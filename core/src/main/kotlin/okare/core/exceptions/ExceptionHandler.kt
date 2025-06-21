@@ -1,14 +1,14 @@
 package okare.core.exceptions
 
 import io.github.oshai.kotlinlogging.KLogger
+import okare.core.configuration.properties.ApplicationConfigurationProperties
+import okare.core.models.response.ErrorResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
-import okare.core.configuration.properties.ApplicationConfigurationProperties
-import okare.core.models.response.ErrorResponse
 
 @ControllerAdvice
 class ExceptionHandler(private val logger: KLogger, private val config: ApplicationConfigurationProperties) {
@@ -69,6 +69,18 @@ class ExceptionHandler(private val logger: KLogger, private val config: Applicat
             statusCode = HttpStatus.CONFLICT,
             error = "CONFLICT",
             message = ex.message ?: "Conflict occurred",
+            stackTrace = config.includeStackTrace.takeIf { it }?.let { ex.stackTraceToString() }
+        ).also { logger.error { it } }.let {
+            ResponseEntity(it, it.statusCode)
+        }
+    }
+
+    @ExceptionHandler(SupabaseException::class)
+    fun handleSupabaseException(ex: SupabaseException): ResponseEntity<ErrorResponse> {
+        return ErrorResponse(
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR,
+            error = "SUPABASE ERROR",
+            message = ex.message ?: "An error occurred with Supabase",
             stackTrace = config.includeStackTrace.takeIf { it }?.let { ex.stackTraceToString() }
         ).also { logger.error { it } }.let {
             ResponseEntity(it, it.statusCode)
