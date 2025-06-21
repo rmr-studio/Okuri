@@ -3,6 +3,8 @@ package okare.core.entity.user
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okare.core.models.invoice.ChargeRate
+import okare.core.models.user.Address
+import okare.core.models.user.Company
 import org.hibernate.annotations.Type
 import java.time.ZonedDateTime
 import java.util.*
@@ -26,8 +28,13 @@ data class UserEntity(
     @Column(name = "display_name", nullable = false)
     var name: String,
 
-    @Column(name = "company_name", nullable = false)
-    var company: String,
+    @Type(JsonBinaryType::class)
+    @Column(name = "address", nullable = false, columnDefinition = "jsonb")
+    var address: Address,
+
+    @Type(JsonBinaryType::class)
+    @Column(name = "company", nullable = false, columnDefinition = "jsonb")
+    var company: Company,
 
     @Type(JsonBinaryType::class)
     @Column(name = "charge_rate", columnDefinition = "jsonb")

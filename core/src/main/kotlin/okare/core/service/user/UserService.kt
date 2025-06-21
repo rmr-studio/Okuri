@@ -4,7 +4,7 @@ import io.github.oshai.kotlinlogging.KLogger
 import io.ktor.server.plugins.*
 import jakarta.transaction.Transactional
 import okare.core.models.user.User
-import okare.core.repository.UserRepository
+import okare.core.repository.user.UserRepository
 import okare.core.service.auth.AuthTokenService
 import okare.core.util.ServiceUtil.findOrThrow
 import org.springframework.security.access.AccessDeniedException

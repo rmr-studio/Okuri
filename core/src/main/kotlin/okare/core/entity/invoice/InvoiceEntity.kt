@@ -2,6 +2,7 @@ package okare.core.entity.invoice
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
+import okare.core.entity.client.ClientEntity
 import okare.core.entity.user.UserEntity
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.invoice.Billable
@@ -27,13 +28,13 @@ data class InvoiceEntity(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
-        name = "recipient_id",
+        name = "client_id",
         referencedColumnName = "id",
         nullable = false,
         insertable = true,
         updatable = true
     )
-    val recipient: InvoiceRecipientEntity,
+    val recipient: ClientEntity,
 
     @Column(name = "invoice_number", nullable = false, unique = true)
     var invoiceNumber: String,
@@ -65,4 +66,17 @@ data class InvoiceEntity(
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: ZonedDateTime = ZonedDateTime.now(),
 
-    )
+    @Column(name = "updated_at", nullable = false)
+    var updatedAt: ZonedDateTime = ZonedDateTime.now()
+) {
+    @PrePersist
+    fun onPrePersist() {
+        createdAt = ZonedDateTime.now()
+        updatedAt = ZonedDateTime.now()
+    }
+
+    @PreUpdate
+    fun onPreUpdate() {
+        updatedAt = ZonedDateTime.now()
+    }
+}
