@@ -1,8 +1,10 @@
 package okare.core.service.invoice
 
+
 import io.github.oshai.kotlinlogging.KLogger
 import okare.core.entity.invoice.InvoiceEntity
 import okare.core.enums.invoice.InvoiceStatus
+import okare.core.models.client.Client
 import okare.core.models.invoice.Invoice
 import okare.core.models.invoice.request.InvoiceCreationRequest
 import okare.core.repository.invoice.InvoiceRepository
@@ -31,8 +33,9 @@ class InvoiceService(
         }
     }
 
-    fun getInvoicesByClientId(clientId: UUID): List<Invoice> {
-        return findManyResults(clientId, invoiceRepository::findByClientId).map { entity ->
+    @PreAuthorize("@securityConditions.doesUserOwnClient(#client)")
+    fun getInvoicesByClientId(client: Client): List<Invoice> {
+        return findManyResults(client.id, invoiceRepository::findByClientId).map { entity ->
             Invoice.fromEntity(entity)
         }
     }
