@@ -31,7 +31,7 @@ data class UserEntity(
 
     @Type(JsonBinaryType::class)
     @Column(name = "charge_rate", columnDefinition = "jsonb")
-    val chargeRate: ChargeRate,
+    var chargeRate: ChargeRate,
 
     @Embedded
     var paymentDetails: Payment? = null,

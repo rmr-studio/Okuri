@@ -38,6 +38,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.5.0")
     implementation("org.springframework.security:spring-security-oauth2-jose:6.5.0")
 
+    // Supabase
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.1.4"))
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.ktor:ktor-client-cio:3.0.0")
+    implementation("io.github.jan-tennert.supabase:serializer-jackson:3.1.4")
+
+    // Pdf Generation
+    implementation("com.github.librepdf:openpdf:1.3.30")
 
     // Swagger/OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
