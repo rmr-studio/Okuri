@@ -11,7 +11,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfigurationSource
-import paladin.core.configuration.properties.SecurityConfigurationProperties
+import okare.core.configuration.properties.SecurityConfigurationProperties
 import javax.crypto.spec.SecretKeySpec
 
 @Configuration
@@ -36,11 +36,6 @@ class SecurityConfig(
                     .requestMatchers("/docs/**").permitAll() // Allow OpenAPI documentation
                     .requestMatchers("/public/**").permitAll() // Allow public endpoints
                     .anyRequest().authenticated() // Require authentication for all other endpoints
-            }
-            .oauth2ResourceServer { oauth2 ->
-                oauth2.jwt { jwt ->
-                    jwt.jwtAuthenticationConverter(jwtConverter)
-                }
             }
             .exceptionHandling { exceptions ->
                 exceptions
