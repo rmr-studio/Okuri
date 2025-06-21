@@ -23,6 +23,8 @@ import java.nio.charset.StandardCharsets
 @Service
 class AuthService(private val client: SupabaseClient, private val config: ApplicationConfigurationProperties) {
 
+    // Redirect responses
+
     suspend fun handleThirdPartyPKCECallback(
         code: String? = null,
         next: String? = null,
@@ -65,6 +67,16 @@ class AuthService(private val client: SupabaseClient, private val config: Applic
         return RedirectView("${config.webOrigin}/auth/auth-code-error")
     }
 
+    // Authenticates with a social provider using PKCE flow
+    suspend fun authenticateWithSocialProvider(provider: SocialProviders): RedirectView = withContext(Dispatchers.IO) {
+        try {
+            client.auth.signInWith(Google)
+            RedirectView(config.webOrigin + "/api/auth/token/callback")
+        } catch (e: Exception) {
+            RedirectView("/auth/auth-code-error?error=${URLEncoder.encode(e.message ?: "OAuth failed", "UTF-8")}")
+        }
+    }
+
     suspend fun handleUserSignout(): String = withContext(Dispatchers.IO) {
         try {
             client.auth.signOut()
@@ -77,7 +89,7 @@ class AuthService(private val client: SupabaseClient, private val config: Applic
     }
 
     // Logs in a user with email and password credentials
-    suspend fun loginWithEmailPasswordCredentials(credentials: AuthenticationCredentials): String =
+    suspend fun loginWithEmailPasswordCredentials(credentials: AuthenticationCredentials): Boolean =
         withContext(Dispatchers.IO) {
             try {
                 val (email, password) = credentials
@@ -85,7 +97,7 @@ class AuthService(private val client: SupabaseClient, private val config: Applic
                     this.email = email
                     this.password = password
                 }
-                "Login successful"
+                true
             } catch (e: Exception) {
                 throw AccessDeniedException(
                     e.message ?: "Login failed"
@@ -94,7 +106,7 @@ class AuthService(private val client: SupabaseClient, private val config: Applic
         }
 
     // Registers a user with email and password credentials
-    suspend fun registerWithEmailPasswordCredentials(credentials: AuthenticationCredentials): String =
+    suspend fun registerWithEmailPasswordCredentials(credentials: AuthenticationCredentials): Boolean =
         withContext(Dispatchers.IO) {
             try {
                 val (email, password) = credentials
@@ -108,7 +120,7 @@ class AuthService(private val client: SupabaseClient, private val config: Applic
                         "An account with this email already exists."
                     )
                 }
-                "Registration successful"
+                true
             } catch (e: ConflictException) {
                 throw e // Re-throw if already handled
             } catch (e: Exception) {
@@ -140,21 +152,6 @@ class AuthService(private val client: SupabaseClient, private val config: Applic
             }
         }
 
-    // Authenticates with a social provider using PKCE flow
-    suspend fun authenticateWithSocialProvider(provider: SocialProviders): Boolean = withContext(Dispatchers.IO) {
-        try {
-            client.auth.signInWith(
-                Google,
-                redirectUrl = config.webOrigin + "/api/auth/token/callback",
-            )
-            true
-
-        } catch (e: Exception) {
-            throw SupabaseException(
-                "OAuth error: ${e.message}"
-            )
-        }
-    }
 
     // Resends OTP code to the user's email
     suspend fun handleResendOTP(email: String): Boolean = withContext(Dispatchers.IO) {
