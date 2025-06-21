@@ -19,14 +19,14 @@ data class UserEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
+    @Column(name = "display_name", nullable = false)
+    var name: String,
+
     @Column(name = "email", nullable = false)
     var email: String,
 
     @Column(name = "phone", nullable = false)
     var phone: String,
-
-    @Column(name = "display_name", nullable = false)
-    var name: String,
 
     @Type(JsonBinaryType::class)
     @Column(name = "address", nullable = false, columnDefinition = "jsonb")

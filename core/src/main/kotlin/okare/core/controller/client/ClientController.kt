@@ -2,14 +2,12 @@ package okare.core.controller.client
 
 import io.swagger.v3.oas.annotations.tags.Tag
 import okare.core.models.client.Client
+import okare.core.models.client.request.ClientCreationRequest
 import okare.core.service.client.ClientService
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
 @RequestMapping("/api/v1/client")
@@ -17,28 +15,33 @@ import java.util.UUID
 class ClientController(private val clientService: ClientService) {
 
     @GetMapping("/")
-    fun getClientsForUser(): List<Client> {
-        TODO()
+    fun getClientsForUser(): ResponseEntity<List<Client>> {
+        val clients = clientService.getUserClients()
+        return ResponseEntity.ok(clients)
     }
 
     @GetMapping("/id/{clientId}")
-    fun getClientById(clientId: UUID): Client {
-        TODO()
+    fun getClientById(@PathVariable clientId: UUID): ResponseEntity<Client> {
+        val client: Client = clientService.getUserById(clientId)
+        return ResponseEntity.ok(client)
     }
 
     @PostMapping("/")
-    fun createClient(client: Client): Client {
-        TODO()
-    }
-    
-    @PutMapping("/")
-    fun updateClient(client: Client): Client {
-        TODO()
+    fun createClient(request: ClientCreationRequest): ResponseEntity<Client> {
+        val client: Client = clientService.createClient(request)
+        return ResponseEntity.status(HttpStatus.CREATED).body(client)
     }
 
-    @DeleteMapping("/id/{clientId}")
-    fun deleteClientById(clientId: UUID) {
-        TODO()
+    @PutMapping("/")
+    fun updateClient(client: Client): ResponseEntity<Client> {
+        val updatedClient: Client = clientService.updateClient(client)
+        return ResponseEntity.ok(updatedClient)
+    }
+
+    @DeleteMapping("/")
+    fun deleteClientById(client: Client): ResponseEntity<Unit> {
+        clientService.deleteClient(client)
+        return ResponseEntity.noContent().build()
     }
 
 }

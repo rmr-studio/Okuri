@@ -10,6 +10,13 @@ import java.util.*
 @Entity
 @Table(
     name = "client",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uq_client_phone_user", columnNames = ["user_id", "phone"]),
+        UniqueConstraint(name = "uq_client_ndis_user", columnNames = ["user_id", "ndis_number"])
+    ],
+    indexes = [
+        Index(name = "idx_client_user_id", columnList = "user_id")
+    ]
 )
 data class ClientEntity(
     @Id
@@ -21,7 +28,7 @@ data class ClientEntity(
     val userId: UUID,
 
     @Column(name = "name", nullable = false)
-    val name: String,
+    var name: String,
 
     @Type(JsonBinaryType::class)
     @Column(name = "address", nullable = false, columnDefinition = "jsonb")

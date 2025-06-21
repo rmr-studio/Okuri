@@ -14,7 +14,14 @@ import java.util.*
 @Entity
 @Table(
     name = "invoice",
-    uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "invoice_number"])],
+    uniqueConstraints = [UniqueConstraint(
+        name = "uq_invoice_number_user",
+        columnNames = ["user_id", "invoice_number"]
+    )],
+    indexes = [
+        Index(name = "idx_invoice_user_id", columnList = "user_id"),
+        Index(name = "idx_invoice_client_id", columnList = "client_id"),
+    ],
 )
 data class InvoiceEntity(
     @Id
@@ -34,7 +41,7 @@ data class InvoiceEntity(
         insertable = true,
         updatable = true
     )
-    val recipient: ClientEntity,
+    val client: ClientEntity,
 
     @Column(name = "invoice_number", nullable = false, unique = true)
     var invoiceNumber: String,

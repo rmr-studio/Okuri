@@ -33,7 +33,7 @@ data class Invoice(
                 return Invoice(
                     id = entity.id ?: throw IllegalArgumentException("InvoiceEntity id cannot be null"),
                     user = User.fromEntity(entity.user),
-                    client = Client.fromEntity(entity.recipient),
+                    client = Client.fromEntity(entity.client),
                     invoiceNumber = entity.invoiceNumber,
                     items = entity.items,
                     amount = entity.amount,

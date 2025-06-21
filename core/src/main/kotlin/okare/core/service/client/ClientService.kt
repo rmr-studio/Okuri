@@ -5,7 +5,6 @@ import io.ktor.server.plugins.*
 import okare.core.entity.client.ClientEntity
 import okare.core.models.client.Client
 import okare.core.models.client.request.ClientCreationRequest
-import okare.core.models.user.User
 import okare.core.repository.client.ClientRepository
 import okare.core.service.auth.AuthTokenService
 import okare.core.util.ServiceUtil.findManyResults
@@ -57,7 +56,7 @@ class ClientService(
     }
 
     @PreAuthorize("@securityConditions.doesUserOwnClient(#client)")
-    fun updateClient(client: Client) {
+    fun updateClient(client: Client): Client {
         findOrThrow(client.id, repository::findById).apply {
             name = client.name
             address = client.address
@@ -65,15 +64,15 @@ class ClientService(
             NDISnumber = client.NDISnumber
         }.run {
             repository.save(this)
-            logger.info { "Updated user profile with ID: ${this.id}" }
-            return User.fromEntity(this)
+            logger.info { "Client Service => Updated client profile with ID: ${this.id}" }
+            return Client.fromEntity(this)
         }
     }
 
     @PreAuthorize("@securityConditions.doesUserOwnClient(#client)")
     fun deleteClient(client: Client) {
         repository.deleteById(client.id)
-        logger.info { "Deleted client with ID: ${client.id}" }
+        logger.info { "Client Service => Deleted client with ID: ${client.id}" }
     }
 
 }

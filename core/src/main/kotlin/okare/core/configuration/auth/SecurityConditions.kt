@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class SecurityConditions {
-
     fun doesUserOwnClient(client: Client): Boolean {
         return SecurityContextHolder.getContext().authentication.principal.let {
             if (it !is Jwt) {
