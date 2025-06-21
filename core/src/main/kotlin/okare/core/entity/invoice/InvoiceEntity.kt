@@ -2,8 +2,6 @@ package okare.core.entity.invoice
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okare.core.entity.client.ClientEntity
-import okare.core.entity.user.UserEntity
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.invoice.Billable
 import org.hibernate.annotations.Type
@@ -29,46 +27,38 @@ data class InvoiceEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, insertable = true, updatable = true)
-    val user: UserEntity,
+    @Column(name = "user_id", nullable = false)
+    val userId: UUID,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "client_id",
-        referencedColumnName = "id",
-        nullable = false,
-        insertable = true,
-        updatable = true
-    )
-    val client: ClientEntity,
+    @Column(name = "client_id", nullable = false)
+    val clientId: UUID,
 
-    @Column(name = "invoice_number", nullable = false, unique = true)
-    var invoiceNumber: String,
+    @Column(name = "invoice_number", nullable = false, unique = true, columnDefinition = "integer")
+    var invoiceNumber: Int,
 
     @Type(JsonBinaryType::class)
     @Column(name = "billable_work", columnDefinition = "jsonb", nullable = false)
-    val items: List<Billable>,
+    var items: List<Billable>,
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
-    val amount: BigDecimal,
+    var amount: BigDecimal,
 
     @Column(name = "currency", nullable = false)
     @Enumerated(EnumType.STRING)
-    val currency: Currency,
+    var currency: Currency,
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     var status: InvoiceStatus = InvoiceStatus.PENDING,
 
     @Column(name = "invoice_start_date", nullable = false)
-    val startDate: ZonedDateTime,
+    var startDate: ZonedDateTime,
 
     @Column(name = "invoice_end_date", nullable = false)
-    val endDate: ZonedDateTime,
+    var endDate: ZonedDateTime,
 
     @Column(name = "invoice_due_date", nullable = false)
-    val dueDate: ZonedDateTime,
+    var dueDate: ZonedDateTime,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: ZonedDateTime = ZonedDateTime.now(),

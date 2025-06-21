@@ -110,14 +110,14 @@ create index if not exists idx_line_item_user_id
 
 -- Invoice
 
-CREATE TYPE invoice_billing_status AS ENUM ('PENDING', 'PAID' , 'OVERDUE' );
+CREATE TYPE invoice_billing_status AS ENUM ('PENDING', 'PAID' , 'OVERDUE', 'OUTDATED', 'CANCELLED' );
 
 create table if not exists "invoice"
 (
     "id"                 uuid primary key         not null default uuid_generate_v4(),
     "user_id"            uuid                     not null references public.users (id) on delete cascade,
     "client_id"          uuid                     not null references public.clients (id) on delete cascade,
-    "invoice_number"     varchar(50)              not null,
+    "invoice_number"     INTEGER                  not null,
     "billable_work"      jsonb                    not null,
     "amount"             DECIMAL(19, 4)           not null default 0.00,
     "currency"           varchar(3)               not null default 'AUD',

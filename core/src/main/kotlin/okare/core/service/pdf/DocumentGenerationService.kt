@@ -5,6 +5,7 @@ import com.lowagie.text.pdf.PdfPCell
 import com.lowagie.text.pdf.PdfPTable
 import com.lowagie.text.pdf.PdfWriter
 import okare.core.models.invoice.Invoice
+import okare.core.models.user.Address
 import org.springframework.stereotype.Service
 import java.awt.Color
 import java.io.ByteArrayOutputStream
@@ -14,9 +15,9 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 @Service
-class InvoicePdfService {
+class DocumentGenerationService {
 
-    fun generate(invoice: Invoice): ByteArray {
+    fun generateInvoiceDocument(invoice: Invoice): ByteArray {
         val outputStream = ByteArrayOutputStream()
         val document = Document(PageSize.A4, 36f, 36f, 54f, 36f)
         PdfWriter.getInstance(document, outputStream)
@@ -52,7 +53,8 @@ class InvoicePdfService {
 
         // Recipient
         document.add(Paragraph("TO: ${invoice.client.name}", boldFont))
-        document.add(Paragraph(invoice.client.address, regularFont))
+        //TODO: GENERATE ADDRESS BLOCK
+//        document.add(Paragraph(invoice.client.address, regularFont))
         document.add(Paragraph(invoice.client.phone, regularFont))
         document.add(Paragraph("NDIS number: ${invoice.client.NDISnumber}", regularFont))
         document.add(Chunk.NEWLINE)
@@ -126,4 +128,8 @@ class InvoicePdfService {
     private fun formatDate(date: ZonedDateTime): String {
         return date.format(DateTimeFormatter.ofPattern("d/M/yy"))
     }
+
+    private fun generateAddressBlock(address: Address) {}
+
+    private fun generateBillingBlock(address: Address) {}
 }
