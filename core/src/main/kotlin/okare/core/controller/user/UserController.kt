@@ -1,9 +1,10 @@
 package okare.core.controller.user
 
-import io.swagger.v3.oas.annotations.tags.Tag
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.tags.Tag
+import okare.core.entity.user.toModel
 import okare.core.models.user.User
 import okare.core.service.user.UserService
 import org.springframework.http.ResponseEntity
@@ -28,7 +29,7 @@ class UserController(
         ApiResponse(responseCode = "404", description = "User not found")
     )
     fun getCurrentUser(): ResponseEntity<User> {
-        val user: User = profileService.getUserFromSession()
+        val user: User = profileService.getUserFromSession().toModel()
         return ResponseEntity.ok(user)
     }
 
@@ -48,7 +49,7 @@ class UserController(
         if (currentUserId != userId) {
             return ResponseEntity.status(403).build()
         }
-        val userProfile = profileService.getUserById(userId)
+        val userProfile: User = profileService.getUserById(userId).toModel()
         return ResponseEntity.ok(userProfile)
     }
 

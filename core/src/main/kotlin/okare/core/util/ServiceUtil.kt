@@ -1,6 +1,6 @@
 package okare.core.util
 
-import paladin.core.exceptions.NotFoundException
+import okare.core.exceptions.NotFoundException
 import java.util.*
 
 object ServiceUtil {

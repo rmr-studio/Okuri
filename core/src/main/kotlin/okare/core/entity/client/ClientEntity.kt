@@ -59,3 +59,14 @@ data class ClientEntity(
         updatedAt = ZonedDateTime.now()
     }
 }
+
+fun ClientEntity.toModel(): okare.core.models.client.Client {
+    return okare.core.models.client.Client(
+        id = this.id ?: UUID.randomUUID(),
+        userId = this.userId,
+        name = this.name,
+        address = this.address,
+        phone = this.phone,
+        NDISnumber = this.NDISnumber
+    )
+}

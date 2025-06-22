@@ -2,8 +2,13 @@ package okare.core.entity.invoice
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
+import okare.core.entity.client.ClientEntity
+import okare.core.entity.client.toModel
+import okare.core.entity.user.UserEntity
+import okare.core.entity.user.toModel
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.invoice.Billable
+import okare.core.models.invoice.Invoice
 import org.hibernate.annotations.Type
 import java.math.BigDecimal
 import java.time.ZonedDateTime
@@ -27,11 +32,13 @@ data class InvoiceEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @Column(name = "user_id", nullable = false)
-    val userId: UUID,
+    @JoinColumn(name = "user_id", nullable = false, updatable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    val user: UserEntity,
 
-    @Column(name = "client_id", nullable = false)
-    val clientId: UUID,
+    @JoinColumn(name = "client_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    val client: ClientEntity,
 
     @Column(name = "invoice_number", nullable = false, unique = true, columnDefinition = "integer")
     var invoiceNumber: Int,
@@ -75,5 +82,28 @@ data class InvoiceEntity(
     @PreUpdate
     fun onPreUpdate() {
         updatedAt = ZonedDateTime.now()
+    }
+}
+
+fun InvoiceEntity.toModel(): Invoice {
+    return this.id.let {
+        if (it == null) {
+            throw IllegalArgumentException("InvoiceEntity id cannot be null")
+        }
+
+        Invoice(
+            id = it,
+            user = this.user.toModel(),
+            client = this.client.toModel(),
+            invoiceNumber = this.invoiceNumber,
+            items = this.items,
+            amount = this.amount,
+            currency = this.currency,
+            status = this.status,
+            startDate = this.startDate,
+            endDate = this.endDate,
+            dueDate = this.dueDate,
+            createdAt = this.createdAt
+        )
     }
 }

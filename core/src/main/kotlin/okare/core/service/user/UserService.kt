@@ -1,8 +1,10 @@
 package okare.core.service.user
 
 import io.github.oshai.kotlinlogging.KLogger
-import io.ktor.server.plugins.*
 import jakarta.transaction.Transactional
+import okare.core.entity.user.UserEntity
+import okare.core.entity.user.toModel
+import okare.core.exceptions.NotFoundException
 import okare.core.models.user.User
 import okare.core.repository.user.UserRepository
 import okare.core.service.auth.AuthTokenService
@@ -19,19 +21,17 @@ class UserService(
 ) {
 
     @Throws(NotFoundException::class, IllegalArgumentException::class)
-    fun getUserFromSession(): User {
+    fun getUserFromSession(): UserEntity {
         return authTokenService.getUserId().let {
-            findOrThrow(it, repository::findById).let { entity ->
-                User.fromEntity(entity)
+            findOrThrow(it, repository::findById).apply {
+                logger.info { "Retrieved user profile for ID: $it" }
             }
         }
     }
 
     @Throws(NotFoundException::class)
-    fun getUserById(id: UUID): User {
-        return findOrThrow(id, repository::findById).let {
-            User.fromEntity(it)
-        }
+    fun getUserById(id: UUID): UserEntity {
+        return findOrThrow(id, repository::findById)
     }
 
     @Throws(NotFoundException::class, IllegalArgumentException::class)
@@ -53,7 +53,7 @@ class UserService(
         }.run {
             repository.save(this)
             logger.info { "Updated user profile with ID: ${this.id}" }
-            return User.fromEntity(this)
+            return this.toModel()
         }
     }
 

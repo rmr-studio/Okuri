@@ -5,6 +5,7 @@ import jakarta.persistence.*
 import okare.core.models.invoice.ChargeRate
 import okare.core.models.user.Address
 import okare.core.models.user.Company
+import okare.core.models.user.User
 import org.hibernate.annotations.Type
 import java.time.ZonedDateTime
 import java.util.*
@@ -73,4 +74,22 @@ data class UserEntity(
         @Column(name = "account_name")
         var accountName: String
     )
+}
+
+fun UserEntity.toModel(): User {
+    this.id.let {
+        if (it == null) {
+            throw IllegalArgumentException("UserEntity id cannot be null")
+        }
+        return User(
+            id = it,
+            email = this.email,
+            phone = this.phone,
+            name = this.name,
+            company = this.company,
+            chargeRate = this.chargeRate,
+            paymentDetails = this.paymentDetails,
+            address = this.address,
+        )
+    }
 }

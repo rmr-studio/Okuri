@@ -1,13 +1,14 @@
 package okare.core.models.invoice
 
 import okare.core.entity.invoice.LineItemEntity
+import java.math.BigDecimal
 import java.util.*
 
 data class LineItem(
     val id: UUID,
     val name: String,
     val description: String? = null,
-    val chargeRate: Double,
+    val chargeRate: BigDecimal,
 ) {
 
     companion object Factory {

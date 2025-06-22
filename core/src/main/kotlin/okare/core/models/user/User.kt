@@ -13,24 +13,4 @@ data class User(
     var company: Company,
     var chargeRate: ChargeRate,
     var paymentDetails: UserEntity.Payment? = null
-) {
-    companion object Factory {
-        fun fromEntity(entity: UserEntity): User {
-            entity.id.let {
-                if (it == null) {
-                    throw IllegalArgumentException("UserEntity id cannot be null")
-                }
-                return User(
-                    id = it,
-                    email = entity.email,
-                    phone = entity.phone,
-                    name = entity.name,
-                    company = entity.company,
-                    chargeRate = entity.chargeRate,
-                    paymentDetails = entity.paymentDetails,
-                    address = entity.address,
-                )
-            }
-        }
-    }
-}
+)

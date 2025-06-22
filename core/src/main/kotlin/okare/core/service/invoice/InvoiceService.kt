@@ -3,13 +3,16 @@ package okare.core.service.invoice
 
 import io.github.oshai.kotlinlogging.KLogger
 import okare.core.entity.invoice.InvoiceEntity
+import okare.core.entity.invoice.toModel
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.client.Client
 import okare.core.models.invoice.Invoice
 import okare.core.models.invoice.request.InvoiceCreationRequest
 import okare.core.repository.invoice.InvoiceRepository
 import okare.core.service.auth.AuthTokenService
+import okare.core.service.client.ClientService
 import okare.core.service.pdf.DocumentGenerationService
+import okare.core.service.user.UserService
 import okare.core.util.ServiceUtil.findManyResults
 import okare.core.util.ServiceUtil.findOrThrow
 import org.springframework.security.access.AccessDeniedException
@@ -20,37 +23,39 @@ import java.util.*
 @Service
 class InvoiceService(
     private val invoiceRepository: InvoiceRepository,
+    private val userService: UserService,
+    private val clientService: ClientService,
     private val authTokenService: AuthTokenService,
     private val documentGeneratorService: DocumentGenerationService,
     private val logger: KLogger
 ) {
 
-    fun getInvoicesByUserSession(): List<Invoice> {
+    fun getInvoicesByUserSession(): List<InvoiceEntity> {
         return authTokenService.getUserId().let {
             findManyResults(it, invoiceRepository::findByUserId).map { entity ->
-                Invoice.fromEntity(entity)
+                entity
             }
         }
     }
 
     @PreAuthorize("@securityConditions.doesUserOwnClient(#client)")
-    fun getInvoicesByClientId(client: Client): List<Invoice> {
+    fun getInvoicesByClientId(client: Client): List<InvoiceEntity> {
         return findManyResults(client.id, invoiceRepository::findByClientId).map { entity ->
-            Invoice.fromEntity(entity)
+            entity
         }
     }
 
     @Throws(AccessDeniedException::class)
-    fun getInvoiceById(id: UUID): Invoice {
+    fun getInvoiceById(id: UUID): InvoiceEntity {
         return authTokenService.getUserId().let {
-            findOrThrow(id, invoiceRepository::findById).let {
-                Invoice.fromEntity(it)
-            }.let { invoice ->
-                if (invoice.user.id != it) {
-                    throw AccessDeniedException("User does not own this invoice")
+            findOrThrow(id, invoiceRepository::findById).let { entity ->
+                entity.also { entity ->
+                    if (it != entity.user.id) {
+                        throw AccessDeniedException("User does not own this invoice")
+                    }
+                    logger.info { "Invoice Service => User $it => Retrieved invoice with ID: ${entity.id}" }
                 }
 
-                invoice
             }
         }
     }
@@ -58,9 +63,11 @@ class InvoiceService(
     fun createInvoice(request: InvoiceCreationRequest): Invoice {
         return authTokenService.getUserId().let {
             val currentInvoiceNumber = invoiceRepository.findMaxInvoiceNumberByUserId(it) ?: 0
+            val user = userService.getUserById(it)
+            val client = clientService.getClientById(request.client.id)
             InvoiceEntity(
-                userId = it,
-                clientId = request.client.id,
+                user = user,
+                client = client,
                 invoiceNumber = currentInvoiceNumber + 1,
                 items = request.items,
                 amount = request.amount,
@@ -72,7 +79,7 @@ class InvoiceService(
             ).run {
                 invoiceRepository.save(this).let { entity ->
                     logger.info { "Invoice Service => User $it => Created new invoice with ID: ${entity.id}" }
-                    Invoice.fromEntity(entity)
+                    entity.toModel()
                 }
             }
         }
@@ -92,7 +99,7 @@ class InvoiceService(
         }.run {
             invoiceRepository.save(this).let {
                 logger.info { "Invoice Service => Updated invoice with ID: ${this.id}" }
-                Invoice.fromEntity(this)
+                this.toModel()
             }
         }
     }
@@ -120,7 +127,7 @@ class InvoiceService(
         }.run {
             invoiceRepository.save(this).let {
                 logger.info { "Invoice Service => Cancelled invoice with ID: ${this.id}" }
-                Invoice.fromEntity(this)
+                this.toModel()
             }
         }
     }

@@ -22,19 +22,13 @@ class ClientService(
 ) {
 
     @Throws(NotFoundException::class, IllegalArgumentException::class)
-    fun getUserClients(): List<Client> {
-        return authTokenService.getUserId().let {
-            findManyResults(it, repository::findByUserId).map { entity ->
-                Client.fromEntity(entity)
-            }
-        }
+    fun getUserClients(): List<ClientEntity> {
+        return findManyResults(authTokenService.getUserId(), repository::findByUserId)
     }
 
     @Throws(NotFoundException::class)
-    fun getUserById(id: UUID): Client {
-        return findOrThrow(id, repository::findById).let {
-            Client.fromEntity(it)
-        }
+    fun getClientById(id: UUID): ClientEntity {
+        return findOrThrow(id, repository::findById)
     }
 
 

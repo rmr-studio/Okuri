@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import okare.core.entity.invoice.toModel
 import okare.core.models.client.Client
 import okare.core.models.invoice.Invoice
 import okare.core.models.invoice.request.InvoiceCreationRequest
@@ -30,7 +31,7 @@ class InvoiceController(
         ApiResponse(responseCode = "401", description = "Unauthorized access")
     )
     fun getUserInvoices(): ResponseEntity<List<Invoice>> {
-        val invoices = invoiceService.getInvoicesByUserSession()
+        val invoices = invoiceService.getInvoicesByUserSession().map { it.toModel() }
         return ResponseEntity.ok(invoices)
     }
 
@@ -45,7 +46,7 @@ class InvoiceController(
         ApiResponse(responseCode = "403", description = "User does not have access to the client")
     )
     fun getClientInvoices(@RequestBody client: Client): ResponseEntity<List<Invoice>> {
-        val invoices = invoiceService.getInvoicesByClientId(client)
+        val invoices = invoiceService.getInvoicesByClientId(client).map { it.toModel() }
         return ResponseEntity.ok(invoices)
     }
 
@@ -61,7 +62,7 @@ class InvoiceController(
         ApiResponse(responseCode = "404", description = "Invoice not found")
     )
     fun getInvoiceById(@PathVariable id: UUID): ResponseEntity<Invoice> {
-        val invoice = invoiceService.getInvoiceById(id)
+        val invoice = invoiceService.getInvoiceById(id).toModel()
         return ResponseEntity.ok(invoice)
     }
 
@@ -152,11 +153,11 @@ class InvoiceController(
         ApiResponse(responseCode = "404", description = "Invoice not found")
     )
     fun generateInvoiceDocument(@PathVariable id: UUID): ResponseEntity<ByteArray> {
-        val invoice = invoiceService.getInvoiceById(id) // Fetch invoice to check ownership
+        val invoice = invoiceService.getInvoiceById(id).toModel() // Fetch invoice to check ownership
         val document = invoiceService.generateDocument(invoice)
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_PDF)
-            .header("Content-Disposition", "attachment; filename=invoice-$id.pdf")
+            .header("Content-Disposition", "attachment; filename=invoice-${invoice.invoiceNumber}.pdf")
             .body(document)
     }
 }

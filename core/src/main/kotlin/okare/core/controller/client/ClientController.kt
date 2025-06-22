@@ -1,9 +1,10 @@
 package okare.core.controller.client
 
-import io.swagger.v3.oas.annotations.tags.Tag
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.tags.Tag
+import okare.core.entity.client.toModel
 import okare.core.models.client.Client
 import okare.core.models.client.request.ClientCreationRequest
 import okare.core.service.client.ClientService
@@ -28,7 +29,7 @@ class ClientController(private val clientService: ClientService) {
         ApiResponse(responseCode = "404", description = "No clients found for the user")
     )
     fun getClientsForUser(): ResponseEntity<List<Client>> {
-        val clients = clientService.getUserClients()
+        val clients = clientService.getUserClients().map { it.toModel() }
         return ResponseEntity.ok(clients)
     }
 
@@ -43,7 +44,7 @@ class ClientController(private val clientService: ClientService) {
         ApiResponse(responseCode = "404", description = "Client not found")
     )
     fun getClientById(@PathVariable clientId: UUID): ResponseEntity<Client> {
-        val client: Client = clientService.getUserById(clientId)
+        val client: Client = clientService.getClientById(clientId).toModel()
         return ResponseEntity.ok(client)
     }
 
@@ -94,7 +95,8 @@ class ClientController(private val clientService: ClientService) {
         ApiResponse(responseCode = "404", description = "Client not found")
     )
     fun deleteClientById(@PathVariable clientId: UUID): ResponseEntity<Unit> {
-        val client = clientService.getUserById(clientId) // Fetch client to check ownership
+        // Check ownership of client
+        val client = clientService.getClientById(clientId).toModel()
         clientService.deleteClient(client)
         return ResponseEntity.noContent().build()
     }
