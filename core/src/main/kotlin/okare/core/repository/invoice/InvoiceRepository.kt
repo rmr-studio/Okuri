@@ -10,7 +10,7 @@ interface InvoiceRepository : JpaRepository<InvoiceEntity, UUID> {
     fun findByUserId(userId: UUID): List<InvoiceEntity>
     fun findByClientId(clientId: UUID): List<InvoiceEntity>
 
-    @Query("SELECT max(i.invoiceNumber) FROM InvoiceEntity i WHERE i.userId = :userId")
+    @Query("SELECT max(i.invoiceNumber) FROM InvoiceEntity i WHERE i.user.id = :userId")
     fun findMaxInvoiceNumberByUserId(@Param("userId") userId: UUID): Int?
 
 }

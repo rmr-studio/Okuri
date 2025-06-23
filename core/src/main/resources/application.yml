@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: core
+  datasource:
+    url: ${POSTGRES_DB_JDBC}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: ${okare.include-stack-trace}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_AUTH_URL}
+server:
+  port: ${SERVER_PORT}
+okare:
+  security:
+    jwt-secret-key: ${JWT_SECRET_KEY}
+    jwt-issuer: ${SUPABASE_URL}
+    allowed-origins:
+      - ${ORIGIN_API_URL}
+  include-stack-trace: true
+  supabase-url: ${SUPABASE_URL}
+  supabase-key: ${SUPABASE_KEY}
+  web-origin: ${ORIGIN_API_URL}
+springdoc:
+  api-docs:
+    path: /docs/v3/api-docs
+  swagger-ui:
+    path: /docs/swagger-ui.html

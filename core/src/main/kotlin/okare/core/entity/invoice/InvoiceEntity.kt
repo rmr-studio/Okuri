@@ -51,7 +51,6 @@ data class InvoiceEntity(
     var amount: BigDecimal,
 
     @Column(name = "currency", nullable = false)
-    @Enumerated(EnumType.STRING)
     var currency: Currency,
 
     @Column(name = "status", nullable = false)

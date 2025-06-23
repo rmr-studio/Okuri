@@ -7,13 +7,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class ApplicationConfigurationProperties(
     val includeStackTrace: Boolean = true,
     @NotNull
-    val supabaseURL: String,
+    val supabaseUrl: String,
     @NotNull
     val supabaseKey: String,
-
     @NotNull
     val webOrigin: String = "http://localhost:3000", // Default to localhost for development purposes
-
-    @NotNull
-    val profile: String = "development", // Default profile for development purposes
 )
