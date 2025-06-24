@@ -1,31 +1,14 @@
 import { useAuth } from "@/components/provider/AuthContext";
-import { AvatarUploader } from "@/components/ui/avatar-uploader";
 import { Button } from "@/components/ui/button";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-    SheetDescription,
-    SheetFooter,
-    SheetTitle,
-} from "@/components/ui/sheet";
+import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
 import { updateUser } from "@/controller/user.controller";
 import { useProfile } from "@/hooks/useProfile";
 import { User } from "@/lib/interfaces/user.interface";
-import { OTPFormSchema } from "@/lib/util/form/form.util";
-import {
-    formatURLPath,
-    handlePublicFileUpload,
-} from "@/lib/util/storage/storage.util";
-import { undefinedIfNull } from "@/lib/util/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { isMobilePhone } from "validator";
@@ -36,16 +19,20 @@ const userOnboardDetailsSchema = z.object({
     displayName: z
         .string({ required_error: "Display Name is required" })
         .min(3, "Display Name is too short"),
-    phone: z
-        .string()
-        .min(10, "Invalid Phone Number")
-        .refine(isMobilePhone)
-        .optional()
-        .or(z.literal("")),
-    avatarUrl: z.string().url().optional(),
-
-    // OTP is only required if phone number is provided
-    otp: OTPFormSchema.shape.otp.or(z.literal("")),
+    phone: z.string().min(10, "Invalid Phone Number").refine(isMobilePhone),
+    street: z.string(),
+    city: z.string(),
+    state: z.string(),
+    country: z.string(),
+    postalCode: z.string(),
+    companyName: z.string().optional(),
+    businessNumber: z.string().optional(),
+    publicHolidayMultiplier: z.number().min(1, "Multiplier must be at least 1").optional(),
+    saturdayMultiplier: z.number().min(1, "Multiplier must be at least 1").optional(),
+    sundayMultiplier: z.number().min(1, "Multiplier must be at least 1").optional(),
+    bsb: z.string(),
+    accountNumber: z.string(),
+    accountName: z.string(),
 });
 
 export type UserOnboard = z.infer<typeof userOnboardDetailsSchema>;
@@ -54,8 +41,6 @@ export const OnboardForm = () => {
     const { data: user } = useProfile();
     const { client, session } = useAuth();
     const queryClient = useQueryClient();
-
-    const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
     const toastRef = useRef<string | number | null>(null);
 
     const userOnboardForm: UseFormReturn<UserOnboard> = useForm<UserOnboard>({
@@ -63,8 +48,19 @@ export const OnboardForm = () => {
         defaultValues: {
             displayName: user?.name || "",
             phone: user?.phone || undefined,
-            avatarUrl: user?.avatarUrl,
-            otp: "",
+            street: user?.address?.street || "",
+            city: user?.address?.city || "",
+            state: user?.address?.state || "",
+            country: user?.address?.country || "",
+            postalCode: user?.address?.postalCode || "",
+            companyName: user?.company?.name || "",
+            businessNumber: user?.company?.abn || "",
+            publicHolidayMultiplier: user?.chargeRate?.publicHolidayMultiplier || 1,
+            saturdayMultiplier: user?.chargeRate?.saturdayMultiplier || 1,
+            sundayMultiplier: user?.chargeRate?.sundayMultiplier || 1,
+            bsb: user?.paymentDetails?.bsb || "",
+            accountNumber: user?.paymentDetails?.accountNumber || "",
+            accountName: user?.paymentDetails?.accountName || "",
         },
     });
 
@@ -88,87 +84,59 @@ export const OnboardForm = () => {
 
             toast.success("Profile Updated Successfully");
             // Update profile cache
-            queryClient.setQueryData(
-                ["userProfile", session?.user.id],
-                response
-            );
+            queryClient.setQueryData(["userProfile", session?.user.id], response);
         },
     });
 
     const handleSubmission = async (values: UserOnboard) => {
         if (!user || !client) return;
-
-        if (uploadedAvatar) {
-            const loadingToast = toast.loading("Uploading Avatar...");
-            const response = await handlePublicFileUpload(
-                client,
-                uploadedAvatar!,
-                "profile-picture",
-                user.id,
-                true
-            );
-
-            toast.dismiss(loadingToast);
-
-            if (!response.ok) {
-                toast.error("Failed to upload Avatar");
-                return;
-            }
-        }
-
         // Update User Profile
         const updatedUser: User = {
             ...user,
-            phone: undefinedIfNull(values.phone),
+            phone: values.phone,
             name: values.displayName,
-            avatarUrl: uploadedAvatar
-                ? formatURLPath("profile-picture", user.id)
-                : values.avatarUrl,
+            address: {
+                street: values.street,
+                city: values.city,
+                state: values.state,
+                country: values.country,
+                postalCode: values.postalCode,
+            },
+            company: {
+                name: values.companyName,
+                abn: values.businessNumber,
+            },
+            chargeRate: {
+                publicHolidayMultiplier: values.publicHolidayMultiplier || 1,
+                saturdayMultiplier: values.saturdayMultiplier || 1,
+                sundayMultiplier: values.sundayMultiplier || 1,
+            },
+            paymentDetails: {
+                bsb: values.bsb,
+                accountNumber: values.accountNumber,
+                accountName: values.accountName,
+            },
         };
 
         userMutation.mutate(updatedUser);
     };
 
-    const handleAvatarUpload = async (image: File): Promise<void> => {
-        // Store transformed image ready for upload upon form submission
-        setUploadedAvatar(image);
-        // Set the avatar URL in the form state
-        const avatarURL = URL.createObjectURL(image);
-        userOnboardForm.setValue("avatarUrl", avatarURL);
-    };
-
-    const handleAvatarRemoval = (): void => {
-        setUploadedAvatar(null);
-        userOnboardForm.setValue("avatarUrl", undefined);
-    };
-
     return (
         <Form {...userOnboardForm}>
             <form onSubmit={userOnboardForm.handleSubmit(handleSubmission)}>
-                <SheetTitle className="text-2xl mt-2 font-fold">
-                    Complete your profile
-                </SheetTitle>
+                <SheetTitle className="text-2xl mt-2 font-fold">Complete your profile</SheetTitle>
                 <SheetDescription className="mt-2">
                     Please fill out the details below to complete your profile.
+                    <br />
+                    This will be used when generating invoices and other documents.
                 </SheetDescription>
                 <section className="mt-4 md:mt-0">
-                    <FormLabel className="pb-0 md:hidden font-semibold">
-                        Profile Picture
-                    </FormLabel>
-                    <AvatarUploader
-                        onUpload={handleAvatarUpload}
-                        imageURL={userOnboardForm.getValues("avatarUrl")}
-                        onRemove={handleAvatarRemoval}
-                    />
-
                     <FormField
                         control={userOnboardForm.control}
                         name="displayName"
                         render={({ field }) => (
                             <FormItem className="mt-6">
-                                <FormLabel className="font-semibold">
-                                    Display Name *
-                                </FormLabel>
+                                <FormLabel className="font-semibold">Display Name *</FormLabel>
                                 <FormControl>
                                     <Input {...field} placeholder="John Doe" />
                                 </FormControl>

@@ -236,8 +236,8 @@ export interface components {
             sundayMultiplier: number;
         };
         Company: {
-            name: string;
-            abn: string;
+            name?: string;
+            abn?: string;
         };
         Payment: {
             bsb: string;
