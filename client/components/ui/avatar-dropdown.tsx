@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,12 +12,7 @@ import {
 import { User } from "@/lib/interfaces/user.interface";
 import { getInitials } from "@/lib/util/utils";
 
-import {
-    ArrowLeftToLine,
-    Building2,
-    Settings,
-    User as UserIcon,
-} from "lucide-react";
+import { ArrowLeftToLine, Building2, Settings, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FC } from "react";
@@ -29,7 +24,7 @@ interface Props {
 }
 
 export const UserProfileDropdown: FC<Props> = ({ user }) => {
-    const { name, avatarUrl } = user;
+    const { name } = user;
     const { client } = useAuth();
     const router = useRouter();
 
@@ -48,19 +43,14 @@ export const UserProfileDropdown: FC<Props> = ({ user }) => {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Avatar className="rounded-md ">
-                    <AvatarImage src={avatarUrl} alt={name} />
-                    <AvatarFallback className="rounded-md">
-                        {getInitials(name)}
-                    </AvatarFallback>
+                    <AvatarFallback className="rounded-md">{getInitials(name)}</AvatarFallback>
                 </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="px-2 mx-4 mt-1">
                 <DropdownMenuGroup>
                     <DropdownMenuItem className="pointer-events-none">
                         <UserIcon />
-                        <span className="ml-2 text-xs font-semibold">
-                            {user.email}
-                        </span>
+                        <span className="ml-2 text-xs font-semibold">{user.email}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
@@ -86,26 +76,19 @@ export const UserProfileDropdown: FC<Props> = ({ user }) => {
                         <Building2 />
                         <span
                             className="ml-2 text-xs text-content"
-                            onClick={() =>
-                                router.push("/dashboard/organisation")
-                            }
+                            onClick={() => router.push("/dashboard/organisation")}
                         >
-                            All Organisations
+                            All Invoices
                         </span>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                    <Link
-                        href={"https://www.github.com/usepaladin"}
-                        target="_blank"
-                    >
+                    <Link href={"https://www.github.com/usepaladin"} target="_blank">
                         <DropdownMenuItem>
                             <FaGithub />
 
-                            <span className="ml-2 text-xs text-content">
-                                Source Code
-                            </span>
+                            <span className="ml-2 text-xs text-content">Source Code</span>
                         </DropdownMenuItem>
                     </Link>
                 </DropdownMenuGroup>
