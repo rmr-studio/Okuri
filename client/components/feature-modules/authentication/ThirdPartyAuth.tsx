@@ -5,7 +5,7 @@ import { SocialProviders } from "@/lib/interfaces/auth.interface";
 import { ClassNameProps } from "@/lib/interfaces/interface";
 import { cn } from "@/lib/util/utils";
 import React from "react";
-import { FaGithub, FaGoogle } from "react-icons/fa";
+import { FaGoogle } from "react-icons/fa";
 
 interface ThirdPartyProps extends ClassNameProps {
     iconClass?: string;
@@ -34,14 +34,6 @@ const ThirdParty: React.FC<ThirdPartyProps> = ({
                 <div className="h-[2px] flex flex-grow bg-foreground rounded-lg"></div>
             </div>
             <section className=" space-y-2">
-                <Button
-                    onClick={async () => await handleAuth("github")}
-                    variant={"outline"}
-                    className="w-full relative"
-                >
-                    <FaGithub className={cn("text-base", iconClass)} />
-                    <span className="ml-2">GitHub</span>
-                </Button>
                 <Button
                     onClick={async () => await handleAuth("google")}
                     variant={"outline"}

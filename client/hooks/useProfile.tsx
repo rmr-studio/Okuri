@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/provider/AuthContext";
 import { fetchSessionUser } from "@/controller/user.controller";
+import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { useQuery } from "@tanstack/react-query";
 
 export function useProfile() {
@@ -9,9 +10,23 @@ export function useProfile() {
 
     const query = useQuery({
         queryKey: ["userProfile", session?.user.id],
-        queryFn: () => fetchSessionUser(session),
+        queryFn: () => {
+            if (!session?.user.id) {
+                throw fromError({
+                    message: "No active session found",
+                    status: 401,
+                    error: "NO_SESSION",
+                });
+            }
+            return fetchSessionUser(session);
+        },
         enabled: !!session?.user.id, // Only fetch if user is authenticated
-        retry: 1, // Retry once on failure
+        retry: (count, error) => {
+            // Retry once on failure, but not on network errors
+            if (isResponseError(error)) return false;
+
+            return count < 2;
+        }, // Retry once on failure
         staleTime: 5 * 60 * 1000, // Cache for 5 minutes,
     });
 

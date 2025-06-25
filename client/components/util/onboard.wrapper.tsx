@@ -12,7 +12,7 @@ import { FCWC, Propless } from "@/lib/interfaces/interface";
 export const OnboardWrapper: FCWC<Propless> = ({ children }) => {
     const { data: user, isLoading, isLoadingAuth } = useProfile();
 
-    // Wait for auth & profile to finish before deciding what to show
+    // // Wait for auth & profile to finish before deciding what to show
     if (isLoading || isLoadingAuth) {
         return null; // or <Skeleton className="h-screen w-full" />
     }
