@@ -34,7 +34,7 @@ class DocumentGenerationService {
         infoTable.widthPercentage = 100f
         infoTable.addCell(getCell("Company: ${invoice.user.company}", PdfPCell.ALIGN_LEFT))
         infoTable.addCell(getCell("Invoice no: ${invoice.invoiceNumber}", PdfPCell.ALIGN_RIGHT))
-        infoTable.addCell(getCell("ABN: ${invoice.user.company.abn}", PdfPCell.ALIGN_LEFT))
+        infoTable.addCell(getCell("ABN: ${invoice.user.company?.abn}", PdfPCell.ALIGN_LEFT))
         infoTable.addCell(
             getCell(
                 "Invoice date: ${formatDate(invoice.startDate)} – ${formatDate(invoice.endDate)}",

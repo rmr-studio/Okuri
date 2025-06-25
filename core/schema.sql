@@ -10,9 +10,9 @@ create table if not exists "users"
     "name"           varchar(50)      not null,
     "email"          varchar(100)     not null unique,
     "phone"          varchar(15)      not null unique,
-    "address"        jsonb            not null,
-    "company"        jsonb            not null,
-    "charge_rate"    jsonb            not null,
+    "address"        jsonb,
+    "company"        jsonb,
+    "charge_rate"    jsonb,
     "bsb"            varchar(10)      not null,
     "account_number" varchar(20)      not null,
     "account_name"   varchar(50)      not null,
@@ -27,14 +27,11 @@ create or replace function public.handle_new_user()
 as
 $$
 begin
-    insert into public.users (id, name, email, phone, address, company, charge_rate, bsb, account_number, account_name)
+    insert into public.users (id, name, email, phone, bsb, account_number, account_name)
     values (new.id,
             coalesce(new.raw_user_meta_data ->> 'name', ''),
             new.email,
             coalesce(new.raw_user_meta_data ->> 'phone', ''),
-            '{}'::jsonb,
-            '{}'::jsonb,
-            '{}'::jsonb,
             '',
             '',
             '');

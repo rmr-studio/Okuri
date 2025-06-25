@@ -9,8 +9,8 @@ data class User(
     var email: String,
     var name: String,
     var phone: String,
-    var address: Address,
-    var company: Company,
-    var chargeRate: ChargeRate,
+    var address: Address? = null,
+    var company: Company? = null,
+    var chargeRate: ChargeRate? = null,
     var paymentDetails: UserEntity.Payment? = null
 )

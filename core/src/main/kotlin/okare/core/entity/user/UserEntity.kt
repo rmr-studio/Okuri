@@ -20,7 +20,7 @@ data class UserEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @Column(name = "display_name", nullable = false)
+    @Column(name = "name", nullable = false)
     var name: String,
 
     @Column(name = "email", nullable = false)
@@ -30,16 +30,16 @@ data class UserEntity(
     var phone: String,
 
     @Type(JsonBinaryType::class)
-    @Column(name = "address", nullable = false, columnDefinition = "jsonb")
-    var address: Address,
+    @Column(name = "address", nullable = true, columnDefinition = "jsonb")
+    var address: Address? = null,
 
     @Type(JsonBinaryType::class)
-    @Column(name = "company", nullable = false, columnDefinition = "jsonb")
-    var company: Company,
+    @Column(name = "company", nullable = true, columnDefinition = "jsonb")
+    var company: Company? = null,
 
     @Type(JsonBinaryType::class)
-    @Column(name = "charge_rate", columnDefinition = "jsonb")
-    var chargeRate: ChargeRate,
+    @Column(name = "charge_rate", columnDefinition = "jsonb", nullable = true)
+    var chargeRate: ChargeRate? = null,
 
     @Embedded
     var paymentDetails: Payment? = null,
