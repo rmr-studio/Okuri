@@ -4,11 +4,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
 import { updateUser } from "@/controller/user.controller";
-import { useProfile } from "@/hooks/useProfile";
 import { User } from "@/lib/interfaces/user.interface";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
+import { FC, useRef } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { isMobilePhone } from "validator";
@@ -37,8 +36,11 @@ const userOnboardDetailsSchema = z.object({
 
 export type UserOnboard = z.infer<typeof userOnboardDetailsSchema>;
 
-export const OnboardForm = () => {
-    const { data: user } = useProfile();
+interface Props {
+    user: User;
+}
+
+export const OnboardForm: FC<Props> = ({ user }) => {
     const { client, session } = useAuth();
     const queryClient = useQueryClient();
     const toastRef = useRef<string | number | null>(null);
