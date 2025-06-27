@@ -1,10 +1,8 @@
 "use client";
 
 import { useProfile } from "@/hooks/useProfile";
-import { Propless } from "@/lib/interfaces/interface";
-import { FC } from "react";
-import { OnboardForm } from "../feature-modules/onboarding/OnboardForm";
-import { SheetContent } from "../ui/sheet";
+import { FCWC, Propless } from "@/lib/interfaces/interface";
+import { Onboard } from "../feature-modules/onboarding/Onboard";
 
 /**
  * Centralised Wrapper Component to Handle all the Onboarding Process
@@ -12,15 +10,11 @@ import { SheetContent } from "../ui/sheet";
  * Will handle the core onboarding with a mandatory flow for the user to complete
  *
  */
-export const OnboardPrompt: FC<Propless> = () => {
+export const OnboardWrapper: FCWC<Propless> = ({ children }) => {
     const { data: user } = useProfile();
 
-    // // New user accounts wont have a name, indicating they haven't completed onboarding
-    if (!user || user.name) return null;
+    // New user accounts wont have a name, indicating they haven't completed onboarding
+    if (!user || user.name) return <>{children}</>;
 
-    return (
-        <SheetContent>
-            <OnboardForm user={user} />;
-        </SheetContent>
-    );
+    return <Onboard />;
 };

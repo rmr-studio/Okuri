@@ -4,6 +4,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
 import { updateUser } from "@/controller/user.controller";
+import { useProfile } from "@/hooks/useProfile";
 import { User } from "@/lib/interfaces/user.interface";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,8 +41,9 @@ interface Props {
     user: User;
 }
 
-export const OnboardForm: FC<Props> = ({ user }) => {
+export const OnboardForm: FC<Props> = () => {
     const { client, session } = useAuth();
+    const { data: user } = useProfile();
     const queryClient = useQueryClient();
     const toastRef = useRef<string | number | null>(null);
 
