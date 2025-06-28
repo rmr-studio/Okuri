@@ -2,9 +2,11 @@ import { useAuth } from "@/components/provider/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
 import { updateUser } from "@/controller/user.controller";
 import { useProfile } from "@/hooks/useProfile";
+import { Propless } from "@/lib/interfaces/interface";
 import { User } from "@/lib/interfaces/user.interface";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -37,11 +39,7 @@ const userOnboardDetailsSchema = z.object({
 
 export type UserOnboard = z.infer<typeof userOnboardDetailsSchema>;
 
-interface Props {
-    user: User;
-}
-
-export const OnboardForm: FC<Props> = () => {
+export const OnboardForm: FC<Propless> = () => {
     const { client, session } = useAuth();
     const { data: user } = useProfile();
     const queryClient = useQueryClient();
@@ -134,6 +132,7 @@ export const OnboardForm: FC<Props> = () => {
                     <br />
                     This will be used when generating invoices and other documents.
                 </SheetDescription>
+                <Separator>Hey</Separator>
                 <section className="mt-4 md:mt-0">
                     <FormField
                         control={userOnboardForm.control}
@@ -147,27 +146,6 @@ export const OnboardForm: FC<Props> = () => {
                             </FormItem>
                         )}
                     />
-                    {/* <section className="flex flex-col md:flex-row md:space-x-4 mt-6">
-                        <FormField
-                            control={userOnboardForm.control}
-                            name="phone"
-                            render={({ field }) => (
-                                <FormItem className="mt-8 md:mt-0 flex flex-col w-full">
-                                    <FormLabel className="font-semibold">
-                                        Phone Number
-                                    </FormLabel>
-                                    <FormControl>
-                                        <PhoneInput
-                                            {...field}
-                                            defaultCountry="AU"
-                                        />
-                                    </FormControl>
-
-                                    <FormMessage className="font-semibold" />
-                                </FormItem>
-                            )}
-                        />
-                    </section> */}
                 </section>
                 <SheetFooter className="justify-end flex flex-row px-0">
                     <Button className="w-32" type="submit">
