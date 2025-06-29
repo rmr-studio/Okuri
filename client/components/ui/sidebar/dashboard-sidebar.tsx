@@ -1,11 +1,13 @@
 "use client";
+import { useProfile } from "@/hooks/useProfile";
 import { SidebarGroupProps } from "@/lib/interfaces/interface";
-import { Boxes, Building2, CalendarHeart, CogIcon, TrendingUpDown, Users } from "lucide-react";
+import { Building2, CalendarHeart, CogIcon, TrendingUpDown, UserPlus, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "./root-sidebar";
 
 export const DashboardSidebar = () => {
     const pathName = usePathname();
+    const { data: user } = useProfile();
 
     // This is sample data.
     const sidebarContent: SidebarGroupProps[] = [
@@ -40,11 +42,18 @@ export const DashboardSidebar = () => {
             title: "Clients",
             items: [
                 {
-                    icon: Boxes,
+                    icon: UserPlus,
                     hidden: false,
-                    title: "Overview",
+                    title: "New Client",
+                    url: "/dashboard/clients/new",
+                    isActive: pathName.startsWith(`/dashboard/clients/new`),
+                },
+                {
+                    icon: Users,
+                    hidden: false,
+                    title: "All Clients",
                     url: `/dashboard/clients`,
-                    isActive: pathName.startsWith(`/dashboard/clients`),
+                    isActive: pathName === `/dashboard/clients`,
                 },
             ],
         },

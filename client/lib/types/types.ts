@@ -250,9 +250,9 @@ export interface components {
             email: string;
             name: string;
             phone: string;
-            address: components["schemas"]["Address"];
-            company: components["schemas"]["Company"];
-            chargeRate: components["schemas"]["ChargeRate"];
+            address?: components["schemas"]["Address"];
+            company?: components["schemas"]["Company"];
+            chargeRate?: components["schemas"]["ChargeRate"];
             paymentDetails?: components["schemas"]["Payment"];
         };
         Billable: {
@@ -269,9 +269,8 @@ export interface components {
             userId: string;
             name: string;
             address: components["schemas"]["Address"];
-            NDISnumber?: string;
+            ndisNumber: string;
             phone: string;
-            ndisnumber: string;
         };
         Invoice: {
             /** Format: uuid */
@@ -336,9 +335,8 @@ export interface components {
         ClientCreationRequest: {
             name: string;
             address: components["schemas"]["Address"];
-            NDISnumber?: string;
+            ndisNumber: string;
             phone: string;
-            ndisnumber: string;
         };
     };
     responses: never;
@@ -358,26 +356,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description User profile retrieved successfully */
+            /** @description OK */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["User"];
-                };
-            };
-            /** @description Unauthorized access */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["User"];
-                };
-            };
-            /** @description User not found */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };

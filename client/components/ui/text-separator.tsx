@@ -38,7 +38,7 @@ const TextSeparator = React.forwardRef<React.ElementRef<typeof Separator>, TextS
                 <div className="flex-1">
                     <Separator decorative={decorative} />
                 </div>
-                <div className="px-4 text-sm text-muted-foreground bg-background">{children}</div>
+                <div className="px-4 text-sm text-muted-foreground ">{children}</div>
                 <div className="flex-1">
                     <Separator decorative={decorative} />
                 </div>

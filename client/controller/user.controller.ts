@@ -40,7 +40,7 @@ export const fetchSessionUser = async (session: Session | null): Promise<User> =
             errorData = await response.json();
         } catch {
             errorData = {
-                message: `Failed to create organisation: ${response.status} ${response.statusText}`,
+                message: `Failed to fetch user: ${response.status} ${response.statusText}`,
                 status: response.status,
                 error: "SERVER_ERROR",
             };
@@ -85,7 +85,7 @@ export const updateUser = async (session: Session | null, user: User): Promise<U
             errorData = await response.json();
         } catch {
             errorData = {
-                message: `Failed to create organisation: ${response.status} ${response.statusText}`,
+                message: `Failed to create update user: ${response.status} ${response.statusText}`,
                 status: response.status,
                 error: "SERVER_ERROR",
             };
