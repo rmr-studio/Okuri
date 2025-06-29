@@ -49,6 +49,7 @@ class UserService(
             phone = user.phone
             company = user.company
             chargeRate = user.chargeRate
+            address = user.address
             paymentDetails = user.paymentDetails
         }.run {
             repository.save(this)

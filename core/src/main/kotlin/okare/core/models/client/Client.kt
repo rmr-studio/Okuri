@@ -9,7 +9,7 @@ data class Client(
     val userId: UUID,
     var name: String,
     var address: Address,
-    var NDISnumber: String,
+    var ndisNumber: String,
     var phone: String
 ) {
     companion object Factory {
@@ -24,7 +24,7 @@ data class Client(
                     userId = entity.userId,
                     name = entity.name,
                     address = entity.address,
-                    NDISnumber = entity.NDISnumber,
+                    ndisNumber = entity.ndisNumber,
                     phone = entity.phone
                 )
             }

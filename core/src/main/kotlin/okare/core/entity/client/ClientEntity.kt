@@ -38,7 +38,7 @@ data class ClientEntity(
     var phone: String,
 
     @Column(name = "ndis_number", nullable = false)
-    var NDISnumber: String,
+    var ndisNumber: String,
 
     @Column(
         name = "created_at",
@@ -61,12 +61,20 @@ data class ClientEntity(
 }
 
 fun ClientEntity.toModel(): okare.core.models.client.Client {
-    return okare.core.models.client.Client(
-        id = this.id ?: UUID.randomUUID(),
-        userId = this.userId,
-        name = this.name,
-        address = this.address,
-        phone = this.phone,
-        NDISnumber = this.NDISnumber
-    )
+    this.id.let {
+        if (it == null) {
+            throw IllegalStateException("ClientEntity ID cannot be null when converting to model")
+        }
+
+        return okare.core.models.client.Client(
+            id = it,
+            userId = this.userId,
+            name = this.name,
+            address = this.address,
+            phone = this.phone,
+            ndisNumber = this.ndisNumber
+        )
+
+    }
+
 }

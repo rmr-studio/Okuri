@@ -39,7 +39,7 @@ class ClientService(
                 name = client.name,
                 address = client.address,
                 phone = client.phone,
-                NDISnumber = client.NDISnumber
+                ndisNumber = client.ndisNumber
             ).run {
                 repository.save(this).let { entity ->
                     logger.info { "Client Service => User $it => Created new client with ID: ${entity.id}" }
@@ -55,7 +55,7 @@ class ClientService(
             name = client.name
             address = client.address
             phone = client.phone
-            NDISnumber = client.NDISnumber
+            ndisNumber = client.ndisNumber
         }.run {
             repository.save(this)
             logger.info { "Client Service => Updated client profile with ID: ${this.id}" }
