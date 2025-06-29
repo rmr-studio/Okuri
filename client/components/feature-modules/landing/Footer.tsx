@@ -4,14 +4,15 @@ import Link from "next/link";
 export default function Footer() {
     return (
         <footer className="border-t">
-            <div className="container flex flex-col gap-8 py-8 md:flex-row md:py-12">
-                <div className="flex-1 space-y-4">
-                    <h2 className="font-bold">Amane Soft</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Pioneering software solutions for the digital age.
+            <div className="flex flex-col gap-8 py-8 md:flex-row md:py-12">
+                <div className="flex-1 space-y-4 px-12 w-full">
+                    <h2 className="font-bold">Okare</h2>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                        Bringing automation and management solutions to independent carers and small
+                        businesses.
                     </p>
                 </div>
-                <div className="grid flex-1 grid-cols-2 gap-12 sm:grid-cols-3">
+                <div className="grid w-1/3 grid-cols-2 gap-12 ">
                     <div className="space-y-4">
                         <h3 className="text-sm font-medium">Solutions</h3>
                         <ul className="space-y-3 text-sm">
@@ -29,27 +30,6 @@ export default function Footer() {
                                     className="text-muted-foreground transition-colors hover:text-primary"
                                 >
                                     Cloud Services
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-medium">Company</h3>
-                        <ul className="space-y-3 text-sm">
-                            <li>
-                                <Link
-                                    href="/about"
-                                    className="text-muted-foreground transition-colors hover:text-primary"
-                                >
-                                    About Us
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href="/careers"
-                                    className="text-muted-foreground transition-colors hover:text-primary"
-                                >
-                                    Careers
                                 </Link>
                             </li>
                         </ul>
@@ -82,9 +62,9 @@ export default function Footer() {
                     </div>
                 </div>
             </div>
-            <div className="container border-t py-6">
+            <div className="py-6">
                 <p className="text-center text-sm text-muted-foreground">
-                    © {new Date().getFullYear()} Amane Soft, Inc. All rights reserved.
+                    © {new Date().getFullYear()} Okare, Inc. All rights reserved.
                 </p>
             </div>
         </footer>

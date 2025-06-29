@@ -11,7 +11,7 @@ export const Onboard: FC<Propless> = () => {
             <SheetContent
                 hideClose={true}
                 side={"left"}
-                className="w-full md:min-w-[50rem] overflow-y-auto flex flex-col p-8 md:px-16 md:py-20"
+                className="w-full lg:w-1/2 sm:max-w-none lg:max-w-none overflow-y-auto flex flex-col p-8 md:px-16 md:py-20"
             >
                 <OnboardForm />
             </SheetContent>
