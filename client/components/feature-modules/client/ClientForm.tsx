@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { countryCodeToName } from "@/lib/util/country/country.util";
-import { FC, useEffect, useState } from "react";
+import { FC, JSX, useEffect, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { Country, getCountries } from "react-phone-number-input";
 import { isMobilePhone } from "validator";
@@ -43,9 +43,10 @@ export type ClientCreation = z.infer<typeof ClientFormSchema>;
 interface Props {
     form: UseFormReturn<ClientCreation>;
     handleSubmission: (data: ClientCreation) => Promise<void>;
+    renderFooter: () => JSX.Element;
 }
 
-export const ClientForm: FC<Props> = ({ form, handleSubmission }) => {
+export const ClientForm: FC<Props> = ({ form, handleSubmission, renderFooter }) => {
     const [selectedCountry, setSelectedCountry] = useState<Country>("AU");
     const [countries, setCountries] = useState<CountryEntry[]>([]);
 
@@ -203,6 +204,7 @@ export const ClientForm: FC<Props> = ({ form, handleSubmission }) => {
                     </div>
                 </section>
             </form>
+            {renderFooter()}
         </Form>
     );
 };

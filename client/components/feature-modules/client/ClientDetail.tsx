@@ -52,6 +52,7 @@ export const ClientOverview = () => {
         };
 
         clientMutation.mutate(updatedClient);
+        handleDrawerClose();
     };
 
     const clientMutation = useMutation({

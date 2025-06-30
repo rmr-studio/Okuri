@@ -98,22 +98,27 @@ const NewClient = () => {
                 </CardDescription>
             </CardHeader>
             <CardContent className="my-12">
-                <ClientForm form={form} handleSubmission={handleSubmission} />
+                <ClientForm
+                    form={form}
+                    handleSubmission={handleSubmission}
+                    renderFooter={() => (
+                        <CardFooter className="flex justify-between mt-4 py-1 border-t ">
+                            <Button
+                                type="button"
+                                className="cursor-pointer"
+                                onClick={handleCancel}
+                                variant={"outline"}
+                                size={"sm"}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit" size={"sm"} className="cursor-pointer">
+                                Create Client
+                            </Button>
+                        </CardFooter>
+                    )}
+                />
             </CardContent>
-            <CardFooter className="flex justify-between mt-4 py-1 border-t ">
-                <Button
-                    type="button"
-                    className="cursor-pointer"
-                    onClick={handleCancel}
-                    variant={"outline"}
-                    size={"sm"}
-                >
-                    Cancel
-                </Button>
-                <Button type="submit" size={"sm"} className="cursor-pointer">
-                    Create Client
-                </Button>
-            </CardFooter>
         </Card>
     );
 };
