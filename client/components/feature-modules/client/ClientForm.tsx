@@ -42,7 +42,7 @@ export type ClientCreation = z.infer<typeof ClientFormSchema>;
 
 interface Props {
     form: UseFormReturn<ClientCreation>;
-    handleSubmission: (data: ClientCreation) => void;
+    handleSubmission: (data: ClientCreation) => Promise<void>;
 }
 
 export const ClientForm: FC<Props> = ({ form, handleSubmission }) => {

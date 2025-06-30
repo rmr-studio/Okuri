@@ -47,6 +47,51 @@ export const fetchUserClients = async (session: Session | null): Promise<Client[
     }
 };
 
+export const updateClient = async (session: Session | null, client: Client): Promise<Client> => {
+    try {
+        // Validate session and access token
+        if (!session?.access_token) {
+            throw fromError({
+                message: "No active session found",
+                status: 401,
+                error: "NO_SESSION",
+            });
+        }
+
+        const url = api();
+
+        const response = await fetch(`${url}/v1/client/${client.id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify(client),
+        });
+
+        if (response.ok) {
+            return await response.json();
+        }
+        // Parse server error response
+        let errorData;
+        try {
+            errorData = await response.json();
+        } catch {
+            errorData = {
+                message: `Failed to update client: ${response.status} ${response.statusText}`,
+                status: response.status,
+                error: "SERVER_ERROR",
+            };
+        }
+        throw fromError(errorData);
+    } catch (error) {
+        if (isResponseError(error)) throw error;
+
+        // Convert any caught error to ResponseError
+        throw fromError(error);
+    }
+};
+
 export const getClient = async (session: Session | null, id: string): Promise<Client> => {
     try {
         // Validate id is a UUID
