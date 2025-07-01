@@ -2,24 +2,25 @@ import { Brain, Cloud, Shield, Zap } from "lucide-react";
 
 const features = [
     {
-        name: "AI-Powered Analytics",
+        name: "Automated Invoice Generation",
         description:
-            "Harness the power of machine learning to derive actionable insights from your data.",
+            "Harness the power of our software to automatically turn your billable hours into ready to go Invoices to send straight to your client",
         icon: Brain,
     },
     {
-        name: "Cloud-Native Architecture",
+        name: "Seamless Client Management",
         description:
-            "Scalable, resilient, and efficient solutions built for the modern cloud ecosystem.",
+            "Store, manage and update all of your client details in a singular easy to use Platform.",
         icon: Cloud,
     },
     {
-        name: "Enterprise-Grade Security",
-        description: "State-of-the-art security measures to protect your most valuable assets.",
+        name: "Efficienct Invoice Storage",
+        description:
+            "Store all generated Invoices in our storage systems. Ready and available for when you need them most.",
         icon: Shield,
     },
     {
-        name: "High-Performance Systems",
+        name: "Improved Productivity",
         description:
             "Optimized for speed and efficiency, our solutions deliver unparalleled performance.",
         icon: Zap,
