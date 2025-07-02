@@ -56,7 +56,7 @@ class DocumentGenerationService {
         //TODO: GENERATE ADDRESS BLOCK
 //        document.add(Paragraph(invoice.client.address, regularFont))
         document.add(Paragraph(invoice.client.phone, regularFont))
-        document.add(Paragraph("NDIS number: ${invoice.client.NDISnumber}", regularFont))
+        document.add(Paragraph("NDIS number: ${invoice.client.ndisNumber}", regularFont))
         document.add(Chunk.NEWLINE)
 
         // Billable items table

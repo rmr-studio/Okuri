@@ -9,7 +9,7 @@ import java.util.*
 
 @Entity
 @Table(
-    name = "client",
+    name = "clients",
     uniqueConstraints = [
         UniqueConstraint(name = "uq_client_phone_user", columnNames = ["user_id", "phone"]),
         UniqueConstraint(name = "uq_client_ndis_user", columnNames = ["user_id", "ndis_number"])

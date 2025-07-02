@@ -15,7 +15,7 @@ class SecurityConditions {
             }
 
             it.claims["sub"]
-        } == client.userId
+        } == client.userId.toString()
     }
 
     fun doesUserOwnInvoice(invoice: Invoice): Boolean {
@@ -25,7 +25,7 @@ class SecurityConditions {
             }
 
             it.claims["sub"]
-        } == invoice.user.id
+        } == invoice.user.id.toString()
     }
 
 }
