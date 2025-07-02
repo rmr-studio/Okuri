@@ -57,22 +57,39 @@ export const ClientOverview = () => {
 
     const clientMutation = useMutation({
         mutationFn: (client: Client) => updateClient(session, client),
-        onMutate: () => {
-            toastRef.current = toast.loading("Creating New Client...");
-        },
-        onSuccess: () => {
-            toast.dismiss(toastRef.current);
-            toast.success("Client created successfully");
+        // Optimistic update
+        onMutate: async (updatedClient) => {
+            // Cancel any outgoing refetches to avoid overwriting the optimistic update
+            await queryClient.cancelQueries({ queryKey: ["client", client?.id] });
 
-            // Alter Client details stored in cache
-            queryClient.setQueryData(["clientOverview"], (oldData: Client | undefined) => {
-                if (!oldData) return oldData;
-                return { ...oldData, ...client };
-            });
+            // Snapshot the previous value
+            const previousClient = queryClient.getQueryData<Client>(["client", client?.id]);
+
+            // Optimistically update the cache
+            queryClient.setQueryData(["client", client?.id], updatedClient);
+
+            // Start the toast
+            toastRef.current = toast.loading("Editing Client Details...");
+
+            // Return context for rollback on error
+            return { previousClient };
         },
-        onError: (error) => {
+        onSuccess: (data) => {
             toast.dismiss(toastRef.current);
-            toast.error(`Failed to create client: ${error.message}`);
+            toast.success("Client updated successfully");
+
+            // Ensure the cache is updated with the server response
+            queryClient.setQueryData(["client", data.id], data);
+        },
+        onError: (error, _variables, context) => {
+            // Roll back to the previous data on error
+            queryClient.setQueryData(["client", client?.id], context?.previousClient);
+            toast.dismiss(toastRef.current);
+            toast.error(`Failed to update client: ${error.message}`);
+        },
+        // Always refetch after error or success to ensure data consistency (optional)
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["client", client?.id] });
         },
     });
 

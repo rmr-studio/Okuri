@@ -203,8 +203,8 @@ export const ClientForm: FC<Props> = ({ form, handleSubmission, renderFooter }) 
                         />
                     </div>
                 </section>
+                {renderFooter()}
             </form>
-            {renderFooter()}
         </Form>
     );
 };
