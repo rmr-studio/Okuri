@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import okare.core.entity.invoice.toModel
 import okare.core.models.client.request.LineItemCreationRequest
 import okare.core.models.invoice.LineItem
-import okare.core.service.invoice.LineItemService
+import okare.core.service.client.LineItemService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
