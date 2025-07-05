@@ -123,27 +123,27 @@ const PayCalculator: React.FC<PayCalculatorProps> = ({
 
     return (
         <div className="overflow-x-auto">
-            <table className="min-w-full border rounded-lg bg-white">
+            <table className="min-w-full border rounded-lg bg-background border-border">
                 <thead>
-                    <tr className="bg-gray-100">
-                        <th className="px-2 py-2">Line Item</th>
-                        <th className="px-2 py-2">Rate Type</th>
-                        <th className="px-2 py-2">Rate</th>
-                        <th className="px-2 py-2">
+                    <tr className="bg-muted">
+                        <th className="px-2 py-2 text-foreground">Line Item</th>
+                        <th className="px-2 py-2 text-foreground">Rate Type</th>
+                        <th className="px-2 py-2 text-foreground">Rate</th>
+                        <th className="px-2 py-2 text-foreground">
                             {rows[0]?.rateType === "TRAVEL"
                                 ? "Distance"
                                 : "Hours"}
                         </th>
-                        <th className="px-2 py-2">Total</th>
+                        <th className="px-2 py-2 text-foreground">Total</th>
                         <th className="px-2 py-2"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {rows.map((row, idx) => (
-                        <tr key={idx} className="border-b">
+                        <tr key={idx} className="border-b border-border">
                             <td className="px-2 py-1">
                                 <select
-                                    className="w-full border rounded px-2 py-1"
+                                    className="w-full border border-border rounded px-2 py-1 bg-background text-foreground"
                                     value={row.lineItemId}
                                     onChange={(e) =>
                                         updateRow(idx, {
@@ -162,7 +162,7 @@ const PayCalculator: React.FC<PayCalculatorProps> = ({
                             </td>
                             <td className="px-2 py-1">
                                 <select
-                                    className="w-full border rounded px-2 py-1"
+                                    className="w-full border border-border rounded px-2 py-1 bg-background text-foreground"
                                     value={row.rateType}
                                     onChange={(e) =>
                                         updateRow(idx, {
@@ -179,7 +179,7 @@ const PayCalculator: React.FC<PayCalculatorProps> = ({
                             </td>
                             <td className="px-2 py-1">
                                 <input
-                                    className="w-full border rounded px-2 py-1 text-right"
+                                    className="w-full border border-border rounded px-2 py-1 text-right bg-background text-foreground"
                                     type="number"
                                     min="0"
                                     step="0.01"
@@ -195,7 +195,7 @@ const PayCalculator: React.FC<PayCalculatorProps> = ({
                             </td>
                             <td className="px-2 py-1">
                                 <input
-                                    className="w-full border rounded px-2 py-1 text-right"
+                                    className="w-full border border-border rounded px-2 py-1 text-right bg-background text-foreground"
                                     type="number"
                                     min="0"
                                     step="0.01"
@@ -210,13 +210,13 @@ const PayCalculator: React.FC<PayCalculatorProps> = ({
                                     required
                                 />
                             </td>
-                            <td className="px-2 py-1 text-right">
+                            <td className="px-2 py-1 text-right text-foreground">
                                 ${row.total.toFixed(2)}
                             </td>
                             <td className="px-2 py-1 text-center">
                                 <button
                                     type="button"
-                                    className="text-red-500 hover:text-red-700"
+                                    className="text-destructive hover:text-destructive-foreground rounded px-2 py-1"
                                     onClick={() => removeRow(idx)}
                                     aria-label="Remove row"
                                     disabled={rows.length === 1}
@@ -231,11 +231,11 @@ const PayCalculator: React.FC<PayCalculatorProps> = ({
                     <tr>
                         <td
                             colSpan={4}
-                            className="text-right font-semibold px-2 py-2"
+                            className="text-right font-semibold px-2 py-2 text-foreground"
                         >
                             Invoice Total
                         </td>
-                        <td className="text-right font-bold px-2 py-2">
+                        <td className="text-right font-bold px-2 py-2 text-primary">
                             ${invoiceTotal.toFixed(2)}
                         </td>
                         <td></td>

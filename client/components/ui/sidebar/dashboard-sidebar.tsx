@@ -1,7 +1,14 @@
 "use client";
 import { useProfile } from "@/hooks/useProfile";
 import { SidebarGroupProps } from "@/lib/interfaces/interface";
-import { Building2, CalendarHeart, CogIcon, TrendingUpDown, UserPlus, Users } from "lucide-react";
+import {
+    Building2,
+    CalendarHeart,
+    CogIcon,
+    TrendingUpDown,
+    UserPlus,
+    Users,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "./root-sidebar";
 
@@ -19,22 +26,15 @@ export const DashboardSidebar = () => {
                     icon: Building2,
                     hidden: false,
                     title: "New Invoice",
-                    url: `/dashboard/invoices/new`,
-                    isActive: pathName === `/dashboard/invoices/new`,
+                    url: `/dashboard/invoice/new`,
+                    isActive: pathName === `/dashboard/invoice/new`,
                 },
                 {
                     icon: Users,
                     hidden: false,
                     title: "Generated",
-                    url: `/dashboard/invoices/`,
-                    isActive: pathName.startsWith(`/dashboard/invoices/`),
-                },
-                {
-                    icon: Users,
-                    hidden: false,
-                    title: "In Progress",
-                    url: `/dashboard/invoices/in-progress`,
-                    isActive: pathName.startsWith(`/dashboard/invoices/in-progress`),
+                    url: `/dashboard/invoice/`,
+                    isActive: pathName === `/dashboard/invoice/`,
                 },
             ],
         },
@@ -54,6 +54,25 @@ export const DashboardSidebar = () => {
                     title: "All Clients",
                     url: `/dashboard/clients`,
                     isActive: pathName === `/dashboard/clients`,
+                },
+            ],
+        },
+        {
+            title: "Line Items",
+            items: [
+                {
+                    icon: UserPlus,
+                    hidden: false,
+                    title: "New Line Item",
+                    url: "/dashboard/item/new",
+                    isActive: pathName.startsWith(`/dashboard/item/new`),
+                },
+                {
+                    icon: Users,
+                    hidden: false,
+                    title: "All Line Items",
+                    url: `/dashboard/item`,
+                    isActive: pathName === `/dashboard/item`,
                 },
             ],
         },

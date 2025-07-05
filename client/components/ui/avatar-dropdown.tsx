@@ -12,7 +12,12 @@ import {
 import { User } from "@/lib/interfaces/user.interface";
 import { getInitials } from "@/lib/util/utils";
 
-import { ArrowLeftToLine, Building2, Settings, User as UserIcon } from "lucide-react";
+import {
+    ArrowLeftToLine,
+    Building2,
+    Settings,
+    User as UserIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FC } from "react";
@@ -42,15 +47,19 @@ export const UserProfileDropdown: FC<Props> = ({ user }) => {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Avatar className="rounded-md ">
-                    <AvatarFallback className="rounded-md">{getInitials(name)}</AvatarFallback>
+                <Avatar className="rounded-md cursor-pointer">
+                    <AvatarFallback className="rounded-md">
+                        {getInitials(name)}
+                    </AvatarFallback>
                 </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="px-2 mx-4 mt-1">
                 <DropdownMenuGroup>
                     <DropdownMenuItem className="pointer-events-none">
                         <UserIcon />
-                        <span className="ml-2 text-xs font-semibold">{user.email}</span>
+                        <span className="ml-2 text-xs font-semibold">
+                            {user.email}
+                        </span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
@@ -84,11 +93,16 @@ export const UserProfileDropdown: FC<Props> = ({ user }) => {
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                    <Link href={"https://www.github.com/usepaladin"} target="_blank">
+                    <Link
+                        href={"https://www.github.com/usepaladin"}
+                        target="_blank"
+                    >
                         <DropdownMenuItem>
                             <FaGithub />
 
-                            <span className="ml-2 text-xs text-content">Source Code</span>
+                            <span className="ml-2 text-xs text-content">
+                                Source Code
+                            </span>
                         </DropdownMenuItem>
                     </Link>
                 </DropdownMenuGroup>

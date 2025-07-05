@@ -35,20 +35,21 @@ const LineItemForm: FC<Props> = ({ form, handleSubmission, renderFooter }) => {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmission)}>
-                <section>
+                <section className="bg-background border border-border rounded-lg shadow p-6">
                     <div className="mb-6">
                         <FormField
                             control={form.control}
                             name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="font-semibold">
+                                    <FormLabel className="font-semibold text-foreground">
                                         Name *
                                     </FormLabel>
                                     <FormControl>
                                         <Input
                                             {...field}
                                             placeholder="Line Item Name"
+                                            className="bg-background text-foreground border-border"
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -62,11 +63,14 @@ const LineItemForm: FC<Props> = ({ form, handleSubmission, renderFooter }) => {
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Description</FormLabel>
+                                    <FormLabel className="text-foreground">
+                                        Description
+                                    </FormLabel>
                                     <FormControl>
                                         <Input
                                             {...field}
                                             placeholder="Description (optional)"
+                                            className="bg-background text-foreground border-border"
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -80,7 +84,7 @@ const LineItemForm: FC<Props> = ({ form, handleSubmission, renderFooter }) => {
                             name="chargeRate"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="font-semibold">
+                                    <FormLabel className="font-semibold text-foreground">
                                         Charge Rate *
                                     </FormLabel>
                                     <FormControl>
@@ -90,6 +94,7 @@ const LineItemForm: FC<Props> = ({ form, handleSubmission, renderFooter }) => {
                                             type="number"
                                             min="0"
                                             step="0.01"
+                                            className="bg-background text-foreground border-border"
                                         />
                                     </FormControl>
                                     <FormMessage />

@@ -46,23 +46,27 @@ const NewInvoicePage = () => {
 
     return (
         <div className="max-w-3xl mx-auto mt-8 px-2">
-            <h1 className="text-2xl font-bold mb-6">Create New Invoice</h1>
+            <h1 className="text-2xl font-bold mb-6 text-foreground">
+                Create New Invoice
+            </h1>
             <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Invoice Details */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-lg font-semibold mb-4">
+                <section className="bg-background rounded-lg shadow border border-border p-6">
+                    <h2 className="text-lg font-semibold mb-4 text-foreground">
                         Invoice Details
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block font-medium mb-1">
+                            <label className="block font-medium mb-1 text-foreground">
                                 Client
                             </label>
                             {loadingClients ? (
-                                <div>Loading clients...</div>
+                                <div className="text-muted-foreground">
+                                    Loading clients...
+                                </div>
                             ) : (
                                 <select
-                                    className="w-full border rounded px-3 py-2"
+                                    className="w-full border border-border rounded px-3 py-2 bg-background text-foreground"
                                     value={clientId}
                                     onChange={(e) =>
                                         setClientId(e.target.value)
@@ -80,11 +84,11 @@ const NewInvoicePage = () => {
                             )}
                         </div>
                         <div>
-                            <label className="block font-medium mb-1">
+                            <label className="block font-medium mb-1 text-foreground">
                                 Invoice Number
                             </label>
                             <input
-                                className="w-full border rounded px-3 py-2"
+                                className="w-full border border-border rounded px-3 py-2 bg-background text-foreground"
                                 type="text"
                                 value={invoiceNumber}
                                 onChange={(e) =>
@@ -94,11 +98,11 @@ const NewInvoicePage = () => {
                             />
                         </div>
                         <div>
-                            <label className="block font-medium mb-1">
+                            <label className="block font-medium mb-1 text-foreground">
                                 Period Start
                             </label>
                             <input
-                                className="w-full border rounded px-3 py-2"
+                                className="w-full border border-border rounded px-3 py-2 bg-background text-foreground"
                                 type="date"
                                 value={periodStart}
                                 onChange={(e) => setPeriodStart(e.target.value)}
@@ -106,11 +110,11 @@ const NewInvoicePage = () => {
                             />
                         </div>
                         <div>
-                            <label className="block font-medium mb-1">
+                            <label className="block font-medium mb-1 text-foreground">
                                 Period End
                             </label>
                             <input
-                                className="w-full border rounded px-3 py-2"
+                                className="w-full border border-border rounded px-3 py-2 bg-background text-foreground"
                                 type="date"
                                 value={periodEnd}
                                 onChange={(e) => setPeriodEnd(e.target.value)}
@@ -121,12 +125,14 @@ const NewInvoicePage = () => {
                 </section>
 
                 {/* Pay Calculator */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-lg font-semibold mb-4">
+                <section className="bg-background rounded-lg shadow border border-border p-6">
+                    <h2 className="text-lg font-semibold mb-4 text-foreground">
                         Pay Calculator
                     </h2>
                     {loadingLineItems ? (
-                        <div>Loading line items...</div>
+                        <div className="text-muted-foreground">
+                            Loading line items...
+                        </div>
                     ) : (
                         <PayCalculator
                             lineItems={lineItems || []}
@@ -134,11 +140,8 @@ const NewInvoicePage = () => {
                             initialBillables={billables}
                         />
                     )}
-                    <div className="mt-4 text-right text-lg font-bold">
-                        Invoice Total:{" "}
-                        <span className="text-blue-700">
-                            ${invoiceTotal.toFixed(2)}
-                        </span>
+                    <div className="mt-4 text-right text-lg font-bold text-primary">
+                        Invoice Total: <span>${invoiceTotal.toFixed(2)}</span>
                     </div>
                 </section>
 
@@ -166,59 +169,65 @@ const NewInvoicePage = () => {
 
             {/* Invoice Preview Modal (styled) */}
             {showPreview && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 print:bg-transparent print:relative print:inset-auto">
-                    <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full relative print:shadow-none print:p-4">
+                <div className="fixed inset-0 bg-black/40 dark:bg-black/70 flex items-center justify-center z-50 print:bg-transparent print:relative print:inset-auto">
+                    <div className="bg-background rounded-lg shadow-lg p-8 max-w-2xl w-full relative print:shadow-none print:p-4 border border-border">
                         <button
-                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 print:hidden"
+                            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground print:hidden"
                             onClick={() => setShowPreview(false)}
                         >
                             ×
                         </button>
                         <div className="mb-6">
-                            <h2 className="text-2xl font-bold mb-2">
+                            <h2 className="text-2xl font-bold mb-2 text-foreground">
                                 Invoice Preview
                             </h2>
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-2">
                                 <div>
-                                    <div className="font-semibold">Client:</div>
-                                    <div>{getClientName()}</div>
+                                    <div className="font-semibold text-foreground">
+                                        Client:
+                                    </div>
+                                    <div className="text-foreground">
+                                        {getClientName()}
+                                    </div>
                                 </div>
                                 <div>
-                                    <div className="font-semibold">
+                                    <div className="font-semibold text-foreground">
                                         Invoice #:
                                     </div>
-                                    <div>
+                                    <div className="text-foreground">
                                         {invoiceNumber || (
-                                            <span className="text-gray-400">
+                                            <span className="text-muted-foreground">
                                                 (auto)
                                             </span>
                                         )}
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="font-semibold">Period:</div>
-                                    <div>
+                                    <div className="font-semibold text-foreground">
+                                        Period:
+                                    </div>
+                                    <div className="text-foreground">
                                         {periodStart} to {periodEnd}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <table className="min-w-full border rounded bg-white mb-4">
+                        <table className="min-w-full border rounded bg-background mb-4 border-border">
                             <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="px-2 py-2 text-left">
+                                <tr className="bg-muted">
+                                    <th className="px-2 py-2 text-left text-foreground">
                                         Line Item
                                     </th>
-                                    <th className="px-2 py-2 text-left">
+                                    <th className="px-2 py-2 text-left text-foreground">
                                         Rate Type
                                     </th>
-                                    <th className="px-2 py-2 text-right">
+                                    <th className="px-2 py-2 text-right text-foreground">
                                         Rate
                                     </th>
-                                    <th className="px-2 py-2 text-right">
+                                    <th className="px-2 py-2 text-right text-foreground">
                                         Hours/Distance
                                     </th>
-                                    <th className="px-2 py-2 text-right">
+                                    <th className="px-2 py-2 text-right text-foreground">
                                         Total
                                     </th>
                                 </tr>
@@ -228,29 +237,32 @@ const NewInvoicePage = () => {
                                     <tr>
                                         <td
                                             colSpan={5}
-                                            className="text-center text-gray-500 py-4"
+                                            className="text-center text-muted-foreground py-4"
                                         >
                                             No billable items
                                         </td>
                                     </tr>
                                 ) : (
                                     billables.map((row, idx) => (
-                                        <tr key={idx} className="border-b">
-                                            <td className="px-2 py-1">
+                                        <tr
+                                            key={idx}
+                                            className="border-b border-border"
+                                        >
+                                            <td className="px-2 py-1 text-foreground">
                                                 {getLineItemName(
                                                     row.lineItemId
                                                 )}
                                             </td>
-                                            <td className="px-2 py-1">
+                                            <td className="px-2 py-1 text-foreground">
                                                 {row.rateType.replace("_", " ")}
                                             </td>
-                                            <td className="px-2 py-1 text-right">
+                                            <td className="px-2 py-1 text-right text-foreground">
                                                 ${row.rate.toFixed(2)}
                                             </td>
-                                            <td className="px-2 py-1 text-right">
+                                            <td className="px-2 py-1 text-right text-foreground">
                                                 {row.hoursOrDistance}
                                             </td>
-                                            <td className="px-2 py-1 text-right">
+                                            <td className="px-2 py-1 text-right text-foreground">
                                                 ${row.total.toFixed(2)}
                                             </td>
                                         </tr>
@@ -261,11 +273,11 @@ const NewInvoicePage = () => {
                                 <tr>
                                     <td
                                         colSpan={4}
-                                        className="text-right font-semibold px-2 py-2"
+                                        className="text-right font-semibold px-2 py-2 text-foreground"
                                     >
                                         Invoice Total
                                     </td>
-                                    <td className="text-right font-bold px-2 py-2">
+                                    <td className="text-right font-bold px-2 py-2 text-primary">
                                         ${invoiceTotal.toFixed(2)}
                                     </td>
                                 </tr>

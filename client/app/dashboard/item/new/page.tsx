@@ -39,25 +39,31 @@ const NewLineItemPage = () => {
 
     return (
         <div className="max-w-xl mx-auto mt-8">
-            <h1 className="text-2xl font-bold mb-4">Add New Line Item</h1>
-            <LineItemForm
-                form={form}
-                handleSubmission={handleSubmission}
-                renderFooter={() => (
-                    <div className="mt-4 flex flex-col gap-2">
-                        <button
-                            type="submit"
-                            className="btn btn-primary"
-                            disabled={loading}
-                        >
-                            {loading ? "Saving..." : "Create Line Item"}
-                        </button>
-                        {error && (
-                            <div className="text-red-500 text-sm">{error}</div>
-                        )}
-                    </div>
-                )}
-            />
+            <section className="bg-background border border-border rounded-lg shadow p-6">
+                <h1 className="text-2xl font-bold mb-4 text-foreground">
+                    Add New Line Item
+                </h1>
+                <LineItemForm
+                    form={form}
+                    handleSubmission={handleSubmission}
+                    renderFooter={() => (
+                        <div className="mt-4 flex flex-col gap-2">
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={loading}
+                            >
+                                {loading ? "Saving..." : "Create Line Item"}
+                            </button>
+                            {error && (
+                                <div className="text-destructive text-sm">
+                                    {error}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                />
+            </section>
         </div>
     );
 };
