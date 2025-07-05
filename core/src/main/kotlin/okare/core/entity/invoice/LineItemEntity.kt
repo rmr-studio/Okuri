@@ -1,6 +1,7 @@
 package okare.core.entity.invoice
 
 import jakarta.persistence.*
+import okare.core.models.invoice.LineItem
 import java.math.BigDecimal
 import java.time.ZonedDateTime
 import java.util.*
@@ -25,13 +26,13 @@ data class LineItemEntity(
     val userId: UUID,
 
     @Column(name = "name", nullable = false)
-    val name: String,
+    var name: String,
 
     @Column(name = "description", nullable = true)
-    val description: String? = null,
+    var description: String? = null,
 
     @Column(name = "charge_rate", nullable = false, precision = 19, scale = 4)
-    val chargeRate: BigDecimal,
+    var chargeRate: BigDecimal,
 
     @Column(
         name = "created_at",
@@ -50,5 +51,20 @@ data class LineItemEntity(
     @PreUpdate
     fun onPreUpdate() {
         updatedAt = ZonedDateTime.now()
+    }
+}
+
+fun LineItemEntity.toModel(): LineItem {
+    this.id.let {
+        if (it == null) {
+            throw IllegalArgumentException("LineItemEntity id cannot be null")
+        }
+        return LineItem(
+            id = it,
+            userId = this.userId,
+            description = this.description,
+            name = this.name,
+            chargeRate = this.chargeRate,
+        )
     }
 }
