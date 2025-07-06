@@ -3,6 +3,7 @@ package okare.core.service.client
 import io.github.oshai.kotlinlogging.KLogger
 import io.ktor.server.plugins.*
 import okare.core.entity.client.ClientEntity
+import okare.core.entity.client.toModel
 import okare.core.models.client.Client
 import okare.core.models.client.request.ClientCreationRequest
 import okare.core.repository.client.ClientRepository
@@ -43,7 +44,7 @@ class ClientService(
             ).run {
                 repository.save(this).let { entity ->
                     logger.info { "Client Service => User $it => Created new client with ID: ${entity.id}" }
-                    return Client.fromEntity(entity)
+                    return entity.toModel()
                 }
             }
         }
@@ -59,7 +60,7 @@ class ClientService(
         }.run {
             repository.save(this)
             logger.info { "Client Service => Updated client profile with ID: ${this.id}" }
-            return Client.fromEntity(this)
+            return this.toModel()
         }
     }
 

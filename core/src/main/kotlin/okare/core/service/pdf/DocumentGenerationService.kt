@@ -17,7 +17,22 @@ import java.util.*
 @Service
 class DocumentGenerationService {
 
-    fun generateInvoiceDocument(invoice: Invoice): ByteArray {
+    fun generateInvoiceDocument(invoice: Invoice, templateData: String? = null): ByteArray {
+        // If templateData is provided, use it to customize the PDF layout.
+        // For now, fallback to the default implementation if templateData is null.
+        // In a real implementation, parse templateData (e.g., JSON) and render accordingly.
+        if (templateData != null) {
+            // TODO: Parse templateData and use it to render the PDF dynamically
+            // For now, just add a note to the PDF
+            val outputStream = ByteArrayOutputStream()
+            val document = Document(PageSize.A4, 36f, 36f, 54f, 36f)
+            PdfWriter.getInstance(document, outputStream)
+            document.open()
+            document.add(Paragraph("Custom Template Used", Font(Font.HELVETICA, 16f, Font.BOLD)))
+            document.add(Paragraph("Template Data: $templateData"))
+            document.close()
+            return outputStream.toByteArray()
+        }
         val outputStream = ByteArrayOutputStream()
         val document = Document(PageSize.A4, 36f, 36f, 54f, 36f)
         PdfWriter.getInstance(document, outputStream)
