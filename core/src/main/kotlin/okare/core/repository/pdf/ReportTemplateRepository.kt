@@ -8,6 +8,6 @@ import java.util.*
 @Repository
 interface ReportTemplateRepository : JpaRepository<ReportTemplateEntity, UUID> {
     fun findByOwnerId(ownerId: UUID): List<ReportTemplateEntity>
-    fun findByTypeAndOwnerIdOrIsBuiltIn(type: String, ownerId: UUID, isBuiltIn: Boolean = true): List<ReportTemplateEntity>
-    fun findByTypeAndIsDefaultAndOwnerId(type: String, isDefault: Boolean, ownerId: UUID): ReportTemplateEntity?
+    fun findByTypeAndOwnerIdOrPremade(type: String, ownerId: UUID, premade: Boolean = true): List<ReportTemplateEntity>
+    fun findByTypeAndDefaultAndOwnerId(type: String, isDefault: Boolean, ownerId: UUID): ReportTemplateEntity?
 } 

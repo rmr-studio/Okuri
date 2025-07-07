@@ -138,15 +138,16 @@ ALTER TABLE public.invoice
 
 -- Report Templates
 
-CREATE TABLE IF NOT EXISTS report_templates (
-    id UUID PRIMARY KEY,
-    owner_id UUID NULL,
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(64) NOT NULL,
-    template_data TEXT NOT NULL,
-    is_default BOOLEAN NOT NULL DEFAULT FALSE,
-    is_built_in BOOLEAN NOT NULL DEFAULT FALSE,
-    CONSTRAINT fk_owner FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS report_templates
+(
+    id            UUID PRIMARY KEY,
+    owner_id      UUID         NULL,
+    name          VARCHAR(255) NOT NULL,
+    type          VARCHAR(64)  NOT NULL,
+    template_data TEXT         NOT NULL,
+    is_default    BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_premade    BOOLEAN      NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 

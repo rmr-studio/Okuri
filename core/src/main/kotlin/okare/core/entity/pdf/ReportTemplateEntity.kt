@@ -24,8 +24,8 @@ data class ReportTemplateEntity(
     val templateData: String, // JSON or other format
 
     @Column(name = "is_default", nullable = false)
-    val isDefault: Boolean = false,
+    val default: Boolean = false,
 
-    @Column(name = "is_built_in", nullable = false)
-    val isBuiltIn: Boolean = false
+    @Column(name = "is_premade", nullable = false)
+    val premade: Boolean = false
 ) 

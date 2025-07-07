@@ -11,12 +11,12 @@ class ReportTemplateService(
     private val repository: ReportTemplateRepository
 ) {
     fun getTemplatesForUser(userId: UUID, type: String): List<ReportTemplate> {
-        return repository.findByTypeAndOwnerIdOrIsBuiltIn(type, userId, true)
+        return repository.findByTypeAndOwnerIdOrPremade(type, userId, premade = true)
             .map { it.toModel() }
     }
 
     fun getDefaultTemplateForUser(userId: UUID, type: String): ReportTemplate? {
-        return repository.findByTypeAndIsDefaultAndOwnerId(type, true, userId)?.toModel()
+        return repository.findByTypeAndDefaultAndOwnerId(type, true, userId)?.toModel()
     }
 
     fun getTemplateById(id: UUID): ReportTemplate? {
@@ -30,8 +30,8 @@ class ReportTemplateService(
             name = template.name,
             type = template.type,
             templateData = template.templateData,
-            isDefault = template.isDefault,
-            isBuiltIn = template.isBuiltIn
+            default = template.isDefault,
+            premade = template.isBuiltIn
         )
         return repository.save(entity).toModel()
     }
@@ -41,7 +41,7 @@ class ReportTemplateService(
         val updated = entity.copy(
             name = template.name,
             templateData = template.templateData,
-            isDefault = template.isDefault
+            default = template.isDefault
         )
         return repository.save(updated).toModel()
     }
@@ -57,6 +57,6 @@ fun ReportTemplateEntity.toModel() = ReportTemplate(
     name = name,
     type = type,
     templateData = templateData,
-    isDefault = isDefault,
-    isBuiltIn = isBuiltIn
+    isDefault = default,
+    isBuiltIn = premade
 ) 
