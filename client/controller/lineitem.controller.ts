@@ -15,7 +15,7 @@ export const fetchUserLineItems = async (
             });
         }
         const url = api();
-        const response = await fetch(`${url}/v1/lineitem/`, {
+        const response = await fetch(`${url}/v1/item/`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -55,7 +55,7 @@ export const createLineItem = async (
             });
         }
         const url = api();
-        const response = await fetch(`${url}/v1/lineitem/`, {
+        const response = await fetch(`${url}/v1/item/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -96,7 +96,7 @@ export const updateLineItem = async (
             });
         }
         const url = api();
-        const response = await fetch(`${url}/v1/lineitem/${lineItem.id}`, {
+        const response = await fetch(`${url}/v1/item/${lineItem.id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -144,7 +144,7 @@ export const getLineItemById = async (
             });
         }
         const url = api();
-        const response = await fetch(`${url}/v1/lineitem/${id}`, {
+        const response = await fetch(`${url}/v1/item/${id}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",

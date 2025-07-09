@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import TemplateActions from "./TemplateActions";
 import TemplateForm from "./TemplateForm";
