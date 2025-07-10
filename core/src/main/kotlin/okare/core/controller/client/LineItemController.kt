@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/api/v1/line-item")
+@RequestMapping("/api/v1/item")
 @Tag(name = "Line Item Management", description = "Endpoints for managing line item records")
 class LineItemController(private val lineItemService: LineItemService) {
 

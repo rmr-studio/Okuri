@@ -1,12 +1,12 @@
 "use client";
 
+import { useProfile } from "@/hooks/useProfile";
+import { useReportTemplates } from "@/hooks/useReportTemplates";
 import React, { useEffect, useState } from "react";
 import TemplateActions from "./TemplateActions";
 import TemplateForm from "./TemplateForm";
 import TemplatePreview from "./TemplatePreview";
 
-// TODO: Replace with real user context or props
-const mockUserId = "11111111-1111-1111-1111-111111111111";
 const templateType = "invoice";
 
 export type Template = {
@@ -20,7 +20,6 @@ export type Template = {
 };
 
 const TemplateList: React.FC = () => {
-    const [templates, setTemplates] = useState<Template[]>([]);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
         null
     );
@@ -32,18 +31,17 @@ const TemplateList: React.FC = () => {
         null
     );
 
-    const fetchTemplates = () => {
-        setLoading(true);
-        fetch(`/api/report-templates?userId=${mockUserId}&type=${templateType}`)
-            .then((res) => res.json())
-            .then(setTemplates)
-            .catch(() => setError("Failed to load templates"))
-            .finally(() => setLoading(false));
-    };
+    const { data: user, isLoadingAuth } = useProfile();
+    const {
+        data: templates = [],
+        isLoading,
+        error: fetchError,
+        refetch,
+    } = useReportTemplates(user?.id ?? null, templateType);
 
     useEffect(() => {
-        fetchTemplates();
-    }, []);
+        refetch();
+    }, [user?.id, templateType, refetch]);
 
     const handlePreview = (template: Template) => setSelectedTemplate(template);
     const handleClosePreview = () => setSelectedTemplate(null);
@@ -76,7 +74,7 @@ const TemplateList: React.FC = () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: editingTemplateId,
-                    ownerId: mockUserId,
+                    ownerId: user?.id,
                     ...data,
                     isDefault: false,
                     isBuiltIn: false,
@@ -89,7 +87,7 @@ const TemplateList: React.FC = () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: crypto.randomUUID(),
-                    ownerId: mockUserId,
+                    ownerId: user?.id,
                     ...data,
                     isDefault: false,
                     isBuiltIn: false,
@@ -99,7 +97,7 @@ const TemplateList: React.FC = () => {
         setShowForm(false);
         setEditingTemplateId(null);
         setFormInitialData(null);
-        fetchTemplates();
+        refetch();
     };
 
     const handleDelete = async (template: Template) => {
@@ -107,7 +105,7 @@ const TemplateList: React.FC = () => {
         await fetch(`/api/report-templates/${template.id}`, {
             method: "DELETE",
         });
-        fetchTemplates();
+        refetch();
     };
 
     const handleDuplicate = async (template: Template) => {
@@ -122,7 +120,7 @@ const TemplateList: React.FC = () => {
                 isBuiltIn: false,
             }),
         });
-        fetchTemplates();
+        refetch();
     };
 
     const handleSetDefault = async (template: Template) => {
@@ -130,9 +128,10 @@ const TemplateList: React.FC = () => {
         await Promise.all(
             templates
                 .filter(
-                    (t) => t.ownerId === mockUserId && t.type === template.type
+                    (t: Template) =>
+                        t.ownerId === user?.id && t.type === template.type
                 )
-                .map((t) =>
+                .map((t: Template) =>
                     fetch(`/api/report-templates/${t.id}`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
@@ -143,11 +142,11 @@ const TemplateList: React.FC = () => {
                     })
                 )
         );
-        fetchTemplates();
+        refetch();
     };
 
-    if (loading) return <div>Loading templates...</div>;
-    if (error) return <div>{error}</div>;
+    if (isLoadingAuth || isLoading) return <div>Loading templates...</div>;
+    if (fetchError) return <div>{(fetchError as Error).message}</div>;
 
     return (
         <div>
