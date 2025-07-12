@@ -60,6 +60,27 @@ export const DashboardSidebar = () => {
             ],
         },
         {
+            title: "Templates",
+            items: [
+                {
+                    icon: LayoutTemplate,
+                    hidden: false,
+                    title: "Manage Templates",
+                    url: "/dashboard/templates",
+                    isActive: pathName.startsWith("/dashboard/templates"),
+                },
+                {
+                    icon: FileText,
+                    hidden: false,
+                    title: "Select Template",
+                    url: "/dashboard/templates/select",
+                    isActive: pathName.startsWith(
+                        "/dashboard/templates/select"
+                    ),
+                },
+            ],
+        },
+        {
             title: "Line Items",
             items: [
                 {
@@ -107,27 +128,6 @@ export const DashboardSidebar = () => {
                     title: "Settings",
                     url: `/dashboard/settings`,
                     isActive: pathName.startsWith(`/dashboard/settings`),
-                },
-            ],
-        },
-        {
-            title: "Templates",
-            items: [
-                {
-                    icon: LayoutTemplate,
-                    hidden: false,
-                    title: "Manage Templates",
-                    url: "/dashboard/templates",
-                    isActive: pathName.startsWith("/dashboard/templates"),
-                },
-                {
-                    icon: FileText,
-                    hidden: false,
-                    title: "Select Template",
-                    url: "/dashboard/templates/select",
-                    isActive: pathName.startsWith(
-                        "/dashboard/templates/select"
-                    ),
                 },
             ],
         },

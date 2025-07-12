@@ -11,19 +11,34 @@ import { updateClient } from "@/controller/client.controller";
 import { useClientOverview } from "@/hooks/useClientOverview";
 import { Client } from "@/lib/interfaces/client.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ArrowLeft, CreditCard, Edit, MapPin, Phone, User } from "lucide-react";
+import {
+    AlertCircle,
+    ArrowLeft,
+    CreditCard,
+    Edit,
+    MapPin,
+    Phone,
+    User,
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ClientCreation } from "./ClientForm";
 import EditClient from "./EditClient";
 
 export const ClientOverview = () => {
-    const { data: client, isLoading, error, isLoadingAuth } = useClientOverview();
+    const {
+        data: client,
+        isLoading,
+        error,
+        isLoadingAuth,
+    } = useClientOverview();
     const { session, client: authClient } = useAuth();
     const [editingClient, setEditingClient] = useState<boolean>(false);
     const toastRef = useRef<string | number | undefined>(undefined);
     const queryClient = useQueryClient();
+    const router = useRouter();
 
     const openEditDrawer = () => {
         setEditingClient(true);
@@ -60,10 +75,15 @@ export const ClientOverview = () => {
         // Optimistic update
         onMutate: async (updatedClient) => {
             // Cancel any outgoing refetches to avoid overwriting the optimistic update
-            await queryClient.cancelQueries({ queryKey: ["client", client?.id] });
+            await queryClient.cancelQueries({
+                queryKey: ["client", client?.id],
+            });
 
             // Snapshot the previous value
-            const previousClient = queryClient.getQueryData<Client>(["client", client?.id]);
+            const previousClient = queryClient.getQueryData<Client>([
+                "client",
+                client?.id,
+            ]);
 
             // Optimistically update the cache
             queryClient.setQueryData(["client", client?.id], updatedClient);
@@ -83,7 +103,10 @@ export const ClientOverview = () => {
         },
         onError: (error, _variables, context) => {
             // Roll back to the previous data on error
-            queryClient.setQueryData(["client", client?.id], context?.previousClient);
+            queryClient.setQueryData(
+                ["client", client?.id],
+                context?.previousClient
+            );
             toast.dismiss(toastRef.current);
             toast.error(`Failed to update client: ${error.message}`);
         },
@@ -105,7 +128,8 @@ export const ClientOverview = () => {
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                        Failed to load client information. Please try again later.
+                        Failed to load client information. Please try again
+                        later.
                     </AlertDescription>
                 </Alert>
             </div>
@@ -136,14 +160,30 @@ export const ClientOverview = () => {
                             </Link>
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">{client.name}</h1>
-                            <p className="text-muted-foreground">Client Overview</p>
+                            <h1 className="text-3xl font-bold tracking-tight">
+                                {client.name}
+                            </h1>
+                            <p className="text-muted-foreground">
+                                Client Overview
+                            </p>
                         </div>
                     </div>
-                    <Button onClick={openEditDrawer}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Client
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button onClick={openEditDrawer}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Client
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() =>
+                                router.push(
+                                    `/dashboard/invoice/new?clientId=${client.id}`
+                                )
+                            }
+                        >
+                            New Invoice
+                        </Button>
+                    </div>
                 </div>
 
                 <Separator />
@@ -153,7 +193,9 @@ export const ClientOverview = () => {
                     {/* Basic Information */}
                     <Card>
                         <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Basic Information</CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                Basic Information
+                            </CardTitle>
                             <User className="h-4 w-4 ml-auto text-muted-foreground" />
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -161,16 +203,11 @@ export const ClientOverview = () => {
                                 <p className="text-sm font-medium text-muted-foreground">
                                     Full Name
                                 </p>
-                                <p className="text-lg font-semibold">{client.name}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Client ID
-                                </p>
-                                <p className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                                    {client.id}
+                                <p className="text-lg font-semibold">
+                                    {client.name}
                                 </p>
                             </div>
+                            {/* Removed Client ID display */}
                         </CardContent>
                     </Card>
 
@@ -190,7 +227,9 @@ export const ClientOverview = () => {
                                 <p className="text-lg">{client.phone}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Status
+                                </p>
                                 <Badge variant="secondary">Active</Badge>
                             </div>
                         </CardContent>
@@ -199,7 +238,9 @@ export const ClientOverview = () => {
                     {/* NDIS Information */}
                     <Card>
                         <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">NDIS Information</CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                NDIS Information
+                            </CardTitle>
                             <CreditCard className="h-4 w-4 ml-auto text-muted-foreground" />
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -207,7 +248,9 @@ export const ClientOverview = () => {
                                 <p className="text-sm font-medium text-muted-foreground">
                                     NDIS Number
                                 </p>
-                                <p className="text-lg font-mono">{client.ndisNumber}</p>
+                                <p className="text-lg font-mono">
+                                    {client.ndisNumber}
+                                </p>
                             </div>
                             <div>
                                 <Badge
@@ -224,14 +267,18 @@ export const ClientOverview = () => {
                 {/* Address Information */}
                 <Card>
                     <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Address Information</CardTitle>
+                        <CardTitle className="text-sm font-medium">
+                            Address Information
+                        </CardTitle>
                         <MapPin className="h-4 w-4 ml-auto text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
                             {client.address && (
                                 <div className="text-sm space-y-1">
-                                    {client.address.street && <p>{client.address.street}</p>}
+                                    {client.address.street && (
+                                        <p>{client.address.street}</p>
+                                    )}
                                     {(client.address.city ||
                                         client.address.state ||
                                         client.address.postalCode) && (
@@ -245,7 +292,9 @@ export const ClientOverview = () => {
                                                 .join(", ")}
                                         </p>
                                     )}
-                                    {client.address.country && <p>{client.address.country}</p>}
+                                    {client.address.country && (
+                                        <p>{client.address.country}</p>
+                                    )}
                                 </div>
                             )}
                             {!client.address && (
@@ -253,35 +302,6 @@ export const ClientOverview = () => {
                                     No address information available
                                 </p>
                             )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-2">
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/clients/${client.id}/appointments`}>
-                                    View Appointments
-                                </Link>
-                            </Button>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/clients/${client.id}/documents`}>
-                                    Documents
-                                </Link>
-                            </Button>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/clients/${client.id}/notes`}>Notes</Link>
-                            </Button>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/clients/${client.id}/billing`}>
-                                    Billing
-                                </Link>
-                            </Button>
                         </div>
                     </CardContent>
                 </Card>
