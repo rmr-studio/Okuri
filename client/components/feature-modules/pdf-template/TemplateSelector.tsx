@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { FC, useState } from "react";
 import TemplatePreview from "./TemplatePreview";
+import { useReportTemplates } from "@/hooks/useReportTemplates";
 
 export type Template = {
     id: string;
@@ -11,34 +12,24 @@ export type Template = {
     premade: boolean;
 };
 
-type TemplateSelectorProps = {
+type Props = {
     userId: string;
     type: string;
     selectedTemplateId?: string;
     onSelect: (id: string) => void;
 };
 
-const TemplateSelector: React.FC<TemplateSelectorProps> = ({
+const TemplateSelector: FC<Props> = ({
     userId,
     type,
     selectedTemplateId,
     onSelect,
 }) => {
-    const [templates, setTemplates] = useState<Template[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [previewTemplate, setPreviewTemplate] = useState<Template | null>(
         null
     );
 
-    useEffect(() => {
-        setLoading(true);
-        fetch(`/api/report-templates?userId=${userId}&type=${type}`)
-            .then((res) => res.json())
-            .then(setTemplates)
-            .catch(() => setError("Failed to load templates"))
-            .finally(() => setLoading(false));
-    }, [userId, type]);
+    const {} = useReportTemplates()
 
     if (loading) return <div>Loading templates...</div>;
     if (error) return <div>{error}</div>;

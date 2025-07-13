@@ -2,24 +2,14 @@
 
 import { useProfile } from "@/hooks/useProfile";
 import { useReportTemplates } from "@/hooks/useReportTemplates";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import TemplateActions from "./TemplateActions";
 import TemplateForm from "./TemplateForm";
 import TemplatePreview from "./TemplatePreview";
 
 const templateType = "invoice";
 
-export type Template = {
-    id: string;
-    ownerId: string | null;
-    name: string;
-    type: string;
-    templateData: string;
-    isDefault: boolean;
-    isBuiltIn: boolean;
-};
-
-const TemplateList: React.FC = () => {
+const TemplateList = () => {
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
         null
     );
