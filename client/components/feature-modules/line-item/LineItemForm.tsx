@@ -16,11 +16,7 @@ export const LineItemFormSchema = z.object({
         .string({ required_error: "Name is required" })
         .min(2, "Name is too short"),
     description: z.string().optional(),
-    chargeRate: z
-        .string({ required_error: "Charge rate is required" })
-        .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-            message: "Charge rate must be a positive number",
-        }),
+    chargeRate: z.coerce.number().min(0, "Charge rate must be greater than 0"),
 });
 
 export type LineItemFormType = z.infer<typeof LineItemFormSchema>;

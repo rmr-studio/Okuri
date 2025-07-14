@@ -1,35 +1,34 @@
 "use client";
 
 import { useAuth } from "@/components/provider/AuthContext";
+import { createLineItem } from "@/controller/lineitem.controller";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { LineItemFormType } from "./LineItemForm";
+import { LineItemFormSchema, LineItemFormType } from "./LineItemForm";
 
 export const NewLineItem = () => {
     const { session, client: authClient } = useAuth();
     const form = useForm<LineItemFormType>({
         resolver: zodResolver(LineItemFormSchema),
-        defaultValues: { name: "", description: "", chargeRate: "" },
+        defaultValues: { name: "", description: "", chargeRate: 0 },
     });
-    const { session } = useAuth();
+
     const router = useRouter();
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    
+    
+
+    const handleCancel = () => {
+        router.push("/dashboard/item");
+    };
 
     const handleSubmission = async (data: LineItemFormType) => {
-        setError(null);
-        setLoading(true);
-        try {
-            await createLineItem(session, {
-                name: data.name,
-                description: data.description,
-                chargeRate: Number(data.chargeRate),
-            });
-            router.push("/dashboard/item");
-        } catch (e: any) {
-            setError(e?.message || "Failed to create line item");
-        } finally {
-            setLoading(false);
-        }
+        if(!session || !authClient) return;
+        
+    
+
+
     };
 
     return (
