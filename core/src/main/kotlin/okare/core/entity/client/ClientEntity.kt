@@ -2,7 +2,7 @@ package okare.core.entity.client
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okare.core.models.user.Address
+import okare.core.models.client.ContactDetails
 import org.hibernate.annotations.Type
 import java.time.ZonedDateTime
 import java.util.*
@@ -30,15 +30,13 @@ data class ClientEntity(
     @Column(name = "name", nullable = false)
     var name: String,
 
+    @Column(name = "contact_details", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
-    @Column(name = "address", nullable = false, columnDefinition = "jsonb")
-    var address: Address,
+    var contactDetails: ContactDetails? = null,
 
-    @Column(name = "phone", nullable = false)
-    var phone: String,
-
-    @Column(name = "ndis_number", nullable = false)
-    var ndisNumber: String,
+    @Column(name = "attributes", columnDefinition = "jsonb")
+    @Type(JsonBinaryType::class)
+    var attributes: Map<String, Any> = emptyMap(), // E.g., {"industry": "Healthcare", "size": "50-100"}
 
     @Column(
         name = "created_at",
@@ -70,9 +68,8 @@ fun ClientEntity.toModel(): okare.core.models.client.Client {
             id = it,
             userId = this.userId,
             name = this.name,
-            address = this.address,
-            phone = this.phone,
-            ndisNumber = this.ndisNumber
+            contactDetails = this.contactDetails,
+            attributes = this.attributes
         )
 
     }

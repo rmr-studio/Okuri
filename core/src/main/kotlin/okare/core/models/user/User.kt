@@ -14,3 +14,6 @@ data class User(
     var chargeRate: ChargeRate? = null,
     var paymentDetails: UserEntity.Payment? = null
 )
+
+
+

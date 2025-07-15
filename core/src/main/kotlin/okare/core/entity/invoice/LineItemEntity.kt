@@ -2,6 +2,7 @@ package okare.core.entity.invoice
 
 import jakarta.persistence.*
 import okare.core.models.invoice.LineItem
+import okare.core.models.invoice.LineItemType
 import java.math.BigDecimal
 import java.time.ZonedDateTime
 import java.util.*
@@ -34,6 +35,9 @@ data class LineItemEntity(
     @Column(name = "charge_rate", nullable = false, precision = 19, scale = 4)
     var chargeRate: BigDecimal,
 
+    @Column(name = "type", nullable = false)
+    var type: LineItemType = LineItemType.SERVICE,
+
     @Column(
         name = "created_at",
         nullable = false,
@@ -65,6 +69,7 @@ fun LineItemEntity.toModel(): LineItem {
             description = this.description,
             name = this.name,
             chargeRate = this.chargeRate,
+            type = this.type
         )
     }
 }

@@ -3,7 +3,7 @@ create extension if not exists "uuid-ossp";
 commit;
 
 -- Users
-
+drop table if exists "users" cascade;
 create table if not exists "users"
 (
     "id"             uuid primary key not null default uuid_generate_v4(),
@@ -12,7 +12,7 @@ create table if not exists "users"
     "phone"          varchar(15)      not null unique,
     "address"        jsonb,
     "company"        jsonb,
-    "charge_rate"    jsonb,
+
     "bsb"            varchar(10)      not null,
     "account_number" varchar(20)      not null,
     "account_name"   varchar(50)      not null,
@@ -63,40 +63,39 @@ end;
 $$;
 
 -- Clients
-
+drop table if exists "clients" cascade;
 create table if not exists "clients"
 (
-    "id"          uuid primary key not null default uuid_generate_v4(),
-    "user_id"     uuid             not null references public.users (id) on delete cascade,
-    "name"        varchar(50)      not null,
-    "phone"       varchar(15)      not null,
-    "address"     jsonb            not null,
-    "ndis_number" varchar(20)      not null,
-    "created_at"  timestamp with time zone  default current_timestamp,
-    "updated_at"  timestamp with time zone  default current_timestamp
+    "id"         uuid primary key not null default uuid_generate_v4(),
+    "user_id"    uuid             not null references public.users (id) on delete cascade,
+    "name"       varchar(50)      not null,
+    "phone"      varchar(15)      not null,
+    "address"    jsonb            not null,
+    "attributes" jsonb            not null,
+    "created_at" timestamp with time zone  default current_timestamp,
+    "updated_at" timestamp with time zone  default current_timestamp
 );
 
 ALTER TABLE public.clients
     ADD CONSTRAINT uq_client_phone_user UNIQUE (user_id, phone);
 
 
-ALTER TABLE public.clients
-    ADD CONSTRAINT uq_client_ndis_user UNIQUE (user_id, ndis_number);
-
 create index if not exists idx_client_user_id
     on public.clients (user_id);
 
 -- Line Items
-
-create table if not exists "line_item"
+CREATE TYPE invoice_billing_status AS ENUM ('HOURLY', 'FIXED');
+drop table if exists "line_item" cascade;
+create table if not exists "billable_item"
 (
-    "id"          uuid primary key not null default uuid_generate_v4(),
-    "user_id"     uuid             not null references public.users (id) on delete cascade,
-    "name"        varchar(50)      not null,
-    "description" text             not null,
-    "charge_rate" DECIMAL(19, 4)   not null,
-    "created_at"  timestamp with time zone  default current_timestamp,
-    "updated_at"  timestamp with time zone  default current_timestamp
+    "id"          uuid primary key       not null default uuid_generate_v4(),
+    "user_id"     uuid                   not null references public.users (id) on delete cascade,
+    "name"        varchar(50)            not null,
+    "type"        invoice_billing_status not null default 'HOURLY',
+    "description" text                   not null,
+    "charge_rate" DECIMAL(19, 4)         not null,
+    "created_at"  timestamp with time zone        default current_timestamp,
+    "updated_at"  timestamp with time zone        default current_timestamp
 );
 
 ALTER TABLE public.line_item
@@ -105,8 +104,20 @@ ALTER TABLE public.line_item
 create index if not exists idx_line_item_user_id
     on public.line_item (user_id);
 
--- Invoice
+-- Report Templates
+CREATE TABLE IF NOT EXISTS report_templates
+(
+    id            UUID PRIMARY KEY,
+    owner_id      UUID         NULL,
+    name          VARCHAR(255) NOT NULL,
+    type          VARCHAR(64)  NOT NULL,
+    template_data TEXT         NOT NULL,
+    is_default    BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_premade    BOOLEAN      NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
+);
 
+-- Invoice
 CREATE TYPE invoice_billing_status AS ENUM ('PENDING', 'PAID' , 'OVERDUE', 'OUTDATED', 'CANCELLED' );
 
 create table if not exists "invoice"
@@ -114,6 +125,7 @@ create table if not exists "invoice"
     "id"                 uuid primary key         not null default uuid_generate_v4(),
     "user_id"            uuid                     not null references public.users (id) on delete cascade,
     "client_id"          uuid                     not null references public.clients (id) on delete cascade,
+    "template_id"        uuid                     not null references public.report_templates (id) on delete cascade,
     "invoice_number"     INTEGER                  not null,
     "billable_work"      jsonb                    not null,
     "amount"             DECIMAL(19, 4)           not null default 0.00,
@@ -136,18 +148,6 @@ create index if not exists idx_invoice_client_id
 ALTER TABLE public.invoice
     ADD CONSTRAINT uq_invoice_number_user UNIQUE (user_id, invoice_number);
 
--- Report Templates
 
-CREATE TABLE IF NOT EXISTS report_templates
-(
-    id            UUID PRIMARY KEY,
-    owner_id      UUID         NULL,
-    name          VARCHAR(255) NOT NULL,
-    type          VARCHAR(64)  NOT NULL,
-    template_data TEXT         NOT NULL,
-    is_default    BOOLEAN      NOT NULL DEFAULT FALSE,
-    is_premade    BOOLEAN      NOT NULL DEFAULT FALSE,
-    CONSTRAINT fk_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
-);
 
 

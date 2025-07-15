@@ -38,9 +38,8 @@ class ClientService(
             ClientEntity(
                 userId = it,
                 name = client.name,
-                address = client.address,
-                phone = client.phone,
-                ndisNumber = client.ndisNumber
+                contactDetails = client.contact,
+                attributes = client.attributes
             ).run {
                 repository.save(this).let { entity ->
                     logger.info { "Client Service => User $it => Created new client with ID: ${entity.id}" }
@@ -54,9 +53,8 @@ class ClientService(
     fun updateClient(client: Client): Client {
         findOrThrow(client.id, repository::findById).apply {
             name = client.name
-            address = client.address
-            phone = client.phone
-            ndisNumber = client.ndisNumber
+            contactDetails = client.contactDetails
+            attributes = client.attributes
         }.run {
             repository.save(this)
             logger.info { "Client Service => Updated client profile with ID: ${this.id}" }
