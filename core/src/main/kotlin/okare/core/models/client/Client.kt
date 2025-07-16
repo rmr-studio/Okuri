@@ -1,5 +1,7 @@
 package okare.core.models.client
 
+import okare.core.models.template.Template
+import okare.core.models.template.client.ClientTemplateFieldStructure
 import okare.core.models.user.Address
 import java.util.*
 
@@ -8,6 +10,7 @@ data class Client(
     val userId: UUID,
     var name: String,
     var contactDetails: ContactDetails? = null,
+    val template: Template<ClientTemplateFieldStructure>? = null, // Link to which template was used for client structure
     var attributes: Map<String, Any> = emptyMap(), // E.g., {"industry": "Healthcare", "size": "50-100"}
 )
 

@@ -49,13 +49,13 @@ class DocumentGenerationService {
         infoTable.widthPercentage = 100f
         infoTable.addCell(getCell("Company: ${invoice.user.company}", PdfPCell.ALIGN_LEFT))
         infoTable.addCell(getCell("Invoice no: ${invoice.invoiceNumber}", PdfPCell.ALIGN_RIGHT))
-        infoTable.addCell(getCell("ABN: ${invoice.user.company?.abn}", PdfPCell.ALIGN_LEFT))
-        infoTable.addCell(
-            getCell(
-                "Invoice date: ${formatDate(invoice.startDate)} – ${formatDate(invoice.endDate)}",
-                PdfPCell.ALIGN_RIGHT
-            )
-        )
+//        infoTable.addCell(getCell("ABN: ${invoice.user.company?.abn}", PdfPCell.ALIGN_LEFT))
+//        infoTable.addCell(
+//            getCell(
+//                "Invoice date: ${formatDate(invoice.startDate)} – ${formatDate(invoice.endDate)}",
+//                PdfPCell.ALIGN_RIGHT
+//            )
+//        )
         infoTable.addCell(getCell("Address: ${invoice.user}", PdfPCell.ALIGN_LEFT))
         infoTable.addCell(getCell("Due date: ${formatDate(invoice.dueDate)}", PdfPCell.ALIGN_RIGHT))
         infoTable.addCell(getCell("Email: ${invoice.user.email}", PdfPCell.ALIGN_LEFT))
@@ -70,8 +70,8 @@ class DocumentGenerationService {
         document.add(Paragraph("TO: ${invoice.client.name}", boldFont))
         //TODO: GENERATE ADDRESS BLOCK
 //        document.add(Paragraph(invoice.client.address, regularFont))
-        document.add(Paragraph(invoice.client.phone, regularFont))
-        document.add(Paragraph("NDIS number: ${invoice.client.ndisNumber}", regularFont))
+//        document.add(Paragraph(invoice.client.phone, regularFont))
+//        document.add(Paragraph("NDIS number: ${invoice.client.ndisNumber}", regularFont))
         document.add(Chunk.NEWLINE)
 
         // Billable items table

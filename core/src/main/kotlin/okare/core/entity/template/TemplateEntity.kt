@@ -1,5 +1,9 @@
-package okare.core.models.template
+package okare.core.entity.template
 
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
+import jakarta.persistence.*
+import okare.core.models.template.TemplateType
+import org.hibernate.annotations.Type
 import java.io.Serializable
 import java.time.ZonedDateTime
 import java.util.*
@@ -15,32 +19,36 @@ import java.util.*
  * Represents a template for clients, invoices, or reports.
  * The structure is stored as JSONB in PostgreSQL, with type-specific schemas.
  */
-data class Template<T>(
-    val id: UUID,
+@Entity
+@Table
+data class TemplateEntity<T, V>(
+    @Id
+    @GeneratedValue
+    @Column(name = "id")
+    val id: UUID? = null,
     val userId: UUID, // Links to the owning user
+
+
     val name: String,
+    @Column(name = "description", nullable = true)
     val description: String? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
     val type: TemplateType,
+
+    @Column(name = "structure", columnDefinition = "jsonb")
+    @Type(JsonBinaryType::class)
     val structure: Map<String, T>, // JSONB for type-specific schema (fields, layout, calculations)
+
+    @Column(name = "attributes", columnDefinition = "jsonb")
+    @Type(JsonBinaryType::class)
+    val attributes: Map<String, V> = emptyMap(), // Additional attributes for the template
+
     val isDefault: Boolean = false,
     val isPremade: Boolean = false,
     val createdAt: ZonedDateTime = ZonedDateTime.now(),
     val updatedAt: ZonedDateTime = ZonedDateTime.now()
 ) : Serializable
 
-enum class TemplateType {
-    CLIENT, INVOICE, REPORT
-}
-
-/**
- * Represents a field within a template's structure.
- * Used to define custom attributes, their types, and constraints.
- */
-interface Field<T> {
-    val name: String
-    val description: String?
-    val type: T
-    val required: Boolean
-    val children: List<Field<T>>
-}
 

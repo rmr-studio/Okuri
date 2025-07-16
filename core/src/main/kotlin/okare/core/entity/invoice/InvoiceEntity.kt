@@ -41,7 +41,7 @@ data class InvoiceEntity(
     val client: ClientEntity,
 
     @Column(name = "invoice_number", nullable = false, unique = true, columnDefinition = "integer")
-    var invoiceNumber: Int,
+    var invoiceNumber: String,
 
     @Type(JsonBinaryType::class)
     @Column(name = "billable_work", columnDefinition = "jsonb", nullable = false)
@@ -49,6 +49,10 @@ data class InvoiceEntity(
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     var amount: BigDecimal,
+
+    @JoinColumn(name = "invoice_template_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    val template: ,
 
     @Column(name = "currency", nullable = false)
     var currency: Currency,
