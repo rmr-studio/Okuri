@@ -21,7 +21,7 @@ import java.util.*
  */
 @Entity
 @Table
-data class TemplateEntity<T, V>(
+data class TemplateEntity<T>(
     @Id
     @GeneratedValue
     @Column(name = "id")
@@ -40,10 +40,6 @@ data class TemplateEntity<T, V>(
     @Column(name = "structure", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
     val structure: Map<String, T>, // JSONB for type-specific schema (fields, layout, calculations)
-
-    @Column(name = "attributes", columnDefinition = "jsonb")
-    @Type(JsonBinaryType::class)
-    val attributes: Map<String, V> = emptyMap(), // Additional attributes for the template
 
     val isDefault: Boolean = false,
     val isPremade: Boolean = false,

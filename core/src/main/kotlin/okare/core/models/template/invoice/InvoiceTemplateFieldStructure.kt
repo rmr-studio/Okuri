@@ -11,3 +11,4 @@ data class InvoiceTemplateFieldStructure(
 ) : Field<InvoiceFieldType>
 
 enum class InvoiceFieldType
+

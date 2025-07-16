@@ -1,5 +1,6 @@
 package okare.core.models.template
 
+import okare.core.entity.template.TemplateEntity
 import java.io.Serializable
 import java.time.ZonedDateTime
 import java.util.*
@@ -17,7 +18,7 @@ import java.util.*
  */
 data class Template<T>(
     val id: UUID,
-    val userId: UUID, // Links to the owning user
+    val userId: UUID? = null, // Links to the owning user
     val name: String,
     val description: String? = null,
     val type: TemplateType,
@@ -43,4 +44,20 @@ interface Field<T> {
     val required: Boolean
     val children: List<Field<T>>
 }
+
+fun <T> TemplateEntity<T>.toModel(): Template<T> {
+    return Template(
+        id = this.id ?: UUID.randomUUID(),
+        userId = this.userId,
+        name = this.name,
+        description = this.description,
+        type = this.type,
+        structure = this.structure,
+        isDefault = this.isDefault,
+        isPremade = this.isPremade,
+        createdAt = this.createdAt,
+        updatedAt = this.updatedAt
+    )
+}
+
 

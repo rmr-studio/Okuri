@@ -24,8 +24,15 @@ data class Invoice(
     val amount: BigDecimal,
     val currency: Currency,
     val status: InvoiceStatus,
+    val dates: InvoiceDates,
+    val customFields: Map<String, Any> = emptyMap() // JSONB for custom data
+)
+
+data class InvoiceDates(
+    val startDate: ZonedDateTime? = null,
+    val endDate: ZonedDateTime? = null,
     val issueDate: ZonedDateTime,
     val dueDate: ZonedDateTime,
-    val createdAt: ZonedDateTime,
-    val customFields: Map<String, Any> = emptyMap() // JSONB for custom data
+    val invoiceCreatedAt: ZonedDateTime,
+    val invoiceUpdatedAt: ZonedDateTime
 )

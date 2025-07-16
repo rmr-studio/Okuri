@@ -4,11 +4,16 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okare.core.entity.client.ClientEntity
 import okare.core.entity.client.toModel
+import okare.core.entity.template.TemplateEntity
 import okare.core.entity.user.UserEntity
 import okare.core.entity.user.toModel
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.invoice.Billable
 import okare.core.models.invoice.Invoice
+import okare.core.models.invoice.InvoiceDates
+import okare.core.models.template.invoice.InvoiceTemplateFieldStructure
+import okare.core.models.template.report.ReportTemplateFieldStructure
+import okare.core.models.template.toModel
 import org.hibernate.annotations.Type
 import java.math.BigDecimal
 import java.time.ZonedDateTime
@@ -52,7 +57,11 @@ data class InvoiceEntity(
 
     @JoinColumn(name = "invoice_template_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    val template: ,
+    val invoiceTemplate: TemplateEntity<InvoiceTemplateFieldStructure>,
+
+    @JoinColumn(name = "report_template_id", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    val reportTemplate: TemplateEntity<ReportTemplateFieldStructure>? = null,
 
     @Column(name = "currency", nullable = false)
     var currency: Currency,
@@ -66,6 +75,9 @@ data class InvoiceEntity(
 
     @Column(name = "invoice_end_date", nullable = false)
     var endDate: ZonedDateTime,
+
+    @Column(name = "invoice_issue_date", nullable = false)
+    var issueDate: ZonedDateTime,
 
     @Column(name = "invoice_due_date", nullable = false)
     var dueDate: ZonedDateTime,
@@ -103,10 +115,16 @@ fun InvoiceEntity.toModel(): Invoice {
             amount = this.amount,
             currency = this.currency,
             status = this.status,
-            startDate = this.startDate,
-            endDate = this.endDate,
-            dueDate = this.dueDate,
-            createdAt = this.createdAt
+            template = this.invoiceTemplate.toModel(),
+            reportTemplate = this.reportTemplate?.toModel(),
+            dates = InvoiceDates(
+                startDate = this.startDate,
+                endDate = this.endDate,
+                issueDate = this.issueDate,
+                dueDate = this.dueDate,
+                invoiceCreatedAt = this.createdAt,
+                invoiceUpdatedAt = this.updatedAt
+            ),
         )
     }
 }
