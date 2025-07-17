@@ -26,7 +26,9 @@ data class TemplateEntity<T>(
     @GeneratedValue
     @Column(name = "id")
     val id: UUID? = null,
-    val userId: UUID, // Links to the owning user
+
+    @Column(name = "user_id", nullable = true)
+    val userId: UUID?, // Links to the owning user
 
 
     val name: String,
@@ -41,10 +43,24 @@ data class TemplateEntity<T>(
     @Type(JsonBinaryType::class)
     val structure: Map<String, T>, // JSONB for type-specific schema (fields, layout, calculations)
 
+
+    @Column(name = "is_default", nullable = false)
     val isDefault: Boolean = false,
+
+    @Column(name = "is_premade", nullable = false)
     val isPremade: Boolean = false,
+
+    @Column(
+        name = "created_at",
+        nullable = false,
+        updatable = false
+    )
     val createdAt: ZonedDateTime = ZonedDateTime.now(),
+
+    @Column(name = "updated_at", nullable = false)
     val updatedAt: ZonedDateTime = ZonedDateTime.now()
 ) : Serializable
+
+
 
 

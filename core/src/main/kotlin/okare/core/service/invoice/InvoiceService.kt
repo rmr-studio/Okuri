@@ -8,11 +8,11 @@ import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.client.Client
 import okare.core.models.invoice.Invoice
 import okare.core.models.invoice.request.InvoiceCreationRequest
+import okare.core.models.template.toEntity
 import okare.core.repository.invoice.InvoiceRepository
 import okare.core.service.auth.AuthTokenService
 import okare.core.service.client.ClientService
 import okare.core.service.pdf.DocumentGenerationService
-import okare.core.service.pdf.ReportTemplateService
 import okare.core.service.user.UserService
 import okare.core.util.ServiceUtil.findManyResults
 import okare.core.util.ServiceUtil.findOrThrow
@@ -28,7 +28,6 @@ class InvoiceService(
     private val clientService: ClientService,
     private val authTokenService: AuthTokenService,
     private val documentGeneratorService: DocumentGenerationService,
-    private val reportTemplateService: ReportTemplateService,
     private val logger: KLogger
 ) {
 
@@ -64,20 +63,23 @@ class InvoiceService(
 
     fun createInvoice(request: InvoiceCreationRequest): Invoice {
         return authTokenService.getUserId().let {
-            val currentInvoiceNumber = invoiceRepository.findMaxInvoiceNumberByUserId(it) ?: 0
             val user = userService.getUserById(it)
             val client = clientService.getClientById(request.client.id)
             InvoiceEntity(
                 user = user,
                 client = client,
-                invoiceNumber = currentInvoiceNumber + 1,
+                invoiceNumber = request.invoiceNumber,
+                invoiceTemplate = request.template.toEntity(),
+                reportTemplate = request.reportTemplate?.toEntity(),
                 items = request.items,
                 amount = request.amount,
                 currency = request.currency,
                 status = request.status,
                 startDate = request.startDate,
                 endDate = request.endDate,
-                dueDate = request.dueDate
+                issueDate = request.issueDate,
+                dueDate = request.dueDate,
+                customFields = request.customFields,
             ).run {
                 invoiceRepository.save(this).let { entity ->
                     logger.info { "Invoice Service => User $it => Created new invoice with ID: ${entity.id}" }
@@ -90,14 +92,17 @@ class InvoiceService(
     @PreAuthorize("@securityConditions.doesUserOwnInvoice(#invoice)")
     fun updateInvoice(invoice: Invoice): Invoice {
         return findOrThrow(invoice.id, invoiceRepository::findById).apply {
-            invoiceNumber = invoice.invoiceNumber.toInt() // Assuming invoiceNumber is a String in Invoice
+            invoiceNumber = invoice.invoiceNumber // Assuming invoiceNumber is a String in Invoice
             items = invoice.items
             amount = invoice.amount
             currency = invoice.currency
+            reportTemplate = invoice.reportTemplate?.toEntity()
+            customFields = invoice.customFields
             status = invoice.status
-            startDate = invoice.startDate
-            endDate = invoice.endDate
-            dueDate = invoice.dueDate
+            startDate = invoice.dates.startDate
+            endDate = invoice.dates.endDate
+            issueDate = invoice.dates.issueDate
+            dueDate = invoice.dates.endDate
         }.run {
             invoiceRepository.save(this).let {
                 logger.info { "Invoice Service => Updated invoice with ID: ${this.id}" }
@@ -108,11 +113,12 @@ class InvoiceService(
 
     @PreAuthorize("@securityConditions.doesUserOwnInvoice(#invoice)")
     fun generateDocument(invoice: Invoice, templateId: UUID? = null): ByteArray {
-        val templateData = templateId?.let { reportTemplateService.getTemplateById(it)?.templateData }
-        documentGeneratorService.generateInvoiceDocument(invoice, templateData).run {
-            logger.info { "Invoice Service => Generated document for invoice with ID: ${invoice.id} using template: $templateId" }
-            return this
-        }
+//        val templateData = templateId?.let { reportTemplateService.getTemplateById(it)?.templateData }
+//        documentGeneratorService.generateInvoiceDocument(invoice, templateData).run {
+//            logger.info { "Invoice Service => Generated document for invoice with ID: ${invoice.id} using template: $templateId" }
+//            return this
+//        }
+        TODO()
     }
 
     @PreAuthorize("@securityConditions.doesUserOwnInvoice(#invoice)")

@@ -55,13 +55,17 @@ data class InvoiceEntity(
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     var amount: BigDecimal,
 
-    @JoinColumn(name = "invoice_template_id", nullable = false)
+    @JoinColumn(name = "invoice_template_id", nullable = true)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    val invoiceTemplate: TemplateEntity<InvoiceTemplateFieldStructure>,
+    val invoiceTemplate: TemplateEntity<InvoiceTemplateFieldStructure>? = null,
 
     @JoinColumn(name = "report_template_id", nullable = true)
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    val reportTemplate: TemplateEntity<ReportTemplateFieldStructure>? = null,
+    var reportTemplate: TemplateEntity<ReportTemplateFieldStructure>? = null,
+
+    @Column(name = "custom_fields", columnDefinition = "jsonb")
+    @Type(JsonBinaryType::class)
+    var customFields: Map<String, Any> = emptyMap(), // JSONB for custom data
 
     @Column(name = "currency", nullable = false)
     var currency: Currency,
@@ -70,17 +74,17 @@ data class InvoiceEntity(
     @Enumerated(EnumType.STRING)
     var status: InvoiceStatus = InvoiceStatus.PENDING,
 
-    @Column(name = "invoice_start_date", nullable = false)
-    var startDate: ZonedDateTime,
+    @Column(name = "invoice_start_date", nullable = true)
+    var startDate: ZonedDateTime? = null,
 
-    @Column(name = "invoice_end_date", nullable = false)
-    var endDate: ZonedDateTime,
+    @Column(name = "invoice_end_date", nullable = true)
+    var endDate: ZonedDateTime? = null,
 
     @Column(name = "invoice_issue_date", nullable = false)
     var issueDate: ZonedDateTime,
 
-    @Column(name = "invoice_due_date", nullable = false)
-    var dueDate: ZonedDateTime,
+    @Column(name = "invoice_due_date", nullable = true)
+    var dueDate: ZonedDateTime? = null,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: ZonedDateTime = ZonedDateTime.now(),
@@ -115,7 +119,7 @@ fun InvoiceEntity.toModel(): Invoice {
             amount = this.amount,
             currency = this.currency,
             status = this.status,
-            template = this.invoiceTemplate.toModel(),
+            template = this.invoiceTemplate?.toModel(),
             reportTemplate = this.reportTemplate?.toModel(),
             dates = InvoiceDates(
                 startDate = this.startDate,

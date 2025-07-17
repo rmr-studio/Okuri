@@ -57,7 +57,7 @@ class DocumentGenerationService {
 //            )
 //        )
         infoTable.addCell(getCell("Address: ${invoice.user}", PdfPCell.ALIGN_LEFT))
-        infoTable.addCell(getCell("Due date: ${formatDate(invoice.dueDate)}", PdfPCell.ALIGN_RIGHT))
+//        infoTable.addCell(getCell("Due date: ${formatDate(invoice.dueDate)}", PdfPCell.ALIGN_RIGHT))
         infoTable.addCell(getCell("Email: ${invoice.user.email}", PdfPCell.ALIGN_LEFT))
         infoTable.addCell(getCell("", PdfPCell.ALIGN_RIGHT))
         infoTable.addCell(getCell("Phone: ${invoice.user.phone}", PdfPCell.ALIGN_LEFT))

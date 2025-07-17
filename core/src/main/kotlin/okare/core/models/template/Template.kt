@@ -60,4 +60,18 @@ fun <T> TemplateEntity<T>.toModel(): Template<T> {
     )
 }
 
+fun <T> Template<T>.toEntity(): TemplateEntity<T> {
+    return TemplateEntity(
+        id = this.id,
+        userId = this.userId,
+        name = this.name,
+        description = this.description,
+        type = this.type,
+        structure = this.structure,
+        isDefault = this.isDefault,
+        isPremade = this.isPremade,
+        createdAt = this.createdAt,
+        updatedAt = this.updatedAt
+    )
+}
 

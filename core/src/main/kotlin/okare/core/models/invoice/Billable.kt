@@ -12,5 +12,5 @@ data class Billable(
 ) : Serializable
 
 enum class BillableType {
-    HOURS, DISTANCE, QUANTITY
+    HOURS, DISTANCE, QUANTITY, FIXED
 }

@@ -16,23 +16,23 @@ data class Invoice(
     val user: User,
     val client: Client,
     // Invoice for the specific billing structure (Ie. Tables for distance, tables for quantity of products, etc.)
-    val template: Template<InvoiceTemplateFieldStructure>,
+    val template: Template<InvoiceTemplateFieldStructure>? = null,
     // Report template for generating the invoice report, ie. Format of sent invoice
-    val reportTemplate: Template<ReportTemplateFieldStructure>? = null,
+    var reportTemplate: Template<ReportTemplateFieldStructure>? = null,
     val invoiceNumber: String, // Changed to String for flexible formats (e.g., "INV-001")
     val items: List<Billable>,
     val amount: BigDecimal,
-    val currency: Currency,
-    val status: InvoiceStatus,
+    var currency: Currency,
+    var status: InvoiceStatus,
     val dates: InvoiceDates,
-    val customFields: Map<String, Any> = emptyMap() // JSONB for custom data
+    var customFields: Map<String, Any> = emptyMap() // JSONB for custom data
 )
 
 data class InvoiceDates(
-    val startDate: ZonedDateTime? = null,
-    val endDate: ZonedDateTime? = null,
-    val issueDate: ZonedDateTime,
-    val dueDate: ZonedDateTime,
+    var startDate: ZonedDateTime? = null,
+    var endDate: ZonedDateTime? = null,
+    var issueDate: ZonedDateTime,
+    var dueDate: ZonedDateTime? = null,
     val invoiceCreatedAt: ZonedDateTime,
     val invoiceUpdatedAt: ZonedDateTime
 )
