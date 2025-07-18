@@ -3,6 +3,7 @@ import { components, operations } from "@/lib/types/types";
 // --- 🎯 Core Client Models ---
 export type Client = components["schemas"]["Client"];
 export type ClientCreationRequest = components["schemas"]["ClientCreationRequest"];
+export type ContactDetails = components["schemas"]["ContactDetails"];
 
 // --- 📦 Request Payloads ---
 export type CreateClientRequest =

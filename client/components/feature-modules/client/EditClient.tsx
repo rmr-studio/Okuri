@@ -10,7 +10,7 @@ import { Client } from "@/lib/interfaces/client.interface";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FC } from "react";
 import { useForm } from "react-hook-form";
-import { ClientCreation, ClientForm, ClientFormSchema } from "./ClientForm";
+import { ClientCreation, ClientForm, ClientFormSchema } from "./form/ClientForm";
 
 interface Props {
     client: Client;
@@ -21,16 +21,7 @@ interface Props {
 const EditClient: FC<Props> = ({ client, onSubmit, onClose }) => {
     const form = useForm<ClientCreation>({
         resolver: zodResolver(ClientFormSchema),
-        defaultValues: {
-            displayName: client.name,
-            phone: client.phone,
-            street: client.address.street,
-            city: client.address.city,
-            state: client.address.state,
-            country: client.address.country,
-            postalCode: client.address.postalCode,
-            ndisNumber: client.ndisNumber || "",
-        },
+
         mode: "onBlur",
     });
 

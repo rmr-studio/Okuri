@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { ClientCreation, ClientForm, ClientFormSchema } from "./ClientForm";
+import { ClientCreation, ClientForm, ClientFormSchema } from "./form/ClientForm";
 
 const NewClient = () => {
     const { session, client: authClient } = useAuth();

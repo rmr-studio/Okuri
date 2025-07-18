@@ -11,29 +11,16 @@ import { updateClient } from "@/controller/client.controller";
 import { useClientOverview } from "@/hooks/useClientOverview";
 import { Client } from "@/lib/interfaces/client.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-    AlertCircle,
-    ArrowLeft,
-    CreditCard,
-    Edit,
-    MapPin,
-    Phone,
-    User,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, CreditCard, Edit, MapPin, Phone, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { ClientCreation } from "./ClientForm";
 import EditClient from "./EditClient";
+import { ClientCreation } from "./form/ClientForm";
 
 export const ClientOverview = () => {
-    const {
-        data: client,
-        isLoading,
-        error,
-        isLoadingAuth,
-    } = useClientOverview();
+    const { data: client, isLoading, error, isLoadingAuth } = useClientOverview();
     const { session, client: authClient } = useAuth();
     const [editingClient, setEditingClient] = useState<boolean>(false);
     const toastRef = useRef<string | number | undefined>(undefined);
@@ -80,10 +67,7 @@ export const ClientOverview = () => {
             });
 
             // Snapshot the previous value
-            const previousClient = queryClient.getQueryData<Client>([
-                "client",
-                client?.id,
-            ]);
+            const previousClient = queryClient.getQueryData<Client>(["client", client?.id]);
 
             // Optimistically update the cache
             queryClient.setQueryData(["client", client?.id], updatedClient);
@@ -103,10 +87,7 @@ export const ClientOverview = () => {
         },
         onError: (error, _variables, context) => {
             // Roll back to the previous data on error
-            queryClient.setQueryData(
-                ["client", client?.id],
-                context?.previousClient
-            );
+            queryClient.setQueryData(["client", client?.id], context?.previousClient);
             toast.dismiss(toastRef.current);
             toast.error(`Failed to update client: ${error.message}`);
         },
@@ -128,8 +109,7 @@ export const ClientOverview = () => {
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                        Failed to load client information. Please try again
-                        later.
+                        Failed to load client information. Please try again later.
                     </AlertDescription>
                 </Alert>
             </div>
@@ -160,12 +140,8 @@ export const ClientOverview = () => {
                             </Link>
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">
-                                {client.name}
-                            </h1>
-                            <p className="text-muted-foreground">
-                                Client Overview
-                            </p>
+                            <h1 className="text-3xl font-bold tracking-tight">{client.name}</h1>
+                            <p className="text-muted-foreground">Client Overview</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -176,9 +152,7 @@ export const ClientOverview = () => {
                         <Button
                             variant="secondary"
                             onClick={() =>
-                                router.push(
-                                    `/dashboard/invoice/new?clientId=${client.id}`
-                                )
+                                router.push(`/dashboard/invoice/new?clientId=${client.id}`)
                             }
                         >
                             New Invoice
@@ -193,9 +167,7 @@ export const ClientOverview = () => {
                     {/* Basic Information */}
                     <Card>
                         <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">
-                                Basic Information
-                            </CardTitle>
+                            <CardTitle className="text-sm font-medium">Basic Information</CardTitle>
                             <User className="h-4 w-4 ml-auto text-muted-foreground" />
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -203,9 +175,7 @@ export const ClientOverview = () => {
                                 <p className="text-sm font-medium text-muted-foreground">
                                     Full Name
                                 </p>
-                                <p className="text-lg font-semibold">
-                                    {client.name}
-                                </p>
+                                <p className="text-lg font-semibold">{client.name}</p>
                             </div>
                             {/* Removed Client ID display */}
                         </CardContent>
@@ -227,9 +197,7 @@ export const ClientOverview = () => {
                                 <p className="text-lg">{client.phone}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Status
-                                </p>
+                                <p className="text-sm font-medium text-muted-foreground">Status</p>
                                 <Badge variant="secondary">Active</Badge>
                             </div>
                         </CardContent>
@@ -238,9 +206,7 @@ export const ClientOverview = () => {
                     {/* NDIS Information */}
                     <Card>
                         <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">
-                                NDIS Information
-                            </CardTitle>
+                            <CardTitle className="text-sm font-medium">NDIS Information</CardTitle>
                             <CreditCard className="h-4 w-4 ml-auto text-muted-foreground" />
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -248,9 +214,7 @@ export const ClientOverview = () => {
                                 <p className="text-sm font-medium text-muted-foreground">
                                     NDIS Number
                                 </p>
-                                <p className="text-lg font-mono">
-                                    {client.ndisNumber}
-                                </p>
+                                <p className="text-lg font-mono">{client.ndisNumber}</p>
                             </div>
                             <div>
                                 <Badge
@@ -267,18 +231,14 @@ export const ClientOverview = () => {
                 {/* Address Information */}
                 <Card>
                     <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Address Information
-                        </CardTitle>
+                        <CardTitle className="text-sm font-medium">Address Information</CardTitle>
                         <MapPin className="h-4 w-4 ml-auto text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
                             {client.address && (
                                 <div className="text-sm space-y-1">
-                                    {client.address.street && (
-                                        <p>{client.address.street}</p>
-                                    )}
+                                    {client.address.street && <p>{client.address.street}</p>}
                                     {(client.address.city ||
                                         client.address.state ||
                                         client.address.postalCode) && (
@@ -292,9 +252,7 @@ export const ClientOverview = () => {
                                                 .join(", ")}
                                         </p>
                                     )}
-                                    {client.address.country && (
-                                        <p>{client.address.country}</p>
-                                    )}
+                                    {client.address.country && <p>{client.address.country}</p>}
                                 </div>
                             )}
                             {!client.address && (

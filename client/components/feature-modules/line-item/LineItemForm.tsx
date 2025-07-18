@@ -7,23 +7,23 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FC, JSX } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 
 export const LineItemFormSchema = z.object({
-    name: z
-        .string({ required_error: "Name is required" })
-        .min(2, "Name is too short"),
+    name: z.string({ required_error: "Name is required" }).min(2, "Name is too short"),
     description: z.string().optional(),
     chargeRate: z.coerce.number().min(0, "Charge rate must be greater than 0"),
+    type: z.enum(["SERVICE", "PRODUCT", "FEE", "DISCOUNT"]),
 });
 
-export type LineItemFormType = z.infer<typeof LineItemFormSchema>;
+export type LineItemCreation = z.infer<typeof LineItemFormSchema>;
 
 interface Props {
-    form: UseFormReturn<LineItemFormType>;
-    handleSubmission: (data: LineItemFormType) => Promise<void>;
+    form: UseFormReturn<LineItemCreation>;
+    handleSubmission: (data: LineItemCreation) => Promise<void>;
     renderFooter: () => JSX.Element;
 }
 
@@ -59,15 +59,36 @@ const LineItemForm: FC<Props> = ({ form, handleSubmission, renderFooter }) => {
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-foreground">
-                                        Description
-                                    </FormLabel>
+                                    <FormLabel className="text-foreground">Description</FormLabel>
                                     <FormControl>
                                         <Input
                                             {...field}
                                             placeholder="Description (optional)"
                                             className="bg-background text-foreground border-border"
                                         />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="mb-6">
+                        <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-foreground">Item Type</FormLabel>
+                                    <FormControl>
+                                        <Select
+                                            {...field}
+                                            onValueChange={field.onChange}
+                                            defaultValue={field.value}
+                                        >
+                                            <SelectTrigger asChild>
+                                                <SelectValue placeholder="Select an item type" />
+                                            </SelectTrigger>
+                                        </Select>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

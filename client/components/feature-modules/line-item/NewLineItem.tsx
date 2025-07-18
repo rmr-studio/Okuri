@@ -58,6 +58,6 @@ export const NewLineItem = () => {
                     )}
                 />
             </section>
-        </div>
+      p  </div>
     );
 };

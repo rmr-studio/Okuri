@@ -28,6 +28,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/item/{lineItemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a line item by ID
+         * @description Retrieves a specific line item by its ID, if the user has access.
+         */
+        get: operations["getLineItemById"];
+        /**
+         * Update an existing line item
+         * @description Updates a line item with the specified ID, if the user has access.
+         */
+        put: operations["updateLineItem"];
+        post?: never;
+        /**
+         * Delete a line item by ID
+         * @description Deletes a line item with the specified ID, if the user has access.
+         */
+        delete: operations["deleteLineItemById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/{id}": {
         parameters: {
             query?: never;
@@ -79,6 +107,30 @@ export interface paths {
          * @description Deletes a client with the specified ID, if the user has access.
          */
         delete: operations["deleteClientById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/item/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all line items for the authenticated user
+         * @description Retrieves a list of line items associated with the current user's session.
+         */
+        get: operations["getLineItemsForUser"];
+        put?: never;
+        /**
+         * Create a new line item
+         * @description Creates a new line item based on the provided request data.
+         */
+        post: operations["createLineItem"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -236,8 +288,12 @@ export interface components {
             sundayMultiplier: number;
         };
         Company: {
-            name?: string;
-            abn?: string;
+            name: string;
+            businessNumber?: string;
+            taxId?: string;
+            customAttributes: {
+                [key: string]: Record<string, never>;
+            };
         };
         Payment: {
             bsb: string;
@@ -255,12 +311,25 @@ export interface components {
             chargeRate?: components["schemas"]["ChargeRate"];
             paymentDetails?: components["schemas"]["Payment"];
         };
+        LineItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            userId: string;
+            description?: string;
+            /** @enum {string} */
+            type: "SERVICE" | "PRODUCT" | "FEE" | "DISCOUNT";
+            chargeRate: number;
+        };
         Billable: {
             /** Format: date-time */
             date: string;
             description: string;
             lineItem: components["schemas"]["LineItem"];
-            hours: number;
+            /** @enum {string} */
+            billableType: "HOURS" | "DISTANCE" | "QUANTITY" | "FIXED";
+            quantity: number;
         };
         Client: {
             /** Format: uuid */
@@ -268,16 +337,60 @@ export interface components {
             /** Format: uuid */
             userId: string;
             name: string;
-            address: components["schemas"]["Address"];
-            ndisNumber: string;
-            phone: string;
+            contactDetails?: components["schemas"]["ContactDetails"];
+            template?: components["schemas"]["TemplateClientTemplateFieldStructure"];
+            attributes: {
+                [key: string]: Record<string, never>;
+            };
+        };
+        ClientTemplateFieldStructure: {
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
+            required: boolean;
+            children: components["schemas"]["FieldClientFieldType"][];
+            constraints: {
+                [key: string]: Record<string, never>;
+            };
+            options: string[];
+            defaultValue?: Record<string, never>;
+        };
+        ContactDetails: {
+            email?: string;
+            phone?: string;
+            address?: components["schemas"]["Address"];
+            additionalContacts: {
+                [key: string]: string;
+            };
+        };
+        FieldClientFieldType: {
+            description?: string;
+            name: string;
+            /** @enum {string} */
+            type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
+            required: boolean;
+        };
+        FieldInvoiceFieldType: {
+            description?: string;
+            name: string;
+            type: string;
+            required: boolean;
+        };
+        FieldReportFieldType: {
+            description?: string;
+            name: string;
+            type: string;
+            required: boolean;
         };
         Invoice: {
             /** Format: uuid */
             id: string;
             user: components["schemas"]["User"];
             client: components["schemas"]["Client"];
-            invoiceNumber: number;
+            template?: components["schemas"]["TemplateInvoiceTemplateFieldStructure"];
+            reportTemplate?: components["schemas"]["TemplateReportTemplateFieldStructure"];
+            invoiceNumber: string;
             items: components["schemas"]["Billable"][];
             amount: number;
             currency: {
@@ -292,24 +405,105 @@ export interface components {
             };
             /** @enum {string} */
             status: "PENDING" | "PAID" | "OVERDUE" | "OUTDATED" | "CANCELLED";
-            /** Format: date-time */
-            startDate: string;
-            /** Format: date-time */
-            endDate: string;
-            /** Format: date-time */
-            dueDate: string;
-            /** Format: date-time */
-            createdAt: string;
+            dates: components["schemas"]["InvoiceDates"];
+            customFields: {
+                [key: string]: Record<string, never>;
+            };
         };
-        LineItem: {
+        InvoiceDates: {
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            /** Format: date-time */
+            issueDate: string;
+            /** Format: date-time */
+            dueDate?: string;
+            /** Format: date-time */
+            invoiceCreatedAt: string;
+            /** Format: date-time */
+            invoiceUpdatedAt: string;
+        };
+        InvoiceTemplateFieldStructure: {
+            name: string;
+            description?: string;
+            type: string;
+            required: boolean;
+            children: components["schemas"]["FieldInvoiceFieldType"][];
+        };
+        ReportTemplateFieldStructure: {
+            name: string;
+            description?: string;
+            type: string;
+            required: boolean;
+            children: components["schemas"]["FieldReportFieldType"][];
+        };
+        TemplateClientTemplateFieldStructure: {
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            userId?: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            type: "CLIENT" | "INVOICE" | "REPORT";
+            structure: {
+                [key: string]: components["schemas"]["ClientTemplateFieldStructure"];
+            };
+            isDefault: boolean;
+            isPremade: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        TemplateInvoiceTemplateFieldStructure: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId?: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            type: "CLIENT" | "INVOICE" | "REPORT";
+            structure: {
+                [key: string]: components["schemas"]["InvoiceTemplateFieldStructure"];
+            };
+            isDefault: boolean;
+            isPremade: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        TemplateReportTemplateFieldStructure: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId?: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            type: "CLIENT" | "INVOICE" | "REPORT";
+            structure: {
+                [key: string]: components["schemas"]["ReportTemplateFieldStructure"];
+            };
+            isDefault: boolean;
+            isPremade: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        LineItemCreationRequest: {
             name: string;
             description?: string;
             chargeRate: number;
         };
         InvoiceCreationRequest: {
             client: components["schemas"]["Client"];
+            template: components["schemas"]["TemplateInvoiceTemplateFieldStructure"];
+            reportTemplate?: components["schemas"]["TemplateReportTemplateFieldStructure"];
             invoiceNumber: string;
             items: components["schemas"]["Billable"][];
             amount: number;
@@ -326,17 +520,23 @@ export interface components {
             /** @enum {string} */
             status: "PENDING" | "PAID" | "OVERDUE" | "OUTDATED" | "CANCELLED";
             /** Format: date-time */
-            startDate: string;
+            startDate?: string;
             /** Format: date-time */
-            endDate: string;
+            endDate?: string;
             /** Format: date-time */
-            dueDate: string;
+            dueDate?: string;
+            /** Format: date-time */
+            issueDate: string;
+            customFields: {
+                [key: string]: Record<string, never>;
+            };
         };
         ClientCreationRequest: {
             name: string;
-            address: components["schemas"]["Address"];
-            ndisNumber: string;
-            phone: string;
+            contact?: components["schemas"]["ContactDetails"];
+            attributes: {
+                [key: string]: Record<string, never>;
+            };
         };
     };
     responses: never;
@@ -424,6 +624,149 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["User"];
                 };
+            };
+        };
+    };
+    getLineItemById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lineItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Line item retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description Line item not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+        };
+    };
+    updateLineItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lineItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LineItem"];
+            };
+        };
+        responses: {
+            /** @description Line item updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description User does not own the line item */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description Line item not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+        };
+    };
+    deleteLineItemById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lineItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Line item deleted successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User does not own the line item */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Line item not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -730,6 +1073,86 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    getLineItemsForUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of line items retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"][];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"][];
+                };
+            };
+            /** @description No line items found for the user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"][];
+                };
+            };
+        };
+    };
+    createLineItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LineItemCreationRequest"];
+            };
+        };
+        responses: {
+            /** @description Line item created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"];
+                };
             };
         };
     };
