@@ -10,7 +10,7 @@ import { Client } from "@/lib/interfaces/client.interface";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FC } from "react";
 import { useForm } from "react-hook-form";
-import { ClientCreation, ClientForm, ClientFormSchema } from "./form/ClientForm";
+import { ClientCreation, ClientForm, } from "./form/ClientForm";
 
 interface Props {
     client: Client;

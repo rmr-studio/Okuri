@@ -11,3 +11,7 @@ export const OTPFormSchema = z.object({
 });
 
 export type FormOTP = z.infer<typeof OTPFormSchema>;
+
+export const generateDynamicSchema = () => {
+    
+}

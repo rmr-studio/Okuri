@@ -4,6 +4,13 @@ export type ClientTemplateFieldStructure = components["schemas"]["ClientTemplate
 export type TemplateClientTemplateFieldStructure =
     components["schemas"]["TemplateClientTemplateFieldStructure"];
 export type FieldClientFieldType = components["schemas"]["FieldClientFieldType"];
+export type ClientFieldConstraint =
+    | "MIN_LENGTH"
+    | "MAX_LENGTH"
+    | "PATTERN"
+    | "REQUIRED"
+    | "UNIQUE"
+    | "CUSTOM";
 
 export type InvoiceTemplateFieldStructure = components["schemas"]["InvoiceTemplateFieldStructure"];
 export type TemplateInvoiceTemplateFieldStructure =

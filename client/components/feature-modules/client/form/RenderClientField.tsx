@@ -1,15 +1,20 @@
-import { CountryEntry, CountrySelect } from "@/components/ui/country-select";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import FormCountrySelector from "@/components/ui/forms/country/country-selector";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { ClientTemplateFieldStructure } from "@/lib/interfaces/template.interface";
-import { countryCodeToName } from "@/lib/util/country/country.util";
-import { Checkbox } from "@/components/ui/checkbox";
-import { SelectTrigger, SelectValue, SelectContent, SelectItem, Select } from "@/components/ui/select";
-import { FC, useState, useEffect } from "react";
+import { FC } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { getCountries, Country } from "react-phone-number-input";
+import { Country } from "react-phone-number-input";
 import { ClientCreation } from "./ClientForm";
 
 export const RenderClientField: FC<{
@@ -17,20 +22,10 @@ export const RenderClientField: FC<{
     form: UseFormReturn<ClientCreation>;
     path: string;
 }> = ({ field, form, path }) => {
-    const [selectedCountry, setSelectedCountry] = useState<CountryEntry>({ label: "Australia", value: "AU" });
-    const [countries, setCountries] = useState<CountryEntry[]>([]);
 
-    useEffect(() => {
-        const countries: CountryEntry[] = getCountries().map((country) => ({
-            label: countryCodeToName[country as Country],
-            value: country,
-        }));
-        setCountries(countries);
-    }, []);
-
-    const handleCountrySelection = (fieldPath: string) => (country: Country) => {
+    const handleCountrySelection = (fieldPath: string, country: Country) => {
+        // Assert fieldPath 
         form.setValue(fieldPath, country);
-        setSelectedCountry(countries.find(c => c.value === country) || selectedCountry);
     };
 
     if (field.type === "OBJECT") {
@@ -62,22 +57,36 @@ export const RenderClientField: FC<{
                     </FormLabel>
                     <FormControl>
                         {field.type === "TEXT" && field.name.toLowerCase().includes("email") ? (
-                            <Input {...formField} type="email" placeholder={field.description || field.name} />
+                            <Input
+                                {...formField}
+                                type="email"
+                                placeholder={field.description || field.name}
+                            />
                         ) : field.type === "TEXT" && field.name.toLowerCase().includes("phone") ? (
-                            <PhoneInput {...formField} placeholder="0455 555 555" defaultCountry="AU" />
-                        ) : field.type === "TEXT" && field.name.toLowerCase().includes("country") ? (
-                            <CountrySelect
-                                value={formField.value || selectedCountry.value}
-                                onChange={handleCountrySelection(path)}
-                                includePhoneCode={false}
-                                showCountryName={true}
-                                options={countries}
-                                className="w-full rounded-e-md border"
+                            <PhoneInput
+                                {...formField}
+                                placeholder="0455 555 555"
+                                defaultCountry="AU"
+                            />
+                        ) : field.type === "TEXT" &&
+                          field.name.toLowerCase().includes("country") ? (
+                            <FormCountrySelector
+                                key={path}
+                                value={formField.value as Country}
+                                handleSelection={handleCountrySelection}
                             />
                         ) : field.type === "NUMBER" ? (
-                            <Input {...formField} type="number" placeholder={field.description || field.name} />
+                            <Input
+                                {...formField}
+                                type="number"
+                                placeholder={field.description || field.name}
+                            />
                         ) : field.type === "DATE" ? (
-                            <Input {...formField} type="date" placeholder={field.description || field.name} />
+                            <Input
+                                {...formField}
+                                type="date"
+                                placeholder={field.description || field.name}
+                            />
                         ) : field.type === "BOOLEAN" ? (
                             <Checkbox
                                 checked={formField.value}
