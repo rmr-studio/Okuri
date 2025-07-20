@@ -16,15 +16,13 @@ import {
     ClientTemplateFieldStructure,
     TemplateClientTemplateFieldStructure,
 } from "@/lib/interfaces/template.interface";
+import { isNumber, isValidTypeRestriction } from "@/lib/util/form/form.util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FC, JSX } from "react";
 import { UseFormReturn, useForm } from "react-hook-form";
 import { isDate } from "validator";
 import { z } from "zod";
 import { RenderClientField } from "./RenderClientField";
-
-// Define supported field types
-type FieldType = "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
 
 const createDynamicSchema = (
     structure: Record<string, ClientTemplateFieldStructure>
@@ -37,36 +35,47 @@ const createDynamicSchema = (
         switch (field.type) {
             case "TEXT": {
                 let strSchema = z.string({ required_error: `${field.name} is required` });
-                if (field.constraints.MIN_LENGTH)
-                    strSchema = strSchema.min(
-                        Number(field.constraints.MIN_LENGTH),
-                        `${field.name} is too short`
-                    );
-                if (field.constraints.MAX_LENGTH)
-                    strSchema = strSchema.max(
-                        Number(field.constraints.MAX_LENGTH),
-                        `${field.name} is too long`
-                    );
-                if (field.constraints.PATTERN)
-                    strSchema = strSchema.regex(
-                        new RegExp(field.constraints.PATTERN as unknown as string),
-                        `${field.name} is invalid`
-                    );
+                field.constraints.forEach((constraint) => {
+                    const { type, value } = constraint;
+                    if (type == "MIN_LENGTH" && isNumber(value))
+                        strSchema = strSchema.min(value, `${field.name} is too short`);
+
+                    if (type == "MAX_LENGTH" && isNumber(value))
+                        strSchema = strSchema.max(value, `${field.name} is too long`);
+                    if (type === "PATTERN" && value)
+                        strSchema = strSchema.regex(new RegExp(value), `${field.name} is invalid`);
+                });
                 schema = strSchema;
                 break;
             }
             case "NUMBER": {
                 let numSchema = z.coerce.number({ required_error: `${field.name} is required` });
-                if (field.constraints.MIN)
-                    numSchema = numSchema.min(
-                        Number(field.constraints.MIN),
-                        `${field.name} is too small`
-                    );
-                if (field.constraints.MAX)
-                    numSchema = numSchema.max(
-                        Number(field.constraints.MAX),
-                        `${field.name} is too large`
-                    );
+                field.constraints.forEach((constraint) => {
+                    const { type, value } = constraint;
+                    if (type === "MIN_LENGTH" && isNumber(value))
+                        numSchema = numSchema.min(value, `${field.name} is too small`);
+                    if (type === "MAX_LENGTH" && isNumber(value))
+                        numSchema = numSchema.max(value, `${field.name} is too large`);
+                    if (type === "TYPE" && isValidTypeRestriction(field.type, value)) {
+                        if (value === "INTEGER") {
+                            numSchema = numSchema
+                                .int()
+                                .refine(
+                                    (val) => Number.isInteger(val),
+                                    `${field.name} must be an integer`
+                                );
+                        } else if (value === "FLOAT") {
+                            numSchema = numSchema.refine(
+                                (val) => !Number.isInteger(val),
+                                `${field.name} must be a float`
+                            );
+                        } else if (value === "POSITIVE") {
+                            numSchema = numSchema.positive(`${field.name} must be positive`);
+                        } else if (value === "NEGATIVE") {
+                            numSchema = numSchema.negative(`${field.name} must be negative`);
+                        }
+                    }
+                });
                 schema = numSchema;
                 break;
             }

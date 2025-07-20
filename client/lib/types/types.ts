@@ -350,11 +350,14 @@ export interface components {
             type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
             required: boolean;
             children: components["schemas"]["FieldClientFieldType"][];
-            constraints: {
-                [key: string]: Record<string, never>;
-            };
+            constraints: components["schemas"]["Constraint"][];
             options: string[];
             defaultValue?: Record<string, never>;
+        };
+        Constraint: {
+            /** @enum {string} */
+            type: "MIN_LENGTH" | "MAX_LENGTH" | "PATTERN" | "REQUIRED" | "UNIQUE" | "CUSTOM" | "TYPE";
+            value?: string;
         };
         ContactDetails: {
             email?: string;

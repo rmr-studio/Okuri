@@ -4,6 +4,8 @@ import { components, operations } from "@/lib/types/types";
 export type Client = components["schemas"]["Client"];
 export type ClientCreationRequest = components["schemas"]["ClientCreationRequest"];
 export type ContactDetails = components["schemas"]["ContactDetails"];
+export type ClientFieldType = components["schemas"]["ClientTemplateFieldStructure"]['type'];
+export type ClientFieldConstraint = components["schemas"]["Constraint"]["type"];
 
 // --- 📦 Request Payloads ---
 export type CreateClientRequest =
