@@ -7,8 +7,8 @@ data class ClientTemplateFieldStructure(
     override val description: String? = null,
     override val type: ClientFieldType,
     override val required: Boolean = false,
-    override val children: List<Field<ClientFieldType>>,
-    val constraints: Map<ClientFieldConstraint, Any> = emptyMap(), // E.g., {"minLength": 3, "maxLength": 255}
+    override val children: List<ClientTemplateFieldStructure> = emptyList(),
+    val constraints: List<Constraint> = emptyList(), // Constraints like min length, regex, etc.
     val options: List<String> = emptyList(), // For fields like dropdowns or checkboxes
     val defaultValue: Any? = null, // Default value for the field
 ) : Field<ClientFieldType>
@@ -18,5 +18,16 @@ enum class ClientFieldType {
 }
 
 enum class ClientFieldConstraint {
-    MIN_LENGTH, MAX_LENGTH, PATTERN, REQUIRED, UNIQUE, CUSTOM
+    MIN_LENGTH, // e.g., 1 character
+    MAX_LENGTH, // e.g., 255 characters
+    PATTERN, // e.g., regex pattern
+    REQUIRED, // No Value needed, just indicates required field
+    UNIQUE, // No Value needed, just indicates uniqueness
+    CUSTOM, // for custom validation logic
+    TYPE // e.g., "email" | "phone" | "integer" | "decimal"
 }
+
+data class Constraint(
+    val type: ClientFieldConstraint,
+    val value: String? = null // Value for the constraint, e.g., min length, regex pattern
+)

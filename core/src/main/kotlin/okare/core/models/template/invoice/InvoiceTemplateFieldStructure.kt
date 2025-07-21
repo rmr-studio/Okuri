@@ -7,7 +7,7 @@ data class InvoiceTemplateFieldStructure(
     override val description: String? = null,
     override val type: InvoiceFieldType,
     override val required: Boolean = false,
-    override val children: List<Field<InvoiceFieldType>>,
+    override val children: List<InvoiceTemplateFieldStructure> = emptyList(),
 ) : Field<InvoiceFieldType>
 
 enum class InvoiceFieldType

@@ -7,7 +7,7 @@ data class ReportTemplateFieldStructure(
     override val description: String? = null,
     override val type: ReportFieldType,
     override val required: Boolean = false,
-    override val children: List<Field<ReportFieldType>>,
+    override val children: List<ReportTemplateFieldStructure> = emptyList(),
 ) : Field<ReportFieldType>
 
 enum class ReportFieldType
