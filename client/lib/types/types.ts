@@ -349,7 +349,7 @@ export interface components {
             /** @enum {string} */
             type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
             required: boolean;
-            children: components["schemas"]["FieldClientFieldType"][];
+            children: components["schemas"]["ClientTemplateFieldStructure"][];
             constraints: components["schemas"]["Constraint"][];
             options: string[];
             defaultValue?: Record<string, never>;
@@ -366,25 +366,6 @@ export interface components {
             additionalContacts: {
                 [key: string]: string;
             };
-        };
-        FieldClientFieldType: {
-            description?: string;
-            name: string;
-            /** @enum {string} */
-            type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
-            required: boolean;
-        };
-        FieldInvoiceFieldType: {
-            description?: string;
-            name: string;
-            type: string;
-            required: boolean;
-        };
-        FieldReportFieldType: {
-            description?: string;
-            name: string;
-            type: string;
-            required: boolean;
         };
         Invoice: {
             /** Format: uuid */
@@ -432,14 +413,14 @@ export interface components {
             description?: string;
             type: string;
             required: boolean;
-            children: components["schemas"]["FieldInvoiceFieldType"][];
+            children: components["schemas"]["InvoiceTemplateFieldStructure"][];
         };
         ReportTemplateFieldStructure: {
             name: string;
             description?: string;
             type: string;
             required: boolean;
-            children: components["schemas"]["FieldReportFieldType"][];
+            children: components["schemas"]["ReportTemplateFieldStructure"][];
         };
         TemplateClientTemplateFieldStructure: {
             /** Format: uuid */

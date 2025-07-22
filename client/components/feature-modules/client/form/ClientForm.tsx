@@ -57,19 +57,7 @@ const createDynamicSchema = (
                     if (type === "MAX_LENGTH" && isNumber(value))
                         numSchema = numSchema.max(value, `${field.name} is too large`);
                     if (type === "TYPE" && isValidTypeRestriction(field.type, value)) {
-                        if (value === "INTEGER") {
-                            numSchema = numSchema
-                                .int()
-                                .refine(
-                                    (val) => Number.isInteger(val),
-                                    `${field.name} must be an integer`
-                                );
-                        } else if (value === "FLOAT") {
-                            numSchema = numSchema.refine(
-                                (val) => !Number.isInteger(val),
-                                `${field.name} must be a float`
-                            );
-                        } else if (value === "POSITIVE") {
+                        if (value === "POSITIVE") {
                             numSchema = numSchema.positive(`${field.name} must be positive`);
                         } else if (value === "NEGATIVE") {
                             numSchema = numSchema.negative(`${field.name} must be negative`);

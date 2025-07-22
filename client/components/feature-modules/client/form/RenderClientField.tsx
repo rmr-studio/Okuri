@@ -13,7 +13,7 @@ import {
 import { TextSeparator } from "@/components/ui/text-separator";
 import { ClientTemplateFieldStructure } from "@/lib/interfaces/template.interface";
 import { FC } from "react";
-import { UseFormReturn } from "react-hook-form";
+import { Path, UseFormReturn } from "react-hook-form";
 import { Country } from "react-phone-number-input";
 import { ClientCreation } from "./ClientForm";
 
@@ -22,10 +22,10 @@ export const RenderClientField: FC<{
     form: UseFormReturn<ClientCreation>;
     path: string;
 }> = ({ field, form, path }) => {
-
     const handleCountrySelection = (fieldPath: string, country: Country) => {
-        // Assert fieldPath 
-        form.setValue(fieldPath, country);
+        const currentValue = form.getValues(fieldPath as Path<ClientCreation>);
+        const newValue = { ...currentValue, country };
+        form.setValue(fieldPath as Path<ClientCreation>, newValue);
     };
 
     if (field.type === "OBJECT") {
@@ -49,7 +49,7 @@ export const RenderClientField: FC<{
     return (
         <FormField
             control={form.control}
-            name={path}
+            name={path as Path<ClientCreation>}
             render={({ field: formField }) => (
                 <FormItem className="mt-6 w-full">
                     <FormLabel className="font-semibold">
