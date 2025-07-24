@@ -4,13 +4,13 @@ const features = [
     {
         name: "Automated Invoice Generation",
         description:
-            "Harness the power of our software to automatically turn your billable hours into ready to go Invoices to send straight to your client",
+            "Harness the power of our software to automatically turn your billable hours into ready to go Invoices to send straight to your client, with a free flowing structure to ensure that all actions are captured and billed to your client.",
         icon: Brain,
     },
     {
         name: "Seamless Client Management",
         description:
-            "Store, manage and update all of your client details in a singular easy to use Platform.",
+            "Store, manage and update all of your client details in a free flowing structureless manner to ensure no data or information is missed.",
         icon: Cloud,
     },
     {
@@ -20,9 +20,9 @@ const features = [
         icon: Shield,
     },
     {
-        name: "Improved Productivity",
+        name: "Easy template based structure",
         description:
-            "Optimized for speed and efficiency, our solutions deliver unparalleled performance.",
+            "Efficiently structure your clients, invoices and reports with pre built/community custom templates, or build your own templates for ongoing ease of use..",
         icon: Zap,
     },
 ];
@@ -36,7 +36,7 @@ export default function Features() {
                 </h2>
                 <p className="mt-4 text-muted-foreground sm:text-lg">
                     Discover how Okare can simplify your workflow and enhance productivity to ensure
-                    your time is spent on doing what you do best
+                    your time is spent business growing, and not on managing menial tasks.
                 </p>
             </div>
             <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
