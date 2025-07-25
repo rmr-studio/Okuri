@@ -2,7 +2,6 @@ package okare.core.entity.user
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okare.core.models.invoice.ChargeRate
 import okare.core.models.user.Address
 import okare.core.models.user.Company
 import okare.core.models.user.User
@@ -37,13 +36,6 @@ data class UserEntity(
     @Column(name = "company", nullable = true, columnDefinition = "jsonb")
     var company: Company? = null,
 
-    @Type(JsonBinaryType::class)
-    @Column(name = "charge_rate", columnDefinition = "jsonb", nullable = true)
-    var chargeRate: ChargeRate? = null,
-
-    @Embedded
-    var paymentDetails: Payment? = null,
-
     @Column(
         name = "created_at",
         nullable = false,
@@ -62,18 +54,6 @@ data class UserEntity(
     fun onPreUpdate() {
         updatedAt = ZonedDateTime.now()
     }
-
-    @Embeddable
-    data class Payment(
-        @Column(name = "bsb")
-        var bsb: String,
-
-        @Column(name = "account_number")
-        var accountNumber: String,
-
-        @Column(name = "account_name")
-        var accountName: String
-    )
 }
 
 fun UserEntity.toModel(): User {
@@ -87,8 +67,6 @@ fun UserEntity.toModel(): User {
             phone = this.phone,
             name = this.name,
             company = this.company,
-            chargeRate = this.chargeRate,
-            paymentDetails = this.paymentDetails,
             address = this.address,
         )
     }

@@ -1,7 +1,5 @@
 package okare.core.models.user
 
-import okare.core.entity.user.UserEntity
-import okare.core.models.invoice.ChargeRate
 import java.util.*
 
 data class User(
@@ -11,8 +9,6 @@ data class User(
     var phone: String,
     var address: Address? = null,
     var company: Company? = null,
-    var chargeRate: ChargeRate? = null,
-    var paymentDetails: UserEntity.Payment? = null
 )
 
 

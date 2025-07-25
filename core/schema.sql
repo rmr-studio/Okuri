@@ -6,18 +6,14 @@ commit;
 drop table if exists "users" cascade;
 create table if not exists "users"
 (
-    "id"             uuid primary key not null default uuid_generate_v4(),
-    "name"           varchar(50)      not null,
-    "email"          varchar(100)     not null unique,
-    "phone"          varchar(15)      not null unique,
-    "address"        jsonb,
-    "company"        jsonb,
-
-    "bsb"            varchar(10)      not null,
-    "account_number" varchar(20)      not null,
-    "account_name"   varchar(50)      not null,
-    "created_at"     timestamp with time zone  default current_timestamp,
-    "updated_at"     timestamp with time zone  default current_timestamp
+    "id"         uuid primary key not null default uuid_generate_v4(),
+    "name"       varchar(50)      not null,
+    "email"      varchar(100)     not null unique,
+    "phone"      varchar(15)      not null unique,
+    "address"    jsonb,
+    "company"    jsonb,
+    "created_at" timestamp with time zone  default current_timestamp,
+    "updated_at" timestamp with time zone  default current_timestamp
 );
 
 create or replace function public.handle_new_user()
