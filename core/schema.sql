@@ -2,18 +2,117 @@ begin;
 create extension if not exists "uuid-ossp";
 commit;
 
+-- Organisations
+CREATE TABLE IF NOT EXISTS "organisations"
+(
+    "id"                UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
+    "name"              VARCHAR(100)     NOT NULL UNIQUE,
+    "address"           jsonb,
+    "avatar_url"        TEXT,
+    "business_number"   TEXT,
+    "tax_id"            TEXT,
+    "payment_details"   jsonb,
+    "custom_attributes" jsonb,
+    "member_count"      INTEGER          NOT NULL DEFAULT 0,
+    "created_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TYPE ORGANISATION_ROLE AS ENUM ('OWNER', 'ADMIN', 'MEMBER');
+
+CREATE TABLE IF NOT EXISTS "organisation_members"
+(
+    "id"              UUID PRIMARY KEY  NOT NULL DEFAULT uuid_generate_v4(),
+    "organisation_id" UUID              NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
+    "user_id"         UUID              NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    "role"            ORGANISATION_ROLE NOT NULL DEFAULT 'MEMBER',
+    "member_since"    TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE public.organisation_members
+    ADD CONSTRAINT ux_organisation_user UNIQUE (organisation_id, user_id);
+
+CREATE INDEX idx_organisation_members_user_id
+    ON public.organisation_members (user_id);
+
+
+CREATE TYPE ORGANISATION_INVITE_STATUS AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED');
+
+-- Function to update member count
+CREATE OR REPLACE FUNCTION public.update_org_member_count()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        -- Increment member count on INSERT
+        UPDATE public.organisations
+        SET member_count = member_count + 1,
+            updated_at   = now()
+        WHERE id = NEW.organisation_id;
+    ELSIF (TG_OP = 'DELETE') THEN
+        -- Decrement member count on DELETE
+        UPDATE public.organisations
+        SET member_count = member_count - 1,
+            updated_at   = now()
+        WHERE id = OLD.organisation_id;
+    END IF;
+
+    RETURN NULL; -- Triggers on INSERT/DELETE do not modify the rows
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for INSERT and DELETE on org_member
+CREATE or replace TRIGGER trg_update_org_member_count
+    AFTER INSERT OR DELETE
+    ON public.organisation_members
+    FOR EACH ROW
+EXECUTE FUNCTION public.update_org_member_count();
+
+ALTER TABLE ORGANISATIONS
+    ENABLE ROW LEVEL SECURITY;
+
+/* Add restrictions to ensure that only organisation members can view their organisation*/
+CREATE POLICY "Users can view their own organisations" on organisations
+    FOR SELECT
+    TO authenticated
+    USING (
+    id IN (SELECT organisation_id
+           FROM organisation_members
+           WHERE user_id = auth.uid())
+    );
+
+
+CREATE TABLE IF NOT EXISTS "organisation_invites"
+(
+    "id"              UUID PRIMARY KEY  NOT NULL DEFAULT uuid_generate_v4(),
+    "organisation_id" UUID              NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
+    "email"           VARCHAR(100)      NOT NULL,
+    "invite_code"     VARCHAR(12)       NOT NULL CHECK (LENGTH(invite_code) = 12),
+    "role"            ORGANISATION_ROLE NOT NULL DEFAULT 'MEMBER',
+    "invited_by"      UUID              NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    "created_at"      TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP,
+    "expires_at"      TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 days'
+);
+
+CREATE INDEX idx_invite_organisation_id ON public.organisation_invites (organisation_id);
+CREATE INDEX idx_invite_email ON public.organisation_invites (email);
+CREATE INDEX idx_invite_token ON public.organisation_invites (invite_code);
+
+alter table organisation_invites
+    add constraint uq_invite_code unique (invite_code);
+
 -- Users
 drop table if exists "users" cascade;
 create table if not exists "users"
 (
-    "id"         uuid primary key not null default uuid_generate_v4(),
-    "name"       varchar(50)      not null,
-    "email"      varchar(100)     not null unique,
-    "phone"      varchar(15)      not null unique,
-    "address"    jsonb,
-    "company"    jsonb,
-    "created_at" timestamp with time zone  default current_timestamp,
-    "updated_at" timestamp with time zone  default current_timestamp
+    "id"                      uuid primary key not null default uuid_generate_v4(),
+    "name"                    varchar(50)      not null,
+    "email"                   varchar(100)     not null unique,
+    "phone"                   varchar(15)      null,
+    "avatar_url"              TEXT,
+    "default_organisation_id" UUID             references public.organisations (id) ON DELETE SET NULL,
+    "created_at"              timestamp with time zone  default current_timestamp,
+    "updated_at"              timestamp with time zone  default current_timestamp
 );
 
 create or replace function public.handle_new_user()
@@ -23,14 +122,12 @@ create or replace function public.handle_new_user()
 as
 $$
 begin
-    insert into public.users (id, name, email, phone, bsb, account_number, account_name)
+    insert into public.users (id, name, email, phone, avatar_url)
     values (new.id,
             coalesce(new.raw_user_meta_data ->> 'name', ''),
             new.email,
             coalesce(new.raw_user_meta_data ->> 'phone', ''),
-            '',
-            '',
-            '');
+            avatar_url);
     return new;
 end
 $$;
@@ -76,6 +173,8 @@ CREATE TABLE IF NOT EXISTS template
     CONSTRAINT fk_owner FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
+drop table report_templates;
+
 -- Clients
 drop table if exists "clients" cascade;
 create table if not exists "clients"
@@ -84,7 +183,7 @@ create table if not exists "clients"
     "user_id"         uuid             not null references public.users (id) on delete cascade,
     "name"            varchar(50)      not null,
     "contact_details" jsonb,
-    "template_id"     uuid             null references public.report_templates (id) on delete cascade,
+    "template_id"     uuid             null references public.template (id) on delete cascade,
     "attributes"      jsonb            not null,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp
@@ -127,8 +226,8 @@ create table if not exists "invoice"
     "user_id"             uuid                     not null references public.users (id) on delete cascade,
     "client_id"           uuid                     not null references public.clients (id) on delete cascade,
     "invoice_number"      TEXT                     not null,
-    "invoice_template_id" uuid                     null references public.report_templates (id) on delete cascade,
-    "report_template_id"  uuid                     null references public.report_templates (id) on delete cascade,
+    "invoice_template_id" uuid                     null references public.template (id) on delete cascade,
+    "report_template_id"  uuid                     null references public.template (id) on delete cascade,
     "billable_work"       jsonb                    not null,
     "amount"              DECIMAL(19, 4)           not null default 0.00,
     "custom_fields"       jsonb                    not null default '{}',
@@ -152,6 +251,45 @@ create index if not exists idx_invoice_client_id
 ALTER TABLE public.invoice
     ADD CONSTRAINT uq_invoice_number_user UNIQUE (user_id, invoice_number);
 
+/* Add Organisation Roles to Supabase JWT */
+CREATE or replace FUNCTION public.custom_access_token_hook(event jsonb)
+    RETURNS jsonb
+    LANGUAGE plpgsql
+    stable
+AS
+$$
+DECLARE
+    claims jsonb;
+    _roles jsonb;
+BEGIN
+    SELECT coalesce(
+                   jsonb_agg(jsonb_build_object('organisation_id', organisation_id, 'role', role)),
+                   '[]'::jsonb)
+    INTO _roles
+    FROM public.organisation_members
+    WHERE user_id = (event ->> 'user_id')::uuid;
+    claims := event -> 'claims';
+    claims := jsonb_set(claims, '{roles}', _roles, true);
+    event := jsonb_set(event, '{claims}', claims, true);
+    RETURN event;
+END;
+$$;
 
+grant usage on schema public to supabase_auth_admin;
 
+grant execute
+    on function public.custom_access_token_hook
+    to supabase_auth_admin;
+revoke execute
+    on function public.custom_access_token_hook
+    from authenticated, anon, public;
+
+grant all on table public.organisations to supabase_auth_admin;
+grant all on table public.users to supabase_auth_admin;
+grant all on table public.organisation_members to supabase_auth_admin;
+
+create policy "Allow auth admin to read organisation member roles" ON public.organisation_members
+    as permissive for select
+    to supabase_auth_admin
+    using (true);
 
