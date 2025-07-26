@@ -28,6 +28,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organisation/{organisationId}/member/role/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateMemberRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organisation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateOrganisation"];
+        post: operations["createOrganisation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/item/{lineItemId}": {
         parameters: {
             query?: never;
@@ -107,6 +139,54 @@ export interface paths {
          * @description Deletes a client with the specified ID, if the user has access.
          */
         delete: operations["deleteClientById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organisation/invite/reject/{inviteToken}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organisation/invite/organisation/{organisationId}/email/{email}/role/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["inviteToOrganisation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organisation/invite/accept/{inviteToken}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acceptInvite"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -228,6 +308,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organisation/{organisationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOrganisation"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteOrganisation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organisation/invite/user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getUserInvites"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organisation/invite/organisation/{organisationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOrganisationInvites"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/{id}/document": {
         parameters: {
             query?: never;
@@ -268,6 +396,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organisation/{organisationId}/member": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeMemberFromOrganisation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organisation/invite/organisation/{organisationId}/invitation/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeInvite"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -279,23 +439,34 @@ export interface components {
             postalCode: string;
             country: string;
         };
-        ChargeRate: {
-            /** Format: double */
-            publicHolidayMultiplier: number;
-            /** Format: double */
-            saturdayMultiplier: number;
-            /** Format: double */
-            sundayMultiplier: number;
-        };
-        Company: {
+        Organisation: {
+            /** Format: uuid */
+            id: string;
             name: string;
+            avatarUrl?: string;
             businessNumber?: string;
             taxId?: string;
+            address?: components["schemas"]["Address"];
+            organisationPaymentDetails?: components["schemas"]["OrganisationPaymentDetails"];
             customAttributes: {
                 [key: string]: Record<string, never>;
             };
+            /** Format: int32 */
+            memberCount: number;
+            /** Format: date-time */
+            createdAt: string;
         };
-        Payment: {
+        OrganisationMember: {
+            user: components["schemas"]["UserDisplay"];
+            /** Format: uuid */
+            organisationId: string;
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+            /** Format: date-time */
+            memberSince: string;
+            organisation?: components["schemas"]["Organisation"];
+        };
+        OrganisationPaymentDetails: {
             bsb: string;
             accountNumber: string;
             accountName: string;
@@ -305,11 +476,17 @@ export interface components {
             id: string;
             email: string;
             name: string;
-            phone: string;
-            address?: components["schemas"]["Address"];
-            company?: components["schemas"]["Company"];
-            chargeRate?: components["schemas"]["ChargeRate"];
-            paymentDetails?: components["schemas"]["Payment"];
+            phone?: string;
+            avatarUrl?: string;
+            memberships: components["schemas"]["OrganisationMember"][];
+            defaultOrganisation?: components["schemas"]["Organisation"];
+        };
+        UserDisplay: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            avatarUrl?: string;
         };
         LineItem: {
             /** Format: uuid */
@@ -479,6 +656,29 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        OrganisationInvite: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            organisationId: string;
+            email: string;
+            inviteToken: string;
+            /** Format: uuid */
+            invitedBy?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+            /** @enum {string} */
+            status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED";
+        };
+        OrganisationCreationRequest: {
+            name: string;
+            avatarUrl?: string;
+            isDefault: boolean;
+        };
         LineItemCreationRequest: {
             name: string;
             description?: string;
@@ -607,6 +807,81 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    updateMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+                role: "OWNER" | "ADMIN" | "MEMBER";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganisationMember"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrganisationMember"];
+                };
+            };
+        };
+    };
+    updateOrganisation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Organisation"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Organisation"];
+                };
+            };
+        };
+    };
+    createOrganisation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganisationCreationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Organisation"];
                 };
             };
         };
@@ -1060,6 +1335,70 @@ export interface operations {
             };
         };
     };
+    rejectInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inviteToken: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    inviteToOrganisation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+                email: string;
+                role: "OWNER" | "ADMIN" | "MEMBER";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrganisationInvite"];
+                };
+            };
+        };
+    };
+    acceptInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inviteToken: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getLineItemsForUser: {
         parameters: {
             query?: never;
@@ -1443,6 +1782,92 @@ export interface operations {
             };
         };
     };
+    getOrganisation: {
+        parameters: {
+            query?: {
+                includeMembers?: boolean;
+            };
+            header?: never;
+            path: {
+                organisationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Organisation"];
+                };
+            };
+        };
+    };
+    deleteOrganisation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getUserInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrganisationInvite"][];
+                };
+            };
+        };
+    };
+    getOrganisationInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrganisationInvite"][];
+                };
+            };
+        };
+    };
     generateInvoiceDocument: {
         parameters: {
             query?: never;
@@ -1531,6 +1956,51 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["Invoice"][];
                 };
+            };
+        };
+    };
+    removeMemberFromOrganisation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganisationMember"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revokeInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
