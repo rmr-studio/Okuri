@@ -2,8 +2,8 @@ package okare.core.entity.organisation
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
+import okare.core.models.common.Address
 import okare.core.models.organisation.Organisation
-import okare.core.models.organisation.OrganisationAddress
 import okare.core.models.organisation.OrganisationPaymentDetails
 import org.hibernate.annotations.Type
 import java.time.ZonedDateTime
@@ -39,7 +39,7 @@ data class OrganisationEntity(
 
     @Type(JsonBinaryType::class)
     @Column(name = "address", nullable = true, columnDefinition = "jsonb")
-    var address: OrganisationAddress? = null,
+    var address: Address? = null,
 
     @Column(name = "business_number", nullable = true, updatable = true)
     var businessNumber: String? = null,

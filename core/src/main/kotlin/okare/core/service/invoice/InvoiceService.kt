@@ -12,7 +12,6 @@ import okare.core.models.template.toEntity
 import okare.core.repository.invoice.InvoiceRepository
 import okare.core.service.auth.AuthTokenService
 import okare.core.service.client.ClientService
-import okare.core.service.pdf.DocumentGenerationService
 import okare.core.service.user.UserService
 import okare.core.util.ServiceUtil.findManyResults
 import okare.core.util.ServiceUtil.findOrThrow
@@ -27,7 +26,6 @@ class InvoiceService(
     private val userService: UserService,
     private val clientService: ClientService,
     private val authTokenService: AuthTokenService,
-    private val documentGeneratorService: DocumentGenerationService,
     private val logger: KLogger
 ) {
 
@@ -113,11 +111,6 @@ class InvoiceService(
 
     @PreAuthorize("@securityConditions.doesUserOwnInvoice(#invoice)")
     fun generateDocument(invoice: Invoice, templateId: UUID? = null): ByteArray {
-//        val templateData = templateId?.let { reportTemplateService.getTemplateById(it)?.templateData }
-//        documentGeneratorService.generateInvoiceDocument(invoice, templateData).run {
-//            logger.info { "Invoice Service => Generated document for invoice with ID: ${invoice.id} using template: $templateId" }
-//            return this
-//        }
         TODO()
     }
 

@@ -35,7 +35,7 @@ data class OrganisationInviteEntity(
 
     @Column(name = "role")
     @Enumerated(EnumType.STRING)
-    val role: OrganisationRoles = OrganisationRoles.DEVELOPER,
+    val role: OrganisationRoles = OrganisationRoles.MEMBER,
 
     @Column(name = "invite_code", length = 12, nullable = false)
     val token: String = this.generateSecureToken(),

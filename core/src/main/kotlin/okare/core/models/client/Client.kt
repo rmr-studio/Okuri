@@ -1,5 +1,6 @@
 package okare.core.models.client
 
+import okare.core.models.common.Address
 import okare.core.models.template.Template
 import okare.core.models.template.client.ClientTemplateFieldStructure
 import java.util.*

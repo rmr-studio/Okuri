@@ -3,6 +3,7 @@ package okare.core.models.organisation
 
 import okare.core.entity.organisation.OrganisationEntity
 import okare.core.entity.organisation.OrganisationMemberEntity
+import okare.core.entity.organisation.toModel
 import okare.core.entity.user.toDisplay
 import okare.core.enums.organisation.OrganisationRoles
 import okare.core.models.user.UserDisplay
@@ -29,7 +30,7 @@ data class OrganisationMember(
                         organisationId = it.organisationId,
                         role = entity.role,
                         memberSince = entity.memberSince,
-                        organisation = organisation?.let { entity -> Organisation.fromEntity(entity) }
+                        organisation = organisation?.toModel()
                     )
                 }
 
