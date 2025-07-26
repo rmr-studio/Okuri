@@ -1,6 +1,6 @@
-package okare.core.models.user
+package okare.core.models.organisation
 
-data class PaymentDetails(
+data class OrganisationPaymentDetails(
     var bsb: String,
     var accountNumber: String,
     var accountName: String

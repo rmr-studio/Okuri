@@ -1,0 +1,70 @@
+package okare.core.entity.organisation
+
+import jakarta.persistence.*
+import okare.core.entity.user.UserEntity
+import okare.core.entity.user.toDisplay
+import okare.core.enums.organisation.OrganisationRoles
+import okare.core.models.organisation.OrganisationMember
+import java.time.ZonedDateTime
+import java.util.*
+
+@Entity
+@Table(
+    name = "organisation_members",
+)
+data class OrganisationMemberEntity(
+    // User ID + Organisation ID as composite key
+    @EmbeddedId
+    val id: OrganisationMemberKey,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, updatable = true)
+    var role: OrganisationRoles,
+
+    @Column(name = "member_since", nullable = false, updatable = false)
+    val memberSince: ZonedDateTime = ZonedDateTime.now(),
+) {
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", insertable = false, updatable = false)
+    var user: UserEntity? = null
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "organisation_id",
+        referencedColumnName = "id",
+        insertable = false,
+        updatable = false
+    )
+    var organisation: OrganisationEntity? = null
+
+    @Embeddable
+    data class OrganisationMemberKey(
+        @Column(name = "organisation_id", nullable = false)
+        val organisationId: UUID,
+
+        @Column(name = "user_id", nullable = false)
+        val userId: UUID
+    )
+}
+
+fun OrganisationMemberEntity.toModel(): OrganisationMember {
+    this.user.let {
+        if (it == null) {
+            throw IllegalArgumentException("OrganisationMemberEntity must have a non-null user")
+        }
+
+        if (it.id == null) {
+            throw IllegalArgumentException("UserEntity must have a non-null id")
+        }
+
+        return OrganisationMember(
+            user = it.toDisplay(),
+            organisationId = id.organisationId,
+            role = role,
+            memberSince = memberSince,
+        )
+    }
+
+
+}
+

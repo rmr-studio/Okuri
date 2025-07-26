@@ -2,7 +2,6 @@ package okare.core.models.client
 
 import okare.core.models.template.Template
 import okare.core.models.template.client.ClientTemplateFieldStructure
-import okare.core.models.user.Address
 import java.util.*
 
 data class Client(

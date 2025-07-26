@@ -1,6 +1,6 @@
-package okare.core.models.user
+package okare.core.models.organisation
 
-data class Address(
+data class OrganisationAddress(
     val street: String,
     val city: String,
     val state: String,
