@@ -1,5 +1,6 @@
-package paladin.core.service.organisation
+package okare.core.service.organisation
 
+import okare.core.service.organisation.OrganisationInviteService
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
@@ -10,20 +11,20 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import paladin.core.entities.organisation.OrganisationEntity
-import paladin.core.entities.organisation.OrganisationInviteEntity
-import paladin.core.entities.organisation.OrganisationMemberEntity
-import paladin.core.entities.user.UserEntity
-import paladin.core.enums.organisation.OrganisationInviteStatus
-import paladin.core.enums.organisation.OrganisationRoles
-import paladin.core.exceptions.ConflictException
-import paladin.core.repository.organisation.OrganisationInviteRepository
-import paladin.core.repository.organisation.OrganisationMemberRepository
-import paladin.core.repository.organisation.OrganisationRepository
-import util.OrganisationRole
-import util.WithUserPersona
-import util.factory.MockOrganisationEntityFactory
-import util.factory.MockUserEntityFactory
+import okare.core.entity.organisation.OrganisationEntity
+import okare.core.entity.organisation.OrganisationInviteEntity
+import okare.core.entity.organisation.OrganisationMemberEntity
+import okare.core.entity.user.UserEntity
+import okare.core.enums.organisation.OrganisationInviteStatus
+import okare.core.enums.organisation.OrganisationRoles
+import okare.core.exceptions.ConflictException
+import okare.core.repository.organisation.OrganisationInviteRepository
+import okare.core.repository.organisation.OrganisationMemberRepository
+import okare.core.repository.organisation.OrganisationRepository
+import okare.core.util.OrganisationRole
+import okare.core.util.WithUserPersona
+import okare.core.util.factory.MockOrganisationEntityFactory
+import okare.core.util.factory.MockUserEntityFactory
 import java.util.*
 
 @SpringBootTest
@@ -61,7 +62,7 @@ class OrganisationInviteServiceTest {
             ),
             OrganisationRole(
                 organisationId = "e9b1c2d3-4e5f-6789-abcd-ef9876543210",
-                role = OrganisationRoles.DEVELOPER
+                role = OrganisationRoles.MEMBER
             )
         ]
     )
@@ -108,7 +109,7 @@ class OrganisationInviteServiceTest {
         val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
             email = targetEmail,
             organisationId = organisationId1,
-            role = OrganisationRoles.DEVELOPER,
+            role = OrganisationRoles.MEMBER,
             invitedBy = userId,
         )
 
@@ -123,7 +124,7 @@ class OrganisationInviteServiceTest {
             organisationInviteService.createOrganisationInvitation(
                 organisationId2,
                 targetEmail,
-                OrganisationRoles.DEVELOPER
+                OrganisationRoles.MEMBER
             )
         }
 
@@ -131,7 +132,7 @@ class OrganisationInviteServiceTest {
             organisationId1,
             // Using a different email to test the invitation creation
             targetEmail,
-            OrganisationRoles.DEVELOPER
+            OrganisationRoles.MEMBER
         )
 
     }
@@ -190,7 +191,7 @@ class OrganisationInviteServiceTest {
             organisationInviteService.createOrganisationInvitation(
                 organisationId1,
                 targetEmail,
-                OrganisationRoles.DEVELOPER
+                OrganisationRoles.MEMBER
             )
         }
     }
@@ -243,7 +244,7 @@ class OrganisationInviteServiceTest {
         val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
-            role = OrganisationRoles.DEVELOPER,
+            role = OrganisationRoles.MEMBER,
             token = token,
         )
 
@@ -262,7 +263,7 @@ class OrganisationInviteServiceTest {
                         organisationId = organisationId1,
                         userId = userId
                     ),
-                    OrganisationRoles.DEVELOPER
+                    OrganisationRoles.MEMBER
                 ).apply {
                     this.user = user
                 }
@@ -299,7 +300,7 @@ class OrganisationInviteServiceTest {
         val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
-            role = OrganisationRoles.DEVELOPER,
+            role = OrganisationRoles.MEMBER,
             token = token,
         )
 
@@ -318,7 +319,7 @@ class OrganisationInviteServiceTest {
                         organisationId = organisationId1,
                         userId = userId
                     ),
-                    OrganisationRoles.DEVELOPER
+                    OrganisationRoles.MEMBER
                 ).apply {
                     this.user = user
                 }
@@ -344,7 +345,7 @@ class OrganisationInviteServiceTest {
         val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
-            role = OrganisationRoles.DEVELOPER,
+            role = OrganisationRoles.MEMBER,
             token = token,
         )
 
@@ -370,7 +371,7 @@ class OrganisationInviteServiceTest {
         val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
-            role = OrganisationRoles.DEVELOPER,
+            role = OrganisationRoles.MEMBER,
             token = token,
             status = OrganisationInviteStatus.EXPIRED
         )
@@ -400,7 +401,7 @@ class OrganisationInviteServiceTest {
         val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
-            role = OrganisationRoles.DEVELOPER,
+            role = OrganisationRoles.MEMBER,
             status = OrganisationInviteStatus.ACCEPTED
         )
 
@@ -423,7 +424,7 @@ class OrganisationInviteServiceTest {
         roles = [
             OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
-                role = OrganisationRoles.DEVELOPER
+                role = OrganisationRoles.MEMBER
             )
         ]
     )
@@ -433,7 +434,7 @@ class OrganisationInviteServiceTest {
         val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
-            role = OrganisationRoles.DEVELOPER,
+            role = OrganisationRoles.MEMBER,
             status = OrganisationInviteStatus.PENDING
         )
 

@@ -1,6 +1,18 @@
-package paladin.core.service.organisation
+package okare.core.service.organisation
 
-import org.junit.jupiter.api.BeforeEach
+import okare.core.entity.organisation.OrganisationEntity
+import okare.core.entity.organisation.OrganisationMemberEntity
+import okare.core.entity.organisation.toModel
+import okare.core.entity.user.UserEntity
+import okare.core.enums.organisation.OrganisationRoles
+import okare.core.models.organisation.Organisation
+import okare.core.models.organisation.OrganisationMember
+import okare.core.repository.organisation.OrganisationMemberRepository
+import okare.core.repository.organisation.OrganisationRepository
+import okare.core.util.OrganisationRole
+import okare.core.util.WithUserPersona
+import okare.core.util.factory.MockOrganisationEntityFactory
+import okare.core.util.factory.MockUserEntityFactory
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
@@ -11,19 +23,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import paladin.core.configuration.properties.SecurityConfigurationProperties
-import paladin.core.entities.organisation.OrganisationEntity
-import paladin.core.entities.organisation.OrganisationMemberEntity
-import paladin.core.entities.user.UserEntity
-import paladin.core.enums.organisation.OrganisationRoles
-import paladin.core.models.organisation.Organisation
-import paladin.core.models.organisation.OrganisationMember
-import paladin.core.repository.organisation.OrganisationMemberRepository
-import paladin.core.repository.organisation.OrganisationRepository
-import util.OrganisationRole
-import util.WithUserPersona
-import util.factory.MockOrganisationEntityFactory
-import util.factory.MockUserEntityFactory
 import java.util.*
 
 @SpringBootTest
@@ -40,7 +39,7 @@ import java.util.*
         ),
         OrganisationRole(
             organisationId = "e9b1c2d3-4e5f-6789-abcd-ef9876543210",
-            role = OrganisationRoles.DEVELOPER
+            role = OrganisationRoles.MEMBER
         )
     ]
 )
@@ -54,7 +53,7 @@ class OrganisationServiceTest {
 
     // Organisation Id to test access control with an org a user is not apart of
     private val organisationId3 = UUID.fromString("d8b1c2d3-4e5f-6789-abcd-ef9876543210")
-    
+
     @MockitoBean
     private lateinit var organisationRepository: OrganisationRepository
 
@@ -104,9 +103,7 @@ class OrganisationServiceTest {
             it.copy().apply {
                 name = "Updated Organisation Name"
             }
-        }.let {
-            Organisation.fromEntity(it)
-        }
+        }.toModel()
 
         Mockito.`when`(organisationRepository.findById(organisationId2)).thenReturn(Optional.of(entity))
         // Assert user can fetch the organisation given org roles
@@ -138,9 +135,7 @@ class OrganisationServiceTest {
             it.copy().apply {
                 name = "Updated Organisation Name"
             }
-        }.let {
-            Organisation.fromEntity(it)
-        }
+        }.toModel()
 
         Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(entity))
         Mockito.`when`(organisationRepository.save(Mockito.any(OrganisationEntity::class.java)))
@@ -278,7 +273,7 @@ class OrganisationServiceTest {
         val member: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
-            role = OrganisationRoles.DEVELOPER
+            role = OrganisationRoles.MEMBER
         ).let {
             it.run {
                 Mockito.`when`(organisationMemberRepository.findById(key)).thenReturn(Optional.of(this))
@@ -356,7 +351,7 @@ class OrganisationServiceTest {
         roles = [
             OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
-                role = OrganisationRoles.DEVELOPER
+                role = OrganisationRoles.MEMBER
             )
         ]
     )
@@ -381,7 +376,7 @@ class OrganisationServiceTest {
         val member: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
-            role = OrganisationRoles.DEVELOPER
+            role = OrganisationRoles.MEMBER
         ).let {
             it.run {
                 Mockito.`when`(organisationMemberRepository.findById(key)).thenReturn(Optional.of(this))
@@ -453,7 +448,7 @@ class OrganisationServiceTest {
         val memberDeveloper: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user1,
-            role = OrganisationRoles.DEVELOPER
+            role = OrganisationRoles.MEMBER
         ).let {
             it.run {
                 Mockito.`when`(organisationMemberRepository.findById(key1)).thenReturn(Optional.of(this))
@@ -557,7 +552,7 @@ class OrganisationServiceTest {
         val memberDeveloper: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user1,
-            role = OrganisationRoles.DEVELOPER
+            role = OrganisationRoles.MEMBER
         ).let {
             it.run {
                 Mockito.`when`(organisationMemberRepository.findById(key1)).thenReturn(Optional.of(this))
@@ -588,7 +583,7 @@ class OrganisationServiceTest {
         }
 
         // Assert user is able to update an admins role
-        organisationService.updateMemberRole(organisationId1, memberAdmin, OrganisationRoles.DEVELOPER).run {
+        organisationService.updateMemberRole(organisationId1, memberAdmin, OrganisationRoles.MEMBER).run {
             assert(true) { "Admin role update should not throw an exception" }
             // Verify the save function was invoked for a second time to update the role of the user
             Mockito.verify(organisationMemberRepository, Mockito.times(2)).save(Mockito.any())
