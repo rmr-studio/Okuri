@@ -34,9 +34,7 @@ class OrganisationService(
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisation(organisationId: UUID, includeMembers: Boolean = false): Organisation {
-        return findOrThrow(organisationId, organisationRepository::findById).let {
-            it.toModel(includeMembers)
-        }
+        return findOrThrow(organisationId, organisationRepository::findById).toModel(includeMembers)
     }
 
     /**
@@ -52,7 +50,12 @@ class OrganisationService(
         // Create and save the organisation entity
         val organisation: Organisation = OrganisationEntity(
             name = name,
-            avatarUrl = avatarUrl
+            avatarUrl = avatarUrl,
+            businessNumber = request.businessNumber,
+            address = request.address,
+            taxId = request.taxId,
+            organisationPaymentDetails = request.payment,
+            customAttributes = request.customAttributes,
         ).run {
             organisationRepository.save(this).toModel()
         }
@@ -146,7 +149,7 @@ class OrganisationService(
     /**
      * Allow permission to remove member from organisation under the following conditions:
      *  - The user is the owner of the organisation
-     *  - The user is an admin and has a role higher than the member's role (ie. ADMIN can remove DEVELOPER/READONLY, but not OWNER or ADMIN)
+     *  - The user is an admin and has a role higher than the member's role (ie. ADMIN can remove MEMBER, but not OWNER or ADMIN)
      *  - The user is trying to remove themselves from the organisation
      */
     @PreAuthorize(
@@ -173,7 +176,7 @@ class OrganisationService(
     /**
      * Allow permission to update a member's role in the organisation under the following conditions:
      *  - The user is the owner of the organisation
-     *  - The user is an admin and has a role higher than the member's role (ie. ADMIN can alter roles of DEVELOPER/READONLY users, but not OWNER or ADMIN)
+     *  - The user is an admin and has a role higher than the member's role (ie. ADMIN can alter roles of MEMBER users, but not OWNER or ADMIN)
      */
     @PreAuthorize(
         """

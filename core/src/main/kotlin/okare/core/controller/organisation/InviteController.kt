@@ -1,12 +1,12 @@
-package paladin.core.controller.organisation
+package okare.core.controller.organisation
 
 import io.swagger.v3.oas.annotations.tags.Tag
+import okare.core.enums.organisation.OrganisationRoles
+import okare.core.models.organisation.OrganisationInvite
+import okare.core.service.organisation.OrganisationInviteService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import paladin.core.enums.organisation.OrganisationRoles
-import paladin.core.models.organisation.OrganisationInvite
-import paladin.core.service.organisation.OrganisationInviteService
 import java.util.*
 
 @RestController

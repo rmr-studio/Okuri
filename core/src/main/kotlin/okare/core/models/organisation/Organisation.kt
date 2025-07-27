@@ -6,13 +6,13 @@ import java.util.*
 
 data class Organisation(
     val id: UUID,
-    val name: String,
-    val avatarUrl: String? = null,
-    val businessNumber: String? = null,
-    val taxId: String? = null,
-    val address: Address? = null,
-    val organisationPaymentDetails: OrganisationPaymentDetails? = null, // Optional, can be null if not applicable
-    val customAttributes: Map<String, Any> = emptyMap(), // JSONB for industry-specific fields
+    var name: String,
+    var avatarUrl: String? = null,
+    var businessNumber: String? = null,
+    var taxId: String? = null,
+    var address: Address? = null,
+    var organisationPaymentDetails: OrganisationPaymentDetails? = null, // Optional, can be null if not applicable
+    var customAttributes: Map<String, Any> = emptyMap(), // JSONB for industry-specific fields
     val memberCount: Int,
     val createdAt: ZonedDateTime,
     val members: List<OrganisationMember> = listOf(),
