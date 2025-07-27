@@ -678,6 +678,13 @@ export interface components {
             name: string;
             avatarUrl?: string;
             isDefault: boolean;
+            businessNumber?: string;
+            taxId?: string;
+            address: components["schemas"]["Address"];
+            payment?: components["schemas"]["OrganisationPaymentDetails"];
+            customAttributes: {
+                [key: string]: Record<string, never>;
+            };
         };
         LineItemCreationRequest: {
             name: string;

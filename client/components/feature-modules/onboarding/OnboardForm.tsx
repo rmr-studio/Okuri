@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { isMobilePhone } from "validator";
 
 import { Progress } from "@/components/ui/progress";
+import { OTPFormSchema } from "@/lib/util/form/form.util";
 import { z } from "zod";
 import OnboardUserForm from "./form/1.User";
 import OnboardCompanyForm from "./form/2.Company";
@@ -22,25 +23,16 @@ const userOnboardDetailsSchema = z.object({
     displayName: z
         .string({ required_error: "Display Name is required" })
         .min(3, "Display Name is too short"),
-    phone: z.string().min(10, "Invalid Phone Number").refine(isMobilePhone),
-    street: z
-        .string({ required_error: "Street is required" })
-        .nonempty("A street address is required"),
-    city: z.string({ required_error: "City is required" }).nonempty("A city is required"),
-    state: z.string({ required_error: "State is required" }).nonempty("A state is required"),
-    country: z.string({ required_error: "Country is required" }).nonempty("A country is required"),
-    postalCode: z
-        .string({ required_error: "Postal Code is required" })
-        .nonempty("A postal code is required"),
+    phone: z
+        .string()
+        .min(10, "Invalid Phone Number")
+        .refine(isMobilePhone)
+        .optional()
+        .or(z.literal("")),
+    avatarUrl: z.string().url().optional(),
 
-    companyName: z.string().optional(),
-    businessNumber: z.string().optional(),
-    publicHolidayMultiplier: z.coerce.number().min(1, "Multiplier must be at least 1").optional(),
-    saturdayMultiplier: z.coerce.number().min(1, "Multiplier must be at least 1").optional(),
-    sundayMultiplier: z.coerce.number().min(1, "Multiplier must be at least 1").optional(),
-    bsb: z.string(),
-    accountNumber: z.string(),
-    accountName: z.string(),
+    // OTP is only required if phone number is provided
+    otp: OTPFormSchema.shape.otp.or(z.literal("")),
 });
 
 export type UserOnboard = z.infer<typeof userOnboardDetailsSchema>;
@@ -52,6 +44,7 @@ export const OnboardForm: FC<Propless> = () => {
     const { data: user } = useProfile();
     const queryClient = useQueryClient();
     const [progress, setProgress] = useState<number>(20);
+    const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
     const [currentTab, setCurrentTab] = useState<OnboardFormTab>("user");
     const toastRef = useRef<string | number | null>(null);
 
@@ -60,24 +53,13 @@ export const OnboardForm: FC<Propless> = () => {
         defaultValues: {
             displayName: user?.name || "",
             phone: user?.phone || undefined,
-            street: user?.address?.street || "",
-            city: user?.address?.city || "",
-            state: user?.address?.state || "",
-            country: user?.address?.country || "",
-            postalCode: user?.address?.postalCode || "",
-            companyName: user?.company?.name || "",
-            businessNumber: user?.company?.abn || "",
-            publicHolidayMultiplier: user?.chargeRate?.publicHolidayMultiplier || 1,
-            saturdayMultiplier: user?.chargeRate?.saturdayMultiplier || 1,
-            sundayMultiplier: user?.chargeRate?.sundayMultiplier || 1,
-            bsb: user?.paymentDetails?.bsb || "",
-            accountNumber: user?.paymentDetails?.accountNumber || "",
-            accountName: user?.paymentDetails?.accountName || "",
+            avatarUrl: user?.avatarUrl,
+            otp: "",
         },
     });
 
     const userMutation = useMutation({
-        mutationFn: (user: User) => updateUser(session, user),
+        mutationFn: (user: User) => updateUser(session, user, uploadedAvatar),
         onMutate: () => {
             toastRef.current = toast.loading("Updating Profile...");
         },
@@ -107,27 +89,6 @@ export const OnboardForm: FC<Propless> = () => {
             ...user,
             phone: values.phone,
             name: values.displayName,
-            address: {
-                street: values.street,
-                city: values.city,
-                state: values.state,
-                country: values.country,
-                postalCode: values.postalCode,
-            },
-            company: {
-                name: values.companyName,
-                abn: values.businessNumber,
-            },
-            chargeRate: {
-                publicHolidayMultiplier: values.publicHolidayMultiplier || 1,
-                saturdayMultiplier: values.saturdayMultiplier || 1,
-                sundayMultiplier: values.sundayMultiplier || 1,
-            },
-            paymentDetails: {
-                bsb: values.bsb,
-                accountNumber: values.accountNumber,
-                accountName: values.accountName,
-            },
         };
 
         userMutation.mutate(updatedUser);
