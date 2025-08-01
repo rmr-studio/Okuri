@@ -1,6 +1,6 @@
 import { useAuth } from "@/components/provider/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
 import { updateUser } from "@/controller/user.controller";
 import { useProfile } from "@/hooks/useProfile";
@@ -13,11 +13,12 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { isMobilePhone } from "validator";
 
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { TextSeparator } from "@/components/ui/text-separator";
 import { OTPFormSchema } from "@/lib/util/form/form.util";
 import { z } from "zod";
-import OnboardUserForm from "./form/1.User";
-import OnboardCompanyForm from "./form/2.Company";
+import { AvatarUploader } from "@/components/ui/AvatarUploader";
 
 const userOnboardDetailsSchema = z.object({
     displayName: z
@@ -37,18 +38,14 @@ const userOnboardDetailsSchema = z.object({
 
 export type UserOnboard = z.infer<typeof userOnboardDetailsSchema>;
 
-type OnboardFormTab = "user" | "company";
-
 export const OnboardForm: FC<Propless> = () => {
     const { client, session } = useAuth();
     const { data: user } = useProfile();
     const queryClient = useQueryClient();
-    const [progress, setProgress] = useState<number>(20);
     const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
-    const [currentTab, setCurrentTab] = useState<OnboardFormTab>("user");
     const toastRef = useRef<string | number | null>(null);
 
-    const userOnboardForm: UseFormReturn<UserOnboard> = useForm<UserOnboard>({
+    const form: UseFormReturn<UserOnboard> = useForm<UserOnboard>({
         resolver: zodResolver(userOnboardDetailsSchema),
         defaultValues: {
             displayName: user?.name || "",
@@ -71,7 +68,7 @@ export const OnboardForm: FC<Propless> = () => {
 
             toast.error("Failed to update Profile");
         },
-        onSuccess: (response) => {
+        onSuccess: (response: User) => {
             if (toastRef.current !== null) {
                 toast.dismiss(toastRef.current);
             }
@@ -94,63 +91,68 @@ export const OnboardForm: FC<Propless> = () => {
         userMutation.mutate(updatedUser);
     };
 
-    const handleNextTab = async () => {
-        if (currentTab === "user") {
-            const tabValidation = await userOnboardForm.trigger([
-                "displayName",
-                "phone",
-                "street",
-                "city",
-                "state",
-                "country",
-                "postalCode",
-            ]);
-
-            if (!tabValidation) return;
-
-            setCurrentTab("company");
-            setProgress(100);
-        } else {
-            const tabValidation = await userOnboardForm.trigger([
-                "companyName",
-                "businessNumber",
-                "publicHolidayMultiplier",
-                "saturdayMultiplier",
-                "sundayMultiplier",
-                "bsb",
-                "accountNumber",
-                "accountName",
-            ]);
-
-            if (!tabValidation) return;
-
-            handleSubmission(userOnboardForm.getValues());
-        }
-    };
+    const handleAvatarUpload = () => {
+        
+    }
 
     return (
-        <Form {...userOnboardForm}>
-            <form onSubmit={userOnboardForm.handleSubmit(handleSubmission)}>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmission)}>
                 <SheetTitle className="text-2xl mt-2 font-bold">Complete your profile</SheetTitle>
-                <Progress value={progress} className="my-4" />
                 <SheetDescription className="mt-2">
                     Please fill out the details below to complete your profile.
-                    <br />
-                    This will be used when generating invoices and other documents.
-                    <br />
                 </SheetDescription>
                 <div className="mt-4 italic text-sm text-muted-foreground">
                     <span className="font-semibold">Note:</span> You can update these details later
                     in your profile settings.
                 </div>
-                <div className="mt-4">
-                    {currentTab === "user" && <OnboardUserForm {...userOnboardForm} />}
-                    {currentTab === "company" && <OnboardCompanyForm {...userOnboardForm} />}
-                </div>
+                <section className="my-4">
+                    <TextSeparator>
+                        <span className="text-[1rem] leading-1 font-semibold">Your details</span>
+                    </TextSeparator>
+                    <div className="flex flex-col lg:flex-row md:space-x-4">
+                        <FormLabel className="pb-0 md:hidden font-semibold">
+                            Profile Picture
+                        </FormLabel>
+                        <AvatarUploader
+                            onUpload={handleAvatarUpload}
+                            imageURL={userOnboardForm.getValues("avatarUrl")}
+                            onRemove={handleAvatarRemoval}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="displayName"
+                            render={({ field }) => (
+                                <FormItem className="mt-6 w-full lg:w-3/5">
+                                    <FormLabel className="font-semibold">Display Name *</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} placeholder="John Doe" />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                                <FormItem className="mt-6 w-full lg:w-2/5">
+                                    <FormLabel className="font-semibold">Phone *</FormLabel>
+                                    <FormControl>
+                                        <PhoneInput
+                                            {...field}
+                                            placeholder="0455 555 555"
+                                            defaultCountry="AU"
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </section>
 
                 <SheetFooter className="justify-end flex flex-row px-0">
-                    <Button className="w-32 cursor-pointer" type="button" onClick={handleNextTab}>
-                        {currentTab === "user" ? "Next" : "Submit"}
+                    <Button className="w-32 cursor-pointer" type="submit">
+                        Save Changes
                     </Button>
                 </SheetFooter>
             </form>

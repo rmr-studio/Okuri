@@ -1,20 +1,33 @@
-import { CountryEntry, CountrySelect } from "@/components/ui/country-select";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { TextSeparator } from "@/components/ui/text-separator";
 import { countryCodeToName } from "@/lib/util/country/country.util";
 import { FC, useEffect, useState } from "react";
 import { Control, UseFormSetValue } from "react-hook-form";
 import { Country, getCountries } from "react-phone-number-input";
-import { UserOnboard } from "../OnboardForm";
+import { z } from "zod";
+import { CountryEntry, CountrySelect } from "../../country-select";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../form";
+import { Input } from "../../input";
+import { TextSeparator } from "../../text-separator";
+
+export const AddressFormSchema = z.object({
+    street: z
+        .string({ required_error: "Street is required" })
+        .nonempty("A street address is required"),
+    city: z.string({ required_error: "City is required" }).nonempty("A city is required"),
+    state: z.string({ required_error: "State is required" }).nonempty("A state is required"),
+    country: z.string({ required_error: "Country is required" }).nonempty("A country is required"),
+    postalCode: z
+        .string({ required_error: "Postal Code is required" })
+        .nonempty("A postal code is required"),
+});
+
+export type AddressForm = z.infer<typeof AddressFormSchema>;
 
 interface Props {
-    control: Control<UserOnboard>;
-    setValue: UseFormSetValue<UserOnboard>;
+    control: Control<AddressForm>;
+    setValue: UseFormSetValue<AddressForm>;
 }
 
-const OnboardUserForm: FC<Props> = ({ control, setValue }) => {
+export const AddressForm: FC<Props> = ({ control, setValue }) => {
     const [selectedCountry, setSelectedCountry] = useState<Country>("AU");
     const [countries, setCountries] = useState<CountryEntry[]>([]);
 
@@ -34,42 +47,7 @@ const OnboardUserForm: FC<Props> = ({ control, setValue }) => {
     }, []);
 
     return (
-        <>
-            <section className="my-4">
-                <TextSeparator>
-                    <span className="text-[1rem] leading-1 font-semibold">Your details</span>
-                </TextSeparator>
-                <div className="flex flex-col lg:flex-row md:space-x-4">
-                    <FormField
-                        control={control}
-                        name="displayName"
-                        render={({ field }) => (
-                            <FormItem className="mt-6 w-full lg:w-3/5">
-                                <FormLabel className="font-semibold">Display Name *</FormLabel>
-                                <FormControl>
-                                    <Input {...field} placeholder="John Doe" />
-                                </FormControl>
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={control}
-                        name="phone"
-                        render={({ field }) => (
-                            <FormItem className="mt-6 w-full lg:w-2/5">
-                                <FormLabel className="font-semibold">Phone *</FormLabel>
-                                <FormControl>
-                                    <PhoneInput
-                                        {...field}
-                                        placeholder="0455 555 555"
-                                        defaultCountry="AU"
-                                    />
-                                </FormControl>
-                            </FormItem>
-                        )}
-                    />
-                </div>
-            </section>
+        <section>
             <section className="my-4 flex flex-col">
                 <TextSeparator>
                     <span className="text-[1rem] leading-1 font-semibold">Your Address</span>
@@ -155,8 +133,6 @@ const OnboardUserForm: FC<Props> = ({ control, setValue }) => {
                     />
                 </div>
             </section>
-        </>
+        </section>
     );
 };
-
-export default OnboardUserForm;

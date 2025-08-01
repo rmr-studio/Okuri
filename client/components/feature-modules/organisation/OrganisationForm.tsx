@@ -43,14 +43,15 @@ const OrganisationCreationFormSchema = z.object({
         .min(3, "Display Name is too short"),
     avatarUrl: z.string().url().optional(),
     isDefault: z.boolean(),
-    plan: z.enum(["ENTHUSIAST", "PRO", "TEAM", "ENTERPRISE"]),
 });
 
 export type OrganisationCreation = z.infer<typeof OrganisationCreationFormSchema>;
+export type OrganisationFormTab = "base" | "address" | "billing";
 
 export const OrganisationForm = () => {
     const { session, client } = useAuth();
     const { data: user } = useProfile();
+    const progress = useState<number>(20);
     const toastRef = useRef<string | number | undefined>(undefined);
     const router = useRouter();
 
@@ -59,26 +60,7 @@ export const OrganisationForm = () => {
     const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
     const handleSubmission = async (values: OrganisationCreation) => {
         if (!session || !client) return;
-        //todo: Move to backend to upload avatar with organisation UUID after creation
-        // if (uploadedAvatar) {
-        //     const loadingToast = toast.loading("Uploading Avatar...");
-        //     const response = await handlePublicFileUpload(
-        //         client,
-        //         uploadedAvatar!,
-        //         "organisation-profile",
-        //         values.displayName,
-        //         true
-        //     );
 
-        //     toast.dismiss(loadingToast);
-
-        //     if (!response.ok) {
-        //         toast.error("Failed to upload Avatar");
-        //         return;
-        //     }
-        // }
-
-    
         const organisation: OrganisationCreationRequest = {
             name: values.displayName,
             avatarUrl: values.avatarUrl,
