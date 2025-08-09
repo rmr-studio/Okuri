@@ -13,13 +13,14 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { isMobilePhone } from "validator";
 
+import { AvatarUploader } from "@/components/ui/AvatarUploader";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { OTPFormSchema } from "@/lib/util/form/form.util";
 import { z } from "zod";
-import { AvatarUploader } from "@/components/ui/AvatarUploader";
 
+// Avatar blob is sent to the backend. So is not included in form
 const userOnboardDetailsSchema = z.object({
     displayName: z
         .string({ required_error: "Display Name is required" })
@@ -30,7 +31,6 @@ const userOnboardDetailsSchema = z.object({
         .refine(isMobilePhone)
         .optional()
         .or(z.literal("")),
-    avatarUrl: z.string().url().optional(),
 
     // OTP is only required if phone number is provided
     otp: OTPFormSchema.shape.otp.or(z.literal("")),
@@ -43,6 +43,8 @@ export const OnboardForm: FC<Propless> = () => {
     const { data: user } = useProfile();
     const queryClient = useQueryClient();
     const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
+    const [currentAvatar, setCurrentAvatar] = useState<string | undefined>(user?.avatarUrl);
+
     const toastRef = useRef<string | number | null>(null);
 
     const form: UseFormReturn<UserOnboard> = useForm<UserOnboard>({
@@ -50,10 +52,14 @@ export const OnboardForm: FC<Propless> = () => {
         defaultValues: {
             displayName: user?.name || "",
             phone: user?.phone || undefined,
-            avatarUrl: user?.avatarUrl,
             otp: "",
         },
     });
+
+    const handleAvatarRemoval = () => {
+        setUploadedAvatar(null);
+        setCurrentAvatar(user?.avatarUrl);
+    };
 
     const userMutation = useMutation({
         mutationFn: (user: User) => updateUser(session, user, uploadedAvatar),
@@ -91,9 +97,10 @@ export const OnboardForm: FC<Propless> = () => {
         userMutation.mutate(updatedUser);
     };
 
-    const handleAvatarUpload = () => {
-        
-    }
+    const handleAvatarUpload = (file: Blob) => {
+        setUploadedAvatar(file);
+        setCurrentAvatar(URL.createObjectURL(file));
+    };
 
     return (
         <Form {...form}>
@@ -115,9 +122,15 @@ export const OnboardForm: FC<Propless> = () => {
                             Profile Picture
                         </FormLabel>
                         <AvatarUploader
+                            imageURL={currentAvatar}
                             onUpload={handleAvatarUpload}
-                            imageURL={userOnboardForm.getValues("avatarUrl")}
                             onRemove={handleAvatarRemoval}
+                            validation={{
+                                allowedTypes: ["image/jpeg", "image/png", "image/gif"],
+                                maxSize: 2 * 1024 * 1024, // 2 MB
+                                errorMessage:
+                                    "Please upload a valid image (JPEG, PNG, GIF) under 2MB.",
+                            }}
                         />
                         <FormField
                             control={form.control}

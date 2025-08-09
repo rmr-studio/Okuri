@@ -1,8 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ClassNameProps } from "@/lib/interfaces/interface";
-import { cn } from "@/lib/util/utils";
 import { Upload } from "lucide-react";
 import Image from "next/image";
 import { FC, useId, useRef } from "react";
@@ -13,7 +11,7 @@ interface InputValidation {
     errorMessage: string; // Error message to display if validation fails
 }
 
-interface AvatarUploaderProps extends ClassNameProps {
+interface AvatarUploaderProps {
     onUpload: (file: Blob) => void;
     onRemove?: () => void;
     imageURL?: string;
@@ -49,7 +47,7 @@ export const AvatarUploader: FC<AvatarUploaderProps> = ({
 
     return (
         <section className="flex items-center mt-2">
-            <div className={cn("mt-2 relative group/picture", imageContainerClass)}>
+            <div className="mt-2 relative group/picture">
                 <div className="w-20 h-20 relative rounded-xl overflow-hidden">
                     {imageURL ? (
                         <Image
@@ -85,12 +83,7 @@ export const AvatarUploader: FC<AvatarUploaderProps> = ({
             <div className="ml-4 flex flex-col">
                 <Label className="hidden md:block font-semibold">{title}</Label>
                 <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 mt-2">
-                    <Button
-                        type="button"
-                        onClick={uploadFile}
-                        variant={"outline"}
-                        className={submitButtonClass}
-                    >
+                    <Button type="button" onClick={uploadFile} variant={"outline"}>
                         <Upload className="w-4 h-4" />
                         <span>Upload Picture</span>
                     </Button>
