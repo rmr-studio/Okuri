@@ -123,11 +123,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get a client by ID
-         * @description Retrieves a specific client by its ID, if the user has access.
-         */
-        get: operations["getClientById"];
+        get?: never;
         /**
          * Update an existing client
          * @description Updates a client with the specified ID, if the user has access.
@@ -200,8 +196,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get all line items for the authenticated user
-         * @description Retrieves a list of line items associated with the current user's session.
+         * Get all line items for an organisation
+         * @description Retrieves a list of line items associated with a given organisation.
          */
         get: operations["getLineItemsForUser"];
         put?: never;
@@ -244,8 +240,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get all invoices for the authenticated user
-         * @description Retrieves a list of invoices associated with the current user's session.
+         * Get all invoices for them provided organisation
+         * @description Retrieves a list of invoices associated with the provided organisation
          */
         get: operations["getUserInvoices"];
         put?: never;
@@ -267,11 +263,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get all clients for the authenticated user
-         * @description Retrieves a list of clients associated with the current user's session.
-         */
-        get: operations["getClientsForUser"];
+        get?: never;
         put?: never;
         /**
          * Create a new client
@@ -396,6 +388,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/organisation/{organisationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all clients for the organisation
+         * @description Retrieves a list of clients for a given organisation. Given the user is authenticated, and belongs to that specified organisation
+         */
+        get: operations["getOrganisationClients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/client/{clientId}/organisation/{organisationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a client by ID
+         * @description Retrieves a specific client by its ID, if the user has access.
+         */
+        get: operations["getClientById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organisation/{organisationId}/member": {
         parameters: {
             query?: never;
@@ -493,7 +525,7 @@ export interface components {
             id: string;
             name: string;
             /** Format: uuid */
-            userId: string;
+            organisationId: string;
             description?: string;
             /** @enum {string} */
             type: "SERVICE" | "PRODUCT" | "FEE" | "DISCOUNT";
@@ -512,7 +544,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
-            userId: string;
+            organisationId: string;
             name: string;
             contactDetails?: components["schemas"]["ContactDetails"];
             template?: components["schemas"]["TemplateClientTemplateFieldStructure"];
@@ -547,7 +579,7 @@ export interface components {
         Invoice: {
             /** Format: uuid */
             id: string;
-            user: components["schemas"]["User"];
+            organisation: components["schemas"]["Organisation"];
             client: components["schemas"]["Client"];
             template?: components["schemas"]["TemplateInvoiceTemplateFieldStructure"];
             reportTemplate?: components["schemas"]["TemplateReportTemplateFieldStructure"];
@@ -688,11 +720,16 @@ export interface components {
         };
         LineItemCreationRequest: {
             name: string;
+            /** Format: uuid */
+            organisationId: string;
             description?: string;
             chargeRate: number;
         };
         InvoiceCreationRequest: {
-            client: components["schemas"]["Client"];
+            /** Format: uuid */
+            clientId: string;
+            /** Format: uuid */
+            organisationId: string;
             template: components["schemas"]["TemplateInvoiceTemplateFieldStructure"];
             reportTemplate?: components["schemas"]["TemplateReportTemplateFieldStructure"];
             invoiceNumber: string;
@@ -724,6 +761,8 @@ export interface components {
         };
         ClientCreationRequest: {
             name: string;
+            /** Format: uuid */
+            organisationId: string;
             contact?: components["schemas"]["ContactDetails"];
             attributes: {
                 [key: string]: Record<string, never>;
@@ -1199,46 +1238,6 @@ export interface operations {
             };
         };
     };
-    getClientById: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                clientId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Client retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"];
-                };
-            };
-            /** @description Unauthorized access */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"];
-                };
-            };
-            /** @description Client not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"];
-                };
-            };
-        };
-    };
     updateClient: {
         parameters: {
             query?: never;
@@ -1408,7 +1407,9 @@ export interface operations {
     };
     getLineItemsForUser: {
         parameters: {
-            query?: never;
+            query: {
+                organisationId: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1426,15 +1427,6 @@ export interface operations {
             };
             /** @description Unauthorized access */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["LineItem"][];
-                };
-            };
-            /** @description No line items found for the user */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1550,7 +1542,9 @@ export interface operations {
     };
     getUserInvoices: {
         parameters: {
-            query?: never;
+            query: {
+                organisationId: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1615,44 +1609,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Invoice"];
-                };
-            };
-        };
-    };
-    getClientsForUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of clients retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"][];
-                };
-            };
-            /** @description Unauthorized access */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"][];
-                };
-            };
-            /** @description No clients found for the user */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"][];
                 };
             };
         };
@@ -1962,6 +1918,86 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Invoice"][];
+                };
+            };
+        };
+    };
+    getOrganisationClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of clients retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"][];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"][];
+                };
+            };
+            /** @description No clients found for the organisation */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"][];
+                };
+            };
+        };
+    };
+    getClientById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"];
+                };
+            };
+            /** @description Client not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"];
                 };
             };
         };
