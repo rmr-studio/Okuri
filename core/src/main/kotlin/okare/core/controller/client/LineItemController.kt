@@ -18,7 +18,7 @@ import java.util.*
 @Tag(name = "Line Item Management", description = "Endpoints for managing line item records")
 class LineItemController(private val lineItemService: LineItemService) {
 
-    @GetMapping("/")
+    @GetMapping("/organisation/{organisationId}")
     @Operation(
         summary = "Get all line items for an organisation",
         description = "Retrieves a list of line items associated with a given organisation."
@@ -27,7 +27,7 @@ class LineItemController(private val lineItemService: LineItemService) {
         ApiResponse(responseCode = "200", description = "List of line items retrieved successfully"),
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
     )
-    fun getLineItemsForUser(organisationId: UUID): ResponseEntity<List<LineItem>> {
+    fun getLineItemsForUser(@PathVariable organisationId: UUID): ResponseEntity<List<LineItem>> {
         val lineItems = lineItemService.getOrganisationLineItem(organisationId).map { it.toModel() }
         return ResponseEntity.ok(lineItems)
     }

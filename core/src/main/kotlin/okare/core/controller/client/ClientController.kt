@@ -33,7 +33,7 @@ class ClientController(private val clientService: ClientService) {
         return ResponseEntity.ok(clients)
     }
 
-    @GetMapping("/client/{clientId}/organisation/{organisationId}")
+    @GetMapping("/client/{clientId}")
     @Operation(
         summary = "Get a client by ID",
         description = "Retrieves a specific client by its ID, if the user has access."
