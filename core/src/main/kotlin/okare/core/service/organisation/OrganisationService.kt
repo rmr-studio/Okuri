@@ -65,7 +65,8 @@ class OrganisationService(
                 customAttributes = request.customAttributes,
             )
             organisationRepository.save(entity).run {
-                this.toModel().run {
+                val organisation = this.toModel(includeMembers = false)
+                organisation.run {
                     // Log the activity of creating an organisation
                     activityService.logActivity(
                         activity = okare.core.enums.activity.Activity.ORGANISATION,
@@ -86,13 +87,12 @@ class OrganisationService(
                     }
 
                     // If this is the first organisation for the user, update their profile to make it their default
-
                     userService.getUserFromSession().toModel().let {
                         // Membership array should be empty until transaction is over. Meaning we can determine if this is the first organisation made by the user
                         // Can also manually specify for the organisation to become the new default
                         if (it.memberships.isEmpty() || isDefault) {
                             it.apply {
-                                defaultOrganisation = this@run
+                                defaultOrganisation = organisation
                             }.run {
                                 userService.updateUserDetails(this)
                             }

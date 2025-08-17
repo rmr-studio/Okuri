@@ -23,15 +23,15 @@ class InvoiceController(
 
     @GetMapping("/")
     @Operation(
-        summary = "Get all invoices for the authenticated user",
-        description = "Retrieves a list of invoices associated with the current user's session."
+        summary = "Get all invoices for them provided organisation",
+        description = "Retrieves a list of invoices associated with the provided organisation"
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "List of invoices retrieved successfully"),
         ApiResponse(responseCode = "401", description = "Unauthorized access")
     )
-    fun getUserInvoices(): ResponseEntity<List<Invoice>> {
-        val invoices = invoiceService.getInvoicesByUserSession().map { it.toModel() }
+    fun getUserInvoices(organisationId: UUID): ResponseEntity<List<Invoice>> {
+        val invoices = invoiceService.getOrganisationInvoices(organisationId).map { it.toModel() }
         return ResponseEntity.ok(invoices)
     }
 

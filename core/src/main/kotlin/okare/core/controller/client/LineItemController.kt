@@ -20,16 +20,15 @@ class LineItemController(private val lineItemService: LineItemService) {
 
     @GetMapping("/")
     @Operation(
-        summary = "Get all line items for the authenticated user",
-        description = "Retrieves a list of line items associated with the current user's session."
+        summary = "Get all line items for an organisation",
+        description = "Retrieves a list of line items associated with a given organisation."
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "List of line items retrieved successfully"),
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
-        ApiResponse(responseCode = "404", description = "No line items found for the user")
     )
-    fun getLineItemsForUser(): ResponseEntity<List<LineItem>> {
-        val lineItems = lineItemService.getUserLineItems().map { it.toModel() }
+    fun getLineItemsForUser(organisationId: UUID): ResponseEntity<List<LineItem>> {
+        val lineItems = lineItemService.getOrganisationLineItem(organisationId).map { it.toModel() }
         return ResponseEntity.ok(lineItems)
     }
 

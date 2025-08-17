@@ -1,6 +1,5 @@
 package okare.core.service.client
 
-import io.github.oshai.kotlinlogging.KLogger
 import io.ktor.server.plugins.*
 import okare.core.entity.invoice.LineItemEntity
 import okare.core.entity.invoice.toModel
@@ -22,14 +21,13 @@ import java.util.*
 class LineItemService(
     private val repository: LineItemRepository,
     private val authTokenService: AuthTokenService,
-    private val activityService: ActivityService,
-    private val logger: KLogger
+    private val activityService: ActivityService
 ) {
 
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisationLineItem(organisationId: UUID): List<LineItemEntity> {
-        return findManyResults(authTokenService.getUserId(), repository::findByUserId)
+        return findManyResults(organisationId, repository::findByOrganisationId)
     }
 
     @Throws(NotFoundException::class)

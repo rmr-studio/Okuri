@@ -28,7 +28,7 @@ class ClientService(
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun getOrganisationClients(organisationId: UUID): List<ClientEntity> {
-        return findManyResults(authTokenService.getUserId(), repository::findByUserId)
+        return findManyResults(organisationId, repository::findByOrganisationId)
     }
 
     @Throws(NotFoundException::class)
