@@ -1,12 +1,17 @@
-import { Organisation, OrganisationCreationRequest } from "@/lib/interfaces/organisation.interface";
+import {
+    CreateOrganisationRequest,
+    CreateOrganisationResponse,
+    GetOrganisationPathParams,
+    GetOrganisationResponse,
+} from "@/lib/interfaces/organisation.interface";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { api, isUUID } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
 
 export const createOrganisation = async (
     session: Session | null,
-    organisation: OrganisationCreationRequest
-): Promise<Organisation> => {
+    request: CreateOrganisationRequest
+): Promise<CreateOrganisationResponse> => {
     try {
         // Validate session and access token
         if (!session?.access_token) {
@@ -25,7 +30,7 @@ export const createOrganisation = async (
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify(organisation),
+            body: JSON.stringify(request),
         });
 
         if (response.ok) {
@@ -55,11 +60,12 @@ export const createOrganisation = async (
 
 export const getOrganisation = async (
     session: Session | null,
-    id: string
-): Promise<Organisation> => {
+    params: GetOrganisationPathParams
+): Promise<GetOrganisationResponse> => {
+    const { organisationId } = params;
     try {
         // Validate id is a UUID
-        if (!isUUID(id)) {
+        if (!isUUID(organisationId)) {
             throw fromError({
                 message: "Invalid organization ID format. Expected a UUID.",
                 status: 400,
@@ -77,13 +83,16 @@ export const getOrganisation = async (
         }
 
         const url = api();
-        const response = await fetch(`${url}/v1/organisation/${id}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session.access_token}`,
-            },
-        });
+        const response = await fetch(
+            `${url}/v1/organisation/${organisationId}`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+            }
+        );
 
         if (response.ok) {
             return await response.json();
