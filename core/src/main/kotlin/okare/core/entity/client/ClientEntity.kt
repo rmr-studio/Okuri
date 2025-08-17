@@ -14,12 +14,8 @@ import java.util.*
 @Entity
 @Table(
     name = "clients",
-    uniqueConstraints = [
-        UniqueConstraint(name = "uq_client_phone_user", columnNames = ["user_id", "phone"]),
-        UniqueConstraint(name = "uq_client_ndis_user", columnNames = ["user_id", "ndis_number"])
-    ],
     indexes = [
-        Index(name = "idx_client_user_id", columnList = "user_id")
+        Index(name = "idx_client_organisation_id", columnList = "organisation_id")
     ]
 )
 data class ClientEntity(
@@ -28,8 +24,8 @@ data class ClientEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @Column(name = "user_id", nullable = false)
-    val userId: UUID,
+    @Column(name = "organisation_id", nullable = false)
+    val organisationId: UUID,
 
     @Column(name = "name", nullable = false)
     var name: String,
@@ -74,7 +70,7 @@ fun ClientEntity.toModel(): Client {
 
         return Client(
             id = it,
-            userId = this.userId,
+            organisationId = this.organisationId,
             template = this.template?.toModel(),
             name = this.name,
             contactDetails = this.contactDetails,

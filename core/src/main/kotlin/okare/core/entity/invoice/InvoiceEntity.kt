@@ -4,9 +4,9 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okare.core.entity.client.ClientEntity
 import okare.core.entity.client.toModel
+import okare.core.entity.organisation.OrganisationEntity
+import okare.core.entity.organisation.toModel
 import okare.core.entity.template.TemplateEntity
-import okare.core.entity.user.UserEntity
-import okare.core.entity.user.toModel
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.invoice.Billable
 import okare.core.models.invoice.Invoice
@@ -24,10 +24,10 @@ import java.util.*
     name = "invoice",
     uniqueConstraints = [UniqueConstraint(
         name = "uq_invoice_number_user",
-        columnNames = ["user_id", "invoice_number"]
+        columnNames = ["organisation_id", "invoice_number"]
     )],
     indexes = [
-        Index(name = "idx_invoice_user_id", columnList = "user_id"),
+        Index(name = "idx_invoice_organisation_id", columnList = "organisation_id"),
         Index(name = "idx_invoice_client_id", columnList = "client_id"),
     ],
 )
@@ -37,9 +37,9 @@ data class InvoiceEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @JoinColumn(name = "user_id", nullable = false, updatable = false)
+    @JoinColumn(name = "organisation_id", nullable = false, updatable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    val user: UserEntity,
+    val organisation: OrganisationEntity,
 
     @JoinColumn(name = "client_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -112,7 +112,7 @@ fun InvoiceEntity.toModel(): Invoice {
 
         Invoice(
             id = it,
-            user = this.user.toModel(),
+            organisation = this.organisation.toModel(includeMembers = false),
             client = this.client.toModel(),
             invoiceNumber = this.invoiceNumber,
             items = this.items,

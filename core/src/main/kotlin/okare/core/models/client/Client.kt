@@ -7,7 +7,7 @@ import java.util.*
 
 data class Client(
     val id: UUID,
-    val userId: UUID,
+    val organisationId: UUID,
     var name: String,
     var contactDetails: ContactDetails? = null,
     val template: Template<ClientTemplateFieldStructure>? = null, // Link to which template was used for client structure

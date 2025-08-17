@@ -11,5 +11,5 @@ data class OrganisationCreationRequest(
     val taxId: String? = null,
     val address: Address,
     val payment: OrganisationPaymentDetails? = null, // Optional, can be null if not applicable
-    val customAttributes: Map<String, Any> = emptyMap() // JSONB for industry-specific fields
+    val customAttributes: Map<String, Any> = emptyMap() // JSONB for industry-specific fields`
 )

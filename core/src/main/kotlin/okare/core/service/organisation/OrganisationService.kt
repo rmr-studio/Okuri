@@ -13,6 +13,7 @@ import okare.core.models.organisation.OrganisationMember
 import okare.core.models.organisation.request.OrganisationCreationRequest
 import okare.core.repository.organisation.OrganisationMemberRepository
 import okare.core.repository.organisation.OrganisationRepository
+import okare.core.service.activity.ActivityService
 import okare.core.service.auth.AuthTokenService
 import okare.core.service.user.UserService
 import okare.core.util.ServiceUtil.findOrThrow
@@ -27,14 +28,21 @@ class OrganisationService(
     private val organisationMemberRepository: OrganisationMemberRepository,
     private val userService: UserService,
     private val logger: KLogger,
-    private val authTokenService: AuthTokenService
+    private val authTokenService: AuthTokenService,
+    private val activityService: ActivityService
 ) {
 
 
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisation(organisationId: UUID, includeMembers: Boolean = false): Organisation {
-        return findOrThrow(organisationId, organisationRepository::findById).toModel(includeMembers)
+        return getOrganisationEntity(organisationId).toModel(includeMembers)
+    }
+
+    @Throws(NotFoundException::class)
+    @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
+    fun getOrganisationEntity(organisationId: UUID): OrganisationEntity {
+        return findOrThrow(organisationId, organisationRepository::findById)
     }
 
     /**
@@ -45,67 +53,88 @@ class OrganisationService(
     fun createOrganisation(request: OrganisationCreationRequest): Organisation {
         val (name, avatarUrl, isDefault) = request
         // Gets the user ID from the auth token to act as the Organisation creator
-        val userId: UUID = authTokenService.getUserId()
+        authTokenService.getUserId().let { userId ->
 
-        // Create and save the organisation entity
-        val organisation: Organisation = OrganisationEntity(
-            name = name,
-            avatarUrl = avatarUrl,
-            businessNumber = request.businessNumber,
-            address = request.address,
-            taxId = request.taxId,
-            organisationPaymentDetails = request.payment,
-            customAttributes = request.customAttributes,
-        ).run {
-            organisationRepository.save(this).toModel()
-        }
 
-        // Add the creator as the first member/owner of the organisation
-        val key = OrganisationMemberEntity.OrganisationMemberKey(
-            organisationId = organisation.id,
-            userId = userId
-        )
+            // Create and save the organisation entity
+            val entity = OrganisationEntity(
+                name = name,
+                avatarUrl = avatarUrl,
+                businessNumber = request.businessNumber,
+                address = request.address,
+                taxId = request.taxId,
+                organisationPaymentDetails = request.payment,
+                customAttributes = request.customAttributes,
+            )
+            organisationRepository.save(entity).run {
+                this.toModel().run {
+                    // Log the activity of creating an organisation
+                    activityService.logActivity(
+                        activity = okare.core.enums.activity.Activity.ORGANISATION,
+                        operation = okare.core.enums.util.OperationType.CREATE,
+                        userId = userId,
+                        organisationId = this.id,
+                        additionalDetails = "Created organisation with name: $name"
+                    )
 
-        OrganisationMemberEntity(key, OrganisationRoles.OWNER).run {
-            organisationMemberRepository.save(this)
-        }
+                    // Add the creator as the first member/owner of the organisation
+                    val key = OrganisationMemberEntity.OrganisationMemberKey(
+                        organisationId = this.id,
+                        userId = userId
+                    )
 
-        // If this is the first organisation for the user, update their profile to make it their default
+                    OrganisationMemberEntity(key, OrganisationRoles.OWNER).run {
+                        organisationMemberRepository.save(this)
+                    }
 
-        userService.getUserFromSession().toModel().let {
-            // Membership array should be empty until transaction is over. Meaning we can determine if this is the first organisation made by the user
-            // Can also manually specify for the organisation to become the new default
-            if (it.memberships.isEmpty() || isDefault) {
-                it.apply {
-                    defaultOrganisation = organisation
-                }.run {
-                    userService.updateUserDetails(this)
+                    // If this is the first organisation for the user, update their profile to make it their default
+
+                    userService.getUserFromSession().toModel().let {
+                        // Membership array should be empty until transaction is over. Meaning we can determine if this is the first organisation made by the user
+                        // Can also manually specify for the organisation to become the new default
+                        if (it.memberships.isEmpty() || isDefault) {
+                            it.apply {
+                                defaultOrganisation = this@run
+                            }.run {
+                                userService.updateUserDetails(this)
+                            }
+                        }
+                    }
+
+                    return this
                 }
+
             }
         }
 
-        return organisation
     }
 
     @PreAuthorize("@organisationSecurity.hasOrgRoleOrHigher(#organisation.id, 'ADMIN')")
     fun updateOrganisation(organisation: Organisation): Organisation {
-        findOrThrow(organisation.id, organisationRepository::findById).run {
-            val entity = this.apply {
-                avatarUrl = organisation.avatarUrl
-                name = organisation.name
-                businessNumber = organisation.businessNumber
-                address = organisation.address
-                taxId = organisation.taxId
-                organisationPaymentDetails = organisation.organisationPaymentDetails
-                customAttributes = organisation.customAttributes
+        authTokenService.getUserId().let { userId ->
+            findOrThrow(organisation.id, organisationRepository::findById).run {
+                val entity = this.apply {
+                    avatarUrl = organisation.avatarUrl
+                    name = organisation.name
+                    businessNumber = organisation.businessNumber
+                    address = organisation.address
+                    taxId = organisation.taxId
+                    organisationPaymentDetails = organisation.organisationPaymentDetails
+                    customAttributes = organisation.customAttributes
+                }
+
+                organisationRepository.save(entity).let { updatedEntity ->
+                    // Log the activity of updating an organisation
+                    activityService.logActivity(
+                        activity = okare.core.enums.activity.Activity.ORGANISATION,
+                        operation = okare.core.enums.util.OperationType.UPDATE,
+                        userId = userId,
+                        organisationId = updatedEntity.id,
+                        additionalDetails = "Updated organisation with name: ${updatedEntity.name}"
+                    )
+                    return updatedEntity.toModel()
+                }
             }
-
-            organisationRepository.save(entity).let { updatedEntity ->
-                logger.info { "Organisation with ID ${organisation.id} updated successfully." }
-                return updatedEntity.toModel()
-            }
-
-
         }
     }
 
@@ -115,16 +144,28 @@ class OrganisationService(
     @PreAuthorize("@organisationSecurity.hasOrgRoleOrHigher(#organisationId, 'OWNER')")
     @Transactional
     fun deleteOrganisation(organisationId: UUID) {
-        // Check if the organisation exists
-        val organisation: OrganisationEntity = findOrThrow(organisationId, organisationRepository::findById)
+        authTokenService.getUserId().let { userId ->
 
-        // Delete all members associated with the organisation
-        organisationMemberRepository.deleteByIdOrganisationId(organisationId)
 
-        // Delete the organisation itself
-        organisationRepository.delete(organisation)
+            // Check if the organisation exists
+            val organisation: OrganisationEntity = findOrThrow(organisationId, organisationRepository::findById)
 
-        logger.info { "Organisation with ID $organisationId deleted successfully." }
+            // Delete all members associated with the organisation
+            organisationMemberRepository.deleteByIdOrganisationId(organisationId)
+
+            // Delete the organisation itself
+            organisationRepository.delete(organisation).run {
+                // Log the activity of deleting an organisation
+                activityService.logActivity(
+                    activity = okare.core.enums.activity.Activity.ORGANISATION,
+                    operation = okare.core.enums.util.OperationType.DELETE,
+                    userId = userId,
+                    organisationId = organisationId,
+                    additionalDetails = "Deleted organisation with name: ${organisation.name}"
+                )
+
+            }
+        }
     }
 
     /**
@@ -158,19 +199,30 @@ class OrganisationService(
         """
     )
     fun removeMemberFromOrganisation(organisationId: UUID, member: OrganisationMember) {
-        // Assert that the removed member is not currently the owner of the organisation
-        if (member.role == OrganisationRoles.OWNER) {
-            throw IllegalArgumentException("Cannot remove the owner of the organisation. Please transfer ownership first.")
+        authTokenService.getUserId().let { userId ->
+
+            // Assert that the removed member is not currently the owner of the organisation
+            if (member.role == OrganisationRoles.OWNER) {
+                throw IllegalArgumentException("Cannot remove the owner of the organisation. Please transfer ownership first.")
+            }
+
+            OrganisationMemberEntity.OrganisationMemberKey(
+                organisationId = organisationId,
+                userId = member.user.id
+            ).run {
+                findOrThrow(this, organisationMemberRepository::findById)
+                organisationMemberRepository.deleteById(this)
+                activityService.logActivity(
+                    activity = okare.core.enums.activity.Activity.ORGANISATION_MEMBER,
+                    operation = okare.core.enums.util.OperationType.DELETE,
+                    userId = userId,
+                    organisationId = organisationId,
+                    targetId = member.user.id,
+                    additionalDetails = "Removed member with ID ${member.user.id} from organisation $organisationId"
+                )
+            }
         }
 
-        OrganisationMemberEntity.OrganisationMemberKey(
-            organisationId = organisationId,
-            userId = member.user.id
-        ).run {
-            findOrThrow(this, organisationMemberRepository::findById)
-            organisationMemberRepository.deleteById(this)
-            logger.info { "Member with ID ${member.user.id} removed from organisation $organisationId successfully." }
-        }
     }
 
     /**
@@ -188,24 +240,32 @@ class OrganisationService(
         member: OrganisationMember,
         role: OrganisationRoles
     ): OrganisationMember {
+        authTokenService.getUserId().let { userId ->
+            // Ensure that if the new role is that of OWNER, that only the current owner can assign it
+            if (role == OrganisationRoles.OWNER || member.role == OrganisationRoles.OWNER) {
+                throw IllegalArgumentException("Transfer of ownership must be done through a dedicated transfer ownership method.")
+            }
 
-        // Ensure that if the new role is that of OWNER, that only the current owner can assign it
-        if (role == OrganisationRoles.OWNER || member.role == OrganisationRoles.OWNER) {
-            throw IllegalArgumentException("Transfer of ownership must be done through a dedicated transfer ownership method.")
-        }
+            OrganisationMemberEntity.OrganisationMemberKey(
+                organisationId = organisationId,
+                userId = member.user.id
+            ).run {
+                findOrThrow(this, organisationMemberRepository::findById).run {
+                    this.apply {
+                        this.role = role
+                    }
 
-        OrganisationMemberEntity.OrganisationMemberKey(
-            organisationId = organisationId,
-            userId = member.user.id
-        ).run {
-            findOrThrow(this, organisationMemberRepository::findById).run {
-                this.apply {
-                    this.role = role
+                    organisationMemberRepository.save(this)
+                    activityService.logActivity(
+                        activity = okare.core.enums.activity.Activity.ORGANISATION_MEMBER,
+                        operation = okare.core.enums.util.OperationType.UPDATE,
+                        userId = userId,
+                        organisationId = organisationId,
+                        targetId = member.user.id,
+                        additionalDetails = "Updated member with ID ${member.user.id} to role $role in organisation $organisationId"
+                    )
+                    return OrganisationMember.fromEntity(this)
                 }
-
-                organisationMemberRepository.save(this)
-                logger.info { "Member with ID ${member.user.id} role updated to $role in organisation $organisationId successfully." }
-                return OrganisationMember.fromEntity(this)
             }
         }
     }

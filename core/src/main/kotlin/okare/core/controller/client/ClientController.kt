@@ -18,22 +18,22 @@ import java.util.*
 @Tag(name = "Client Management", description = "Endpoints for managing client profiles and details")
 class ClientController(private val clientService: ClientService) {
 
-    @GetMapping("/")
+    @GetMapping("/organisation/{organisationId}")
     @Operation(
-        summary = "Get all clients for the authenticated user",
-        description = "Retrieves a list of clients associated with the current user's session."
+        summary = "Get all clients for the organisation",
+        description = "Retrieves a list of clients for a given organisation. Given the user is authenticated, and belongs to that specified organisation"
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "List of clients retrieved successfully"),
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
-        ApiResponse(responseCode = "404", description = "No clients found for the user")
+        ApiResponse(responseCode = "404", description = "No clients found for the organisation")
     )
-    fun getClientsForUser(): ResponseEntity<List<Client>> {
-        val clients = clientService.getUserClients().map { it.toModel() }
+    fun getOrganisationClients(@PathVariable organisationId: UUID): ResponseEntity<List<Client>> {
+        val clients = clientService.getOrganisationClients(organisationId).map { it.toModel() }
         return ResponseEntity.ok(clients)
     }
 
-    @GetMapping("/{clientId}")
+    @GetMapping("/client/{clientId}/organisation/{organisationId}")
     @Operation(
         summary = "Get a client by ID",
         description = "Retrieves a specific client by its ID, if the user has access."

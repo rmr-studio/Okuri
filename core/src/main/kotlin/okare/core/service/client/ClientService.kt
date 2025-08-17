@@ -4,12 +4,16 @@ import io.github.oshai.kotlinlogging.KLogger
 import io.ktor.server.plugins.*
 import okare.core.entity.client.ClientEntity
 import okare.core.entity.client.toModel
+import okare.core.enums.activity.Activity
+import okare.core.enums.util.OperationType
 import okare.core.models.client.Client
 import okare.core.models.client.request.ClientCreationRequest
 import okare.core.repository.client.ClientRepository
+import okare.core.service.activity.ActivityService
 import okare.core.service.auth.AuthTokenService
 import okare.core.util.ServiceUtil.findManyResults
 import okare.core.util.ServiceUtil.findOrThrow
+import org.springframework.security.access.prepost.PostAuthorize
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
 import java.util.*
@@ -19,53 +23,83 @@ import java.util.*
 class ClientService(
     private val repository: ClientRepository,
     private val authTokenService: AuthTokenService,
+    private val activityService: ActivityService,
     private val logger: KLogger
 ) {
 
+    @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     @Throws(NotFoundException::class, IllegalArgumentException::class)
-    fun getUserClients(): List<ClientEntity> {
+    fun getOrganisationClients(organisationId: UUID): List<ClientEntity> {
         return findManyResults(authTokenService.getUserId(), repository::findByUserId)
     }
 
     @Throws(NotFoundException::class)
+    @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
     fun getClientById(id: UUID): ClientEntity {
         return findOrThrow(id, repository::findById)
     }
 
 
+    @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun createClient(client: ClientCreationRequest): Client {
         authTokenService.getUserId().let {
             ClientEntity(
-                userId = it,
+                organisationId = client.organisationId,
                 name = client.name,
                 contactDetails = client.contact,
                 attributes = client.attributes
             ).run {
                 repository.save(this).let { entity ->
-                    logger.info { "Client Service => User $it => Created new client with ID: ${entity.id}" }
+                    activityService.logActivity(
+                        activity = Activity.CLIENT,
+                        operation = OperationType.CREATE,
+                        userId = it,
+                        organisationId = entity.organisationId,
+                        additionalDetails = "Created client with ID: ${entity.id}"
+                    )
                     return entity.toModel()
                 }
             }
         }
     }
 
-    @PreAuthorize("@securityConditions.doesUserOwnClient(#client)")
+    @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun updateClient(client: Client): Client {
         findOrThrow(client.id, repository::findById).apply {
             name = client.name
             contactDetails = client.contactDetails
             attributes = client.attributes
         }.run {
-            repository.save(this)
-            logger.info { "Client Service => Updated client profile with ID: ${this.id}" }
-            return this.toModel()
+            authTokenService.getUserId().let { userId ->
+                repository.save(this).run {
+                    activityService.logActivity(
+                        activity = Activity.CLIENT,
+                        operation = OperationType.UPDATE,
+                        userId = userId,
+                        organisationId = this.organisationId,
+                        additionalDetails = "Updated client with ID: ${this.id}"
+                    )
+
+                    return this.toModel()
+                }
+            }
         }
     }
 
-    @PreAuthorize("@securityConditions.doesUserOwnClient(#client)")
+    @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun deleteClient(client: Client) {
-        repository.deleteById(client.id)
-        logger.info { "Client Service => Deleted client with ID: ${client.id}" }
+        authTokenService.getUserId().let {
+            repository.deleteById(client.id).run {
+                activityService.logActivity(
+                    activity = Activity.CLIENT,
+                    operation = OperationType.DELETE,
+                    userId = it,
+                    organisationId = client.organisationId,
+                    additionalDetails = "Deleted client with ID: ${client.id}"
+                )
+            }
+        }
+
     }
 
 }

@@ -11,10 +11,10 @@ import java.util.*
 @Table(
     name = "line_item",
     uniqueConstraints = [
-        UniqueConstraint(name = "uq_line_item_name_user", columnNames = ["user_id", "name"])
+        UniqueConstraint(name = "uq_line_item_name_organisation", columnNames = ["organisation_id", "name"])
     ],
     indexes = [
-        Index(name = "idx_line_item_user_id", columnList = "user_id"),
+        Index(name = "idx_line_item_organisation_id", columnList = "organisation_id"),
     ]
 )
 data class LineItemEntity(
@@ -23,8 +23,8 @@ data class LineItemEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @Column(name = "user_id", nullable = false)
-    val userId: UUID,
+    @Column(name = "organisation_id", nullable = false)
+    val organisationId: UUID,
 
     @Column(name = "name", nullable = false)
     var name: String,
@@ -65,7 +65,7 @@ fun LineItemEntity.toModel(): LineItem {
         }
         return LineItem(
             id = it,
-            userId = this.userId,
+            organisationId = this.organisationId,
             description = this.description,
             name = this.name,
             chargeRate = this.chargeRate,

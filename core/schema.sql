@@ -160,27 +160,28 @@ CREATE TYPE template_type AS ENUM ('CLIENT', 'INVOICE', 'REPORT');
 
 CREATE TABLE IF NOT EXISTS template
 (
-    id          UUID PRIMARY KEY,
-    user_id     UUID          NULL,
-    name        VARCHAR(255)  NOT NULL,
-    description TEXT          NULL,
-    type        template_type NOT NULL,
-    structure   JSONB         NOT NULL,
-    is_default  BOOLEAN       NOT NULL   DEFAULT FALSE,
-    is_premade  BOOLEAN       NOT NULL   DEFAULT FALSE,
-    created_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    id              UUID PRIMARY KEY,
+    user_id         UUID          NULL,
+    organisation_id UUID          NULL,
+    name            VARCHAR(255)  NOT NULL,
+    description     TEXT          NULL,
+    type            template_type NOT NULL,
+    structure       JSONB         NOT NULL,
+    is_default      BOOLEAN       NOT NULL   DEFAULT FALSE,
+    is_premade      BOOLEAN       NOT NULL   DEFAULT FALSE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_owner FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-drop table report_templates;
+CREATE INDEX idx_template_organisation_id ON template (organisation_id);
 
 -- Clients
 drop table if exists "clients" cascade;
 create table if not exists "clients"
 (
     "id"              uuid primary key not null default uuid_generate_v4(),
-    "user_id"         uuid             not null references public.users (id) on delete cascade,
+    "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
     "name"            varchar(50)      not null,
     "contact_details" jsonb,
     "template_id"     uuid             null references public.template (id) on delete cascade,
@@ -189,41 +190,38 @@ create table if not exists "clients"
     "updated_at"      timestamp with time zone  default current_timestamp
 );
 
-
-create index if not exists idx_client_user_id
-    on public.clients (user_id);
+create index if not exists idx_client_organisation_id
+    on public.clients (organisation_id);
 
 -- Line Items
 CREATE TYPE line_item_type AS ENUM ('SERVICE', 'PRODUCT', 'FEE', 'DISCOUNT');
-drop table if exists "line_item" cascade;
 create table if not exists "line_item"
 (
-    "id"          uuid primary key not null default uuid_generate_v4(),
-    "user_id"     uuid             not null references public.users (id) on delete cascade,
-    "name"        varchar(50)      not null,
-    "type"        line_item_type   not null,
-    "description" text             not null,
-    "charge_rate" DECIMAL(19, 4)   not null,
-    "created_at"  timestamp with time zone  default current_timestamp,
-    "updated_at"  timestamp with time zone  default current_timestamp
+    "id"              uuid primary key not null default uuid_generate_v4(),
+    "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
+    "name"            varchar(50)      not null,
+    "type"            line_item_type   not null,
+    "description"     text             not null,
+    "charge_rate"     DECIMAL(19, 4)   not null,
+    "created_at"      timestamp with time zone  default current_timestamp,
+    "updated_at"      timestamp with time zone  default current_timestamp
 );
 
 ALTER TABLE public.line_item
-    ADD CONSTRAINT uq_line_item_name_user UNIQUE (user_id, name);
+    ADD CONSTRAINT uq_line_item_name_organisation UNIQUE (organisation_id, name);
 
-create index if not exists idx_line_item_user_id
-    on public.line_item (user_id);
+create index if not exists idx_line_item_organisation_id
+    on public.line_item (organisation_id);
 
 
 -- Invoice
-drop table if exists "invoice" cascade;
 drop type if exists invoice_billing_status cascade;
 CREATE TYPE invoice_billing_status AS ENUM ('PENDING', 'PAID' , 'OVERDUE', 'OUTDATED', 'CANCELLED' );
 
 create table if not exists "invoice"
 (
     "id"                  uuid primary key         not null default uuid_generate_v4(),
-    "user_id"             uuid                     not null references public.users (id) on delete cascade,
+    "organisation_id"     uuid                     not null references public.organisations (id) on delete cascade,
     "client_id"           uuid                     not null references public.clients (id) on delete cascade,
     "invoice_number"      TEXT                     not null,
     "invoice_template_id" uuid                     null references public.template (id) on delete cascade,
@@ -241,15 +239,15 @@ create table if not exists "invoice"
     "updated_at"          timestamp with time zone          default current_timestamp
 );
 
-create index if not exists idx_invoice_user_id
-    on public.invoice (user_id);
+create index if not exists idx_invoice_organisation_id
+    on public.invoice (organisation_id);
 
 
 create index if not exists idx_invoice_client_id
     on public.invoice (client_id);
 
 ALTER TABLE public.invoice
-    ADD CONSTRAINT uq_invoice_number_user UNIQUE (user_id, invoice_number);
+    ADD CONSTRAINT uq_invoice_number_organisation UNIQUE (organisation_id, invoice_number);
 
 /* Add Organisation Roles to Supabase JWT */
 CREATE or replace FUNCTION public.custom_access_token_hook(event jsonb)

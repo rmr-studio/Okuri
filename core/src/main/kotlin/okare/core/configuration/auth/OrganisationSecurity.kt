@@ -26,6 +26,7 @@ class OrganisationSecurity {
 
     }
 
+
     fun hasOrg(organisationId: UUID): Boolean {
         SecurityContextHolder.getContext().authentication.let {
             if (it == null || !it.isAuthenticated) {

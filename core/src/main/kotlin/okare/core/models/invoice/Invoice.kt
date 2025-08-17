@@ -3,17 +3,17 @@ package okare.core.models.invoice
 
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.client.Client
+import okare.core.models.organisation.Organisation
 import okare.core.models.template.Template
 import okare.core.models.template.invoice.InvoiceTemplateFieldStructure
 import okare.core.models.template.report.ReportTemplateFieldStructure
-import okare.core.models.user.User
 import java.math.BigDecimal
 import java.time.ZonedDateTime
 import java.util.*
 
 data class Invoice(
     val id: UUID,
-    val user: User,
+    val organisation: Organisation,
     val client: Client,
     // Invoice for the specific billing structure (Ie. Tables for distance, tables for quantity of products, etc.)
     val template: Template<InvoiceTemplateFieldStructure>? = null,

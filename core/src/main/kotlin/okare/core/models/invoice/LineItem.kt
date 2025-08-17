@@ -6,7 +6,7 @@ import java.util.*
 data class LineItem(
     val id: UUID,
     val name: String,
-    val userId: UUID,
+    val organisationId: UUID,
     val description: String? = null,
     val type: LineItemType,
     val chargeRate: BigDecimal,

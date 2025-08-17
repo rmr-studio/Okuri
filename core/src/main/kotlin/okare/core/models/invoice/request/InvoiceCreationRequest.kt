@@ -1,7 +1,6 @@
 package okare.core.models.invoice.request
 
 import okare.core.enums.invoice.InvoiceStatus
-import okare.core.models.client.Client
 import okare.core.models.invoice.Billable
 import okare.core.models.template.Template
 import okare.core.models.template.invoice.InvoiceTemplateFieldStructure
@@ -11,7 +10,8 @@ import java.time.ZonedDateTime
 import java.util.*
 
 data class InvoiceCreationRequest(
-    val client: Client,
+    val clientId: UUID,
+    val organisationId: UUID,
     val template: Template<InvoiceTemplateFieldStructure>,
     // Report template for generating the invoice report, ie. Format of sent invoice
     var reportTemplate: Template<ReportTemplateFieldStructure>? = null,
