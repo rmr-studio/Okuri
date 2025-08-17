@@ -54,8 +54,6 @@ class OrganisationService(
         val (name, avatarUrl, isDefault) = request
         // Gets the user ID from the auth token to act as the Organisation creator
         authTokenService.getUserId().let { userId ->
-
-
             // Create and save the organisation entity
             val entity = OrganisationEntity(
                 name = name,

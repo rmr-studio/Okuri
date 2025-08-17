@@ -1,8 +1,6 @@
 package okare.core.service.invoice
 
 
-import io.github.oshai.kotlinlogging.KLogger
-import okare.core.configuration.auth.OpenApiConfig
 import okare.core.entity.invoice.InvoiceEntity
 import okare.core.entity.invoice.toModel
 import okare.core.entity.organisation.OrganisationEntity
@@ -33,15 +31,12 @@ class InvoiceService(
     private val clientService: ClientService,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
-    private val logger: KLogger,
-    private val openApiConfig: OpenApiConfig
 ) {
 
-    fun getInvoicesByUserSession(): List<InvoiceEntity> {
-        return authTokenService.getUserId().let {
-            findManyResults(it, invoiceRepository::findByUserId).map { entity ->
-                entity
-            }
+    @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
+    fun getOrganisationInvoices(organisationId: UUID): List<InvoiceEntity> {
+        return findManyResults(organisationId, invoiceRepository::findByOrganisationId).map { entity ->
+            entity
         }
     }
 
@@ -62,38 +57,37 @@ class InvoiceService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun createInvoice(request: InvoiceCreationRequest): Invoice {
-        return authTokenService.getUserId().let { userId ->
-            val organisation: OrganisationEntity =
-                organisationService.getOrganisationEntity(request.organisationId)
-            val client = clientService.getClientById(request.clientId)
-            InvoiceEntity(
-                organisation = organisation,
-                client = client,
-                invoiceNumber = request.invoiceNumber,
-                invoiceTemplate = request.template.toEntity(),
-                reportTemplate = request.reportTemplate?.toEntity(),
-                items = request.items,
-                amount = request.amount,
-                currency = request.currency,
-                status = request.status,
-                startDate = request.startDate,
-                endDate = request.endDate,
-                issueDate = request.issueDate,
-                dueDate = request.dueDate,
-                customFields = request.customFields,
-            ).run {
-                invoiceRepository.save(this).let { entity ->
-                    activityService.logActivity(
-                        activity = Activity.INVOICE,
-                        operation = OperationType.CREATE,
-                        userId = userId,
-                        organisationId = organisation.id,
-                        additionalDetails = "Created invoice with number: ${entity.invoiceNumber}, ID: ${entity.id}",
-                    )
-                    entity.toModel()
-                }
+        val organisation: OrganisationEntity =
+            organisationService.getOrganisationEntity(request.organisationId)
+        val client = clientService.getClientById(request.clientId)
+        return InvoiceEntity(
+            organisation = organisation,
+            client = client,
+            invoiceNumber = request.invoiceNumber,
+            invoiceTemplate = request.template.toEntity(),
+            reportTemplate = request.reportTemplate?.toEntity(),
+            items = request.items,
+            amount = request.amount,
+            currency = request.currency,
+            status = request.status,
+            startDate = request.startDate,
+            endDate = request.endDate,
+            issueDate = request.issueDate,
+            dueDate = request.dueDate,
+            customFields = request.customFields,
+        ).run {
+            invoiceRepository.save(this).let { entity ->
+                activityService.logActivity(
+                    activity = Activity.INVOICE,
+                    operation = OperationType.CREATE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = organisation.id,
+                    additionalDetails = "Created invoice with number: ${entity.invoiceNumber}, ID: ${entity.id}",
+                )
+                entity.toModel()
             }
         }
+
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#invoice.organisation.id)")
@@ -112,7 +106,13 @@ class InvoiceService(
             dueDate = invoice.dates.endDate
         }.run {
             invoiceRepository.save(this).let {
-                // TODO log activity
+                activityService.logActivity(
+                    activity = Activity.INVOICE,
+                    operation = OperationType.UPDATE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = invoice.organisation.id,
+                    additionalDetails = "Updated invoice with number: ${this.invoiceNumber}, ID: ${this.id}",
+                )
                 this.toModel()
             }
         }
@@ -137,7 +137,13 @@ class InvoiceService(
             this.status = InvoiceStatus.CANCELLED
         }.run {
             invoiceRepository.save(this).let {
-                // TODO log activity
+                activityService.logActivity(
+                    activity = Activity.INVOICE,
+                    operation = OperationType.ARCHIVE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = invoice.organisation.id,
+                    additionalDetails = "Cancelled invoice with number: ${this.invoiceNumber}, ID: ${this.id}",
+                )
                 this.toModel()
             }
         }
@@ -153,7 +159,13 @@ class InvoiceService(
             if (this.status == InvoiceStatus.CANCELLED) {
                 throw IllegalArgumentException("Cannot delete a cancelled invoice")
             }
-            // TODO log activity
+            activityService.logActivity(
+                activity = Activity.INVOICE,
+                operation = OperationType.DELETE,
+                userId = authTokenService.getUserId(),
+                organisationId = invoice.organisation.id,
+                additionalDetails = "Deleted invoice with number: ${this.invoiceNumber}, ID: ${this.id}",
+            )
             invoiceRepository.deleteById(invoice.id)
         }
 

@@ -2,12 +2,15 @@ package okare.core.service.organisation
 
 import jakarta.transaction.Transactional
 import okare.core.entity.organisation.OrganisationInviteEntity
+import okare.core.enums.activity.Activity
 import okare.core.enums.organisation.OrganisationInviteStatus
 import okare.core.enums.organisation.OrganisationRoles
+import okare.core.enums.util.OperationType
 import okare.core.exceptions.ConflictException
 import okare.core.models.organisation.OrganisationInvite
 import okare.core.repository.organisation.OrganisationInviteRepository
 import okare.core.repository.organisation.OrganisationMemberRepository
+import okare.core.service.activity.ActivityService
 import okare.core.service.auth.AuthTokenService
 import okare.core.util.ServiceUtil.findManyResults
 import okare.core.util.ServiceUtil.findOrThrow
@@ -22,12 +25,14 @@ class OrganisationInviteService(
     private val organisationService: OrganisationService,
     private val organisationInviteRepository: OrganisationInviteRepository,
     private val organisationMemberRepository: OrganisationMemberRepository,
-    private val authTokenService: AuthTokenService
+    private val authTokenService: AuthTokenService,
+    private val activityService: ActivityService
 ) {
 
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId) and @organisationSecurity.hasOrgRoleOrHigher(#organisationId, 'ADMIN')")
     @Throws(AccessDeniedException::class, IllegalArgumentException::class)
     fun createOrganisationInvitation(organisationId: UUID, email: String, role: OrganisationRoles): OrganisationInvite {
+
         // Disallow invitation with the Owner role, ensure that this is only down through specified transfer of ownership methods
         if (role == OrganisationRoles.OWNER) {
             throw IllegalArgumentException("Cannot create an invite with the Owner role. Use transfer ownership methods instead.")
@@ -65,9 +70,18 @@ class OrganisationInviteService(
         ).let {
             organisationInviteRepository.save(it).run {
                 // TODO: Send out invitational email
+
+                activityService.logActivity(
+                    activity = Activity.ORGANISATION_MEMBER_INVITE,
+                    operation = OperationType.CREATE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = organisationId,
+                    additionalDetails = "Invited $email with role $role to organisation $organisationId => Invite ID: ${this.id}"
+                )
                 return OrganisationInvite.fromEntity(this)
             }
         }
+
     }
 
     @Throws(AccessDeniedException::class, IllegalArgumentException::class)

@@ -1,6 +1,5 @@
 package okare.core.service.client
 
-import io.github.oshai.kotlinlogging.KLogger
 import io.ktor.server.plugins.*
 import okare.core.entity.client.ClientEntity
 import okare.core.entity.client.toModel
@@ -24,7 +23,6 @@ class ClientService(
     private val repository: ClientRepository,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
-    private val logger: KLogger
 ) {
 
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
@@ -42,23 +40,21 @@ class ClientService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun createClient(client: ClientCreationRequest): Client {
-        authTokenService.getUserId().let {
-            ClientEntity(
-                organisationId = client.organisationId,
-                name = client.name,
-                contactDetails = client.contact,
-                attributes = client.attributes
-            ).run {
-                repository.save(this).let { entity ->
-                    activityService.logActivity(
-                        activity = Activity.CLIENT,
-                        operation = OperationType.CREATE,
-                        userId = it,
-                        organisationId = entity.organisationId,
-                        additionalDetails = "Created client with ID: ${entity.id}"
-                    )
-                    return entity.toModel()
-                }
+        ClientEntity(
+            organisationId = client.organisationId,
+            name = client.name,
+            contactDetails = client.contact,
+            attributes = client.attributes
+        ).run {
+            repository.save(this).let { entity ->
+                activityService.logActivity(
+                    activity = Activity.CLIENT,
+                    operation = OperationType.CREATE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = entity.organisationId,
+                    additionalDetails = "Created client with ID: ${entity.id}"
+                )
+                return entity.toModel()
             }
         }
     }
@@ -70,34 +66,32 @@ class ClientService(
             contactDetails = client.contactDetails
             attributes = client.attributes
         }.run {
-            authTokenService.getUserId().let { userId ->
-                repository.save(this).run {
-                    activityService.logActivity(
-                        activity = Activity.CLIENT,
-                        operation = OperationType.UPDATE,
-                        userId = userId,
-                        organisationId = this.organisationId,
-                        additionalDetails = "Updated client with ID: ${this.id}"
-                    )
+            repository.save(this).run {
+                activityService.logActivity(
+                    activity = Activity.CLIENT,
+                    operation = OperationType.UPDATE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = this.organisationId,
+                    additionalDetails = "Updated client with ID: ${this.id}"
+                )
 
-                    return this.toModel()
-                }
+                return this.toModel()
             }
         }
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun deleteClient(client: Client) {
-        authTokenService.getUserId().let {
-            repository.deleteById(client.id).run {
-                activityService.logActivity(
-                    activity = Activity.CLIENT,
-                    operation = OperationType.DELETE,
-                    userId = it,
-                    organisationId = client.organisationId,
-                    additionalDetails = "Deleted client with ID: ${client.id}"
-                )
-            }
+
+        repository.deleteById(client.id).run {
+            activityService.logActivity(
+                activity = Activity.CLIENT,
+                operation = OperationType.DELETE,
+                userId = authTokenService.getUserId(),
+                organisationId = client.organisationId,
+                additionalDetails = "Deleted client with ID: ${client.id}"
+            )
+
         }
 
     }

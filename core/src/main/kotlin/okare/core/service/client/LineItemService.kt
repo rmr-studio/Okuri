@@ -40,64 +40,63 @@ class LineItemService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun createLineItem(request: LineItemCreationRequest): LineItem {
-        authTokenService.getUserId().let {
-            LineItemEntity(
-                organisationId = request.organisationId,
-                name = request.name,
-                description = request.description,
-                chargeRate = request.chargeRate
-            ).run {
-                repository.save(this).let { entity ->
-                    activityService.logActivity(
-                        activity = Activity.LINE_ITEM,
-                        operation = OperationType.CREATE,
-                        userId = it,
-                        organisationId = entity.organisationId,
-                        additionalDetails = "Created line item with ID: ${entity.id}"
-                    )
-                    return entity.toModel()
-                }
+        LineItemEntity(
+            organisationId = request.organisationId,
+            name = request.name,
+            description = request.description,
+            chargeRate = request.chargeRate
+        ).run {
+            repository.save(this).let { entity ->
+                activityService.logActivity(
+                    activity = Activity.LINE_ITEM,
+                    operation = OperationType.CREATE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = entity.organisationId,
+                    additionalDetails = "Created line item with ID: ${entity.id}"
+                )
+                return entity.toModel()
             }
         }
+
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#lineItem.organisationId)")
     fun updateLineItem(lineItem: LineItem): LineItem {
-        authTokenService.getUserId().let {
-            findOrThrow(lineItem.id, repository::findById).apply {
-                name = lineItem.name
-                description = lineItem.description
-                chargeRate = lineItem.chargeRate
-            }.run {
-                repository.save(this)
-                // Todo: Would need to mark Invoices as outdated if the line item charge changes
-                activityService.logActivity(
-                    activity = Activity.LINE_ITEM,
-                    operation = OperationType.UPDATE,
-                    userId = it,
-                    organisationId = this.organisationId,
-                    additionalDetails = "Updated line item with ID: ${this.id}"
-                )
+
+        findOrThrow(lineItem.id, repository::findById).apply {
+            name = lineItem.name
+            description = lineItem.description
+            chargeRate = lineItem.chargeRate
+        }.run {
+            repository.save(this)
+            // Todo: Would need to mark Invoices as outdated if the line item charge changes
+            activityService.logActivity(
+                activity = Activity.LINE_ITEM,
+                operation = OperationType.UPDATE,
+                userId = authTokenService.getUserId(),
+                organisationId = this.organisationId,
+                additionalDetails = "Updated line item with ID: ${this.id}"
+            )
 
 
-                return this.toModel()
-            }
+            return this.toModel()
+
         }
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#lineItem.organisationId)")
     fun deleteLineItem(lineItem: LineItem) {
-        authTokenService.getUserId().let {
-            repository.deleteById(lineItem.id).run {
-                activityService.logActivity(
-                    activity = Activity.LINE_ITEM,
-                    operation = OperationType.DELETE,
-                    userId = it,
-                    organisationId = lineItem.organisationId,
-                    additionalDetails = "Deleted line item with ID: ${lineItem.id}"
-                )
-            }
 
+        repository.deleteById(lineItem.id).run {
+            activityService.logActivity(
+                activity = Activity.LINE_ITEM,
+                operation = OperationType.DELETE,
+                userId = authTokenService.getUserId(),
+                organisationId = lineItem.organisationId,
+                additionalDetails = "Deleted line item with ID: ${lineItem.id}"
+            )
         }
+
+
     }
 }
