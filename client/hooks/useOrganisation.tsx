@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 export const useOrganisation = () => {
     const { session, loading } = useAuth();
     // Extract organization name from URL params
-    // Assuming the route is defined like: /dashboard/organisation/:orgName
+    // Assuming the route is defined like: /dashboard/organisation/:orgId
     const { id: orgId } = useParams<{ id: string }>();
 
     // Use TanStack Query to fetch organization data

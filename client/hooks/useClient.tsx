@@ -1,15 +1,19 @@
 "use client";
 
 import { useAuth } from "@/components/provider/AuthContext";
-import { fetchUserClients } from "@/controller/client.controller";
+import { fetchOrganisationClients } from "@/controller/client.controller";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { useQuery } from "@tanstack/react-query";
+import { useOrganisation } from "./useOrganisation";
 
 export function useClient() {
     const { session, loading } = useAuth();
 
+    // Fetch current organisationId from parametres
+    const { data: organisation } = useOrganisation();
+
     const query = useQuery({
-        queryKey: ["userClients", session?.user.id],
+        queryKey: ["organisationClients", organisation?.id],
         queryFn: () => {
             if (!session?.user.id) {
                 throw fromError({
@@ -18,9 +22,18 @@ export function useClient() {
                     error: "NO_SESSION",
                 });
             }
-            return fetchUserClients(session);
+
+            if (!organisation?.id) {
+                throw fromError({
+                    message: "No organisation found",
+                    status: 404,
+                    error: "NO_ORGANISATION",
+                });
+            }
+
+            return fetchOrganisationClients(session, organisation);
         },
-        enabled: !!session?.user.id, // Only fetch if user is authenticated
+        enabled: !!session?.user.id && !!organisation?.id, // Only fetch if user is authenticated and if an organisation is available
         retry: (count, error) => {
             // Retry once on failure, but not on network errors
             if (isResponseError(error)) return false;

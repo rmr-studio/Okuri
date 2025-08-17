@@ -1,15 +1,17 @@
 "use client";
 
 import { useAuth } from "@/components/provider/AuthContext";
-import { fetchUserLineItems } from "@/controller/lineitem.controller";
+import { fetchOrganisationLineItems } from "@/controller/lineitem.controller";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { useQuery } from "@tanstack/react-query";
+import { useOrganisation } from "./useOrganisation";
 
 export function useLineItem() {
     const { session, loading } = useAuth();
+    const { data: organisation } = useOrganisation();
 
     const query = useQuery({
-        queryKey: ["userLineItems", session?.user.id],
+        queryKey: ["organisationLineItems", organisation?.id],
         queryFn: () => {
             if (!session?.user.id) {
                 throw fromError({
@@ -18,9 +20,18 @@ export function useLineItem() {
                     error: "NO_SESSION",
                 });
             }
-            return fetchUserLineItems(session);
+
+            if (!organisation?.id) {
+                throw fromError({
+                    message: "No organisation found",
+                    status: 404,
+                    error: "NO_ORGANISATION",
+                });
+            }
+
+            return fetchOrganisationLineItems(session, organisation);
         },
-        enabled: !!session?.user.id,
+        enabled: !!session?.user.id && !!organisation?.id, // Only fetch if user is authenticated and if an organisation is available
         retry: (count, error) => {
             if (isResponseError(error)) return false;
             return count < 2;
