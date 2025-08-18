@@ -11,112 +11,32 @@ import {
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TextSeparator } from "@/components/ui/text-separator";
-import { Client, ContactDetails } from "@/lib/interfaces/client.interface";
+import { Client } from "@/lib/interfaces/client.interface";
+import { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/template.interface";
 import {
-    ClientTemplateFieldStructure,
-    TemplateClientTemplateFieldStructure,
-} from "@/lib/interfaces/template.interface";
-import { isNumber, isValidTypeRestriction } from "@/lib/util/form/form.util";
+    buildDefaultAttributes,
+    createDynamicClientSchema,
+} from "@/lib/util/form/schema.client.util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FC, JSX } from "react";
 import { UseFormReturn, useForm } from "react-hook-form";
-import { isDate } from "validator";
 import { z } from "zod";
 import { RenderClientField } from "./RenderClientField";
 
-const createDynamicSchema = (
-    structure: Record<string, ClientTemplateFieldStructure>
-): z.ZodTypeAny => {
-    const schemaFields: Record<string, z.ZodTypeAny> = {};
+const clientCreationSchema = z.object({
+    name: z.string(),
+    contactDetails: z
+        .object({
+            email: z.string().email().optional(),
+            phone: z.string().optional(),
+            address: z.any().optional(),
+        })
+        .partial()
+        .optional(),
+    attributes: z.record(z.any()).default({}), // Required with default empty object
+});
 
-    for (const [key, field] of Object.entries(structure)) {
-        let schema: z.ZodTypeAny;
-
-        switch (field.type) {
-            case "TEXT": {
-                let strSchema = z.string({ required_error: `${field.name} is required` });
-                field.constraints.forEach((constraint) => {
-                    const { type, value } = constraint;
-                    if (type == "MIN_LENGTH" && isNumber(value))
-                        strSchema = strSchema.min(value, `${field.name} is too short`);
-
-                    if (type == "MAX_LENGTH" && isNumber(value))
-                        strSchema = strSchema.max(value, `${field.name} is too long`);
-                    if (type === "PATTERN" && value)
-                        strSchema = strSchema.regex(new RegExp(value), `${field.name} is invalid`);
-                });
-                schema = strSchema;
-                break;
-            }
-            case "NUMBER": {
-                let numSchema = z.coerce.number({ required_error: `${field.name} is required` });
-                field.constraints.forEach((constraint) => {
-                    const { type, value } = constraint;
-                    if (type === "MIN_LENGTH" && isNumber(value))
-                        numSchema = numSchema.min(value, `${field.name} is too small`);
-                    if (type === "MAX_LENGTH" && isNumber(value))
-                        numSchema = numSchema.max(value, `${field.name} is too large`);
-                    if (type === "TYPE" && isValidTypeRestriction(field.type, value)) {
-                        if (value === "POSITIVE") {
-                            numSchema = numSchema.positive(`${field.name} must be positive`);
-                        } else if (value === "NEGATIVE") {
-                            numSchema = numSchema.negative(`${field.name} must be negative`);
-                        }
-                    }
-                });
-                schema = numSchema;
-                break;
-            }
-            case "DATE": {
-                schema = z
-                    .string({ required_error: `${field.name} is required` })
-                    .refine(isDate, `${field.name} is invalid`);
-                break;
-            }
-            case "BOOLEAN": {
-                schema = z.boolean({ required_error: `${field.name} is required` });
-                break;
-            }
-            case "SELECT": {
-                schema = z
-                    .string({ required_error: `${field.name} is required` })
-                    .refine(
-                        (val) => field.options.includes(val),
-                        `${field.name} must be one of: ${field.options.join(", ")}`
-                    );
-                break;
-            }
-            case "MULTISELECT": {
-                schema = z
-                    .array(z.string())
-                    .refine(
-                        (vals) => vals.every((val) => field.options.includes(val)),
-                        `${field.name} contains invalid options`
-                    );
-                break;
-            }
-            case "OBJECT": {
-                schema = createDynamicSchema(
-                    field.children.reduce((acc, child) => ({ ...acc, [child.name]: child }), {})
-                );
-                break;
-            }
-            default: {
-                schema = z.any(); // fallback
-            }
-        }
-
-        schemaFields[key] = field.required && field.type !== "OBJECT" ? schema : schema.optional();
-    }
-
-    return z.object(schemaFields);
-};
-
-export type ClientCreation = {
-    name: string;
-    contactDetails?: Partial<ContactDetails>;
-    attributes: Record<string, any>;
-};
+export type ClientCreation = z.infer<typeof clientCreationSchema>;
 
 interface Props {
     form?: UseFormReturn<ClientCreation>;
@@ -137,13 +57,27 @@ export const ClientForm: FC<Props> = ({
     handleSubmission,
     renderFooter,
 }) => {
-    const schema = selectedTemplate
-        ? createDynamicSchema(selectedTemplate.structure)
-        : z.object({
-              name: z
-                  .string({ required_error: "Display Name is required" })
-                  .min(3, "Display Name is too short"),
-          });
+    const attributesSchema = selectedTemplate
+        ? createDynamicClientSchema(selectedTemplate.structure)
+        : z.record(z.any()).default({});
+
+    const schema = z
+        .object({
+            name: z
+                .string({ required_error: "Display Name is required" })
+                .min(3, "Display Name is too short"),
+            contactDetails: z
+                .object({
+                    email: z.string().email().optional(),
+                    phone: z.string().optional(),
+                    address: z.any().optional(),
+                })
+                .optional(),
+            attributes: selectedTemplate
+                ? createDynamicClientSchema(selectedTemplate.structure)
+                : z.record(z.any()).default({}),
+        })
+        .strict();
 
     const internalForm = useForm<ClientCreation>({
         resolver: zodResolver(schema),
@@ -155,22 +89,13 @@ export const ClientForm: FC<Props> = ({
                       phone: client.contactDetails?.phone,
                       address: client.contactDetails?.address,
                   },
-                  attributes: client.attributes,
+                  attributes: client.attributes ?? {},
               }
             : {
                   name: "",
+                  contactDetails: undefined,
                   attributes: selectedTemplate
-                      ? Object.fromEntries(
-                            Object.entries(selectedTemplate.structure).map(([key, field]) => [
-                                key,
-                                field.defaultValue ||
-                                    (field.type === "MULTISELECT"
-                                        ? []
-                                        : field.type === "BOOLEAN"
-                                        ? false
-                                        : ""),
-                            ])
-                        )
+                      ? buildDefaultAttributes(selectedTemplate.structure)
                       : {},
               },
         mode: "onBlur",

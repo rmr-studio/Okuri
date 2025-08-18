@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { ClientTemplateFieldStructure } from "@/lib/interfaces/template.interface";
+import { getTypeConstraint } from "@/lib/util/form/schema.client.util";
 import { FC } from "react";
 import { Path, UseFormReturn } from "react-hook-form";
 import { Country } from "react-phone-number-input";
@@ -22,10 +23,11 @@ export const RenderClientField: FC<{
     form: UseFormReturn<ClientCreation>;
     path: string;
 }> = ({ field, form, path }) => {
+    const typeConstraint = getTypeConstraint(field);
+
     const handleCountrySelection = (fieldPath: string, country: Country) => {
-        const currentValue = form.getValues(fieldPath as Path<ClientCreation>);
-        const newValue = { ...currentValue, country };
-        form.setValue(fieldPath as Path<ClientCreation>, newValue);
+        // If TYPE === COUNTRY and schema is TEXT (string), store just the country code string
+        form.setValue(fieldPath as Path<ClientCreation>, country as any, { shouldDirty: true });
     };
 
     if (field.type === "OBJECT") {
@@ -56,24 +58,23 @@ export const RenderClientField: FC<{
                         {field.name} {field.required ? "*" : ""}
                     </FormLabel>
                     <FormControl>
-                        {field.type === "TEXT" && field.name.toLowerCase().includes("email") ? (
+                        {field.type === "TEXT" && typeConstraint === "EMAIL" ? (
                             <Input
                                 {...formField}
                                 type="email"
                                 placeholder={field.description || field.name}
                             />
-                        ) : field.type === "TEXT" && field.name.toLowerCase().includes("phone") ? (
+                        ) : field.type === "TEXT" && typeConstraint === "PHONE" ? (
                             <PhoneInput
                                 {...formField}
                                 placeholder="0455 555 555"
                                 defaultCountry="AU"
                             />
-                        ) : field.type === "TEXT" &&
-                          field.name.toLowerCase().includes("country") ? (
+                        ) : field.type === "TEXT" && typeConstraint === "COUNTRY" ? (
                             <FormCountrySelector
                                 key={path}
                                 value={formField.value as Country}
-                                handleSelection={handleCountrySelection}
+                                handleSelection={(c) => handleCountrySelection(path, c as Country)}
                             />
                         ) : field.type === "NUMBER" ? (
                             <Input
@@ -89,11 +90,14 @@ export const RenderClientField: FC<{
                             />
                         ) : field.type === "BOOLEAN" ? (
                             <Checkbox
-                                checked={formField.value}
-                                onCheckedChange={formField.onChange}
+                                checked={!!formField.value}
+                                onCheckedChange={(checked) => formField.onChange(Boolean(checked))}
                             />
                         ) : field.type === "SELECT" ? (
-                            <Select onValueChange={formField.onChange} value={formField.value}>
+                            <Select
+                                onValueChange={formField.onChange}
+                                value={formField.value ?? ""}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder={`Select ${field.name}`} />
                                 </SelectTrigger>
@@ -106,27 +110,35 @@ export const RenderClientField: FC<{
                                 </SelectContent>
                             </Select>
                         ) : field.type === "MULTISELECT" ? (
-                            <div>
-                                {field.options.map((option) => (
-                                    <div key={option} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            checked={(formField.value || []).includes(option)}
-                                            onCheckedChange={(checked) => {
-                                                const current = formField.value || [];
-                                                const updated = checked
-                                                    ? [...current, option]
-                                                    : current.filter((v: string) => v !== option);
-                                                formField.onChange(updated);
-                                            }}
-                                        />
-                                        <span>{option}</span>
-                                    </div>
-                                ))}
+                            <div className="space-y-2">
+                                {(field.options || []).map((option) => {
+                                    const current: string[] = Array.isArray(formField.value)
+                                        ? formField.value
+                                        : [];
+                                    const checked = current.includes(option);
+                                    return (
+                                        <div key={option} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                checked={checked}
+                                                onCheckedChange={(c) => {
+                                                    const next = c
+                                                        ? [...current, option]
+                                                        : current.filter((v) => v !== option);
+                                                    formField.onChange(next);
+                                                }}
+                                            />
+                                            <span>{option}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <Input {...formField} placeholder={field.description || field.name} />
                         )}
                     </FormControl>
+                    {field.description && (
+                        <p className="text-xs text-muted-foreground mt-1">{field.description}</p>
+                    )}
                     <FormMessage />
                 </FormItem>
             )}
