@@ -5,17 +5,19 @@ commit;
 -- Organisations
 CREATE TABLE IF NOT EXISTS "organisations"
 (
-    "id"                UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
-    "name"              VARCHAR(100)     NOT NULL UNIQUE,
+    "id"                UUID PRIMARY KEY  NOT NULL DEFAULT uuid_generate_v4(),
+    "name"              VARCHAR(100)      NOT NULL UNIQUE,
+    "plan"              ORGANISATION_PLAN NOT NULL DEFAULT 'FREE',
+    "default_currency"  VARCHAR(3)        NOT NULL DEFAULT 'AUD',
     "address"           jsonb,
     "avatar_url"        TEXT,
     "business_number"   TEXT,
     "tax_id"            TEXT,
     "payment_details"   jsonb,
     "custom_attributes" jsonb,
-    "member_count"      INTEGER          NOT NULL DEFAULT 0,
-    "created_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP
+    "member_count"      INTEGER           NOT NULL DEFAULT 0,
+    "created_at"        TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"        TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TYPE ORGANISATION_ROLE AS ENUM ('OWNER', 'ADMIN', 'MEMBER');

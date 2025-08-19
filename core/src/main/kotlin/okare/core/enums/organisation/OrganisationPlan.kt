@@ -1,8 +1,8 @@
 package okare.core.enums.organisation
 
 enum class OrganisationPlan {
-    ENTHUSIAST,
-    PRO,
-    TEAM,
+    FREE,
+    STARTUP,
+    SCALE,
     ENTERPRISE
 }

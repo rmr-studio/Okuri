@@ -1,5 +1,6 @@
 package okare.core.models.organisation
 
+import okare.core.enums.organisation.OrganisationPlan
 import okare.core.models.common.Address
 import java.time.ZonedDateTime
 import java.util.*
@@ -7,6 +8,8 @@ import java.util.*
 data class Organisation(
     val id: UUID,
     var name: String,
+    val plan: OrganisationPlan,
+    var defaultCurrency: Currency = Currency.getInstance("AUD"), // Default currency for the organisation
     var avatarUrl: String? = null,
     var businessNumber: String? = null,
     var taxId: String? = null,

@@ -2,6 +2,7 @@ package okare.core.entity.organisation
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
+import okare.core.enums.organisation.OrganisationPlan
 import okare.core.models.common.Address
 import okare.core.models.organisation.Organisation
 import okare.core.models.organisation.OrganisationPaymentDetails
@@ -24,6 +25,13 @@ data class OrganisationEntity(
 
     @Column(name = "name", nullable = false, updatable = true)
     var name: String,
+
+    @Column(name = "plan", nullable = false, updatable = true)
+    @Enumerated(EnumType.STRING)
+    var plan: OrganisationPlan = OrganisationPlan.FREE,
+
+    @Column(name = "default_currency", nullable = false, updatable = true)
+    var defaultCurrency: Currency = Currency.getInstance("AUD"), // Default currency for the organisation
 
     @Column(name = "avatarUrl", nullable = true, updatable = true)
     var avatarUrl: String? = null,
@@ -79,6 +87,8 @@ fun OrganisationEntity.toModel(includeMembers: Boolean = false): Organisation {
         return Organisation(
             id = it,
             name = this.name,
+            plan = this.plan,
+            defaultCurrency = this.defaultCurrency,
             avatarUrl = this.avatarUrl,
             memberCount = this.memberCount,
             createdAt = this.createdAt,
