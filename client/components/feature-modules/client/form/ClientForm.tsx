@@ -33,7 +33,7 @@ const clientCreationSchema = z.object({
         })
         .partial()
         .optional(),
-    attributes: z.record(z.any()).default({}), // Required with default empty object
+    attributes: z.record(z.any()).default({}).optional(), // Required with default empty object
 });
 
 export type ClientCreation = z.infer<typeof clientCreationSchema>;
