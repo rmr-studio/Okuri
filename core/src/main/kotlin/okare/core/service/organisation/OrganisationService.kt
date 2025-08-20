@@ -51,13 +51,20 @@ class OrganisationService(
     @Throws(AccessDeniedException::class, IllegalArgumentException::class)
     @Transactional
     fun createOrganisation(request: OrganisationCreationRequest): Organisation {
-        val (name, avatarUrl, isDefault) = request
         // Gets the user ID from the auth token to act as the Organisation creator
         authTokenService.getUserId().let { userId ->
             // Create and save the organisation entity
+            val currency: Currency = request.defaultCurrency.let {
+                Currency.getAvailableCurrencies()
+                    .find { it.currencyCode.equals(it) }
+                    ?: throw IllegalArgumentException("Invalid currency code: ${request.defaultCurrency}")
+            }
+
             val entity = OrganisationEntity(
-                name = name,
-                avatarUrl = avatarUrl,
+                name = request.name,
+                avatarUrl = request.avatarUrl,
+                plan = request.plan,
+                defaultCurrency = currency,
                 businessNumber = request.businessNumber,
                 address = request.address,
                 taxId = request.taxId,
@@ -90,7 +97,7 @@ class OrganisationService(
                     userService.getUserFromSession().toModel().let {
                         // Membership array should be empty until transaction is over. Meaning we can determine if this is the first organisation made by the user
                         // Can also manually specify for the organisation to become the new default
-                        if (it.memberships.isEmpty() || isDefault) {
+                        if (it.memberships.isEmpty() || request.isDefault) {
                             it.apply {
                                 defaultOrganisation = organisation
                             }.run {
