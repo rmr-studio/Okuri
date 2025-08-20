@@ -195,11 +195,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get all line items for an organisation
-         * @description Retrieves a list of line items associated with a given organisation.
-         */
-        get: operations["getLineItemsForUser"];
+        get?: never;
         put?: never;
         /**
          * Create a new line item
@@ -348,6 +344,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/item/organisation/{organisationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all line items for an organisation
+         * @description Retrieves a list of line items associated with a given organisation.
+         */
+        get: operations["getLineItemsForUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/{id}/document": {
         parameters: {
             query?: never;
@@ -408,7 +424,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/client/client/{clientId}/organisation/{organisationId}": {
+    "/api/v1/client/client/{clientId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -475,6 +491,18 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @enum {string} */
+            plan: "FREE" | "STARTUP" | "SCALE" | "ENTERPRISE";
+            defaultCurrency: {
+                currencyCode?: string;
+                /** Format: int32 */
+                numericCode?: number;
+                numericCodeAsString?: string;
+                displayName?: string;
+                symbol?: string;
+                /** Format: int32 */
+                defaultFractionDigits?: number;
+            };
             avatarUrl?: string;
             businessNumber?: string;
             taxId?: string;
@@ -709,6 +737,9 @@ export interface components {
         OrganisationCreationRequest: {
             name: string;
             avatarUrl?: string;
+            /** @enum {string} */
+            plan: "FREE" | "STARTUP" | "SCALE" | "ENTERPRISE";
+            defaultCurrency: string;
             isDefault: boolean;
             businessNumber?: string;
             taxId?: string;
@@ -1405,37 +1436,6 @@ export interface operations {
             };
         };
     };
-    getLineItemsForUser: {
-        parameters: {
-            query: {
-                organisationId: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of line items retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["LineItem"][];
-                };
-            };
-            /** @description Unauthorized access */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["LineItem"][];
-                };
-            };
-        };
-    };
     createLineItem: {
         parameters: {
             query?: never;
@@ -1827,6 +1827,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrganisationInvite"][];
+                };
+            };
+        };
+    };
+    getLineItemsForUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of line items retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"][];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LineItem"][];
                 };
             };
         };

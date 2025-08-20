@@ -1,6 +1,6 @@
 "use client";
 
-import { useOrganisationStore } from "@/components/provider/OrganisationContext";
+import { useOrganisationStore } from "@/components/provider/OrganisationContent";
 import { useOrganisation } from "@/hooks/useOrganisation";
 import { isResponseError, ResponseError } from "@/lib/util/error/error.util";
 import { useRouter } from "next/navigation";
