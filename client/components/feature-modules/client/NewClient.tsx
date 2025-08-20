@@ -10,80 +10,26 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { createClient } from "@/controller/client.controller";
-import { ClientCreationRequest } from "@/lib/interfaces/client.interface";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useOrganisation } from "@/hooks/useOrganisation";
+import { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/client.interface";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { ClientCreation, ClientForm, ClientFormSchema } from "./form/ClientForm";
+import { useState } from "react";
+import { ClientForm } from "./form/ClientForm";
 
 const NewClient = () => {
-    const { session, client: authClient } = useAuth();
+    const { session } = useAuth();
+    const { data: organisation } = useOrganisation();
 
-    const toastRef = useRef<string | number | undefined>(undefined);
     const router = useRouter();
     const queryClient = useQueryClient();
 
+    // TODO: Ability to fetch available templates and select one to shape form schema
+
     const handleCancel = () => {
-        router.push("/dashboard/clients");
+        if (organisation?.id) router.push(`/dashboard/organisation/${organisation.id}/clients`);
+        else router.push(`/dashboard/clients`);
     };
-
-    const handleSubmission = async (values: ClientCreation) => {
-        if (!session || !authClient) return;
-
-        const client: ClientCreationRequest = {
-            name: values.displayName,
-            address: {
-                street: values.street,
-                city: values.city,
-                state: values.state,
-                country: values.country,
-                postalCode: values.postalCode,
-            },
-            phone: values.phone,
-            ndisNumber: values.ndisNumber,
-        };
-
-        clientMutation.mutate(client);
-    };
-
-    const clientMutation = useMutation({
-        mutationFn: (client: ClientCreationRequest) => createClient(session, client),
-        onMutate: () => {
-            toastRef.current = toast.loading("Creating New Client...");
-        },
-        onSuccess: () => {
-            toast.dismiss(toastRef.current);
-            toast.success("Client created successfully");
-
-            // Invalidate and refetch clients data
-            queryClient.invalidateQueries({ queryKey: ["userClients", session?.user.id] });
-
-            router.push("/dashboard/clients");
-        },
-        onError: (error) => {
-            toast.dismiss(toastRef.current);
-            toast.error(`Failed to create client: ${error.message}`);
-        },
-    });
-
-    const form = useForm<ClientCreation>({
-        resolver: zodResolver(ClientFormSchema),
-        defaultValues: {
-            displayName: "",
-            phone: "",
-            street: "",
-            city: "",
-            state: "",
-            country: "AU",
-            postalCode: "",
-            ndisNumber: "",
-        },
-        mode: "onBlur",
-    });
 
     return (
         <Card className="w-auto flex-grow lg:max-w-2xl h-fit m-2 md:m-6 lg:m-12">
@@ -93,13 +39,13 @@ const NewClient = () => {
                     <br />
                     This new client will be available for all future invoices and management
                     features
-                    <br />
-                    The clients Phone number and NDIS number must be unique from all other clients.
                 </CardDescription>
             </CardHeader>
             <CardContent className="my-12">
                 <ClientForm
-                    form={form}
+                    templates={templates}
+                    selectedTemplate={selectedTemplate}
+                    onTemplateChange={setSelectedTemplate}
                     handleSubmission={handleSubmission}
                     renderFooter={() => (
                         <CardFooter className="flex justify-between mt-4 py-1 border-t ">

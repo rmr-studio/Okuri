@@ -11,8 +11,10 @@ interface Props {
     client: Client;
 }
 
+// TODO: Give users a way to edit client details from this tile
+
 export const ClientTile: FC<Props> = ({ client }) => {
-    const { name, phone, ndisNumber } = client;
+    const { name } = client;
 
     return (
         <Card className="p-3 cursor-pointer hover:bg-card/60 rounded-md">
@@ -25,12 +27,12 @@ export const ClientTile: FC<Props> = ({ client }) => {
                     <Separator />
                     <section className="mt-2">
                         <div className="flex justify-between">
-                            <div className="text-xs text-muted-foreground">Phone:</div>
-                            <div className="text-xs ml-4">{phone || "N/A"}</div>
+                            <div className="text-xs text-muted-foreground">Detail 1:</div>
+                            <div className="text-xs text-content">Value 1</div>
                         </div>
                         <div className="flex justify-between">
-                            <div className="text-xs text-muted-foreground">NDIS Number:</div>
-                            <div className="text-xs ml-4">{ndisNumber || "N/A"}</div>
+                            <div className="text-xs text-muted-foreground">Detail 2:</div>
+                            <div className="text-xs text-content">Value 2</div>
                         </div>
                     </section>
                 </CardContent>

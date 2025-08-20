@@ -1,3 +1,4 @@
+import { useAuth } from "@/components/provider/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
     Sheet,
@@ -6,24 +7,22 @@ import {
     SheetFooter,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { Client } from "@/lib/interfaces/client.interface";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { FC } from "react";
-import { useForm } from "react-hook-form";
-import { ClientCreation, ClientForm, } from "./form/ClientForm";
+import { Client, TemplateClientTemplateFieldStructure } from "@/lib/interfaces/client.interface";
+import { useQueryClient } from "@tanstack/react-query";
+import { FC, useState } from "react";
+import { ClientForm } from "./form/ClientForm";
 
 interface Props {
     client: Client;
-    onSubmit: (values: ClientCreation) => Promise<void>;
     onClose: () => void;
 }
 
-const EditClient: FC<Props> = ({ client, onSubmit, onClose }) => {
-    const form = useForm<ClientCreation>({
-        resolver: zodResolver(ClientFormSchema),
+const EditClient: FC<Props> = ({ client, onClose }) => {
+    const { session } = useAuth();
+    
+    // TODO
 
-        mode: "onBlur",
-    });
+    
 
     return (
         <Sheet open={true} modal={true}>
@@ -39,8 +38,11 @@ const EditClient: FC<Props> = ({ client, onSubmit, onClose }) => {
                     Ensure all information is accurate before saving.
                 </SheetDescription>
                 <ClientForm
-                    form={form}
-                    handleSubmission={onSubmit}
+                    templates={templates}
+                    selectedTemplate={selectedTemplate}
+                    onTemplateChange={setSelectedTemplate}
+                    client={client}
+                    handleSubmission={(values) => mutation.mutateAsync(values)}
                     renderFooter={() => (
                         <SheetFooter className="flex flex-row justify-end mt-4 pt-8 px-2 border-t ">
                             <Button
