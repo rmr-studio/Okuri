@@ -55,7 +55,6 @@ export const DashboardSidebar = () => {
         ? [
               {
                   title: "Organisation",
-
                   items: [
                       {
                           icon: Building2,
@@ -204,7 +203,20 @@ export const DashboardSidebar = () => {
                   ],
               },
           ]
-        : [];
+        : [
+              {
+                  title: "Settings",
+                  items: [
+                      {
+                          icon: CogIcon,
+                          hidden: false,
+                          title: "Account Settings",
+                          url: `/dashboard/settings`,
+                          isActive: pathName.startsWith(`/dashboard/settings`),
+                      },
+                  ],
+              },
+          ];
 
     return (
         <AppSidebar
@@ -216,14 +228,35 @@ export const DashboardSidebar = () => {
                 if (data) {
                     if (data.memberships.length === 0) {
                         return (
-                            <Link
-                                className="mt-3 w-auto flex-grow flex mx-4"
-                                href={"/dashboard/organisation/new"}
-                            >
-                                <Button variant={"outline"} className="w-full" size={"sm"}>
-                                    Create Organisation
-                                </Button>
-                            </Link>
+                            <>
+                                <Link
+                                    className="mt-3 w-auto flex-grow flex mx-4"
+                                    href={"/dashboard/organisation/new"}
+                                >
+                                    <Button
+                                        variant={"outline"}
+                                        type="button"
+                                        className="w-full cursor-pointer"
+                                        size={"sm"}
+                                    >
+                                        Create Organisation
+                                    </Button>
+                                </Link>
+                                <section className="mb-8">
+                                    <div className="flex justify-center mt-6 mb-4 [&_svg:not([class*='text-'])]:text-muted-foreground">
+                                        <Building2 className="w-8 h-8" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-content text-sm font-semibold text-center">
+                                            No Organisations Found
+                                        </h1>
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            You currently do not have any organisations. Create one
+                                            to get started.
+                                        </p>
+                                    </div>
+                                </section>
+                            </>
                         );
                     }
                     return (

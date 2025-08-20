@@ -42,10 +42,16 @@ const getCurrencyData = () => {
 };
 
 const currencies = getCurrencyData();
+type Currency = (typeof currencies)[number];
 
-export function CurrencyComboBox() {
+interface Props {
+    value?: string;
+    onChange: (currency: string) => void;
+}
+
+export const CurrencySelector: React.FC<Props> = ({ value, onChange }) => {
     const [open, setOpen] = React.useState(false);
-    const [selected, setSelected] = React.useState<(typeof currencies)[0]>();
+    const selected = currencies.find((c) => c.code === value);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -76,7 +82,7 @@ export function CurrencyComboBox() {
                                 key={currency.code}
                                 value={`${currency.code} ${currency.country}`}
                                 onSelect={() => {
-                                    setSelected(currency);
+                                    onChange(currency.code);
                                     setOpen(false);
                                 }}
                             >
@@ -96,4 +102,4 @@ export function CurrencyComboBox() {
             </PopoverContent>
         </Popover>
     );
-}
+};
