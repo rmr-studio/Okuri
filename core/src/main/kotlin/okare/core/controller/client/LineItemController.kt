@@ -27,7 +27,7 @@ class LineItemController(private val lineItemService: LineItemService) {
         ApiResponse(responseCode = "200", description = "List of line items retrieved successfully"),
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
     )
-    fun getLineItemsForUser(@PathVariable organisationId: UUID): ResponseEntity<List<LineItem>> {
+    fun getLineItemsForOrganisation(@PathVariable organisationId: UUID): ResponseEntity<List<LineItem>> {
         val lineItems = lineItemService.getOrganisationLineItem(organisationId).map { it.toModel() }
         return ResponseEntity.ok(lineItems)
     }

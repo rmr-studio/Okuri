@@ -61,7 +61,11 @@ data class OrganisationEntity(
 
     @Type(JsonBinaryType::class)
     @Column(name = "custom_attributes", nullable = true, updatable = true, columnDefinition = "jsonb")
-    var customAttributes: Map<String, Any> = emptyMap() // JSONB for industry-specific fields
+    var customAttributes: Map<String, Any> = emptyMap(), // JSONB for industry-specific fields
+
+    @Type(JsonBinaryType::class)
+    @Column(name = "tile_layout", nullable = true, updatable = true, columnDefinition = "jsonb")
+    var tileLayout: Map<String, Any>? = null // JSONB for custom tile layout configuration
 
 ) {
     @OneToMany(mappedBy = "organisation", cascade = [CascadeType.ALL], fetch = FetchType.LAZY, orphanRemoval = true)
@@ -96,6 +100,7 @@ fun OrganisationEntity.toModel(includeMembers: Boolean = false): Organisation {
             taxId = this.taxId,
             organisationPaymentDetails = this.organisationPaymentDetails,
             customAttributes = this.customAttributes,
+            tileLayout = this.tileLayout,
             members = if (includeMembers) {
                 this.members.map { member -> member.toModel() }
             } else {
@@ -116,6 +121,7 @@ fun Organisation.toEntity(): OrganisationEntity {
         taxId = this.taxId,
         organisationPaymentDetails = this.organisationPaymentDetails,
         customAttributes = this.customAttributes,
+        tileLayout = this.tileLayout,
         address = this.address,
     )
 }
