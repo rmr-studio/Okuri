@@ -4,6 +4,12 @@ import { z } from "zod";
 export const MIN_DATE = new Date("1900-01-01");
 export const getCurrentDate = () => new Date();
 
+export interface Step<T> {
+    identifier: T;
+    step: number;
+    title: string;
+    description?: string;
+}
 export const OTPFormSchema = z.object({
     otp: z
         .string()

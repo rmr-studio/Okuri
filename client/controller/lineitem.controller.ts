@@ -3,8 +3,8 @@ import {
     CreateLineItemResponse,
     GetLineItemByIdPathParams,
     GetLineItemByIdResponse,
-    GetLineItemsForUserQueryParams,
-    GetLineItemsForUserResponse,
+    GetLineItemsForOrganisationQueryParams,
+    GetLineItemsForOrganisationResponse,
     UpdateLineItemPathParams,
     UpdateLineItemRequest,
     UpdateLineItemResponse,
@@ -17,7 +17,7 @@ import { Session } from "@supabase/supabase-js";
 export const fetchOrganisationLineItems = async (
     session: Session | null,
     organisation: Organisation
-): Promise<GetLineItemsForUserResponse> => {
+): Promise<GetLineItemsForOrganisationResponse> => {
     try {
         if (!session?.access_token) {
             throw fromError({
@@ -27,12 +27,10 @@ export const fetchOrganisationLineItems = async (
             });
         }
         const url = api();
-        const queryParams: GetLineItemsForUserQueryParams = {
+        const queryParams: GetLineItemsForOrganisationQueryParams = {
             organisationId: organisation.id,
         };
-        const queryString = new URLSearchParams(
-            queryParams as Record<string, string>
-        ).toString();
+        const queryString = new URLSearchParams(queryParams).toString();
 
         const response = await fetch(`${url}/v1/item/?${queryString}`, {
             method: "GET",

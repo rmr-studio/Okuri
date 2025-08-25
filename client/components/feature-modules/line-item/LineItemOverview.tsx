@@ -2,35 +2,38 @@ import { useAuth } from "@/components/provider/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { updateLineItem } from "@/controller/lineitem.controller";
 import { useLineItemOverview } from "@/hooks/useLineItemOverview";
+import { useOrganisation } from "@/hooks/useOrganisation";
 import { LineItem } from "@/lib/interfaces/invoice.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import EditLineItem from "./EditLineItem";
 import { LineItemCreation } from "./LineItemForm";
 import { LineItemOverviewSkeleton } from "./loading/LineItemOverviewSkeleton";
 
 const LineItemOverview = () => {
-    const { data: item, isLoading, error, isLoadingAuth } = useLineItemOverview();
+    const { data: item, isLoading: isLoadingItem, error, isLoadingAuth } = useLineItemOverview();
     const { session, client: authClient } = useAuth();
+    const { data: organisation, isLoading: isLoadingOrganisation } = useOrganisation();
     const [editingItem, setEditingItem] = useState<boolean>(false);
     const toastRef = useRef<string | number | undefined>(undefined);
     const queryClient = useQueryClient();
     const router = useRouter();
 
-    const openEditDrawer = () => {
-        setEditingItem(true);
-    };
-
     const handleDrawerClose = () => {
         setEditingItem(false);
     };
 
-    const handleClientEdit = async (itemDetails: LineItemCreation) => {
-        // Handle mutation'
-        if (!session || !authClient || !item) return;
+    const handleItemEdit = async (itemDetails: LineItemCreation) => {
+        // Handle mutation
+        if (!session || !authClient || !item || !organisation) return;
+
+        if (organisation.id !== item.organisationId) {
+            toast.error("You do not have permission to edit this item.");
+            router.push("/dashboard/item");
+        }
 
         const updatedLineItem: LineItem = {
             ...item,
@@ -86,8 +89,31 @@ const LineItemOverview = () => {
         },
     });
 
+    useEffect(() => {
+        // Redirect if not authenticated or organisation not loaded
+        if (!session || (!organisation && !isLoadingOrganisation)) {
+            toast.error(
+                "Failed to authenticate current user, or selected organisation. Please log in again."
+            );
+            router.push("/login");
+            return;
+        }
+
+        // Redirect if user is trying to access an item from a different organisation
+        if (item && organisation && item.organisationId !== organisation.id) {
+            toast.error("You do not have permission to view this item.");
+            router.push("/dashboard/item");
+            return;
+        }
+
+        // If item is not found, redirect to item list
+        if (!item && !isLoadingItem) {
+            router.push("/dashboard/item");
+        }
+    }, [organisation, item, session]);
+
     // Show loading state while authentication or data is loading
-    if (isLoadingAuth || isLoading) {
+    if (isLoadingAuth || isLoadingItem || isLoadingOrganisation) {
         return <LineItemOverviewSkeleton />;
     }
 
@@ -121,7 +147,7 @@ const LineItemOverview = () => {
         <>
             <div></div>
             {editingItem && (
-                <EditLineItem item={item} onSubmit={handleClientEdit} onClose={handleDrawerClose} />
+                <EditLineItem item={item} onSubmit={handleItemEdit} onClose={handleDrawerClose} />
             )}
         </>
     );

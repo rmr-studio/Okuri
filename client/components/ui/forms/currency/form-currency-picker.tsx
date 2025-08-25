@@ -9,9 +9,11 @@ import {
     CommandItem,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ClassNameProps } from "@/lib/interfaces/interface";
 import { cn } from "@/lib/util/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
-import * as React from "react";
+import { FC, useState } from "react";
+import { ScrollArea } from "../../scroll-area";
 
 // Build currency data
 const getCurrencyData = () => {
@@ -44,13 +46,13 @@ const getCurrencyData = () => {
 const currencies = getCurrencyData();
 type Currency = (typeof currencies)[number];
 
-interface Props {
+interface Props extends ClassNameProps {
     value?: string;
     onChange: (currency: string) => void;
 }
 
-export const CurrencySelector: React.FC<Props> = ({ value, onChange }) => {
-    const [open, setOpen] = React.useState(false);
+export const CurrencySelector: FC<Props> = ({ value, onChange, className }) => {
+    const [open, setOpen] = useState(false);
     const selected = currencies.find((c) => c.code === value);
 
     return (
@@ -60,7 +62,7 @@ export const CurrencySelector: React.FC<Props> = ({ value, onChange }) => {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-[280px] justify-between"
+                    className={cn(`w-[280px] justify-between`, className)}
                 >
                     {selected ? (
                         <span>
@@ -72,31 +74,33 @@ export const CurrencySelector: React.FC<Props> = ({ value, onChange }) => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[280px] p-0">
+            <PopoverContent className="w-[280px] h-[400px] p-0">
                 <Command>
                     <CommandInput placeholder="Search currency or country..." />
                     <CommandEmpty>No currency found.</CommandEmpty>
-                    <CommandGroup>
-                        {currencies.map((currency) => (
-                            <CommandItem
-                                key={currency.code}
-                                value={`${currency.code} ${currency.country}`}
-                                onSelect={() => {
-                                    onChange(currency.code);
-                                    setOpen(false);
-                                }}
-                            >
-                                <Check
-                                    className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selected?.code === currency.code
-                                            ? "opacity-100"
-                                            : "opacity-0"
-                                    )}
-                                />
-                                {currency.country} – {currency.code} ({currency.symbol})
-                            </CommandItem>
-                        ))}
+                    <CommandGroup className="h-[400px]">
+                        <ScrollArea className="h-[400px]">
+                            {currencies.map((currency) => (
+                                <CommandItem
+                                    key={currency.code}
+                                    value={`${currency.code} ${currency.country}`}
+                                    onSelect={() => {
+                                        onChange(currency.code);
+                                        setOpen(false);
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected?.code === currency.code
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                        )}
+                                    />
+                                    {currency.country} – {currency.code} ({currency.symbol})
+                                </CommandItem>
+                            ))}
+                        </ScrollArea>
                     </CommandGroup>
                 </Command>
             </PopoverContent>

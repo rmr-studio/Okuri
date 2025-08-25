@@ -5,7 +5,6 @@ import { useOrganisation } from "@/hooks/useOrganisation";
 import { isResponseError, ResponseError } from "@/lib/util/error/error.util";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { OrganisationHeader } from "./OrganisationHeader";
 
 export const OrganisationDashboard = () => {
     const { data, isPending, isError, error, isLoadingAuth } = useOrganisation();
@@ -39,9 +38,5 @@ export const OrganisationDashboard = () => {
 
     if (!data) return;
 
-    return (
-        <>
-            <OrganisationHeader organisation={data} />
-        </>
-    );
+    return <></>;
 };

@@ -1,42 +1,42 @@
 "use client";
 
 import { useAuth } from "@/components/provider/AuthContext";
-import { AvatarUploader } from "@/components/ui/AvatarUploader";
 import { Button } from "@/components/ui/button";
 import {
     Card,
-    CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+} from "@/components/ui/form";
 import { AddressFormSchema } from "@/components/ui/forms/bespoke/AddressFormSection";
 import { CustomAttributesFormSchema } from "@/components/ui/forms/bespoke/CustomAttributesFormSection";
 import { PaymentDetailsFormSchema } from "@/components/ui/forms/bespoke/PaymentDetailsFormSection";
-import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { FormStepper } from "@/components/ui/forms/form-stepper";
+import { Separator } from "@/components/ui/separator";
 import { createOrganisation } from "@/controller/organisation.controller";
 import { useProfile } from "@/hooks/useProfile";
 import { OrganisationCreationRequest } from "@/lib/interfaces/organisation.interface";
+import { Step } from "@/lib/util/form/form.util";
 import { isValidCurrency } from "@/lib/util/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { SquareArrowUpRight } from "lucide-react";
-import Link from "next/link";
+import { CornerUpLeftIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import OrganisationDetailsForm from "./form/1.details";
+import OrganisationBillingForm from "./form/2.billing";
+import OrganisationAttributesForm from "./form/3.attributes";
 
 const OrganisationCreationFormSchema = z.object({
     displayName: z
@@ -53,8 +53,18 @@ const OrganisationCreationFormSchema = z.object({
     customAttributes: CustomAttributesFormSchema,
 });
 
-export type OrganisationCreation = z.infer<typeof OrganisationCreationFormSchema>;
-export type OrganisationFormTab = "base" | "address" | "billing";
+export type OrganisationCreation = z.infer<
+    typeof OrganisationCreationFormSchema
+>;
+export type OrganisationFormTab = "base" | "billing" | "custom";
+
+export interface OrganisationStepFormProps {
+    form: UseFormReturn<OrganisationCreation>;
+    setUploadedAvatar: (file: Blob | null) => void;
+    handlePreviousPage: (tab: OrganisationFormTab) => void;
+    handleNextPage: (tab: OrganisationFormTab) => void;
+    handleFormSubmit: (values: OrganisationCreation) => Promise<void>;
+}
 
 export const OrganisationForm = () => {
     const { session, client } = useAuth();
@@ -65,33 +75,15 @@ export const OrganisationForm = () => {
     const queryClient = useQueryClient();
 
     const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
-    const handleSubmission = async (values: OrganisationCreation) => {
-        if (!session || !client) return;
-
-        const organisation: OrganisationCreationRequest = {
-            name: values.displayName,
-            avatarUrl: values.avatarUrl,
-            plan: values.plan,
-            defaultCurrency: values.defaultCurrency,
-            isDefault: values.isDefault,
-            businessNumber: values.businessNumber,
-            taxId: values.taxId,
-            address: values.address,
-            payment: values.payment,
-            customAttributes: values.customAttributes,
-        };
-
-        // Create the organisation
-        organisationMutation.mutate(organisation);
-    };
+    const [activeTab, setActiveTab] = useState<OrganisationFormTab>("base");
 
     const organisationCreationForm: UseFormReturn<OrganisationCreation> =
         useForm<OrganisationCreation>({
             resolver: zodResolver(OrganisationCreationFormSchema),
             defaultValues: {
                 displayName: "",
-                avatarUrl: undefined, // No avatar by default
-                isDefault: user?.memberships.length === 0, // Default to false unless user has no memberships
+                avatarUrl: undefined,
+                isDefault: user?.memberships.length === 0,
                 plan: "FREE",
                 defaultCurrency: "AUD",
                 businessNumber: "",
@@ -104,9 +96,9 @@ export const OrganisationForm = () => {
                     country: "AU",
                 },
                 payment: {
-                    bsb: "",
-                    accountNumber: "",
-                    accountName: "",
+                    bsb: undefined,
+                    accountNumber: undefined,
+                    accountName: undefined,
                 },
                 customAttributes: {},
             },
@@ -140,361 +132,143 @@ export const OrganisationForm = () => {
         },
     });
 
-    const handleAvatarUpload = (file: Blob): void => {
-        // Store transformed image ready for upload upon form submission
-        setUploadedAvatar(file);
-        // Set the avatar URL in the form state
-        const avatarURL = URL.createObjectURL(file);
-        organisationCreationForm.setValue("avatarUrl", avatarURL);
-        URL.revokeObjectURL(avatarURL); // Clean up the object URL
+    const handleSubmission = async (values: OrganisationCreation) => {
+        if (!session || !client) {
+            toast.error("No active session found");
+            return;
+        }
+
+        const organisation: OrganisationCreationRequest = {
+            name: values.displayName,
+            avatarUrl: values.avatarUrl,
+            plan: values.plan,
+            defaultCurrency: values.defaultCurrency,
+            isDefault: values.isDefault,
+            businessNumber: values.businessNumber,
+            taxId: values.taxId,
+            address: values.address,
+            payment: values.payment,
+            customAttributes: values.customAttributes,
+        };
+
+        // Create the organisation
+        organisationMutation.mutate(organisation);
     };
 
-    const handleAvatarRemoval = (): void => {
-        setUploadedAvatar(null);
-        organisationCreationForm.setValue("avatarUrl", undefined);
+    const handleNextPage = (tab: OrganisationFormTab) => {
+        setActiveTab(tab);
+    };
+
+    const handlePreviousPage = (tab: OrganisationFormTab) => {
+        setActiveTab(tab);
     };
 
     const handleCancel = () => {
         router.push("/dashboard/organisation");
     };
 
+    const renderStepComponent = (tab: OrganisationFormTab) => {
+        const props: OrganisationStepFormProps = {
+            form: organisationCreationForm,
+            setUploadedAvatar: setUploadedAvatar,
+            handlePreviousPage: handlePreviousPage,
+            handleNextPage: handleNextPage,
+            handleFormSubmit: handleSubmission,
+        };
+
+        const tabMap: Record<OrganisationFormTab, React.ReactNode> = {
+            base: <OrganisationDetailsForm {...props} />,
+            billing: <OrganisationBillingForm {...props} />,
+            custom: <OrganisationAttributesForm {...props} />,
+        };
+
+        return tabMap[tab] || <OrganisationDetailsForm {...props} />;
+    };
+
+    const steps: Step<OrganisationFormTab>[] = [
+        {
+            identifier: "base",
+            step: 1,
+            title: "Organisation Details",
+            description: "Enter your organisation's basic details",
+        },
+        {
+            identifier: "billing",
+            step: 2,
+            title: "Billing Information",
+            description:
+                "Provide your organisations billing information for invoicing and report generation purposes",
+        },
+        {
+            identifier: "custom",
+            step: 3,
+            title: "Custom Attributes",
+            description:
+                "Add any additional attributes for your organisation to be used in invoices and reports",
+        },
+    ];
+
     return (
-        <Card className="w-auto flex-grow lg:max-w-2xl h-fit m-2 md:m-6 lg:m-12">
+        <Card className="w-auto flex-grow lg:max-w-2xl h-fit m-2 md:m-6 lg:m-12 relative">
+            <Button
+                className="absolute left-4 top-4"
+                variant={"secondary"}
+                onClick={handleCancel}
+            >
+                <CornerUpLeftIcon />
+                <span className="hidden sm:block">Cancel</span>
+            </Button>
             <Form {...organisationCreationForm}>
-                <form onSubmit={organisationCreationForm.handleSubmit(handleSubmission)}>
+                <form
+                    onSubmit={organisationCreationForm.handleSubmit(
+                        handleSubmission
+                    )}
+                >
                     <CardHeader>
-                        <CardTitle>Create a new organisation</CardTitle>
+                        <CardTitle className="text-center">
+                            Create a new organisation
+                        </CardTitle>
                         <CardDescription>
                             <br />
-                            Your organsation display name will be publically visible to all users
-                            when creating event routers.
+                            Your organisation display name will be publicly
+                            visible to all users when creating event routers.
                             <br />
                             Your display name will need to be unique.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col space-y-6">
-                            <FormField
-                                control={organisationCreationForm.control}
-                                name="avatarUrl"
-                                render={(_) => (
-                                    <FormItem className="flex flex-col lg:flex-row w-full">
-                                        <FormLabel className="w-1/3">Organisation Avatar</FormLabel>
-                                        <AvatarUploader
-                                            onUpload={handleAvatarUpload}
-                                            imageURL={organisationCreationForm.getValues(
-                                                "avatarUrl"
-                                            )}
-                                            onRemove={handleAvatarRemoval}
-                                            validation={{
-                                                maxSize: 5 * 1024 * 1024, // 5MB
-                                                allowedTypes: [
-                                                    "image/jpeg",
-                                                    "image/png",
-                                                    "image/webp",
-                                                ],
-                                                errorMessage:
-                                                    "Please upload a valid image file (JPEG, PNG, WebP) under 5MB",
+                    <section className="mr-8">
+                        <FormField
+                            control={organisationCreationForm.control}
+                            name="isDefault"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-end gap-2 mt-4 mb-2">
+                                    <FormControl>
+                                        <Checkbox
+                                            disabled={
+                                                user?.memberships.length === 0
+                                            }
+                                            checked={field.value}
+                                            onCheckedChange={(checked) => {
+                                                field.onChange(checked);
                                             }}
                                         />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={organisationCreationForm.control}
-                                name="displayName"
-                                render={({ field }) => (
-                                    <FormItem className="flex mt-2 flex-col lg:flex-row w-full">
-                                        <FormLabel className="w-1/3" htmlFor="displayName">
-                                            Organisation Name
-                                        </FormLabel>
-                                        <Input
-                                            id="displayName"
-                                            placeholder="My Organisation"
-                                            className="w-auto flex-grow"
-                                            {...field}
-                                            required
-                                        />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={organisationCreationForm.control}
-                                name="plan"
-                                render={({ field }) => (
-                                    <FormItem className="flex items-center mt-2 flex-col lg:flex-row">
-                                        <div className="w-full md:w-1/3 mt-2">
-                                            <FormLabel htmlFor="plan">Organisation Plan</FormLabel>
-                                            <Link
-                                                href={"/pricing"}
-                                                target="_blank"
-                                                className="text-xs text-content flex items-center w-fit h-fit mt-2 hover:opacity-50 transition-opacity"
-                                            >
-                                                Pricing
-                                                <SquareArrowUpRight className="w-3 h-3 ml-1" />
-                                            </Link>
-                                        </div>
-                                        <Select
-                                            defaultValue={field.value}
-                                            onValueChange={field.onChange}
-                                        >
-                                            <FormControl className="flex flex-grow w-auto mt-2">
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select an organisation plan" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="STARTUP">Free</SelectItem>
-                                                <SelectItem value="STARTUP">Startup</SelectItem>
-                                                <SelectItem value="PRO">Growth</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </FormItem>
-                                )}
-                            />
-
-                            // TODO: Add a currency selector component
-                            
-
-                            <FormField
-                                control={organisationCreationForm.control}
-                                name="businessNumber"
-                                render={({ field }) => (
-                                    <FormItem className="flex mt-2 flex-col lg:flex-row w-full">
-                                        <FormLabel className="w-1/3" htmlFor="businessNumber">
-                                            Business Number
-                                        </FormLabel>
-                                        <Input
-                                            id="businessNumber"
-                                            placeholder="ABN or Business Number"
-                                            className="w-auto flex-grow"
-                                            {...field}
-                                        />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={organisationCreationForm.control}
-                                name="taxId"
-                                render={({ field }) => (
-                                    <FormItem className="flex mt-2 flex-col lg:flex-row w-full">
-                                        <FormLabel className="w-1/3" htmlFor="taxId">
-                                            Tax ID
-                                        </FormLabel>
-                                        <Input
-                                            id="taxId"
-                                            placeholder="Tax Identification Number"
-                                            className="w-auto flex-grow"
-                                            {...field}
-                                        />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={organisationCreationForm.control}
-                                name="isDefault"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center justify-end gap-2 mt-4 mb-2">
-                                        <FormControl>
-                                            <Checkbox
-                                                disabled={user?.memberships.length === 0}
-                                                checked={field.value}
-                                                onCheckedChange={(checked) => {
-                                                    field.onChange(checked);
-                                                }}
-                                            />
-                                        </FormControl>
-                                        <FormLabel className="text-sm font-normal">
-                                            Set as default organisation
-                                        </FormLabel>
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Address Section */}
-                            <div className="mt-6">
-                                <div className="border-t pt-6">
-                                    <h3 className="text-lg font-semibold mb-4">
-                                        Address Information
-                                    </h3>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="address.street"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Street Address</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Street Address"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="address.city"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>City</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="City" {...field} />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="address.state"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>State</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="State" {...field} />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="address.postalCode"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Postal Code</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Postal Code"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="address.country"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Country</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="Country" {...field} />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Payment Details Section */}
-                            <div className="mt-6">
-                                <div className="border-t pt-6">
-                                    <h3 className="text-lg font-semibold mb-4">
-                                        Payment Details (Optional)
-                                    </h3>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="payment.bsb"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>BSB</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="000-000"
-                                                            {...field}
-                                                            onChange={(e) => {
-                                                                const value =
-                                                                    e.target.value.replace(
-                                                                        /[^0-9]/g,
-                                                                        ""
-                                                                    );
-                                                                if (value.length <= 6) {
-                                                                    const formatted = value.replace(
-                                                                        /(\d{3})(\d{0,3})/,
-                                                                        "$1-$2"
-                                                                    );
-                                                                    field.onChange(formatted);
-                                                                }
-                                                            }}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="payment.accountNumber"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Account Number</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Account Number"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={organisationCreationForm.control}
-                                            name="payment.accountName"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Account Name</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Account Name"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Custom Attributes Section */}
-                            <div className="mt-6">
-                                <div className="border-t pt-6">
-                                    <h3 className="text-lg font-semibold mb-4">
-                                        Custom Attributes (Optional)
-                                    </h3>
-                                    <p className="text-sm text-gray-600 mb-4">
-                                        Add custom fields specific to your organisation. These will
-                                        be stored as JSON data.
-                                    </p>
-                                    <div className="space-y-4">
-                                        <div className="text-sm text-gray-500">
-                                            Custom attributes will be stored as key-value pairs in
-                                            JSON format. You can add these later through the
-                                            organisation settings.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between mt-4 py-1 border-t ">
-                        <Button
-                            type="button"
-                            className="cursor-pointer"
-                            onClick={handleCancel}
-                            variant={"outline"}
-                            size={"sm"}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" size={"sm"} className="cursor-pointer">
-                            Create Organisation
-                        </Button>
-                    </CardFooter>
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-normal">
+                                        Set as default organisation
+                                    </FormLabel>
+                                </FormItem>
+                            )}
+                        />
+                    </section>
+                    <section className="mt-2">
+                        <FormStepper
+                            steps={steps}
+                            currentStep={activeTab}
+                            descriptionType="icon"
+                        />
+                        <Separator className="mt-6 mb-4" />
+                    </section>
+                    {renderStepComponent(activeTab)}
                 </form>
             </Form>
         </Card>

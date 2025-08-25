@@ -355,7 +355,7 @@ export interface paths {
          * Get all line items for an organisation
          * @description Retrieves a list of line items associated with a given organisation.
          */
-        get: operations["getLineItemsForUser"];
+        get: operations["getLineItemsForOrganisation"];
         put?: never;
         post?: never;
         delete?: never;
@@ -527,9 +527,9 @@ export interface components {
             organisation?: components["schemas"]["Organisation"];
         };
         OrganisationPaymentDetails: {
-            bsb: string;
-            accountNumber: string;
-            accountName: string;
+            bsb?: string;
+            accountNumber?: string;
+            accountName?: string;
         };
         User: {
             /** Format: uuid */
@@ -1831,7 +1831,7 @@ export interface operations {
             };
         };
     };
-    getLineItemsForUser: {
+    getLineItemsForOrganisation: {
         parameters: {
             query?: never;
             header?: never;

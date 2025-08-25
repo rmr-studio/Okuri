@@ -70,6 +70,7 @@ export const OnboardForm: FC<Propless> = () => {
             console.error("Error updating user profile:", error);
             if (toastRef.current !== null) {
                 toast.dismiss(toastRef.current);
+                toastRef.current = null;
             }
 
             toast.error("Failed to update Profile");
@@ -77,6 +78,7 @@ export const OnboardForm: FC<Propless> = () => {
         onSuccess: (response: User) => {
             if (toastRef.current !== null) {
                 toast.dismiss(toastRef.current);
+                toastRef.current = null;
             }
 
             toast.success("Profile Updated Successfully");

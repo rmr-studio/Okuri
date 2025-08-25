@@ -8,7 +8,17 @@ import { Input } from "../../input";
 import { TextSeparator } from "../../text-separator";
 
 // Schema for custom attributes - allows any nested object structure
-export const CustomAttributesFormSchema = z.record(z.any());
+export const CustomAttributesFormSchema: z.ZodType<Record<string, any>> =
+    z.lazy(() =>
+        z.record(
+            z.union([
+                z.string(),
+                z.number(),
+                z.boolean(),
+                z.lazy(() => CustomAttributesFormSchema),
+            ])
+        )
+    );
 
 export type CustomAttributesForm = z.infer<typeof CustomAttributesFormSchema>;
 

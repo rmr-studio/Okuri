@@ -16,8 +16,8 @@ export type UpdateLineItemRequest =
 // --- 📬 Response Payloads ---
 export type GetLineItemByIdResponse =
     operations["getLineItemById"]["responses"]["200"]["content"]["*/*"];
-export type GetLineItemsForUserResponse =
-    operations["getLineItemsForUser"]["responses"]["200"]["content"]["*/*"];
+export type GetLineItemsForOrganisationResponse =
+    operations["getLineItemsForOrganisation"]["responses"]["200"]["content"]["*/*"];
 export type CreateLineItemResponse =
     operations["createLineItem"]["responses"]["201"]["content"]["*/*"];
 export type UpdateLineItemResponse =
@@ -33,8 +33,8 @@ export type DeleteLineItemByIdPathParams =
     operations["deleteLineItemById"]["parameters"]["path"];
 
 // --- 🧮 Query Parameters ---
-export type GetLineItemsForUserQueryParams =
-    operations["getLineItemsForUser"]["parameters"]["query"];
+export type GetLineItemsForOrganisationQueryParams =
+    operations["getLineItemsForOrganisation"]["parameters"]["path"];
 
 // --- 🔧 Type Enums ---
 export type LineItemType = LineItem["type"];
