@@ -26,10 +26,6 @@ data class OrganisationEntity(
     @Column(name = "name", nullable = false, updatable = true)
     var name: String,
 
-    @Column(name = "plan", nullable = false, updatable = true)
-    @Enumerated(EnumType.STRING)
-    var plan: OrganisationPlan = OrganisationPlan.FREE,
-
     @Column(name = "default_currency", nullable = false, updatable = true)
     var defaultCurrency: Currency = Currency.getInstance("AUD"), // Default currency for the organisation
 
@@ -62,6 +58,10 @@ data class OrganisationEntity(
     @Type(JsonBinaryType::class)
     @Column(name = "custom_attributes", nullable = true, updatable = true, columnDefinition = "jsonb")
     var customAttributes: Map<String, Any> = emptyMap(), // JSONB for industry-specific fields
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plan", nullable = false)
+    var plan: OrganisationPlan = OrganisationPlan.FREE, // Default plan is FREE
 
     @Type(JsonBinaryType::class)
     @Column(name = "tile_layout", nullable = true, updatable = true, columnDefinition = "jsonb")
@@ -123,5 +123,6 @@ fun Organisation.toEntity(): OrganisationEntity {
         customAttributes = this.customAttributes,
         tileLayout = this.tileLayout,
         address = this.address,
+        plan = this.plan
     )
 }

@@ -83,7 +83,7 @@ class OrganisationSecurity {
     fun isUpdatingOrganisationMember(organisationId: UUID, user: OrganisationMember): Boolean {
         return this.hasOrgRole(organisationId, OrganisationRoles.OWNER) ||
                 (this.hasOrgRoleOrHigher(organisationId, OrganisationRoles.ADMIN) &&
-                        this.hasHigherOrgRole(organisationId, user.role))
+                        this.hasHigherOrgRole(organisationId, user.membershipDetails.role))
     }
 
     fun isUpdatingSelf(member: OrganisationMember): Boolean {

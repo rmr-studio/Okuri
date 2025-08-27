@@ -33,6 +33,9 @@ class OrganisationService(
 ) {
 
 
+    /**
+     * This will fetch an organisation by its ID, and optionally include its members.
+     */
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisation(organisationId: UUID, includeMembers: Boolean = false): Organisation {
@@ -54,10 +57,10 @@ class OrganisationService(
         // Gets the user ID from the auth token to act as the Organisation creator
         authTokenService.getUserId().let { userId ->
             // Create and save the organisation entity
-            val currency: Currency = request.defaultCurrency.let {
-                Currency.getAvailableCurrencies()
-                    .find { it.currencyCode.equals(it) }
-                    ?: throw IllegalArgumentException("Invalid currency code: ${request.defaultCurrency}")
+            val currency: Currency = try {
+                Currency.getInstance(request.defaultCurrency.trim().uppercase())
+            } catch (e: IllegalArgumentException) {
+                throw IllegalArgumentException("Invalid currency code: ${request.defaultCurrency}")
             }
 
             val entity = OrganisationEntity(
@@ -185,7 +188,7 @@ class OrganisationService(
 
         return OrganisationMemberEntity(key, role).run {
             organisationMemberRepository.save(this).let { entity ->
-                OrganisationMember.fromEntity(entity)
+                entity.toModel()
             }.also {
                 logger.info { "User with ID $userId added to organisation $organisationId with role $role." }
             }
@@ -207,7 +210,7 @@ class OrganisationService(
         authTokenService.getUserId().let { userId ->
 
             // Assert that the removed member is not currently the owner of the organisation
-            if (member.role == OrganisationRoles.OWNER) {
+            if (member.membershipDetails.role == OrganisationRoles.OWNER) {
                 throw IllegalArgumentException("Cannot remove the owner of the organisation. Please transfer ownership first.")
             }
 
@@ -247,7 +250,7 @@ class OrganisationService(
     ): OrganisationMember {
         authTokenService.getUserId().let { userId ->
             // Ensure that if the new role is that of OWNER, that only the current owner can assign it
-            if (role == OrganisationRoles.OWNER || member.role == OrganisationRoles.OWNER) {
+            if (role == OrganisationRoles.OWNER || member.membershipDetails.role == OrganisationRoles.OWNER) {
                 throw IllegalArgumentException("Transfer of ownership must be done through a dedicated transfer ownership method.")
             }
 
@@ -269,7 +272,7 @@ class OrganisationService(
                         targetId = member.user.id,
                         additionalDetails = "Updated member with ID ${member.user.id} to role $role in organisation $organisationId"
                     )
-                    return OrganisationMember.fromEntity(this)
+                    return this.toModel()
                 }
             }
         }

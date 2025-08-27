@@ -3,6 +3,8 @@ package okare.core.entity.user
 import jakarta.persistence.*
 import okare.core.entity.organisation.OrganisationEntity
 import okare.core.entity.organisation.OrganisationMemberEntity
+import okare.core.entity.organisation.toDetails
+import okare.core.entity.organisation.toModel
 import okare.core.models.user.User
 import okare.core.models.user.UserDisplay
 import java.time.ZonedDateTime
@@ -44,7 +46,7 @@ data class UserEntity(
 ) {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     var organisations: MutableSet<OrganisationMemberEntity> = mutableSetOf()
-    
+
     @PrePersist
     fun onPrePersist() {
         createdAt = ZonedDateTime.now()
@@ -68,6 +70,8 @@ fun UserEntity.toModel(): User {
             phone = this.phone,
             name = this.name,
             avatarUrl = this.avatarUrl,
+            memberships = this.organisations.map { membership -> membership.toDetails() },
+            defaultOrganisation = this.defaultOrganisation?.toModel(includeMembers = false),
         )
     }
 }

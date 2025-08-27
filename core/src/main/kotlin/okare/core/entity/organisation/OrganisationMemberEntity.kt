@@ -4,6 +4,7 @@ import jakarta.persistence.*
 import okare.core.entity.user.UserEntity
 import okare.core.entity.user.toDisplay
 import okare.core.enums.organisation.OrganisationRoles
+import okare.core.models.organisation.MembershipDetails
 import okare.core.models.organisation.OrganisationMember
 import java.time.ZonedDateTime
 import java.util.*
@@ -59,12 +60,20 @@ fun OrganisationMemberEntity.toModel(): OrganisationMember {
 
         return OrganisationMember(
             user = it.toDisplay(),
-            organisationId = id.organisationId,
-            role = role,
-            memberSince = memberSince,
+            membershipDetails = this.toDetails(),
         )
     }
+}
 
-
+/**
+ * Convert OrganisationMemberEntity to MembershipDetails
+ * This excludes user and organisation details and will be used to hold a user's membership info for their profile.
+ */
+fun OrganisationMemberEntity.toDetails(): MembershipDetails {
+    return MembershipDetails(
+        organisationId = id.organisationId,
+        role = role,
+        memberSince = memberSince,
+    )
 }
 
