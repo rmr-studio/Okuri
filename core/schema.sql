@@ -5,30 +5,30 @@ commit;
 -- Organisations
 CREATE TABLE IF NOT EXISTS "organisations"
 (
-    "id"                UUID PRIMARY KEY  NOT NULL DEFAULT uuid_generate_v4(),
-    "name"              VARCHAR(100)      NOT NULL UNIQUE,
-    "plan"              ORGANISATION_PLAN NOT NULL DEFAULT 'FREE',
-    "default_currency"  VARCHAR(3)        NOT NULL DEFAULT 'AUD',
+    "id"                UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
+    "name"              VARCHAR(100)     NOT NULL UNIQUE,
+    "plan"              VARCHAR          NOT NULL DEFAULT 'FREE' CHECK (plan IN ('FREE', 'STARTUP', 'SCALE', 'ENTERPRISE')),
+    "default_currency"  VARCHAR(3)       NOT NULL DEFAULT 'AUD',
     "address"           jsonb,
     "avatar_url"        TEXT,
     "business_number"   TEXT,
     "tax_id"            TEXT,
     "payment_details"   jsonb,
     "custom_attributes" jsonb,
-    "member_count"      INTEGER           NOT NULL DEFAULT 0,
-    "created_at"        TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"        TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP
+    "tile_layout"       jsonb,
+    "member_count"      INTEGER          NOT NULL DEFAULT 0,
+    "created_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TYPE ORGANISATION_ROLE AS ENUM ('OWNER', 'ADMIN', 'MEMBER');
 
 CREATE TABLE IF NOT EXISTS "organisation_members"
 (
-    "id"              UUID PRIMARY KEY  NOT NULL DEFAULT uuid_generate_v4(),
-    "organisation_id" UUID              NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
-    "user_id"         UUID              NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
-    "role"            ORGANISATION_ROLE NOT NULL DEFAULT 'MEMBER',
-    "member_since"    TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP
+    "id"              UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
+    "organisation_id" UUID             NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
+    "user_id"         UUID             NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    "role"            VARCHAR          NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
+    "member_since"    TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE public.organisation_members
@@ -38,7 +38,6 @@ CREATE INDEX idx_organisation_members_user_id
     ON public.organisation_members (user_id);
 
 
-CREATE TYPE ORGANISATION_INVITE_STATUS AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED');
 
 -- Function to update member count
 CREATE OR REPLACE FUNCTION public.update_org_member_count()
@@ -83,17 +82,17 @@ CREATE POLICY "Users can view their own organisations" on organisations
            WHERE user_id = auth.uid())
     );
 
-
 CREATE TABLE IF NOT EXISTS "organisation_invites"
 (
-    "id"              UUID PRIMARY KEY  NOT NULL DEFAULT uuid_generate_v4(),
-    "organisation_id" UUID              NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
-    "email"           VARCHAR(100)      NOT NULL,
-    "invite_code"     VARCHAR(12)       NOT NULL CHECK (LENGTH(invite_code) = 12),
-    "role"            ORGANISATION_ROLE NOT NULL DEFAULT 'MEMBER',
-    "invited_by"      UUID              NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
-    "created_at"      TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP,
-    "expires_at"      TIMESTAMP WITH TIME ZONE   DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 days'
+    "id"              UUID PRIMARY KEY           NOT NULL DEFAULT uuid_generate_v4(),
+    "organisation_id" UUID                       NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
+    "email"           VARCHAR(100)               NOT NULL,
+    "status"          ORGANISATION_INVITE_STATUS NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED')),
+    "invite_code"     VARCHAR(12)                NOT NULL CHECK (LENGTH(invite_code) = 12),
+    "role"            VARCHAR                    NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
+    "invited_by"      UUID                       NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    "created_at"      TIMESTAMP WITH TIME ZONE            DEFAULT CURRENT_TIMESTAMP,
+    "expires_at"      TIMESTAMP WITH TIME ZONE            DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 days'
 );
 
 CREATE INDEX idx_invite_organisation_id ON public.organisation_invites (organisation_id);
@@ -196,13 +195,13 @@ create index if not exists idx_client_organisation_id
     on public.clients (organisation_id);
 
 -- Line Items
-CREATE TYPE line_item_type AS ENUM ('SERVICE', 'PRODUCT', 'FEE', 'DISCOUNT');
+
 create table if not exists "line_item"
 (
     "id"              uuid primary key not null default uuid_generate_v4(),
     "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
     "name"            varchar(50)      not null,
-    "type"            line_item_type   not null,
+    "type"            VARCHAR          not null default 'SERVICE' CHECK (type IN ('SERVICE', 'PRODUCT', 'FEE', 'DISCOUNT')),
     "description"     text             not null,
     "charge_rate"     DECIMAL(19, 4)   not null,
     "created_at"      timestamp with time zone  default current_timestamp,
@@ -217,8 +216,6 @@ create index if not exists idx_line_item_organisation_id
 
 
 -- Invoice
-drop type if exists invoice_billing_status cascade;
-CREATE TYPE invoice_billing_status AS ENUM ('PENDING', 'PAID' , 'OVERDUE', 'OUTDATED', 'CANCELLED' );
 
 create table if not exists "invoice"
 (
