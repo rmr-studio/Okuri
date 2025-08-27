@@ -1,4 +1,4 @@
-import { BackgroundBeams } from "@/components/ui/beams";
+import { BackgroundBeams } from "@/components/ui/background/beams";
 import { Card } from "@/components/ui/card";
 import { FCWC, Propless } from "@/lib/interfaces/interface";
 

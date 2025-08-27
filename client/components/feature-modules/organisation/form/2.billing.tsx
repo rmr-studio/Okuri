@@ -22,6 +22,9 @@ const OrganisationBillingForm: FC<OrganisationStepFormProps> = ({
             "address.state",
             "address.postalCode",
             "address.country",
+            "payment.accountName",
+            "payment.bsb",
+            "payment.accountNumber",
         ]);
         if (!isValid) {
             toast.error("Please fill in all required address fields");
@@ -41,6 +44,10 @@ const OrganisationBillingForm: FC<OrganisationStepFormProps> = ({
                 {/* Address Section */}
                 <div className="mt-6">
                     <h3 className="text-lg font-semibold mb-4">Address Information</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                        Provide your organisation's address to be used for billing, invoice
+                        generation and official documents
+                    </p>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
@@ -119,8 +126,8 @@ const OrganisationBillingForm: FC<OrganisationStepFormProps> = ({
                 {/* Payment Details Section */}
                 <div className="mt-6">
                     <div className="border-t pt-6">
-                        <h3 className="text-lg font-semibold mb-4">Payment Details (Optional)</h3>
-                        <p className="text-sm text-gray-600 mb-4">
+                        <h3 className="text-lg font-semibold">Payment Details (Optional)</h3>
+                        <p className="text-sm text-muted-foreground mb-6">
                             Provide your organisation's payment details for invoicing and report
                             generation purposes.
                         </p>

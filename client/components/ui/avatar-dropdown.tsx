@@ -47,7 +47,7 @@ export const UserProfileDropdown: FC<Props> = ({ user }) => {
     };
 
     return (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
                 <Avatar className="rounded-md cursor-pointer">
                     <AvatarFallback className="rounded-md">{getInitials(name)}</AvatarFallback>

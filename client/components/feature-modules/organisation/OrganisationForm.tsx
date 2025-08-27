@@ -2,20 +2,9 @@
 
 import { useAuth } from "@/components/provider/AuthContext";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { AddressFormSchema } from "@/components/ui/forms/bespoke/AddressFormSection";
 import { CustomAttributesFormSchema } from "@/components/ui/forms/bespoke/CustomAttributesFormSection";
 import { PaymentDetailsFormSchema } from "@/components/ui/forms/bespoke/PaymentDetailsFormSection";
@@ -53,9 +42,7 @@ const OrganisationCreationFormSchema = z.object({
     customAttributes: CustomAttributesFormSchema,
 });
 
-export type OrganisationCreation = z.infer<
-    typeof OrganisationCreationFormSchema
->;
+export type OrganisationCreation = z.infer<typeof OrganisationCreationFormSchema>;
 export type OrganisationFormTab = "base" | "billing" | "custom";
 
 export interface OrganisationStepFormProps {
@@ -96,9 +83,9 @@ export const OrganisationForm = () => {
                     country: "AU",
                 },
                 payment: {
-                    bsb: undefined,
-                    accountNumber: undefined,
-                    accountName: undefined,
+                    bsb: "",
+                    accountNumber: "",
+                    accountName: "",
                 },
                 customAttributes: {},
             },
@@ -210,28 +197,18 @@ export const OrganisationForm = () => {
 
     return (
         <Card className="w-auto flex-grow lg:max-w-2xl h-fit m-2 md:m-6 lg:m-12 relative">
-            <Button
-                className="absolute left-4 top-4"
-                variant={"secondary"}
-                onClick={handleCancel}
-            >
+            <Button className="absolute left-4 top-4" variant={"secondary"} onClick={handleCancel}>
                 <CornerUpLeftIcon />
                 <span className="hidden sm:block">Cancel</span>
             </Button>
             <Form {...organisationCreationForm}>
-                <form
-                    onSubmit={organisationCreationForm.handleSubmit(
-                        handleSubmission
-                    )}
-                >
+                <form onSubmit={organisationCreationForm.handleSubmit(handleSubmission)}>
                     <CardHeader>
-                        <CardTitle className="text-center">
-                            Create a new organisation
-                        </CardTitle>
+                        <CardTitle className="text-center">Create a new organisation</CardTitle>
                         <CardDescription>
                             <br />
-                            Your organisation display name will be publicly
-                            visible to all users when creating event routers.
+                            Your organisation display name will be publicly visible to all users
+                            when creating event routers.
                             <br />
                             Your display name will need to be unique.
                         </CardDescription>
@@ -244,9 +221,7 @@ export const OrganisationForm = () => {
                                 <FormItem className="flex flex-row items-center justify-end gap-2 mt-4 mb-2">
                                     <FormControl>
                                         <Checkbox
-                                            disabled={
-                                                user?.memberships.length === 0
-                                            }
+                                            disabled={user?.memberships.length === 0}
                                             checked={field.value}
                                             onCheckedChange={(checked) => {
                                                 field.onChange(checked);
@@ -261,11 +236,7 @@ export const OrganisationForm = () => {
                         />
                     </section>
                     <section className="mt-2">
-                        <FormStepper
-                            steps={steps}
-                            currentStep={activeTab}
-                            descriptionType="icon"
-                        />
+                        <FormStepper steps={steps} currentStep={activeTab} descriptionType="icon" />
                         <Separator className="mt-6 mb-4" />
                     </section>
                     {renderStepComponent(activeTab)}

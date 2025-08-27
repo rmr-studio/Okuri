@@ -7,19 +7,27 @@ import { TextSeparator } from "../../text-separator";
 
 export const PaymentDetailsFormSchema = z.object({
     bsb: z
-        .string()
-        .regex(/^\d{3}-\d{3}$/, "BSB must be in format XXX-XXX")
+        .union([
+            z.literal(""), // allow empty string
+            z.string().regex(/^\d{3}-\d{3}$/, "BSB must be in format XXX-XXX"),
+        ])
         .optional(),
 
     accountNumber: z
-        .string()
-        .min(1, "Account number must not be empty")
-        .regex(/^\d+$/, "Account number must contain only digits") // example rule
+        .union([
+            z.literal(""),
+            z
+                .string()
+                .min(1, "Account number must not be empty")
+                .regex(/^\d+$/, "Account number must contain only digits"),
+        ])
         .optional(),
 
     accountName: z
-        .string()
-        .regex(/^[A-Za-z\s]+$/, "Account name must only contain letters")
+        .union([
+            z.literal(""),
+            z.string().regex(/^[A-Za-z\s]+$/, "Account name must only contain letters"),
+        ])
         .optional(),
 });
 

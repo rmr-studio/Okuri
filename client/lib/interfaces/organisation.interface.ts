@@ -4,6 +4,7 @@ import { components, operations } from "@/lib/types/types";
 // --- 🎯 Core Models ---
 export type Organisation = components["schemas"]["Organisation"] & {
     tileLayout?: TileLayoutConfig;
+    members?: OrganisationMember[];
 };
 export type OrganisationMember = components["schemas"]["OrganisationMember"];
 export type OrganisationInvite = components["schemas"]["OrganisationInvite"];

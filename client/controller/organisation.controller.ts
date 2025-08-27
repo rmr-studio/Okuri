@@ -113,7 +113,8 @@ export const updateOrganisation = async (
 
 export const getOrganisation = async (
     session: Session | null,
-    params: GetOrganisationPathParams
+    params: GetOrganisationPathParams,
+    includeMembers: boolean = false
 ): Promise<GetOrganisationResponse> => {
     const { organisationId } = params;
     try {
@@ -136,13 +137,16 @@ export const getOrganisation = async (
         }
 
         const url = api();
-        const response = await fetch(`${url}/v1/organisation/${organisationId}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session.access_token}`,
-            },
-        });
+        const response = await fetch(
+            `${url}/v1/organisation/${organisationId}?includeMembers=${includeMembers}`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+            }
+        );
 
         if (response.ok) {
             return await response.json();

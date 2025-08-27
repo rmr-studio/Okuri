@@ -122,5 +122,5 @@
 }
 
 .h-screen-without-header {
-    height: calc(100vh - 4rem - 1px);
+    height: calc(100dvh - 5rem - 1px);
 }

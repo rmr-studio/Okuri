@@ -12,7 +12,7 @@ export const useOrganisation = () => {
     // Use TanStack Query to fetch organization data
     const query = useQuery({
         queryKey: ["organization", orgId], // Unique key for caching
-        queryFn: () => getOrganisation(session, orgId), // Fetch function
+        queryFn: () => getOrganisation(session, { organisationId: orgId }), // Fetch function
         enabled: !!orgId && !!session?.user.id, // Only fetch if orgName exists and the user is authenticated
         retry: 1,
         staleTime: 5 * 60 * 1000, // Cache for 5 minutes
