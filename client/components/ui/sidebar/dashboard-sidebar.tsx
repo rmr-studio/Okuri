@@ -1,5 +1,5 @@
 "use client";
-import { useOrganisationStore } from "@/components/provider/OrganisationContent";
+import { useOrganisationStore } from "@/components/provider/OrganisationContext";
 import { useProfile } from "@/hooks/useProfile";
 import { SidebarGroupProps } from "@/lib/interfaces/interface";
 import { Organisation } from "@/lib/interfaces/organisation.interface";
@@ -25,6 +25,7 @@ export const DashboardSidebar = () => {
     const pathName = usePathname();
     const router = useRouter();
     const { data, isPending, isLoadingAuth } = useProfile();
+
     const [selectedOrganisation, setSelectedOrganisation] = useState<Organisation | null>(null);
 
     const selectedOrganisationId = useOrganisationStore((store) => store.selectedOrganisationId); // Select specific state

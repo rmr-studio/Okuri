@@ -10,7 +10,7 @@ export const HomeNavbar = () => {
     const isFetching = isLoading || isLoadingAuth;
 
     return (
-        <header className="relative z-20 flex items-center justify-between p-6">
+        <header className="z-20 flex items-center justify-between p-6 relative">
             {/* Logo */}
             <div className="flex items-center">
                 <svg

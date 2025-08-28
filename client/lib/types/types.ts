@@ -487,6 +487,13 @@ export interface components {
             postalCode: string;
             country: string;
         };
+        MembershipDetails: {
+            organisation?: components["schemas"]["Organisation"];
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+            /** Format: date-time */
+            memberSince: string;
+        };
         Organisation: {
             /** Format: uuid */
             id: string;
@@ -511,20 +518,18 @@ export interface components {
             customAttributes: {
                 [key: string]: Record<string, never>;
             };
+            tileLayout?: {
+                [key: string]: Record<string, never>;
+            };
             /** Format: int32 */
             memberCount: number;
             /** Format: date-time */
             createdAt: string;
+            members: components["schemas"]["OrganisationMember"][];
         };
         OrganisationMember: {
             user: components["schemas"]["UserDisplay"];
-            /** Format: uuid */
-            organisationId: string;
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
-            /** Format: date-time */
-            memberSince: string;
-            organisation?: components["schemas"]["Organisation"];
+            membershipDetails: components["schemas"]["MembershipDetails"];
         };
         OrganisationPaymentDetails: {
             bsb?: string;
@@ -538,7 +543,7 @@ export interface components {
             name: string;
             phone?: string;
             avatarUrl?: string;
-            memberships: components["schemas"]["OrganisationMember"][];
+            memberships: components["schemas"]["MembershipDetails"][];
             defaultOrganisation?: components["schemas"]["Organisation"];
         };
         UserDisplay: {
@@ -817,8 +822,26 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description User profile retrieved successfully */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["User"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["User"];
+                };
+            };
+            /** @description User not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

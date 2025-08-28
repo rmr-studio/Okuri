@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProfile } from "@/hooks/useProfile";
-import { OrganisationMember } from "@/lib/interfaces/organisation.interface";
+import { MembershipDetails } from "@/lib/interfaces/organisation.interface";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -13,9 +13,7 @@ const OrganisationPicker = () => {
     const { data: user, isPending } = useProfile();
 
     const [organisationSearch, setOrganisationSearch] = useState<string>("");
-    const [renderedOrganisations, setRenderedOrganisations] = useState<OrganisationMember[]>(
-        user?.memberships ?? []
-    );
+    const [renderedOrganisations, setRenderedOrganisations] = useState<MembershipDetails[]>([]);
     useEffect(() => {
         if (user?.memberships) {
             setRenderedOrganisations(
@@ -61,13 +59,18 @@ const OrganisationPicker = () => {
             <section className="flex flex-wrap flex-shrink-0 mt-8 space-x-4">
                 {renderedOrganisations.length > 0 ? (
                     <>
-                        {renderedOrganisations.map((org) => (
-                            <OrganisationTile
-                                key={org.organisationId}
-                                membership={org}
-                                isDefault={user?.defaultOrganisation?.id === org.organisationId}
-                            />
-                        ))}
+                        {renderedOrganisations.map(
+                            (org) =>
+                                org.organisation?.id && (
+                                    <OrganisationTile
+                                        key={org.organisation.id}
+                                        membership={org}
+                                        isDefault={
+                                            user?.defaultOrganisation?.id === org.organisation.id
+                                        }
+                                    />
+                                )
+                        )}
                     </>
                 ) : isPending ? (
                     <>Loading... </>

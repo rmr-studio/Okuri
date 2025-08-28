@@ -1,11 +1,6 @@
 "use client";
 
-import {
-    Check,
-    ChevronsUpDown,
-    GalleryVerticalEnd,
-    PlusCircle,
-} from "lucide-react";
+import { Check, ChevronsUpDown, GalleryVerticalEnd, PlusCircle } from "lucide-react";
 
 import {
     DropdownMenu,
@@ -13,13 +8,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
-import { JSX, useState } from "react";
+import { JSX } from "react";
 
 interface Choice {
     id: string;
@@ -49,7 +40,7 @@ export const OptionSwitcher = <T extends Choice>({
     return (
         <SidebarMenu>
             <SidebarMenuItem>
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
@@ -60,19 +51,14 @@ export const OptionSwitcher = <T extends Choice>({
                             </div>
                             {selectedOption && (
                                 <div className="flex flex-col gap-0.5 leading-none text-xs">
-                                    <span className="font-semibold">
-                                        {title}
-                                    </span>
+                                    <span className="font-semibold">{title}</span>
                                     {render(selectedOption)}
                                 </div>
                             )}
                             <ChevronsUpDown className="ml-auto" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        className="w-[15rem] mt-2"
-                        align="start"
-                    >
+                    <DropdownMenuContent className="w-[15rem] mt-2" align="start">
                         {options.map((option) => (
                             <DropdownMenuItem
                                 key={option.id}
@@ -80,9 +66,7 @@ export const OptionSwitcher = <T extends Choice>({
                                 onSelect={() => handleOptionSelection(option)}
                             >
                                 {render(option)}
-                                {option.id === selectedOption?.id && (
-                                    <Check className="ml-auto" />
-                                )}
+                                {option.id === selectedOption?.id && <Check className="ml-auto" />}
                             </DropdownMenuItem>
                         ))}
                         {addNewLink && (
@@ -93,9 +77,7 @@ export const OptionSwitcher = <T extends Choice>({
                                 }}
                             >
                                 <PlusCircle className="mr-1 size-4" />
-                                <span className="text-content text-xs">
-                                    {addNewTitle}
-                                </span>
+                                <span className="text-content text-xs">{addNewTitle}</span>
                             </DropdownMenuItem>
                         )}
                     </DropdownMenuContent>

@@ -73,7 +73,7 @@ export const UserProfileDropdown: FC<Props> = ({ user }) => {
                         <Building2 />
                         <span
                             className="ml-2 text-xs text-content"
-                            onClick={() => router.push("/dashboard/organisations")}
+                            onClick={() => router.push("/dashboard/organisation")}
                         >
                             My Organisations
                         </span>

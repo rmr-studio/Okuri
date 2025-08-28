@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { updateOrganisation } from "@/controller/organisation.controller";
 import {
-    Organisation,
+    OrganisationOverview,
     TileLayoutConfig,
     TileSection,
 } from "@/lib/interfaces/organisation.interface";
@@ -37,7 +37,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 interface TileLayoutEditorProps {
-    organisation: Organisation;
+    organisation: OrganisationOverview;
     isOpen: boolean;
     onClose: () => void;
 }
@@ -131,9 +131,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
         setLayout((prev) => ({
             ...prev,
             sections: prev.sections.map((section) =>
-                section.id === sectionId
-                    ? { ...section, visible: !section.visible }
-                    : section
+                section.id === sectionId ? { ...section, visible: !section.visible } : section
             ),
         }));
     };
@@ -147,10 +145,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
             const newIndex = direction === "up" ? index - 1 : index + 1;
             if (newIndex < 0 || newIndex >= sections.length) return prev;
 
-            [sections[index], sections[newIndex]] = [
-                sections[newIndex],
-                sections[index],
-            ];
+            [sections[index], sections[newIndex]] = [sections[newIndex], sections[index]];
             sections[index].order = index;
             sections[newIndex].order = newIndex;
 
@@ -167,17 +162,11 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
         }));
     };
 
-    const updateSectionSize = (
-        sectionId: string,
-        width: number,
-        height: number
-    ) => {
+    const updateSectionSize = (sectionId: string, width: number, height: number) => {
         setLayout((prev) => ({
             ...prev,
             sections: prev.sections.map((section) =>
-                section.id === sectionId
-                    ? { ...section, width, height }
-                    : section
+                section.id === sectionId ? { ...section, width, height } : section
             ),
         }));
     };
@@ -205,9 +194,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
     const removeSection = (sectionId: string) => {
         setLayout((prev) => ({
             ...prev,
-            sections: prev.sections.filter(
-                (section) => section.id !== sectionId
-            ),
+            sections: prev.sections.filter((section) => section.id !== sectionId),
         }));
         setSelectedSection(null);
     };
@@ -238,8 +225,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                             key={section.id}
                             className={cn(
                                 "absolute border-2 border-dashed border-gray-300 bg-gray-50/50 cursor-move",
-                                selectedSection === section.id &&
-                                    "border-blue-500 bg-blue-50/50",
+                                selectedSection === section.id && "border-blue-500 bg-blue-50/50",
                                 previewMode && "hover:border-blue-400"
                             )}
                             style={{
@@ -256,8 +242,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
 
                                 const handleMouseMove = (e: MouseEvent) => {
                                     if (!draggedSection) return;
-                                    const rect =
-                                        e.currentTarget?.getBoundingClientRect();
+                                    const rect = e.currentTarget?.getBoundingClientRect();
                                     if (rect) {
                                         updateSectionPosition(
                                             draggedSection,
@@ -269,24 +254,12 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
 
                                 const handleMouseUp = () => {
                                     setDraggedSection(null);
-                                    document.removeEventListener(
-                                        "mousemove",
-                                        handleMouseMove
-                                    );
-                                    document.removeEventListener(
-                                        "mouseup",
-                                        handleMouseUp
-                                    );
+                                    document.removeEventListener("mousemove", handleMouseMove);
+                                    document.removeEventListener("mouseup", handleMouseUp);
                                 };
 
-                                document.addEventListener(
-                                    "mousemove",
-                                    handleMouseMove
-                                );
-                                document.addEventListener(
-                                    "mouseup",
-                                    handleMouseUp
-                                );
+                                document.addEventListener("mousemove", handleMouseMove);
+                                document.addEventListener("mouseup", handleMouseUp);
                             }}
                         >
                             <div className="flex items-center justify-center h-full text-xs text-gray-500">
@@ -307,14 +280,8 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
         return (
             <div className="border rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">
-                        Section: {section.title}
-                    </Label>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSection(section.id)}
-                    >
+                    <Label className="text-sm font-medium">Section: {section.title}</Label>
+                    <Button variant="ghost" size="sm" onClick={() => removeSection(section.id)}>
                         <Trash2 className="w-4 h-4" />
                     </Button>
                 </div>
@@ -395,9 +362,8 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                 <DialogHeader>
                     <DialogTitle>Customize Tile Layout</DialogTitle>
                     <DialogDescription>
-                        Drag and drop sections to rearrange your organisation
-                        tile layout. Toggle visibility and adjust settings for
-                        each section.
+                        Drag and drop sections to rearrange your organisation tile layout. Toggle
+                        visibility and adjust settings for each section.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -406,24 +372,15 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <Label>Preview Mode</Label>
-                            <Switch
-                                checked={previewMode}
-                                onCheckedChange={setPreviewMode}
-                            />
+                            <Switch checked={previewMode} onCheckedChange={setPreviewMode} />
                         </div>
 
                         <Separator />
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-sm font-medium">
-                                    Sections
-                                </Label>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={addCustomSection}
-                                >
+                                <Label className="text-sm font-medium">Sections</Label>
+                                <Button variant="outline" size="sm" onClick={addCustomSection}>
                                     <Plus className="w-4 h-4 mr-1" />
                                     Add
                                 </Button>
@@ -436,16 +393,12 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                                         selectedSection === section.id &&
                                             "border-blue-500 bg-blue-50/50"
                                     )}
-                                    onClick={() =>
-                                        setSelectedSection(section.id)
-                                    }
+                                    onClick={() => setSelectedSection(section.id)}
                                 >
                                     <div className="flex items-center gap-2">
                                         <GripVertical className="w-4 h-4 text-gray-400" />
                                         {renderSectionIcon(section.type)}
-                                        <span className="text-sm">
-                                            {section.title}
-                                        </span>
+                                        <span className="text-sm">{section.title}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Button
@@ -453,9 +406,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                                             size="sm"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                toggleSectionVisibility(
-                                                    section.id
-                                                );
+                                                toggleSectionVisibility(section.id);
                                             }}
                                         >
                                             {section.visible ? (
@@ -482,10 +433,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                                                 e.stopPropagation();
                                                 moveSection(section.id, "down");
                                             }}
-                                            disabled={
-                                                section.order ===
-                                                layout.sections.length - 1
-                                            }
+                                            disabled={section.order === layout.sections.length - 1}
                                         >
                                             ↓
                                         </Button>
@@ -497,9 +445,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                         <Separator />
 
                         <div className="space-y-3">
-                            <Label className="text-sm font-medium">
-                                Display Options
-                            </Label>
+                            <Label className="text-sm font-medium">Display Options</Label>
                             <div className="space-y-2">
                                 {Object.entries({
                                     showPlan: "Plan",
@@ -512,18 +458,11 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                                     showBusinessNumber: "Business Number",
                                     showTaxId: "Tax ID",
                                 }).map(([key, label]) => (
-                                    <div
-                                        key={key}
-                                        className="flex items-center justify-between"
-                                    >
-                                        <Label className="text-sm">
-                                            {label}
-                                        </Label>
+                                    <div key={key} className="flex items-center justify-between">
+                                        <Label className="text-sm">{label}</Label>
                                         <Switch
                                             checked={
-                                                layout[
-                                                    key as keyof TileLayoutConfig
-                                                ] as boolean
+                                                layout[key as keyof TileLayoutConfig] as boolean
                                             }
                                             onCheckedChange={(checked) =>
                                                 setLayout((prev) => ({
@@ -540,9 +479,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
 
                     {/* Section Editor */}
                     <div className="space-y-4">
-                        <Label className="text-sm font-medium">
-                            Section Properties
-                        </Label>
+                        <Label className="text-sm font-medium">Section Properties</Label>
                         {renderSectionEditor()}
                     </div>
 
@@ -552,9 +489,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                         {renderPreviewTile()}
 
                         <div className="text-xs text-gray-500">
-                            <p>
-                                • Click sections to select and edit properties
-                            </p>
+                            <p>• Click sections to select and edit properties</p>
                             <p>• Enable preview mode to drag sections</p>
                             <p>• Toggle visibility with the eye icon</p>
                             <p>• Reorder sections with arrow buttons</p>
@@ -567,13 +502,8 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button
-                        onClick={handleSave}
-                        disabled={updateLayoutMutation.isPending}
-                    >
-                        {updateLayoutMutation.isPending
-                            ? "Saving..."
-                            : "Save Layout"}
+                    <Button onClick={handleSave} disabled={updateLayoutMutation.isPending}>
+                        {updateLayoutMutation.isPending ? "Saving..." : "Save Layout"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

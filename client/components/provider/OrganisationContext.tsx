@@ -1,6 +1,7 @@
 "use client";
 
 import { useProfile } from "@/hooks/useProfile";
+import { User } from "@/lib/interfaces/user.interface";
 import {
     createOrganisationStore,
     type OrganisationStore,
@@ -36,17 +37,21 @@ export const OrganisationsStoreProvider = ({ children }: OrganisationsStoreProvi
                 store.current?.setState({
                     selectedOrganisationId: selectedOrganisation.id,
                 });
-            }
-        } else {
-            // If no organisation is selected, set the first one as default
-            const firstOrganisation = user.memberships[0]?.organisation;
-            if (firstOrganisation) {
-                store.current?.setState({
-                    selectedOrganisationId: firstOrganisation.id,
-                });
+                return;
             }
         }
+
+        getDefaultOrganisation(user);
     }, [user]);
+
+    const getDefaultOrganisation = (user: User) => {
+        const firstOrganisation = user.memberships[0]?.organisation;
+        if (firstOrganisation) {
+            store.current?.setState({
+                selectedOrganisationId: firstOrganisation.id,
+            });
+        }
+    };
 
     return (
         <OrganisationsStoreContext.Provider value={store.current}>

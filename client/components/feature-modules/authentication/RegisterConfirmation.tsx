@@ -6,7 +6,7 @@ import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { FormOTPInput } from "@/components/ui/forms/form-otp-input";
 import { Separator } from "@/components/ui/separator";
 import {
-    AuthenticationProps,
+    AuthResponse,
     RegistrationConfirmation,
 } from "@/lib/interfaces/auth.interface";
 import { FormOTP, OTPFormSchema } from "@/lib/util/form/form.util";
@@ -18,17 +18,21 @@ import { Control, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Registration } from "./Register";
 
-interface RegisterConfirmationProps extends AuthenticationProps {
+interface RegisterConfirmationProps {
+    confirmEmailSignupWithOTP: (
+        userDetails: RegistrationConfirmation
+    ) => Promise<AuthResponse>;
+    handleResendOTP: (email: string) => Promise<AuthResponse>;
     visibilityCallback: (visible: boolean) => void;
     formControl: Control<Registration>;
 }
 
 const RegisterConfirmation: FC<RegisterConfirmationProps> = ({
     formControl,
-    callbacks,
+    confirmEmailSignupWithOTP,
+    handleResendOTP,
     visibilityCallback,
 }) => {
-    const { confirmEmailSignupWithOTP, handleResendOTP } = callbacks;
     const [otpVerifyError, setOtpVerifyError] = useState<boolean>(false);
     const formDetails = useWatch({ control: formControl });
     const userDetailsForm = useForm<FormOTP>({

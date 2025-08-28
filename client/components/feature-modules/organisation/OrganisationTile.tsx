@@ -2,10 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-    OrganisationMember,
-    TileLayoutConfig,
-} from "@/lib/interfaces/organisation.interface";
+import { MembershipDetails, TileLayoutConfig } from "@/lib/interfaces/organisation.interface";
 import { toTitleCase } from "@/lib/util/utils";
 import { ArrowRightIcon, Edit3Icon } from "lucide-react";
 import Image from "next/image";
@@ -14,7 +11,7 @@ import { FC, useState } from "react";
 import { TileLayoutEditor } from "./TileLayoutEditor";
 
 interface Props {
-    membership: OrganisationMember;
+    membership: MembershipDetails;
     isDefault: boolean;
 }
 
@@ -116,14 +113,9 @@ export const OrganisationTile: FC<Props> = ({ membership }) => {
         return (
             <div className="mt-4 text-xs text-content flex justify-between items-end">
                 <div>
-                    {layout.showRole && (
-                        <div className="font-semibold">{toTitleCase(role)}</div>
-                    )}
+                    {layout.showRole && <div className="font-semibold">{toTitleCase(role)}</div>}
                     {layout.showMemberSince && (
-                        <div>
-                            Member since{" "}
-                            {new Date(memberSince).toLocaleDateString()}
-                        </div>
+                        <div>Member since {new Date(memberSince).toLocaleDateString()}</div>
                     )}
                 </div>
                 <ArrowRightIcon className="w-5 h-5 text-content mb-1" />
@@ -132,19 +124,16 @@ export const OrganisationTile: FC<Props> = ({ membership }) => {
     };
 
     const renderCustomAttributes = () => {
-        if (!layout.showCustomAttributes || !organisation.customAttributes)
-            return null;
+        if (!layout.showCustomAttributes || !organisation.customAttributes) return null;
 
         return (
             <div className="mt-2 text-xs text-content">
-                {Object.entries(organisation.customAttributes).map(
-                    ([key, value]) => (
-                        <div key={key} className="flex justify-between">
-                            <span className="font-medium">{key}:</span>
-                            <span>{String(value)}</span>
-                        </div>
-                    )
-                )}
+                {Object.entries(organisation.customAttributes).map(([key, value]) => (
+                    <div key={key} className="flex justify-between">
+                        <span className="font-medium">{key}:</span>
+                        <span>{String(value)}</span>
+                    </div>
+                ))}
             </div>
         );
     };
@@ -158,12 +147,7 @@ export const OrganisationTile: FC<Props> = ({ membership }) => {
                 <div className="flex items-center gap-1">
                     <span>📍</span>
                     <span>
-                        {[
-                            address.street,
-                            address.city,
-                            address.state,
-                            address.postalCode,
-                        ]
+                        {[address.street, address.city, address.state, address.postalCode]
                             .filter(Boolean)
                             .join(", ")}
                     </span>
@@ -173,8 +157,7 @@ export const OrganisationTile: FC<Props> = ({ membership }) => {
     };
 
     const renderPaymentInfo = () => {
-        if (!layout.showPaymentInfo || !organisation.organisationPaymentDetails)
-            return null;
+        if (!layout.showPaymentInfo || !organisation.organisationPaymentDetails) return null;
 
         const { organisationPaymentDetails } = organisation;
         return (
@@ -184,8 +167,7 @@ export const OrganisationTile: FC<Props> = ({ membership }) => {
                     <span>
                         {organisationPaymentDetails.accountName &&
                             `${organisationPaymentDetails.accountName} • `}
-                        {organisationPaymentDetails.bsb &&
-                            `BSB: ${organisationPaymentDetails.bsb}`}
+                        {organisationPaymentDetails.bsb && `BSB: ${organisationPaymentDetails.bsb}`}
                     </span>
                 </div>
             </div>
@@ -200,9 +182,7 @@ export const OrganisationTile: FC<Props> = ({ membership }) => {
                 {layout.showBusinessNumber && organisation.businessNumber && (
                     <div>Business: {organisation.businessNumber}</div>
                 )}
-                {layout.showTaxId && organisation.taxId && (
-                    <div>Tax ID: {organisation.taxId}</div>
-                )}
+                {layout.showTaxId && organisation.taxId && <div>Tax ID: {organisation.taxId}</div>}
             </div>
         );
     };
