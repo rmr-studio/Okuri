@@ -70,7 +70,7 @@ fun UserEntity.toModel(): User {
             phone = this.phone,
             name = this.name,
             avatarUrl = this.avatarUrl,
-            memberships = this.organisations.map { membership -> membership.toDetails() },
+            memberships = this.organisations.map { membership -> membership.toDetails(includeOrganisation = true) },
             defaultOrganisation = this.defaultOrganisation?.toModel(includeMembers = false),
         )
     }

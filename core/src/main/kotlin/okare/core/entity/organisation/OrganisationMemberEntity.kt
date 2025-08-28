@@ -69,9 +69,13 @@ fun OrganisationMemberEntity.toModel(): OrganisationMember {
  * Convert OrganisationMemberEntity to MembershipDetails
  * This excludes user and organisation details and will be used to hold a user's membership info for their profile.
  */
-fun OrganisationMemberEntity.toDetails(): MembershipDetails {
+fun OrganisationMemberEntity.toDetails(includeOrganisation: Boolean = false): MembershipDetails {
     return MembershipDetails(
-        organisationId = id.organisationId,
+        organisation = if (includeOrganisation) {
+            this.organisation?.toModel(includeMembers = false)
+        } else {
+            null
+        },
         role = role,
         memberSince = memberSince,
     )

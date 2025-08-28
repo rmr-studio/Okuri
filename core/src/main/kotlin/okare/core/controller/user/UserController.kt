@@ -26,11 +26,11 @@ class UserController(
         description = "Retrieves the profile of the authenticated user based on the current session."
     )
 
-//    @ApiResponses(
-//        ApiResponse(responseCode = "200", description = "User profile retrieved successfully"),
-//        ApiResponse(responseCode = "401", description = "Unauthorized access"),
-//        ApiResponse(responseCode = "404", description = "User not found")
-//    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "User profile retrieved successfully"),
+        ApiResponse(responseCode = "401", description = "Unauthorized access"),
+        ApiResponse(responseCode = "404", description = "User not found")
+    )
     fun getCurrentUser(): ResponseEntity<User> {
         val user: User = profileService.getUserFromSession().toModel()
         return ResponseEntity.ok(user)

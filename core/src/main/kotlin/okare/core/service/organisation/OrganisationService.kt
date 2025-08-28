@@ -129,6 +129,7 @@ class OrganisationService(
                     taxId = organisation.taxId
                     organisationPaymentDetails = organisation.organisationPaymentDetails
                     customAttributes = organisation.customAttributes
+                    tileLayout = organisation.tileLayout
                 }
 
                 organisationRepository.save(entity).let { updatedEntity ->
