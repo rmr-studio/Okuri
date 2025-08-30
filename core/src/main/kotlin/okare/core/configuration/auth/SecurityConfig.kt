@@ -19,6 +19,7 @@ import javax.crypto.spec.SecretKeySpec
 @EnableMethodSecurity(prePostEnabled = true)
 class SecurityConfig(
     private val securityConfig: SecurityConfigurationProperties,
+    private val tokenDecoder: CustomAuthenticationTokenConverter
 ) {
 
     private val secretKey = SecretKeySpec(securityConfig.jwtSecretKey.toByteArray(Charsets.UTF_8), "HmacSHA256")
@@ -38,8 +39,8 @@ class SecurityConfig(
                     .anyRequest().authenticated() // Require authentication for all other endpoints
             }
             .oauth2ResourceServer { oauth2 ->
-                oauth2.jwt { jwtConfigurer ->
-                    jwtConfigurer.decoder(jwtDecoder())
+                oauth2.jwt { jwt ->
+                    jwt.jwtAuthenticationConverter(tokenDecoder)
                 }
             }
             .exceptionHandling { exceptions ->
