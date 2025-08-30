@@ -1,7 +1,7 @@
-import ClientsOverview from "@/components/feature-modules/client/ClientsOverview";
+import ClientsList from "@/components/feature-modules/client/ClientsList";
 
 const ClientPage = () => {
-    return <ClientsOverview />;
+    return <ClientsList />;
 };
 
 export default ClientPage;
