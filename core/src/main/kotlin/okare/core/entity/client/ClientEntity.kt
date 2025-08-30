@@ -30,6 +30,9 @@ data class ClientEntity(
     @Column(name = "name", nullable = false)
     var name: String,
 
+    @Column(name = "archived", nullable = false)
+    var archived: Boolean = false,
+
     @Column(name = "contact_details", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
     var contactDetails: ContactDetails? = null,

@@ -9,6 +9,7 @@ data class Client(
     val id: UUID,
     val organisationId: UUID,
     var name: String,
+    var archived: Boolean = false,
     var contactDetails: ContactDetails? = null,
     val template: Template<ClientTemplateFieldStructure>? = null, // Link to which template was used for client structure
     var attributes: Map<String, Any> = emptyMap(), // E.g., {"industry": "Healthcare", "size": "50-100"}

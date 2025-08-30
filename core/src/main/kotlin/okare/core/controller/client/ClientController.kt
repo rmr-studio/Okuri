@@ -100,4 +100,25 @@ class ClientController(private val clientService: ClientService) {
         clientService.deleteClient(client)
         return ResponseEntity.noContent().build()
     }
+
+    @PutMapping("/{clientId}/archive/{status}")
+    @Operation(
+        summary = "Updates the archival status of a client",
+        description = "Archives or unarchives a client based on the provided status, if the user has access."
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "204", description = "Client archival status updated successfully"),
+        ApiResponse(responseCode = "401", description = "Unauthorized access"),
+        ApiResponse(responseCode = "403", description = "User does not own the client"),
+        ApiResponse(responseCode = "404", description = "Client not found")
+    )
+    fun updateArchiveStatusByClientId(
+        @PathVariable clientId: UUID,
+        @PathVariable status: Boolean
+    ): ResponseEntity<Unit> {
+        // Check ownership of client
+        val client = clientService.getClientById(clientId).toModel()
+        clientService.archiveClient(client, status)
+        return ResponseEntity.noContent().build()
+    }
 }

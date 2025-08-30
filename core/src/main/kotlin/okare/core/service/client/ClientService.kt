@@ -82,7 +82,6 @@ class ClientService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun deleteClient(client: Client) {
-
         repository.deleteById(client.id).run {
             activityService.logActivity(
                 activity = Activity.CLIENT,
@@ -91,9 +90,26 @@ class ClientService(
                 organisationId = client.organisationId,
                 additionalDetails = "Deleted client with ID: ${client.id}"
             )
-
         }
-
     }
+
+    @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
+    fun archiveClient(client: Client, archive: Boolean): Client {
+        findOrThrow(client.id, repository::findById).apply {
+            archived = archive
+        }.run {
+            repository.save(this).run {
+                activityService.logActivity(
+                    activity = Activity.CLIENT,
+                    operation = if (archive) OperationType.ARCHIVE else OperationType.RESTORE,
+                    userId = authTokenService.getUserId(),
+                    organisationId = this.organisationId,
+                    additionalDetails = "${if (archive) "Archived" else "Unarchived"} client with ID: ${this.id}"
+                )
+                return this.toModel()
+            }
+        }
+    }
+
 
 }
