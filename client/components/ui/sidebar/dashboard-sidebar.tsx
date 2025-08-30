@@ -4,13 +4,15 @@ import { useProfile } from "@/hooks/useProfile";
 import { SidebarGroupProps } from "@/lib/interfaces/interface";
 import { Organisation } from "@/lib/interfaces/organisation.interface";
 import {
+    BanknoteArrowUp,
+    BookTextIcon,
     Building2,
     CalendarHeart,
     CogIcon,
-    LayoutIcon,
+    Contact,
     LayoutTemplate,
+    PlusCircle,
     TrendingUpDown,
-    UserPlus,
     Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,7 +21,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../button";
 import { Skeleton } from "../skeleton";
 import { AppSidebar } from "./root-sidebar";
-import { OptionSwitcher } from "./switcher";
+import { Action, OptionSwitcher } from "./switcher";
 
 export const DashboardSidebar = () => {
     const pathName = usePathname();
@@ -52,15 +54,27 @@ export const DashboardSidebar = () => {
         router.push("/dashboard/organisation/" + organisation.id);
     };
 
+    const switcherOptions: Action[] = [
+        {
+            title: "Create Organisation",
+            link: "/dashboard/organisation/new",
+            icon: PlusCircle,
+        },
+        {
+            title: "View All Organisations",
+            link: "/dashboard/organisation",
+            icon: Building2,
+        },
+    ];
+
     const sidebarContent: SidebarGroupProps[] = selectedOrganisation
         ? [
               {
-                  title: "Organisation",
                   items: [
                       {
                           icon: Building2,
                           hidden: false,
-                          title: "Overview",
+                          title: "Organisation",
                           url: `/dashboard/organisation/${selectedOrganisation.id}`,
                           isActive:
                               pathName === `/dashboard/organisation/${selectedOrganisation.id}`,
@@ -68,111 +82,46 @@ export const DashboardSidebar = () => {
                       {
                           icon: Users,
                           hidden: false,
-                          title: "Members",
+                          title: "Team",
                           url: `/dashboard/organisation/${selectedOrganisation.id}/members`,
                           isActive: pathName.startsWith(
                               `/dashboard/organisation/${selectedOrganisation.id}/members`
                           ),
                       },
                       {
-                          icon: Users,
+                          icon: Contact,
                           hidden: false,
-                          title: "Invites",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/invites`,
-                          isActive: pathName.startsWith(
-                              `/dashboard/organisation/${selectedOrganisation.id}/invites`
-                          ),
-                      },
-                  ],
-              },
-              {
-                  title: "Invoices",
-
-                  items: [
-                      {
-                          icon: Building2,
-                          hidden: false,
-                          title: "New Invoice",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/invoice/new`,
-                          isActive: pathName === `/dashboard/invoice/new`,
-                      },
-                      {
-                          icon: Users,
-                          hidden: false,
-                          title: "Generated",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/invoice/`,
-                          isActive: pathName === `/dashboard/invoice/`,
-                      },
-                  ],
-              },
-              {
-                  title: "Clients",
-                  items: [
-                      {
-                          icon: UserPlus,
-                          hidden: false,
-                          title: "New Client",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/clients/new`,
-                          isActive: pathName.startsWith(`/dashboard/clients/new`),
-                      },
-                      {
-                          icon: Users,
-                          hidden: false,
-                          title: "All Clients",
+                          title: "Clients",
                           url: `/dashboard/organisation/${selectedOrganisation.id}/clients`,
-                          isActive: pathName === `/dashboard/clients`,
+                          isActive: pathName === `/dashboard/${selectedOrganisation.id}/clients`,
                       },
-                  ],
-              },
-              {
-                  title: "Templates",
-                  items: [
                       {
-                          icon: LayoutIcon,
+                          icon: BookTextIcon,
                           hidden: false,
-                          title: "New Template",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/templates/new`,
-                          isActive: pathName.startsWith(`/dashboard/templates/new`),
+                          title: "Invoices",
+                          url: `/dashboard/organisation/${selectedOrganisation.id}/invoice/`,
+                          isActive: pathName === `/dashboard/${selectedOrganisation.id}/invoice`,
                       },
+
                       {
                           icon: LayoutTemplate,
                           hidden: false,
-                          title: "Manage Templates",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/templates`,
+                          title: "Templates",
+                          url: `/dashboard/templates`,
                           isActive: pathName.startsWith("/dashboard/templates"),
                       },
-                  ],
-              },
-              {
-                  title: "Line Items",
-                  items: [
-                      {
-                          icon: UserPlus,
-                          hidden: false,
-                          title: "New Line Item",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/item/new`,
-                          isActive: pathName.startsWith(`/dashboard/item/new`),
-                      },
-                      {
-                          icon: Users,
-                          hidden: false,
-                          title: "All Line Items",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/item`,
-                          isActive: pathName === `/dashboard/item`,
-                      },
-                  ],
-              },
 
-              {
-                  title: "Billing",
-                  items: [
                       {
-                          icon: CalendarHeart,
+                          icon: BanknoteArrowUp,
                           hidden: false,
-                          title: "Subscription",
-                          url: `/dashboard/organisation/${selectedOrganisation.id}/subscriptions`,
-                          isActive: pathName.startsWith(`/dashboard/subscriptions`),
+                          title: "Billables",
+                          url: `/dashboard/organisation/${selectedOrganisation.id}/billable`,
+                          isActive: pathName.startsWith(`/dashboard/billable`),
                       },
+                  ],
+              },
+              {
+                  items: [
                       {
                           icon: TrendingUpDown,
                           hidden: false,
@@ -180,10 +129,16 @@ export const DashboardSidebar = () => {
                           url: `/dashboard/organisation/${selectedOrganisation.id}/usage`,
                           isActive: pathName.startsWith(`/dashboard/usage`),
                       },
+                      {
+                          icon: CalendarHeart,
+                          hidden: false,
+                          title: "Subscription",
+                          url: `/dashboard/organisation/${selectedOrganisation.id}/subscriptions`,
+                          isActive: pathName.startsWith(`/dashboard/subscriptions`),
+                      },
                   ],
               },
               {
-                  title: "Settings",
                   items: [
                       {
                           icon: CogIcon,
@@ -194,30 +149,10 @@ export const DashboardSidebar = () => {
                               `/dashboard/organisation/${selectedOrganisation.id}/settings`
                           ),
                       },
-                      {
-                          icon: CogIcon,
-                          hidden: false,
-                          title: "Account Settings",
-                          url: `/dashboard/settings`,
-                          isActive: pathName.startsWith(`/dashboard/settings`),
-                      },
                   ],
               },
           ]
-        : [
-              {
-                  title: "Settings",
-                  items: [
-                      {
-                          icon: CogIcon,
-                          hidden: false,
-                          title: "Account Settings",
-                          url: `/dashboard/settings`,
-                          isActive: pathName.startsWith(`/dashboard/settings`),
-                      },
-                  ],
-              },
-          ];
+        : [];
 
     return (
         <AppSidebar
@@ -262,8 +197,7 @@ export const DashboardSidebar = () => {
                     }
                     return (
                         <OptionSwitcher
-                            addNewLink="/dashboard/organisation/new"
-                            addNewTitle="Create Organisation"
+                            additionalActions={switcherOptions}
                             title={"Organisations"}
                             options={
                                 data.memberships

@@ -1,11 +1,11 @@
 import * as React from "react";
+import { v4 as uuid } from "uuid";
 
 import {
     Sidebar,
     SidebarContent,
     SidebarGroup,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -30,11 +30,10 @@ export function AppSidebar({
     return (
         <Sidebar {...props}>
             {header && <SidebarHeader>{header()}</SidebarHeader>}
-            <SidebarContent>
+            <SidebarContent className="gap-0">
                 {/* We create a SidebarGroup for each parent. */}
                 {body.map((item) => (
-                    <SidebarGroup key={item.title}>
-                        <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
+                    <SidebarGroup key={uuid()} className="my-0 not-last:border-b">
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {item.items
@@ -43,12 +42,12 @@ export function AppSidebar({
                                         <SidebarMenuItem key={item.title}>
                                             <SidebarMenuButton
                                                 asChild
-                                                className="ml-1"
                                                 isActive={item.isActive}
+                                                className="text-muted-foreground"
                                             >
                                                 <Link href={item.url} className="flex">
-                                                    <item.icon className="size-4" />
-                                                    <span className="ml-2 text-content">
+                                                    <item.icon className="size-3" />
+                                                    <span className="text-[13px]">
                                                         {item.title}
                                                     </span>
                                                 </Link>
