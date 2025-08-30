@@ -140,6 +140,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/{clientId}/archive/{status}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Updates the archival status of a client
+         * @description Archives or unarchives a client based on the provided status, if the user has access.
+         */
+        put: operations["updateArchiveStatusByClientId"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organisation/invite/reject/{inviteToken}": {
         parameters: {
             query?: never;
@@ -579,6 +599,7 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
             name: string;
+            archived: boolean;
             contactDetails?: components["schemas"]["ContactDetails"];
             template?: components["schemas"]["TemplateClientTemplateFieldStructure"];
             attributes: {
@@ -1366,6 +1387,48 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Client deleted successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User does not own the client */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Client not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateArchiveStatusByClientId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+                status: boolean;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client archival status updated successfully */
             204: {
                 headers: {
                     [name: string]: unknown;

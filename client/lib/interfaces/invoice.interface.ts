@@ -3,10 +3,7 @@ import { components, operations } from "@/lib/types/types";
 // --- 🎯 Core Invoice Models ---
 export type Invoice = components["schemas"]["Invoice"];
 export type Billable = components["schemas"]["Billable"];
-export type LineItem = components["schemas"]["LineItem"];
 export type InvoiceCreationRequest = components["schemas"]["InvoiceCreationRequest"];
-export type Client = components["schemas"]["Client"];
-export type Address = components["schemas"]["Address"];
 
 // --- 📦 Request Payloads ---
 export type CreateInvoiceRequest =
