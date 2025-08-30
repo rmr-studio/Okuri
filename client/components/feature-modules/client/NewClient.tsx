@@ -1,25 +1,13 @@
 "use client";
 
 import { useAuth } from "@/components/provider/AuthContext";
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { useOrganisation } from "@/hooks/useOrganisation";
-import { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/client.interface";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ClientForm } from "./form/ClientForm";
 
 const NewClient = () => {
     const { session } = useAuth();
-    const { data: organisation } = useOrganisation();
+    
 
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -41,30 +29,7 @@ const NewClient = () => {
                     features
                 </CardDescription>
             </CardHeader>
-            <CardContent className="my-12">
-                <ClientForm
-                    templates={templates}
-                    selectedTemplate={selectedTemplate}
-                    onTemplateChange={setSelectedTemplate}
-                    handleSubmission={handleSubmission}
-                    renderFooter={() => (
-                        <CardFooter className="flex justify-between mt-4 py-1 border-t ">
-                            <Button
-                                type="button"
-                                className="cursor-pointer"
-                                onClick={handleCancel}
-                                variant={"outline"}
-                                size={"sm"}
-                            >
-                                Cancel
-                            </Button>
-                            <Button type="submit" size={"sm"} className="cursor-pointer">
-                                Create Client
-                            </Button>
-                        </CardFooter>
-                    )}
-                />
-            </CardContent>
+            <CardContent className="my-12"></CardContent>
         </Card>
     );
 };
