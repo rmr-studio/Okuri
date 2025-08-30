@@ -358,7 +358,7 @@ export const TileLayoutEditor: React.FC<TileLayoutEditorProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-h-[90vh] min-w-[90dvw] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Customize Tile Layout</DialogTitle>
                     <DialogDescription>

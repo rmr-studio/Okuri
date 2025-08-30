@@ -1,6 +1,6 @@
 "use client";
 
-import { useOrganisationStore } from "@/components/provider/OrganisationContent";
+import { useOrganisationStore } from "@/components/provider/OrganisationContext";
 import List01 from "@/components/ui/organisation/list01";
 import List02 from "@/components/ui/organisation/list02";
 import List03 from "@/components/ui/organisation/list03";
@@ -12,6 +12,7 @@ import { useEffect } from "react";
 
 export const OrganisationDashboard = () => {
     const { data, isPending, isError, error, isLoadingAuth } = useOrganisation();
+
     const selectedOrganisationId = useOrganisationStore((store) => store.selectedOrganisationId);
     const setSelectedOrganisation = useOrganisationStore((store) => store.setSelectedOrganisation);
     const router = useRouter();

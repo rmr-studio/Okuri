@@ -220,7 +220,6 @@ export const OrganisationTile: FC<Props> = ({ membership }) => {
                     </CardContent>
                 </Link>
             </Card>
-
             <TileLayoutEditor
                 organisation={organisation}
                 isOpen={isEditModalOpen}
