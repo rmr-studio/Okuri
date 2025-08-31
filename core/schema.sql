@@ -186,10 +186,11 @@ create table if not exists "clients"
     "archived"        boolean          not null default false,
     "contact_details" jsonb,
     "template_id"     uuid             null references public.template (id) on delete cascade,
-    "attributes"      jsonb            not null,
+    "attributes"      jsonb,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp
 );
+
 
 create index if not exists idx_client_organisation_id
     on public.clients (organisation_id);

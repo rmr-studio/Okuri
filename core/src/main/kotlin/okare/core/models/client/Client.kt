@@ -12,12 +12,12 @@ data class Client(
     var archived: Boolean = false,
     var contactDetails: ContactDetails? = null,
     val template: Template<ClientTemplateFieldStructure>? = null, // Link to which template was used for client structure
-    var attributes: Map<String, Any> = emptyMap(), // E.g., {"industry": "Healthcare", "size": "50-100"}
+    var attributes: Map<String, Any>? = null
 )
 
 data class ContactDetails(
     var email: String? = null,
     var phone: String? = null,
     var address: Address? = null,
-    var additionalContacts: Map<String, String> = emptyMap() // E.g., {"billing_email": "..."}
+    var additionalContacts: Map<String, String>? = null
 )

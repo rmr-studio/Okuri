@@ -41,9 +41,9 @@ data class ClientEntity(
     @JoinColumn(name = "template_id", referencedColumnName = "id")
     var template: TemplateEntity<ClientTemplateFieldStructure>? = null, // Link to which template was used for client structure
 
-    @Column(name = "attributes", columnDefinition = "jsonb")
+    @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
-    var attributes: Map<String, Any> = emptyMap(), // E.g., {"industry": "Healthcare", "size": "50-100"}
+    var attributes: Map<String, Any>? = null, // E.g., {"industry": "Healthcare", "size": "50-100"}
 
     @Column(
         name = "created_at",
