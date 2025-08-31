@@ -1,11 +1,7 @@
-import NewClient from "@/components/feature-modules/client/NewClient";
+import NewClient from "@/components/feature-modules/client/new-client";
 
 const NewClientPage = () => {
-    return (
-        <div className="w-full h-full flex justify-center">
-            <NewClient />
-        </div>
-    );
+    return <NewClient />;
 };
 
 export default NewClientPage;

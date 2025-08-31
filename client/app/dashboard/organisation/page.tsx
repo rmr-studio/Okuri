@@ -1,4 +1,4 @@
-import OrganisationPicker from "@/components/feature-modules/organisation/dashboard/OrganisationPicker";
+import { OrganisationPicker } from "@/components/feature-modules/organisation/dashboard/organisation-picker";
 
 const UserOrganisations = () => {
     return (

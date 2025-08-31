@@ -1,5 +1,7 @@
+import OrganisationMemberList from "@/components/feature-modules/organisation/organisation-members";
+
 const page = () => {
-    return <div>page</div>;
+    return <OrganisationMemberList />;
 };
 
 export default page;

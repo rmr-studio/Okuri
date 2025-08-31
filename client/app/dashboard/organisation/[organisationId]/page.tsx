@@ -1,4 +1,4 @@
-import { OrganisationDashboard } from "@/components/feature-modules/organisation/dashboard/OrganisationDashboard";
+import { OrganisationDashboard } from "@/components/feature-modules/organisation/dashboard/organisation-dashboard";
 
 const Organisation = () => {
     return <OrganisationDashboard />;

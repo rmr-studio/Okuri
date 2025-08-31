@@ -1,4 +1,4 @@
-import ClientsList from "@/components/feature-modules/client/ClientsList";
+import ClientsList from "@/components/feature-modules/client/client-list";
 
 const ClientPage = () => {
     return <ClientsList />;
