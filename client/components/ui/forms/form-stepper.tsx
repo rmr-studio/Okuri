@@ -7,14 +7,16 @@ import {
     StepperTrigger,
 } from "@/components/ui/stepper";
 
+import { ClassNameProps } from "@/lib/interfaces/interface";
 import { Step } from "@/lib/util/form/form.util";
+import { cn } from "@/lib/util/utils";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../tooltip";
 import { TruncatedTooltip } from "../truncated-tooltip";
 
 type StepperDescription = "display" | "icon" | "none";
 
-interface Props<T> {
+interface Props<T> extends ClassNameProps {
     steps: Step<T>[];
     /**
      * The initial step to display in the stepper.
@@ -31,6 +33,7 @@ interface Props<T> {
 export const FormStepper = <T extends string>({
     steps,
     currentStep,
+    className,
     descriptionType = "none",
 }: Props<T>) => {
     if (!steps || steps.length === 0) {
@@ -61,7 +64,7 @@ export const FormStepper = <T extends string>({
     const showDescription = descriptionType && descriptionType !== "none";
 
     return (
-        <div className="mx-auto max-w-xl space-y-8 text-center min-w-[400px]">
+        <div className={cn(`mx-auto max-w-xl space-y-8 text-center min-w-[400px]`, className)}>
             <Stepper defaultValue={initialIndex()} className="items-start gap-4">
                 {steps.map((step) => (
                     <StepperItem

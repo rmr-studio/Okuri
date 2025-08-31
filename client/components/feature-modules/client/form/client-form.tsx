@@ -3,12 +3,13 @@
 import { useAuth } from "@/components/provider/auth-context";
 import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
+import { AddressFormSchema } from "@/components/ui/forms/bespoke/AddressFormSection";
 import { FormStepper } from "@/components/ui/forms/form-stepper";
-import { Separator } from "@/components/ui/separator";
 import { Client } from "@/lib/interfaces/client.interface";
 import type { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/template.interface";
 import { Step } from "@/lib/util/form/form.util";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Separator } from "@radix-ui/react-dropdown-menu";
 import { useQueryClient } from "@tanstack/react-query";
 import { FC, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -16,7 +17,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { ClientPreview } from "../client-preview";
 import { ClientDetailsFormStep } from "./1.client-details";
-import { ClientAttributesFormStep } from "./2.client-attributes";
+import { ClientAttributesFormStep } from "./3.client-attributes";
 
 export interface ClientStepFormProps {
     form: UseFormReturn<ClientCreation>;
@@ -32,7 +33,7 @@ const clientCreationSchema = z.object({
         .object({
             email: z.string().email().optional().or(z.literal("")),
             phone: z.string().optional(),
-            address: z.any().optional(),
+            address: AddressFormSchema.optional(),
         })
         .optional(),
     attributes: z.record(z.any()).default({}).optional(),
@@ -140,16 +141,20 @@ export const ClientForm: FC<ClientFormProps> = ({
                         </p>
                     </div>
 
-                    {/* Progress Bar */}
-                    <section className="mt-2">
-                        <FormStepper steps={steps} currentStep={activeTab} descriptionType="icon" />
-                        <Separator className="mt-6 mb-4" />
-                    </section>
-
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Form Section */}
                         <div className="lg:col-span-2">
                             <Card>
+                                {/* Progress Bar */}
+                                <section className="mt-2">
+                                    <FormStepper
+                                        className="max-w-none mx-6"
+                                        steps={steps}
+                                        currentStep={activeTab}
+                                        descriptionType="icon"
+                                    />
+                                    <Separator className="mt-6 mb-4" />
+                                </section>
                                 <Form {...form}>
                                     <form
                                         onSubmit={form.handleSubmit(handleSubmit)}

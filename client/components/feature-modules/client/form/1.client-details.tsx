@@ -3,7 +3,6 @@ import { CardContent, CardFooter } from "@/components/ui/card";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { TextSeparator } from "@/components/ui/text-separator";
 import { FC } from "react";
 import { toast } from "sonner";
 import { ClientStepFormProps } from "./client-form";
@@ -15,7 +14,11 @@ export const ClientDetailsFormStep: FC<ClientStepFormProps> = ({ form, handleNex
             "name",
             "contactDetails.email",
             "contactDetails.phone",
-            "contactDetails.address",
+            "contactDetails.address.city",
+            "contactDetails.address.street",
+            "contactDetails.address.state",
+            "contactDetails.address.postalCode",
+            "contactDetails.address.country",
         ]);
         if (!isValid) {
             toast.error("Some fields are missing required values");
@@ -29,6 +32,13 @@ export const ClientDetailsFormStep: FC<ClientStepFormProps> = ({ form, handleNex
     return (
         <>
             <CardContent className="space-y-6">
+                <section>
+                    <h3 className="text-lg font-semibold mb-1">Contact Details</h3>
+                    <p className="text-sm text-muted-foreground mb-2 max-w-lg">
+                        Provide some basic information about your organisation. You can update these
+                        details later in your organisation settings.
+                    </p>
+                </section>
                 <FormField
                     control={form.control}
                     name="name"
@@ -42,10 +52,6 @@ export const ClientDetailsFormStep: FC<ClientStepFormProps> = ({ form, handleNex
                         </FormItem>
                     )}
                 />
-
-                <TextSeparator>
-                    <span className="text-sm font-semibold">Contact Details</span>
-                </TextSeparator>
 
                 <FormField
                     control={form.control}
