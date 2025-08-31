@@ -1,8 +1,11 @@
 import {
     CreateOrganisationRequest,
     CreateOrganisationResponse,
+    GetOrganisationInvitesPathParams,
     GetOrganisationPathParams,
     GetOrganisationResponse,
+    InviteToOrganisationPathParams,
+    RevokeInvitePathParams,
     UpdateOrganisationRequest,
 } from "@/lib/interfaces/organisation.interface";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
@@ -167,6 +170,156 @@ export const getOrganisation = async (
         throw fromError(errorData);
     } catch (error) {
         // Convert any caught error to ResponseError
+        throw fromError(error);
+    }
+};
+
+export const inviteToOrganisation = async (
+    session: Session | null,
+    params: InviteToOrganisationPathParams
+) => {
+    const { organisationId, email, role } = params;
+    try {
+        // Validate session and access token
+        if (!session?.access_token) {
+            throw fromError({
+                message: "No active session found",
+                status: 401,
+                error: "NO_SESSION",
+            });
+        }
+
+        const url = api();
+        const response = await fetch(
+            `${url}/v1/organisation/invite/organisation/${organisationId}/email/${email}/role/${role}`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+            }
+        );
+
+        if (response.ok) {
+            return await response.json();
+        }
+
+        // Parse server error response
+        let errorData;
+        try {
+            errorData = await response.json();
+        } catch {
+            errorData = {
+                message: `Failed to invite user: ${response.status} ${response.statusText}`,
+                status: response.status,
+                error: "SERVER_ERROR",
+            };
+        }
+
+        throw fromError(errorData);
+    } catch (error) {
+        if (isResponseError(error)) throw error;
+        throw fromError(error);
+    }
+};
+
+export const getOrganisationInvites = async (
+    session: Session | null,
+    params: GetOrganisationInvitesPathParams
+) => {
+    const { organisationId } = params;
+    try {
+        // Validate session and access token
+        if (!session?.access_token) {
+            throw fromError({
+                message: "No active session found",
+                status: 401,
+                error: "NO_SESSION",
+            });
+        }
+
+        const url = api();
+        const response = await fetch(
+            `${url}/v1/organisation/invite/organisation/${organisationId}`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+            }
+        );
+
+        if (response.ok) {
+            return await response.json();
+        }
+
+        // Parse server error response
+        let errorData;
+        try {
+            errorData = await response.json();
+        } catch {
+            errorData = {
+                message: `Failed to fetch organisation invites: ${response.status} ${response.statusText}`,
+                status: response.status,
+                error: "SERVER_ERROR",
+            };
+        }
+
+        throw fromError(errorData);
+    } catch (error) {
+        if (isResponseError(error)) throw error;
+        throw fromError(error);
+    }
+};
+
+export const revokeInvite = async (
+    session: Session | null,
+    params: RevokeInvitePathParams
+) => {
+    const { organisationId, id } = params;
+    try {
+        // Validate session and access token
+        if (!session?.access_token) {
+            throw fromError({
+                message: "No active session found",
+                status: 401,
+                error: "NO_SESSION",
+            });
+        }
+
+        const url = api();
+        const response = await fetch(
+            `${url}/v1/organisation/invite/organisation/${organisationId}/invitation/${id}`,
+            {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+            }
+        );
+
+        if (response.ok) {
+            return true;
+        }
+
+        // Parse server error response
+        let errorData;
+        try {
+            errorData = await response.json();
+        } catch {
+            errorData = {
+                message: `Failed to revoke invite: ${response.status} ${response.statusText}`,
+                status: response.status,
+                error: "SERVER_ERROR",
+            };
+        }
+
+        throw fromError(errorData);
+    } catch (error) {
+        if (isResponseError(error)) throw error;
         throw fromError(error);
     }
 };
