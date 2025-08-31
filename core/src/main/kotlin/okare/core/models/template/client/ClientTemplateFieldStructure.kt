@@ -8,8 +8,8 @@ data class ClientTemplateFieldStructure(
     override val type: ClientFieldType,
     override val required: Boolean = false,
     override val children: List<ClientTemplateFieldStructure> = emptyList(),
-    val constraints: List<Constraint> = emptyList(), // Constraints like min length, regex, etc.
-    val options: List<String> = emptyList(), // For fields like dropdowns or checkboxes
+    val constraints: List<Constraint>? = null, // Constraints like min length, regex, etc.
+    val options: List<String>? = null, // For fields like dropdowns or checkboxes
     val defaultValue: Any? = null, // Default value for the field
 ) : Field<ClientFieldType>
 

@@ -613,8 +613,8 @@ export interface components {
             type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
             required: boolean;
             children: components["schemas"]["ClientTemplateFieldStructure"][];
-            constraints: components["schemas"]["Constraint"][];
-            options: string[];
+            constraints?: components["schemas"]["Constraint"][];
+            options?: string[];
             defaultValue?: Record<string, never>;
         };
         Constraint: {

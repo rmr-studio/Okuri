@@ -157,19 +157,18 @@ end;
 $$;
 
 -- Templates
-CREATE TYPE template_type AS ENUM ('CLIENT', 'INVOICE', 'REPORT');
 
 CREATE TABLE IF NOT EXISTS template
 (
     id              UUID PRIMARY KEY,
-    user_id         UUID          NULL,
-    organisation_id UUID          NULL,
-    name            VARCHAR(255)  NOT NULL,
-    description     TEXT          NULL,
-    type            template_type NOT NULL,
-    structure       JSONB         NOT NULL,
-    is_default      BOOLEAN       NOT NULL   DEFAULT FALSE,
-    is_premade      BOOLEAN       NOT NULL   DEFAULT FALSE,
+    user_id         UUID         NULL,
+    organisation_id UUID         NULL,
+    name            VARCHAR(255) NOT NULL,
+    description     TEXT         NULL,
+    type            VARCHAR(255) NOT NULL,
+    structure       JSONB        NOT NULL,
+    is_default      BOOLEAN      NOT NULL    DEFAULT FALSE,
+    is_premade      BOOLEAN      NOT NULL    DEFAULT FALSE,
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_owner FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
