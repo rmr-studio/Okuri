@@ -16,7 +16,7 @@ import { getTypeConstraint } from "@/lib/util/form/schema.client.util";
 import { FC } from "react";
 import { Path, UseFormReturn } from "react-hook-form";
 import { Country } from "react-phone-number-input";
-import { ClientCreation } from "./ClientForm";
+import { ClientCreation } from "./client-form";
 
 export const RenderClientField: FC<{
     field: ClientTemplateFieldStructure;

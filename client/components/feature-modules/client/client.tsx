@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { AlertCircle, ArrowLeft, FileText, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import EditClient from "./EditClient";
+import EditClient from "./edit-client";
 
 const renderValue = (value: any): string => {
     if (Array.isArray(value)) return value.join(", ");
@@ -173,7 +173,7 @@ export const ClientOverview = () => {
                                 ))
                             ) : (
                                 <p className="text-muted-foreground text-sm">
-                                    No attributes available
+                                    No attributes available``
                                 </p>
                             )}
                         </CardContent>

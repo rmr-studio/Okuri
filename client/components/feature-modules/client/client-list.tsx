@@ -2,122 +2,39 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useOrganisationClients } from "@/hooks/useOrganisationClients";
 import type { Client } from "@/lib/interfaces/client.interface";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import { ClientCard } from "./ClientTile";
-import DeleteClient from "./DeleteClient";
-import EditClientSheetView from "./EditClient";
-
-// Mock data for demonstration
-const mockClients: Client[] = [
-    {
-        id: "1",
-        organisationId: "org-1",
-        name: "Henry Arthur",
-        contactDetails: {
-            email: "henry.arthur@example.com",
-            phone: "+1 (555) 123-4567",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-    {
-        id: "2",
-        organisationId: "org-1",
-        name: "Black Marvin",
-        contactDetails: {
-            email: "black.marvin@example.com",
-            phone: "+1 (555) 234-5678",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-    {
-        id: "3",
-        organisationId: "org-1",
-        name: "Olivia Martinez",
-        contactDetails: {
-            email: "olivia.martinez@example.com",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-    {
-        id: "4",
-        organisationId: "org-1",
-        name: "Emily Carter",
-        contactDetails: {
-            email: "emily.carter@example.com",
-            phone: "+1 (555) 345-6789",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-    {
-        id: "5",
-        organisationId: "org-1",
-        name: "James Wright",
-        contactDetails: {
-            email: "james.wright@example.com",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-    {
-        id: "6",
-        organisationId: "org-1",
-        name: "Sophia Bennett",
-        contactDetails: {
-            email: "sophia.bennett@example.com",
-            phone: "+1 (555) 456-7890",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-    {
-        id: "7",
-        organisationId: "org-1",
-        name: "Ava Mitchell",
-        contactDetails: {
-            email: "ava.mitchell@example.com",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-    {
-        id: "8",
-        organisationId: "org-1",
-        name: "Liam Turner",
-        contactDetails: {
-            email: "liam.turner@example.com",
-            phone: "+1 (555) 567-8901",
-            additionalContacts: {},
-        },
-        attributes: {},
-    },
-];
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ClientCard } from "./client-card";
+import DeleteClient from "./delete-client";
 
 export default function ClientsList() {
-    const [clients, setClients] = useState<Client[]>(mockClients);
+    const { data: clients, isLoading, isLoadingAuth, error } = useOrganisationClients();
     const [searchQuery, setSearchQuery] = useState("");
-    const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [deletingClient, setDeletingClient] = useState<Client | null>(null);
+    const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+    const router = useRouter();
 
-    // Filter clients based on search query
-    const filteredClients = clients.filter(
-        (client) =>
-            client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            client.contactDetails?.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    useEffect(() => {
+        if (!clients) return;
+        const filtered = clients.filter(
+            (client) =>
+                client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                client.contactDetails?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [searchQuery]);
 
-    const openEditClientSheet = (client: Client) => {
-        setEditingClient(client);
-    };
+    /**
+     * Navigates to the client edit form
+     */
+    const editClient = (client: Client) => {
+        // Disable if there is a current deletion occuring
+        if (!!deletingClient) return;
 
-    const closeEditSheet = () => {
-        setEditingClient(null);
+        router.push(`clients/${client.id}/edit`);
     };
 
     const openDeleteDialog = (client: Client) => {
@@ -152,6 +69,7 @@ export default function ClientsList() {
                     <div className="relative max-w-md">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
+                            disabled={isLoading || isLoadingAuth || !!error}
                             placeholder="Search clients..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -188,7 +106,7 @@ export default function ClientsList() {
                                 <ClientCard
                                     key={client.id}
                                     client={client}
-                                    onEdit={openEditClientSheet}
+                                    onEdit={editClient}
                                     onDelete={openDeleteDialog}
                                 />
                             ))}
@@ -197,7 +115,6 @@ export default function ClientsList() {
                 </div>
             </div>
             <DeleteClient client={deletingClient} onClose={closeDeleteDialog} />
-            <EditClientSheetView client={editingClient} onClose={closeEditSheet} />
         </>
     );
 }

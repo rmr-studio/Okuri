@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -15,11 +15,27 @@ import type { FC } from "react";
 
 interface Props {
     onClose: () => void;
+    onDelete?: (client: Client) => void;
+    onArchive?: (client: Client) => void;
     client: Client | null;
 }
 
-const DeleteClient: FC<Props> = ({ onClose, client }) => {
+const DeleteClient: FC<Props> = ({ onClose, client, onDelete }) => {
     const { session } = useAuth();
+
+    const handleDelete = (client: Client) => {
+        // Handle deletion mutation
+
+        // Callback prop from original components
+        onDelete?.(client);
+    };
+    const handleArchive = (client: Client) => {
+        // Handle archival mutation
+
+        // Callback prop from original components
+        onDelete?.(client);
+    };
+
     if (!client || !session) return null;
     return (
         <Dialog open={!!client} onOpenChange={onClose}>
