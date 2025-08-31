@@ -1,4 +1,4 @@
-import { AuthProvider } from "@/components/provider/AuthContext";
+import { AuthProvider } from "@/components/provider/auth-context";
 import { ThemeProvider } from "@/components/provider/ThemeContext";
 import QueryClientWrapper from "@/components/util/query.wrapper";
 import StoreProviderWrapper from "@/components/util/store.wrapper";
