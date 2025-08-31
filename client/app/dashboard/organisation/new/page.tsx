@@ -1,4 +1,4 @@
-import { OrganisationForm } from "@/components/feature-modules/organisation/OrganisationForm";
+import { OrganisationForm } from "@/components/feature-modules/organisation/form/organisation-form";
 
 const NewOrganisation = () => {
     return (

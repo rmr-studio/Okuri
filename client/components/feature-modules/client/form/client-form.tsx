@@ -10,7 +10,6 @@ import type { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/temp
 import { Step } from "@/lib/util/form/form.util";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from "@radix-ui/react-dropdown-menu";
-import { useQueryClient } from "@tanstack/react-query";
 import { FC, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
@@ -44,14 +43,12 @@ export type ClientFormTab = "base" | "attributes";
 
 interface ClientFormProps {
     client?: Client;
-    templates?: TemplateClientTemplateFieldStructure[];
     selectedTemplate?: TemplateClientTemplateFieldStructure;
     onTemplateChange?: (template: TemplateClientTemplateFieldStructure) => void;
     onSubmit: (data: ClientCreation) => Promise<void>;
 }
 
 export const ClientForm: FC<ClientFormProps> = ({
-    templates = [],
     selectedTemplate,
     onTemplateChange,
     onSubmit,
@@ -59,7 +56,6 @@ export const ClientForm: FC<ClientFormProps> = ({
 }) => {
     const { session, client: authClient } = useAuth();
     const [activeTab, setActiveTab] = useState<ClientFormTab>("base");
-    const queryClient = useQueryClient();
 
     const form = useForm<ClientCreation>({
         resolver: zodResolver(clientCreationSchema),
@@ -125,6 +121,8 @@ export const ClientForm: FC<ClientFormProps> = ({
                 "Add any additional attributes for your client to help categorize and manage them better.",
         },
     ];
+
+    // TODO: Allow for Template selection here
 
     return (
         <div className="min-h-screen bg-background">

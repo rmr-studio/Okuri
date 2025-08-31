@@ -3,6 +3,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 import FormCountrySelector from "@/components/ui/forms/country/country-selector";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Select,
     SelectContent,
@@ -94,21 +95,23 @@ export const RenderClientField: FC<{
                                 onCheckedChange={(checked) => formField.onChange(Boolean(checked))}
                             />
                         ) : field.type === "SELECT" ? (
-                            <Select
-                                onValueChange={formField.onChange}
-                                value={formField.value ?? ""}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder={`Select ${field.name}`} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {field.options.map((option) => (
-                                        <SelectItem key={option} value={option}>
-                                            {option}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <ScrollArea>
+                                <Select
+                                    onValueChange={formField.onChange}
+                                    value={formField.value ?? ""}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={`Select ${field.name}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(field.options || []).map((option) => (
+                                            <SelectItem key={option} value={option}>
+                                                {option}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </ScrollArea>
                         ) : field.type === "MULTISELECT" ? (
                             <div className="space-y-2">
                                 {(field.options || []).map((option) => {

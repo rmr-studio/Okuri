@@ -13,7 +13,7 @@ export function useOrganisationClients() {
     const { data: organisation } = useOrganisation();
 
     const query = useQuery({
-        queryKey: ["organisationClients", organisation?.id],
+        queryKey: ["organisation", organisation?.id, "clients"],
         queryFn: () => {
             if (!session?.user.id) {
                 throw fromError({

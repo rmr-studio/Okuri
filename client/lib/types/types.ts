@@ -602,7 +602,7 @@ export interface components {
             archived: boolean;
             contactDetails?: components["schemas"]["ContactDetails"];
             template?: components["schemas"]["TemplateClientTemplateFieldStructure"];
-            attributes: {
+            attributes?: {
                 [key: string]: Record<string, never>;
             };
         };
@@ -626,7 +626,7 @@ export interface components {
             email?: string;
             phone?: string;
             address?: components["schemas"]["Address"];
-            additionalContacts: {
+            additionalContacts?: {
                 [key: string]: string;
             };
         };
@@ -824,6 +824,7 @@ export interface components {
             attributes: {
                 [key: string]: Record<string, never>;
             };
+            template?: components["schemas"]["TemplateClientTemplateFieldStructure"];
         };
     };
     responses: never;

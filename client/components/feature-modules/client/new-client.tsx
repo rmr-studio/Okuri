@@ -1,10 +1,16 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-context";
+import { createClient } from "@/controller/client.controller";
 import { useOrganisation } from "@/hooks/useOrganisation";
-import { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/client.interface";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+    ClientCreationRequest,
+    TemplateClientTemplateFieldStructure,
+} from "@/lib/interfaces/client.interface";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { ClientCreation, ClientForm } from "./form/client-form";
 // Mock template data for demonstration
 export const mockClientTemplate: TemplateClientTemplateFieldStructure = {
@@ -68,21 +74,79 @@ export const mockClientTemplate: TemplateClientTemplateFieldStructure = {
 
 const NewClient = () => {
     const { session } = useAuth();
-    const { data: organisation, isLoading, isLoadingAuth, error } = useOrganisation();
-
+    const { data: organisation, isPending, isLoadingAuth, error } = useOrganisation();
+    const toastRef = useRef<string | number | undefined>(undefined);
     const router = useRouter();
     const queryClient = useQueryClient();
 
     // TODO: Ability to fetch available templates and select one to shape form schema
+    const loading = isPending || isLoadingAuth;
 
+    useEffect(() => {
+        if (!loading && !organisation) {
+            // If there's an error, redirect with error message
+            if (error) {
+                router.push(`/dashboard/organisation?error=${error}`);
+                return;
+            }
+
+            router.push("/dashboard/organisation");
+        }
+    }, [loading, error, organisation, router]);
+
+    // TODO: Handle Cancelation and breadcumbs
     const handleCancel = () => {
         if (organisation?.id) router.push(`/dashboard/organisation/${organisation.id}/clients`);
-        else router.push(`/dashboard/clients`);
+        else router.push(`/dashboard/organisation`);
     };
 
-    const onSubmit = async (data: ClientCreation) => {};
+    const onSubmit = async (data: ClientCreation) => {
+        if (!organisation?.id) return;
 
-    return <ClientForm templates={[mockClientTemplate]} selectedTemplate={mockClientTemplate} onSubmit={onSubmit} />;
+        // TODO: Add link to template if one was selected or if one was extended/created and saved
+
+        const client: ClientCreationRequest = {
+            name: data.name,
+            organisationId: organisation.id,
+            contact: {
+                email: data.contactDetails?.email,
+                phone: data.contactDetails?.phone,
+                address: data.contactDetails?.address,
+            },
+
+            attributes: data.attributes || {},
+        };
+
+        clientCreationMutation.mutate(client);
+    };
+    const clientCreationMutation = useMutation({
+        mutationFn: (client: ClientCreationRequest) => createClient(session, client),
+        onMutate: () => {
+            toastRef.current = toast.loading("Creating New Client...");
+        },
+        onSuccess: (_) => {
+            toast.dismiss(toastRef.current);
+            toast.success("Client created successfully");
+
+            if (!organisation) {
+                router.push("/dashboard/organisation");
+                return;
+            }
+
+            // Invalidate Organisation client list
+            queryClient.invalidateQueries({
+                queryKey: ["organisation", organisation.id, "clients"],
+            });
+
+            router.push(`/dashboard/organisation/${organisation.id}/clients`);
+        },
+        onError: (error) => {
+            toast.dismiss(toastRef.current);
+            toast.error(`Failed to create organisation: ${error.message}`);
+        },
+    });
+
+    return <ClientForm selectedTemplate={mockClientTemplate} onSubmit={onSubmit} />;
 };
 
 export default NewClient;

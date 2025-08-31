@@ -1,16 +1,20 @@
 import { useAuth } from "@/components/provider/auth-context";
+import { updateClient } from "@/controller/client.controller";
 import { useClient } from "@/hooks/useClient";
+import { UpdateClientRequest } from "@/lib/interfaces/client.interface";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { FC, useEffect } from "react";
+import { FC, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { ClientCreation, ClientForm } from "./form/client-form";
 import { mockClientTemplate } from "./new-client";
-
-// TODO: TEMPLATE INTEGRATION
 
 const EditClient: FC = () => {
     const { session } = useAuth();
     const { data: client, isPending, isLoadingAuth, error } = useClient();
     const router = useRouter();
+    const toastRef = useRef<string | number | undefined>(undefined);
+    const queryClient = useQueryClient();
 
     /**
      * Handle Form Submission (Form should validate data)
@@ -19,6 +23,39 @@ const EditClient: FC = () => {
      *  3. redirect to client detail page
      */
     const onEdit = async (client: ClientCreation) => {};
+
+    const editMutation = useMutation({
+        mutationFn: (client: UpdateClientRequest) => updateClient(session, client),
+        onMutate: () => {
+            toastRef.current = toast.loading("Updating Client Details...");
+        },
+        onSuccess: (_) => {
+            toast.dismiss(toastRef.current);
+            toast.success("Client updated successfully");
+
+            if (!client) {
+                router.push("/dashboard/clients");
+                return;
+            }
+
+            // Invalidate Client detail query
+            queryClient.invalidateQueries({
+                queryKey: ["client", client.id],
+            });
+
+            // Invalidate Organisation client list
+            queryClient.invalidateQueries({
+                queryKey: ["organisation", client.organisationId, "clients"],
+            });
+
+            // Navigate back to Client Overview page
+            router.push(`/dashboard/organisation/${client.organisationId}/clients/${client.id}`);
+        },
+        onError: (error) => {
+            toast.dismiss(toastRef.current);
+            toast.error(`Failed to create organisation: ${error.message}`);
+        },
+    });
 
     const loading = isPending || isLoadingAuth;
 
@@ -44,14 +81,7 @@ const EditClient: FC = () => {
     if (!client) return;
 
     if (!session || !client) return null;
-    return (
-        <ClientForm
-            templates={[mockClientTemplate]}
-            selectedTemplate={mockClientTemplate}
-            client={client}
-            onSubmit={onEdit}
-        />
-    );
+    return <ClientForm selectedTemplate={mockClientTemplate} client={client} onSubmit={onEdit} />;
 };
 
 export default EditClient;
