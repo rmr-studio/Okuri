@@ -1,4 +1,4 @@
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { getOrganisationWithMembers } from "@/controller/organisation.controller";
 import { OrganisationMember } from "@/lib/interfaces/organisation.interface";
 import { useQuery } from "@tanstack/react-query";
@@ -50,8 +50,7 @@ export const useOrganisationRole = (): UseOrganisationRoleReturn => {
     // Use TanStack Query to fetch organization data with members
     const query = useQuery({
         queryKey: ["organization-with-members", orgId],
-        queryFn: () =>
-            getOrganisationWithMembers(session, { organisationId: orgId }),
+        queryFn: () => getOrganisationWithMembers(session, { organisationId: orgId }),
         enabled: !!orgId && !!session?.user.id,
         retry: 1,
         staleTime: 5 * 60 * 1000, // Cache for 5 minutes

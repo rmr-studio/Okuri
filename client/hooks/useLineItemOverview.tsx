@@ -1,4 +1,4 @@
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { getLineItemById } from "@/controller/lineitem.controller";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
