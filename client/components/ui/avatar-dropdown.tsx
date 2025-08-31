@@ -24,7 +24,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FC } from "react";
 import { FaGithub } from "react-icons/fa";
-import { useAuth } from "../provider/AuthContext";
+import { useAuth } from "../provider/auth-context";
 
 interface Props {
     user: User;

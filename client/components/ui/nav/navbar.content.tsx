@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { FCWC, Propless } from "@/lib/interfaces/interface";
 import { User } from "@/lib/interfaces/user.interface";
 import { UseQueryResult } from "@tanstack/react-query";
@@ -21,8 +21,7 @@ export const NavbarUserProfile: FC<UseQueryResult<User>> = ({
 }) => {
     const { loading: loadingAuth } = useAuth();
 
-    if (loadingAuth || loadingProfile)
-        return <Skeleton className="size-8 rounded-md" />;
+    if (loadingAuth || loadingProfile) return <Skeleton className="size-8 rounded-md" />;
     if (!user) return <UnauthenticatedNavbarProfile />;
     return <AuthenticatedNavbarProfile user={user} />;
 };
