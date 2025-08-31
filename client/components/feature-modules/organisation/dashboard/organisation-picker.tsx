@@ -7,9 +7,9 @@ import { MembershipDetails } from "@/lib/interfaces/organisation.interface";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { OrganisationTile } from "../OrganisationTile";
+import { OrganisationTile } from "../organisation-card";
 
-const OrganisationPicker = () => {
+export const OrganisationPicker = () => {
     const { data: user, isPending } = useProfile();
 
     const [organisationSearch, setOrganisationSearch] = useState<string>("");
@@ -81,5 +81,3 @@ const OrganisationPicker = () => {
         </>
     );
 };
-
-export default OrganisationPicker;

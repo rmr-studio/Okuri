@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { updateOrganisation } from "@/controller/organisation.controller";
 import {
-    OrganisationOverview,
+    Organisation,
     TileLayoutConfig,
     TileSection,
 } from "@/lib/interfaces/organisation.interface";
@@ -37,7 +37,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 interface TileLayoutEditorProps {
-    organisation: OrganisationOverview;
+    organisation: Organisation;
     isOpen: boolean;
     onClose: () => void;
 }

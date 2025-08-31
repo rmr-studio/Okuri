@@ -1,4 +1,4 @@
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { updateLineItem } from "@/controller/lineitem.controller";
 import { useLineItemOverview } from "@/hooks/useLineItemOverview";

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { FC } from "react";
 import { Country } from "react-phone-number-input";
 import { toast } from "sonner";
-import { OrganisationStepFormProps } from "../OrganisationForm";
+import { OrganisationStepFormProps } from "./organisation-form";
 
 const OrganisationBillingForm: FC<OrganisationStepFormProps> = ({
     form,

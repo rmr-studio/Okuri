@@ -1,4 +1,4 @@
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";

@@ -8,7 +8,7 @@ import { ArrowRightIcon, Edit3Icon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FC, useState } from "react";
-import { TileLayoutEditor } from "./TileLayoutEditor";
+import { TileLayoutEditor } from "./organisation-tile-editor";
 
 interface Props {
     membership: MembershipDetails;

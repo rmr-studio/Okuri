@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { createLineItem } from "@/controller/lineitem.controller";
 import { useOrganisation } from "@/hooks/useOrganisation";
 import { LineItemCreationRequest } from "@/lib/interfaces/item.interface";

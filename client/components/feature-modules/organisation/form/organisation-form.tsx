@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,9 +23,9 @@ import { useRef, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import OrganisationDetailsForm from "./form/1.details";
-import OrganisationBillingForm from "./form/2.billing";
-import OrganisationAttributesForm from "./form/3.attributes";
+import OrganisationDetailsForm from "./1.organisation-details";
+import OrganisationBillingForm from "./2.organisation-billing";
+import OrganisationAttributesForm from "./3.organisation-attributes";
 
 const OrganisationCreationFormSchema = z.object({
     displayName: z

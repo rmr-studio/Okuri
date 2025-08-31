@@ -15,7 +15,7 @@ import { SquareArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { FC } from "react";
 import { toast } from "sonner";
-import { OrganisationStepFormProps } from "../OrganisationForm";
+import { OrganisationStepFormProps } from "./organisation-form";
 
 const OrganisationDetailsForm: FC<OrganisationStepFormProps> = ({
     setUploadedAvatar,

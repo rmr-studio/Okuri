@@ -17,7 +17,8 @@ export default function Hero() {
 
                     {/* Main Heading */}
                     <h1 className="text-5xl md:text-6xl md:leading-16 tracking-tight font-light text-white mb-4">
-                        <span className="font-medium italic instrument">Innovative</span> Client
+                        <span className="font-medium italic instrument">Next Generation</span>{" "}
+                        Client
                         <br />
                         <span className="font-light tracking-tight text-white">
                             and Invoice Management
