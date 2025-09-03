@@ -25,7 +25,9 @@ export default function ClientsList() {
                 client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 client.contactDetails?.email?.toLowerCase().includes(searchQuery.toLowerCase())
         );
-    }, [searchQuery]);
+
+        setFilteredClients(filtered);
+    }, [clients, searchQuery]);
 
     /**
      * Navigates to the client edit form
@@ -93,12 +95,6 @@ export default function ClientsList() {
                                     ? "No clients found matching your search."
                                     : "No clients yet."}
                             </p>
-                            {!searchQuery && (
-                                <Button variant="outline" className="mt-4 gap-2 bg-transparent">
-                                    <Plus className="h-4 w-4" />
-                                    Add your first client
-                                </Button>
-                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

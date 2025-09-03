@@ -1,6 +1,6 @@
 import { countryCodeToName } from "@/lib/util/country/country.util";
-import { FC, useEffect, useState } from "react";
-import { Control, UseFormSetValue } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Control, FieldValues, Path } from "react-hook-form";
 import { Country, getCountries } from "react-phone-number-input";
 import { z } from "zod";
 import { CountryEntry, CountrySelect } from "../../country-select";
@@ -20,119 +20,133 @@ export const AddressFormSchema = z.object({
         .nonempty("A postal code is required"),
 });
 
-export type AddressForm = z.infer<typeof AddressFormSchema>;
+export type AddressFormData = z.infer<typeof AddressFormSchema>;
 
-interface Props {
-    control: Control<AddressForm>;
-    setValue: UseFormSetValue<AddressForm>;
+// Helper type to ensure the field path points to an address object
+type AddressFieldPath<T extends FieldValues> = {
+    [K in Path<T>]: T[K] extends AddressFormData ? K : never;
+}[Path<T>];
+
+interface Props<TFieldValues extends FieldValues> {
+    control: Control<TFieldValues>;
+    basePath: AddressFieldPath<TFieldValues> | string; // fallback to string for flexibility
+    setValue: (name: Path<TFieldValues>, value: any) => void;
+    defaultCountry?: Country;
 }
 
-export const AddressForm: FC<Props> = ({ control, setValue }) => {
-    const [selectedCountry, setSelectedCountry] = useState<Country>("AU");
+export const AddressForm = <TFieldValues extends FieldValues>({
+    control,
+    basePath,
+    setValue,
+    defaultCountry = "AU",
+}: Props<TFieldValues>) => {
+    const [selectedCountry, setSelectedCountry] = useState<Country>(defaultCountry);
     const [countries, setCountries] = useState<CountryEntry[]>([]);
+
+    const getFieldPath = (field: keyof AddressFormData): Path<TFieldValues> => {
+        return `${basePath}.${field}` as Path<TFieldValues>;
+    };
 
     const handleCountrySelection = (country: Country) => {
         setSelectedCountry(country);
-        setValue("country", country);
+        setValue(getFieldPath("country"), country);
     };
 
     useEffect(() => {
-        const countries: CountryEntry[] = getCountries().map((country) => ({
+        const countriesList: CountryEntry[] = getCountries().map((country) => ({
             label: countryCodeToName[country as Country],
             value: country,
         }));
 
-        setValue("country", selectedCountry);
-        setCountries(countries);
-    }, []);
+        setCountries(countriesList);
+        setValue(getFieldPath("country"), selectedCountry);
+    }, [setValue, basePath, selectedCountry]);
 
     return (
-        <section>
-            <section className="my-4 flex flex-col">
-                <TextSeparator>
-                    <span className="text-[1rem] leading-1 font-semibold">Your Address</span>
-                </TextSeparator>
-                <div className="flex flex-col md:flex-row md:space-x-4"></div>
+        <section className="space-y-6">
+            <TextSeparator>
+                <span className="text-[1rem] leading-1 font-semibold">Address</span>
+            </TextSeparator>
+
+            <FormField
+                control={control}
+                name={getFieldPath("street")}
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="font-semibold">Address *</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Street address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FormField
                     control={control}
-                    name="street"
+                    name={getFieldPath("city")}
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Address</FormLabel>
+                            <FormLabel className="font-semibold">City *</FormLabel>
                             <FormControl>
-                                <Input placeholder="Street" {...field} />
+                                <Input placeholder="City" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
-                <div className="flex flex-col lg:flex-row md:space-x-4">
-                    <FormField
-                        control={control}
-                        name="city"
-                        render={({ field }) => (
-                            <FormItem className="mt-6 w-full">
-                                <FormLabel className="font-semibold">City *</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="City" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={control}
-                        name="state"
-                        render={({ field }) => (
-                            <FormItem className="mt-6 w-full">
-                                <FormLabel className="font-semibold">State*</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="State" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                <div className="flex flex-col lg:flex-row md:space-x-4">
-                    <FormField
-                        control={control}
-                        name="country"
-                        render={({ field }) => (
-                            <FormItem className="mt-6 w-full">
-                                <FormLabel className="font-semibold">Country</FormLabel>
-                                <FormControl>
-                                    <div className="flex">
-                                        <CountrySelect
-                                            {...field}
-                                            value={selectedCountry}
-                                            onChange={handleCountrySelection}
-                                            includePhoneCode={false}
-                                            showCountryName={true}
-                                            options={countries}
-                                            className="w-full rounded-e-md border"
-                                        />
-                                    </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={control}
-                        name="postalCode"
-                        render={({ field }) => (
-                            <FormItem className="mt-6 w-full">
-                                <FormLabel className="font-semibold">Postal Code</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Postal Code" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-            </section>
+                <FormField
+                    control={control}
+                    name={getFieldPath("state")}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="font-semibold">State *</FormLabel>
+                            <FormControl>
+                                <Input placeholder="State/Province" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <FormField
+                    control={control}
+                    name={getFieldPath("country")}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="font-semibold">Country *</FormLabel>
+                            <FormControl>
+                                <CountrySelect
+                                    {...field}
+                                    value={selectedCountry}
+                                    onChange={handleCountrySelection}
+                                    includePhoneCode={false}
+                                    showCountryName={true}
+                                    options={countries}
+                                    className="w-full rounded-md border"
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={control}
+                    name={getFieldPath("postalCode")}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="font-semibold">Postal Code *</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Postal/ZIP code" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
         </section>
     );
 };

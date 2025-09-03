@@ -1,7 +1,11 @@
+"use client";
+
 import { useAuth } from "@/components/provider/auth-context";
 import { updateClient } from "@/controller/client.controller";
 import { useClient } from "@/hooks/useClient";
+import { useOrganisation } from "@/hooks/useOrganisation";
 import { UpdateClientRequest } from "@/lib/interfaces/client.interface";
+import { isResponseError } from "@/lib/util/error/error.util";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { FC, useEffect, useRef } from "react";
@@ -11,10 +15,57 @@ import { mockClientTemplate } from "./new-client";
 
 const EditClient: FC = () => {
     const { session } = useAuth();
-    const { data: client, isPending, isLoadingAuth, error } = useClient();
+    const {
+        data: organisation,
+        isPending: isFetchingOrg,
+        error: orgError,
+    } = useOrganisation();
+    const {
+        data: client,
+        isPending: isFetchingClient,
+        isLoadingAuth,
+        error: clientError,
+    } = useClient();
     const router = useRouter();
     const toastRef = useRef<string | number | undefined>(undefined);
     const queryClient = useQueryClient();
+
+    const loading = isFetchingClient || isFetchingOrg || isLoadingAuth;
+
+    //TODO: FIGURE OUT A WAY TO SCALE THIS INTO A REUSABLE HOOK FOR ALL COMPONENTS
+
+    /**
+     * Effect to handle redirection if client is not found or error occurs
+     */
+    useEffect(() => {
+        if (!loading && !client) {
+            if (
+                (!clientError || isResponseError(!clientError)) &&
+                (!orgError || isResponseError(orgError))
+            ) {
+                // If no specific error, redirect to general clients page
+                router.push("/dashboard/organisations");
+                return;
+            }
+
+            if (orgError && isResponseError(orgError)) {
+                router.push(`/dashboard/organisations?error=${orgError.error}`);
+                return;
+            }
+
+            if (clientError && isResponseError(clientError)) {
+                if (!organisation) {
+                    router.push("/dashboard/organisations");
+                    return;
+                }
+
+                router.push(
+                    `/dashboard/organisation/${organisation.id}/clients?error=${clientError.error}`
+                );
+                return;
+            }
+        }
+    }, [loading, clientError, orgError, client, router]);
 
     /**
      * Handle Form Submission (Form should validate data)
@@ -22,10 +73,20 @@ const EditClient: FC = () => {
      *  2. clear client cache
      *  3. redirect to client detail page
      */
-    const onEdit = async (client: ClientCreation) => {};
+    const onEdit = async (updatedClient: ClientCreation) => {
+        if (!session || !client) return;
+
+        const updateClientRequest: UpdateClientRequest = {
+            ...client,
+            ...updatedClient,
+        };
+
+        editMutation.mutate(updateClientRequest);
+    };
 
     const editMutation = useMutation({
-        mutationFn: (client: UpdateClientRequest) => updateClient(session, client),
+        mutationFn: (client: UpdateClientRequest) =>
+            updateClient(session, client),
         onMutate: () => {
             toastRef.current = toast.loading("Updating Client Details...");
         },
@@ -49,30 +110,15 @@ const EditClient: FC = () => {
             });
 
             // Navigate back to Client Overview page
-            router.push(`/dashboard/organisation/${client.organisationId}/clients/${client.id}`);
+            router.push(
+                `/dashboard/organisation/${client.organisationId}/clients/${client.id}`
+            );
         },
         onError: (error) => {
             toast.dismiss(toastRef.current);
             toast.error(`Failed to create organisation: ${error.message}`);
         },
     });
-
-    const loading = isPending || isLoadingAuth;
-
-    /**
-     * Effect to handle redirection if client is not found or error occurs
-     */
-    useEffect(() => {
-        if (!loading && !client) {
-            // If there's an error, redirect with error message
-            if (error) {
-                router.push(`/dashboard/clients?error=${error}`);
-                return;
-            }
-
-            router.push("/dashboard/clients");
-        }
-    }, [loading, error, client, router]);
 
     if (loading) {
         return <div>Loading...</div>;
@@ -81,7 +127,26 @@ const EditClient: FC = () => {
     if (!client) return;
 
     if (!session || !client) return null;
-    return <ClientForm selectedTemplate={mockClientTemplate} client={client} onSubmit={onEdit} />;
+    return (
+        <ClientForm
+            className="m-8"
+            renderHeader={() => (
+                <>
+                    <h1 className="text-xl font-bold text-primary mb-2">
+                        Manage {client.name}
+                    </h1>
+                    <p className="text-muted-foreground text-sm">
+                        Set up your client profile in just a few steps. This
+                        will help your team identify and manage client
+                        relationships effectively.
+                    </p>
+                </>
+            )}
+            selectedTemplate={mockClientTemplate}
+            client={client}
+            onSubmit={onEdit}
+        />
+    );
 };
 
 export default EditClient;

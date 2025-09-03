@@ -21,10 +21,7 @@ const ShaderPageContainer: FCWC<Props> = ({ children, className }) => {
     return (
         <div
             ref={containerRef}
-            className={cn(
-                `min-h-screen w-full bg-stone-100 dark:bg-stone-950 relative overflow-hidden`,
-                className
-            )}
+            className={cn(`min-h-screen w-full bg-neutral-900 relative overflow-hidden`, className)}
         >
             {/* SVG Filters */}
             <svg className="absolute inset-0 w-0 h-0">

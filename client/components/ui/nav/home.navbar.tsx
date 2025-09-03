@@ -1,14 +1,9 @@
 "use client";
 
-import { useProfile } from "@/hooks/useProfile";
 import Link from "next/link";
-import AuthenticateButton from "../AuthenticateButton";
-import { UserProfileDropdown } from "../avatar-dropdown";
+import { HomeNavbarAuthentication } from "./home.auth";
 
 export const HomeNavbar = () => {
-    const { data: profile, isLoading, isLoadingAuth } = useProfile();
-    const isFetching = isLoading || isLoadingAuth;
-
     return (
         <header className="z-20 flex items-center justify-between p-6 relative">
             {/* Logo */}
@@ -26,7 +21,7 @@ export const HomeNavbar = () => {
             </div>
 
             {/* Navigation */}
-            <nav className="flex items-center space-x-2">
+            <nav className="flex flex-grow justify-center items-center space-x-2">
                 <Link
                     href="#"
                     className="text-white/80 hover:text-white text-xs font-light px-3 py-2 rounded-full hover:bg-white/10 transition-all duration-200"
@@ -46,14 +41,9 @@ export const HomeNavbar = () => {
                     Docs
                 </Link>
             </nav>
-
-            {isFetching ? (
-                <></>
-            ) : !profile ? (
-                <AuthenticateButton />
-            ) : (
-                <UserProfileDropdown user={profile} />
-            )}
+            <section className="flex w-32 justify-end">
+                <HomeNavbarAuthentication />
+            </section>
         </header>
     );
 };

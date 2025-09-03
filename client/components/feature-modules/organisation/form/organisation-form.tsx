@@ -1,27 +1,34 @@
 "use client";
 
-import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Card,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+} from "@/components/ui/form";
 import { AddressFormSchema } from "@/components/ui/forms/bespoke/AddressFormSection";
 import { CustomAttributesFormSchema } from "@/components/ui/forms/bespoke/CustomAttributesFormSection";
 import { PaymentDetailsFormSchema } from "@/components/ui/forms/bespoke/PaymentDetailsFormSection";
 import { FormStepper } from "@/components/ui/forms/form-stepper";
 import { Separator } from "@/components/ui/separator";
-import { createOrganisation } from "@/controller/organisation.controller";
 import { useProfile } from "@/hooks/useProfile";
-import { OrganisationCreationRequest } from "@/lib/interfaces/organisation.interface";
+import { Organisation } from "@/lib/interfaces/organisation.interface";
 import { Step } from "@/lib/util/form/form.util";
 import { isValidCurrency } from "@/lib/util/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CornerUpLeftIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { FC, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
-import { toast } from "sonner";
 import { z } from "zod";
 import OrganisationDetailsForm from "./1.organisation-details";
 import OrganisationBillingForm from "./2.organisation-billing";
@@ -42,8 +49,16 @@ const OrganisationCreationFormSchema = z.object({
     customAttributes: CustomAttributesFormSchema,
 });
 
-export type OrganisationCreation = z.infer<typeof OrganisationCreationFormSchema>;
+export type OrganisationCreation = z.infer<
+    typeof OrganisationCreationFormSchema
+>;
 export type OrganisationFormTab = "base" | "billing" | "custom";
+
+interface Props {
+    organisation?: Organisation;
+    onSubmit: (values: OrganisationCreation) => Promise<void>;
+    setUploadedAvatar: (file: Blob | null) => void;
+}
 
 export interface OrganisationStepFormProps {
     form: UseFormReturn<OrganisationCreation>;
@@ -53,94 +68,41 @@ export interface OrganisationStepFormProps {
     handleFormSubmit: (values: OrganisationCreation) => Promise<void>;
 }
 
-export const OrganisationForm = () => {
-    const { session, client } = useAuth();
+export const OrganisationForm: FC<Props> = ({
+    organisation,
+    onSubmit,
+    setUploadedAvatar,
+}) => {
     const { data: user } = useProfile();
-    const toastRef = useRef<string | number | undefined>(undefined);
     const router = useRouter();
-
-    const queryClient = useQueryClient();
-
-    const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
     const [activeTab, setActiveTab] = useState<OrganisationFormTab>("base");
 
     const organisationCreationForm: UseFormReturn<OrganisationCreation> =
         useForm<OrganisationCreation>({
             resolver: zodResolver(OrganisationCreationFormSchema),
             defaultValues: {
-                displayName: "",
-                avatarUrl: undefined,
+                displayName: organisation?.name || "",
+                avatarUrl: organisation?.avatarUrl || undefined,
                 isDefault: user?.memberships.length === 0,
-                plan: "FREE",
-                defaultCurrency: "AUD",
-                businessNumber: "",
-                taxId: "",
+                plan: organisation?.plan || "FREE",
+                defaultCurrency: organisation?.defaultCurrency?.currencyCode || "AUD",
+                businessNumber: organisation?.businessNumber || "",
+                taxId: organisation?.taxId || "",
                 address: {
-                    street: "",
-                    city: "",
-                    state: "",
-                    postalCode: "",
-                    country: "AU",
+                    street: organisation?.address?.street || "",
+                    city: organisation?.address?.city || "",
+                    state: organisation?.address?.state || "",
+                    postalCode: organisation?.address?.postalCode || "",
+                    country: organisation?.address?.country || "AU",
                 },
                 payment: {
-                    bsb: "",
-                    accountNumber: "",
-                    accountName: "",
+                    bsb: organisation?.organisationPaymentDetails?.bsb || "",
+                    accountNumber: organisation?.organisationPaymentDetails?.accountNumber || "",
+                    accountName: organisation?.organisationPaymentDetails?.accountName || "",
                 },
-                customAttributes: {},
+                customAttributes: organisation?.customAttributes || {},
             },
         });
-
-    const organisationMutation = useMutation({
-        mutationFn: (organisation: OrganisationCreationRequest) =>
-            createOrganisation(session, organisation, uploadedAvatar),
-        onMutate: () => {
-            toastRef.current = toast.loading("Creating Organisation...");
-        },
-        onSuccess: (_) => {
-            toast.dismiss(toastRef.current);
-            toast.success("Organisation created successfully");
-
-            if (!user) {
-                router.push("/dashboard/organisation");
-                return;
-            }
-
-            // Update user profile with new organisation
-            queryClient.invalidateQueries({
-                queryKey: ["userProfile", user.id],
-            });
-
-            router.push("/dashboard/organisation");
-        },
-        onError: (error) => {
-            toast.dismiss(toastRef.current);
-            toast.error(`Failed to create organisation: ${error.message}`);
-        },
-    });
-
-    const handleSubmission = async (values: OrganisationCreation) => {
-        if (!session || !client) {
-            toast.error("No active session found");
-            return;
-        }
-
-        const organisation: OrganisationCreationRequest = {
-            name: values.displayName,
-            avatarUrl: values.avatarUrl,
-            plan: values.plan,
-            defaultCurrency: values.defaultCurrency,
-            isDefault: values.isDefault,
-            businessNumber: values.businessNumber,
-            taxId: values.taxId,
-            address: values.address,
-            payment: values.payment,
-            customAttributes: values.customAttributes,
-        };
-
-        // Create the organisation
-        organisationMutation.mutate(organisation);
-    };
 
     const handleNextPage = (tab: OrganisationFormTab) => {
         setActiveTab(tab);
@@ -160,7 +122,7 @@ export const OrganisationForm = () => {
             setUploadedAvatar: setUploadedAvatar,
             handlePreviousPage: handlePreviousPage,
             handleNextPage: handleNextPage,
-            handleFormSubmit: handleSubmission,
+            handleFormSubmit: onSubmit,
         };
 
         const tabMap: Record<OrganisationFormTab, React.ReactNode> = {
@@ -197,18 +159,26 @@ export const OrganisationForm = () => {
 
     return (
         <Card className="w-auto flex-grow lg:max-w-2xl h-fit m-2 md:m-6 lg:m-12 relative">
-            <Button className="absolute left-4 top-4" variant={"secondary"} onClick={handleCancel}>
+            <Button
+                className="absolute left-4 top-4"
+                variant={"secondary"}
+                onClick={handleCancel}
+            >
                 <CornerUpLeftIcon />
                 <span className="hidden sm:block">Cancel</span>
             </Button>
             <Form {...organisationCreationForm}>
-                <form onSubmit={organisationCreationForm.handleSubmit(handleSubmission)}>
+                <form
+                    onSubmit={organisationCreationForm.handleSubmit(onSubmit)}
+                >
                     <CardHeader>
-                        <CardTitle className="text-center">Create a new organisation</CardTitle>
+                        <CardTitle className="text-center">
+                            Create a new organisation
+                        </CardTitle>
                         <CardDescription>
                             <br />
-                            Your organisation display name will be publicly visible to all users
-                            when creating event routers.
+                            Your organisation display name will be publicly
+                            visible to all users when creating event routers.
                             <br />
                             Your display name will need to be unique.
                         </CardDescription>
@@ -221,7 +191,9 @@ export const OrganisationForm = () => {
                                 <FormItem className="flex flex-row items-center justify-end gap-2 mt-4 mb-2">
                                     <FormControl>
                                         <Checkbox
-                                            disabled={user?.memberships.length === 0}
+                                            disabled={
+                                                user?.memberships.length === 0
+                                            }
                                             checked={field.value}
                                             onCheckedChange={(checked) => {
                                                 field.onChange(checked);
@@ -236,7 +208,11 @@ export const OrganisationForm = () => {
                         />
                     </section>
                     <section className="mt-2">
-                        <FormStepper steps={steps} currentStep={activeTab} descriptionType="icon" />
+                        <FormStepper
+                            steps={steps}
+                            currentStep={activeTab}
+                            descriptionType="icon"
+                        />
                         <Separator className="mt-6 mb-4" />
                     </section>
                     {renderStepComponent(activeTab)}

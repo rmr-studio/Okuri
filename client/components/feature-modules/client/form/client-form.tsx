@@ -1,21 +1,24 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-context";
-import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { AddressFormSchema } from "@/components/ui/forms/bespoke/AddressFormSection";
 import { FormStepper } from "@/components/ui/forms/form-stepper";
 import { Client } from "@/lib/interfaces/client.interface";
+import { ClassNameProps } from "@/lib/interfaces/interface";
 import type { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/template.interface";
 import { Step } from "@/lib/util/form/form.util";
+import { cn } from "@/lib/util/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from "@radix-ui/react-dropdown-menu";
 import { FC, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
+import { isMobilePhone } from "validator";
 import { z } from "zod";
 import { ClientPreview } from "../client-preview";
 import { ClientDetailsFormStep } from "./1.client-details";
+import { ClientAddressFormStep } from "./2.client-address";
 import { ClientAttributesFormStep } from "./3.client-attributes";
 
 export interface ClientStepFormProps {
@@ -31,7 +34,15 @@ const clientCreationSchema = z.object({
     contactDetails: z
         .object({
             email: z.string().email().optional().or(z.literal("")),
-            phone: z.string().optional(),
+            phone: z
+                .string()
+                .min(10, "Please enter a valid phone number for the specified country")
+                .refine(
+                    isMobilePhone,
+                    "Please enter a valid phone number for the specified country"
+                )
+                .optional()
+                .or(z.literal("")),
             address: AddressFormSchema.optional(),
         })
         .optional(),
@@ -39,19 +50,22 @@ const clientCreationSchema = z.object({
 });
 
 export type ClientCreation = z.infer<typeof clientCreationSchema>;
-export type ClientFormTab = "base" | "attributes";
+export type ClientFormTab = "base" | "address" | "attributes";
 
-interface ClientFormProps {
+interface ClientFormProps extends ClassNameProps {
     client?: Client;
     selectedTemplate?: TemplateClientTemplateFieldStructure;
     onTemplateChange?: (template: TemplateClientTemplateFieldStructure) => void;
     onSubmit: (data: ClientCreation) => Promise<void>;
+    renderHeader: () => React.ReactNode;
 }
 
 export const ClientForm: FC<ClientFormProps> = ({
     selectedTemplate,
     onTemplateChange,
+    className,
     onSubmit,
+    renderHeader,
     client,
 }) => {
     const { session, client: authClient } = useAuth();
@@ -60,12 +74,19 @@ export const ClientForm: FC<ClientFormProps> = ({
     const form = useForm<ClientCreation>({
         resolver: zodResolver(clientCreationSchema),
         defaultValues: {
-            name: "",
+            name: client?.name || "",
             contactDetails: {
-                email: "",
-                phone: "",
+                email: client?.contactDetails?.email || "",
+                phone: client?.contactDetails?.phone || "",
+                address: {
+                    street: client?.contactDetails?.address?.street || "",
+                    city: client?.contactDetails?.address?.city || "",
+                    state: client?.contactDetails?.address?.state || "",
+                    postalCode: client?.contactDetails?.address?.postalCode || "",
+                    country: client?.contactDetails?.address?.country || "AU",
+                },
             },
-            attributes: {},
+            attributes: client?.attributes || {},
         },
         mode: "onBlur",
     });
@@ -89,6 +110,7 @@ export const ClientForm: FC<ClientFormProps> = ({
 
         const tabMap: Record<ClientFormTab, React.ReactNode> = {
             base: <ClientDetailsFormStep {...props} />,
+            address: <ClientAddressFormStep {...props} />,
             attributes: <ClientAttributesFormStep {...props} />,
         };
 
@@ -114,8 +136,15 @@ export const ClientForm: FC<ClientFormProps> = ({
         },
 
         {
-            identifier: "attributes",
+            identifier: "address",
             step: 2,
+            title: "Billing Address",
+            description:
+                "Provide your client's address for billing, invoice generation and official documents.",
+        },
+        {
+            identifier: "attributes",
+            step: 3,
             title: "Custom Attributes",
             description:
                 "Add any additional attributes for your client to help categorize and manage them better.",
@@ -125,52 +154,31 @@ export const ClientForm: FC<ClientFormProps> = ({
     // TODO: Allow for Template selection here
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8">
-                <div className="max-w-7xl mx-auto">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-foreground mb-2">
-                            Create New Client
-                        </h1>
-                        <p className="text-muted-foreground">
-                            Set up your client profile in just a few steps. This will help your team
-                            identify and manage client relationships effectively.
-                        </p>
-                    </div>
+        <div className="flex flex-col md:flex-row p-2 min-h-[100dvh]">
+            {/* Form Section */}
+            <div className={cn("w-full md:w-2/5", className)}>
+                <header>{renderHeader()}</header>
+                {/* Progress Bar */}
+                <section className="mt-2">
+                    <FormStepper
+                        className="max-w-none"
+                        steps={steps}
+                        currentStep={activeTab}
+                        descriptionType="icon"
+                    />
+                    <Separator className="mt-6 mb-4" />
+                </section>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                        {renderStepComponent(activeTab)}
+                    </form>
+                </Form>
+            </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Form Section */}
-                        <div className="lg:col-span-2">
-                            <Card>
-                                {/* Progress Bar */}
-                                <section className="mt-2">
-                                    <FormStepper
-                                        className="max-w-none mx-6"
-                                        steps={steps}
-                                        currentStep={activeTab}
-                                        descriptionType="icon"
-                                    />
-                                    <Separator className="mt-6 mb-4" />
-                                </section>
-                                <Form {...form}>
-                                    <form
-                                        onSubmit={form.handleSubmit(handleSubmit)}
-                                        className="space-y-6"
-                                    >
-                                        {renderStepComponent(activeTab)}
-                                    </form>
-                                </Form>
-                            </Card>
-                        </div>
-
-                        {/* Preview Section */}
-                        <div className="lg:col-span-1">
-                            <div className="sticky top-8">
-                                <ClientPreview data={form.watch()} />
-                            </div>
-                        </div>
-                    </div>
+            {/* Preview Section */}
+            <div className="flex flex-grow flex-col bg-accent rounded-sm">
+                <div className="sticky top-8">
+                    <ClientPreview data={form.watch()} />
                 </div>
             </div>
         </div>

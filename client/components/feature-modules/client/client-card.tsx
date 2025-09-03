@@ -71,7 +71,7 @@ export function ClientCard({ client, onEdit, onDelete }: ClientCardProps) {
     };
 
     return (
-        <Link href={`/clients/${client.id}`}>
+        <Link href={`clients/${client.id}`}>
             <Card className="p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">

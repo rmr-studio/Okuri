@@ -35,21 +35,24 @@ export default function Features() {
                     Time-saving Solutions
                 </h2>
                 <p className="mt-4 text-muted-foreground sm:text-lg">
-                    Discover how Okare can simplify your workflow and enhance productivity to ensure
-                    your time is spent business growing, and not on managing menial tasks.
+                    Discover how Okare can simplify your workflow and enhance
+                    productivity to ensure your time is spent business growing,
+                    and not on managing menial tasks.
                 </p>
             </div>
-            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
+            <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 md:grid-cols-2">
                 {features.map((feature) => (
                     <div
                         key={feature.name}
-                        className="relative overflow-hidden rounded-lg border bg-background p-8"
+                        className="relative overflow-hidden rounded-lg border p-8 backdrop-blur-md shadow bg-white/5"
                     >
                         <div className="flex items-center gap-4">
                             <feature.icon className="h-8 w-8" />
                             <h3 className="font-bold">{feature.name}</h3>
                         </div>
-                        <p className="mt-2 text-muted-foreground">{feature.description}</p>
+                        <p className="mt-2 text-muted-foreground">
+                            {feature.description}
+                        </p>
                     </div>
                 ))}
             </div>
