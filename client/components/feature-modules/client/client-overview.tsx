@@ -1,21 +1,13 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
+import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useClient } from "@/hooks/useClient";
 import { useOrganisation } from "@/hooks/useOrganisation";
 import { isResponseError } from "@/lib/util/error/error.util";
-import {
-    ArchiveRestore,
-    ArrowLeft,
-    Edit,
-    Mail,
-    MapPin,
-    Phone,
-    Trash2,
-    UserCircle,
-} from "lucide-react";
+import { ArchiveRestore, Edit, Mail, MapPin, Phone, Trash2, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import DeleteClient from "./delete-client";
@@ -105,25 +97,26 @@ export const ClientOverview = () => {
 
     if (!client) return;
 
+    const trail: BreadCrumbTrail[] = [
+        { label: "Home", href: "/dashboard" },
+        { label: "Organisations", href: "/dashboard/organisations", truncate: true },
+        {
+            label: organisation?.name || "Organisation",
+            href: `/dashboard/organisation/${organisation?.id}/clients`,
+        },
+        {
+            label: client.name || "Client",
+            href: `/dashboard/organisation/${organisation?.id}/clients/${client.id}`,
+            active: true,
+        },
+    ];
+
     return (
         <>
             <div className="py-6 px-12">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        // TODO: MOVE TO BREADCRUMBS
-                        {onBack && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={onBack}
-                                className="flex items-center gap-2"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                Back
-                            </Button>
-                        )}
-                    </div>
+                    <BreadCrumbGroup items={trail} />
                 </div>
                 <article className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Information */}

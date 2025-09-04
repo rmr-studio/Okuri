@@ -4,6 +4,7 @@ import { useAuth } from "@/components/provider/auth-context";
 import { createClient } from "@/controller/client.controller";
 import { useOrganisation } from "@/hooks/useOrganisation";
 import {
+    Client,
     ClientCreationRequest,
     TemplateClientTemplateFieldStructure,
 } from "@/lib/interfaces/client.interface";
@@ -62,13 +63,7 @@ export const mockClientTemplate: TemplateClientTemplateFieldStructure = {
             type: "MULTISELECT",
             required: false,
             description: "Select all applicable services",
-            options: [
-                "Consulting",
-                "Development",
-                "Design",
-                "Marketing",
-                "Support",
-            ],
+            options: ["Consulting", "Development", "Design", "Marketing", "Support"],
             children: [],
         },
     },
@@ -80,12 +75,7 @@ export const mockClientTemplate: TemplateClientTemplateFieldStructure = {
 
 const NewClient = () => {
     const { session } = useAuth();
-    const {
-        data: organisation,
-        isPending,
-        isLoadingAuth,
-        error,
-    } = useOrganisation();
+    const { data: organisation, isPending, isLoadingAuth, error } = useOrganisation();
     const toastRef = useRef<string | number | undefined>(undefined);
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -107,8 +97,7 @@ const NewClient = () => {
 
     // TODO: Handle Cancelation and breadcumbs
     const handleCancel = () => {
-        if (organisation?.id)
-            router.push(`/dashboard/organisation/${organisation.id}/clients`);
+        if (organisation?.id) router.push(`/dashboard/organisation/${organisation.id}/clients`);
         else router.push(`/dashboard/organisation`);
     };
 
@@ -132,12 +121,11 @@ const NewClient = () => {
         clientCreationMutation.mutate(client);
     };
     const clientCreationMutation = useMutation({
-        mutationFn: (client: ClientCreationRequest) =>
-            createClient(session, client),
+        mutationFn: (client: ClientCreationRequest) => createClient(session, client),
         onMutate: () => {
             toastRef.current = toast.loading("Creating New Client...");
         },
-        onSuccess: (_) => {
+        onSuccess: (client: Client) => {
             toast.dismiss(toastRef.current);
             toast.success("Client created successfully");
 
@@ -151,7 +139,7 @@ const NewClient = () => {
                 queryKey: ["organisation", organisation.id, "clients"],
             });
 
-            router.push(`/dashboard/organisation/${organisation.id}/clients`);
+            router.push(`/dashboard/organisation/${organisation.id}/clients/${client.id}`);
         },
         onError: (error) => {
             toast.dismiss(toastRef.current);
@@ -164,13 +152,10 @@ const NewClient = () => {
             className="m-8"
             renderHeader={() => (
                 <>
-                    <h1 className="text-xl font-bold text-primary mb-2">
-                        Create New Client
-                    </h1>
+                    <h1 className="text-xl font-bold text-primary mb-2">Create New Client</h1>
                     <p className="text-muted-foreground text-sm">
-                        Set up your client profile in just a few steps. This
-                        will help your team identify and manage client
-                        relationships effectively.
+                        Set up your client profile in just a few steps. This will help your team
+                        identify and manage client relationships effectively.
                     </p>
                 </>
             )}

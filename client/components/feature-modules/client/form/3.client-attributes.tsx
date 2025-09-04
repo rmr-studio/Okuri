@@ -80,7 +80,7 @@ export const ClientAttributesFormStep: FC<ClientStepFormProps> = ({
                     Previous Page
                 </Button>
                 <Button type="button" size="sm" className="cursor-pointer" onClick={onSubmit}>
-                    Create Client
+                    Save Client
                 </Button>
             </CardFooter>
         </>

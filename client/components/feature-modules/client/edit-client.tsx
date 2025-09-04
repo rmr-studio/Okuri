@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-context";
+import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { updateClient } from "@/controller/client.controller";
 import { useClient } from "@/hooks/useClient";
 import { useOrganisation } from "@/hooks/useOrganisation";
@@ -15,11 +16,7 @@ import { mockClientTemplate } from "./new-client";
 
 const EditClient: FC = () => {
     const { session } = useAuth();
-    const {
-        data: organisation,
-        isPending: isFetchingOrg,
-        error: orgError,
-    } = useOrganisation();
+    const { data: organisation, isPending: isFetchingOrg, error: orgError } = useOrganisation();
     const {
         data: client,
         isPending: isFetchingClient,
@@ -85,8 +82,7 @@ const EditClient: FC = () => {
     };
 
     const editMutation = useMutation({
-        mutationFn: (client: UpdateClientRequest) =>
-            updateClient(session, client),
+        mutationFn: (client: UpdateClientRequest) => updateClient(session, client),
         onMutate: () => {
             toastRef.current = toast.loading("Updating Client Details...");
         },
@@ -110,9 +106,7 @@ const EditClient: FC = () => {
             });
 
             // Navigate back to Client Overview page
-            router.push(
-                `/dashboard/organisation/${client.organisationId}/clients/${client.id}`
-            );
+            router.push(`/dashboard/organisation/${client.organisationId}/clients/${client.id}`);
         },
         onError: (error) => {
             toast.dismiss(toastRef.current);
@@ -126,19 +120,32 @@ const EditClient: FC = () => {
 
     if (!client) return;
 
+    const trail: BreadCrumbTrail[] = [
+        { label: "Home", href: "/dashboard" },
+        { label: "Organisations", href: "/dashboard/organisations", truncate: true },
+        {
+            label: organisation?.name || "Organisation",
+            href: `/dashboard/organisation/${organisation?.id}/clients`,
+            truncate: true,
+        },
+        {
+            label: client.name || "Client",
+            href: `/dashboard/organisation/${organisation?.id}/clients/${client.id}`,
+        },
+        { label: "Edit", href: "#", active: true },
+    ];
+
     if (!session || !client) return null;
     return (
         <ClientForm
             className="m-8"
             renderHeader={() => (
                 <>
-                    <h1 className="text-xl font-bold text-primary mb-2">
-                        Manage {client.name}
-                    </h1>
+                    <BreadCrumbGroup items={trail} className="mb-4" />
+                    <h1 className="text-xl font-bold text-primary mb-2">Manage {client.name}</h1>
                     <p className="text-muted-foreground text-sm">
-                        Set up your client profile in just a few steps. This
-                        will help your team identify and manage client
-                        relationships effectively.
+                        Set up your client profile in just a few steps. This will help your team
+                        identify and manage client relationships effectively.
                     </p>
                 </>
             )}
