@@ -13,7 +13,7 @@ spring:
   test:
     database:
       replace: none
-okare:
+okuri:
   security:
     allowed-origins:
       - http://localhost:3000

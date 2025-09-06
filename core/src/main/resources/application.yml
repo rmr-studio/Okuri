@@ -8,7 +8,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
-    show-sql: ${okare.include-stack-trace}
+    show-sql: ${okuri.include-stack-trace}
   security:
     oauth2:
       resourceserver:
@@ -16,7 +16,7 @@ spring:
           issuer-uri: ${JWT_AUTH_URL}
 server:
   port: ${SERVER_PORT}
-okare:
+okuri:
   security:
     jwt-secret-key: ${JWT_SECRET_KEY}
     jwt-issuer: ${SUPABASE_URL}

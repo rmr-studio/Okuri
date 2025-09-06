@@ -6,7 +6,7 @@ plugins {
     kotlin("plugin.jpa") version "2.1.21"
 }
 
-group = "okare"
+group = "okuri"
 version = "0.0.1-SNAPSHOT"
 
 java {
@@ -28,8 +28,8 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
@@ -56,10 +56,6 @@ dependencies {
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
 
     // Object Mapping
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.3")
-    implementation("com.fasterxml.jackson.core:jackson-core:2.18.3")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.3")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.3")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // Postgres/JPA
