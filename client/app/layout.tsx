@@ -9,17 +9,17 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "Okare | The client and invoice management platform for Independent carers",
+    title: "Okuri | The client and invoice management platform for Independent carers",
     description:
-        "Okare is a client and invoice management platform designed for independent carers, helping you manage your clients, invoices, and payments seamlessly.",
+        "Okuri is a client and invoice management platform designed for independent carers, helping you manage your clients, invoices, and payments seamlessly.",
     openGraph: {
         locale: "en_AU",
         type: "website",
-        url: "https://okare.app",
-        title: "Okare | The client and invoice management platform for Independent carers",
+        url: "https://Okuri.app",
+        title: "Okuri | The client and invoice management platform for Independent carers",
         description:
-            "Okare is a client and invoice management platform designed for independent carers, helping you manage your clients, invoices, and payments seamlessly.",
-        siteName: "Okare",
+            "Okuri is a client and invoice management platform designed for independent carers, helping you manage your clients, invoices, and payments seamlessly.",
+        siteName: "Okuri",
     },
 };
 

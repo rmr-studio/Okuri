@@ -6,7 +6,7 @@ export default function Footer() {
         <footer className="border-t">
             <div className="flex flex-col gap-8 py-8 md:flex-row md:py-12">
                 <div className="flex-1 space-y-4 px-12 w-full">
-                    <h2 className="font-bold">Okare</h2>
+                    <h2 className="font-bold">Okuri</h2>
                     <p className="text-sm text-muted-foreground max-w-sm">
                         Bringing automation and management solutions to independent carers and small
                         businesses.
@@ -64,7 +64,7 @@ export default function Footer() {
             </div>
             <div className="py-6">
                 <p className="text-center text-sm text-muted-foreground">
-                    © {new Date().getFullYear()} Okare, Inc. All rights reserved.
+                    © {new Date().getFullYear()} Okuri, Inc. All rights reserved.
                 </p>
             </div>
         </footer>

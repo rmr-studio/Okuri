@@ -8,7 +8,7 @@ export default function CTA() {
                     Ready to speed up your boring business practices?
                 </h2>
                 <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
-                    Join other businesses who trust Okare to handle their management and invoice
+                    Join other businesses who trust Okuri to handle their management and invoice
                     generation needs to stay ahead and focus on what matters most: building and
                     growing your business
                 </p>
