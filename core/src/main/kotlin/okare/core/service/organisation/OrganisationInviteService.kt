@@ -2,6 +2,7 @@ package okare.core.service.organisation
 
 import jakarta.transaction.Transactional
 import okare.core.entity.organisation.OrganisationInviteEntity
+import okare.core.entity.organisation.toModel
 import okare.core.enums.activity.Activity
 import okare.core.enums.organisation.OrganisationInviteStatus
 import okare.core.enums.organisation.OrganisationRoles
@@ -78,7 +79,7 @@ class OrganisationInviteService(
                     organisationId = organisationId,
                     additionalDetails = "Invited $email with role $role to organisation $organisationId => Invite ID: ${this.id}"
                 )
-                return OrganisationInvite.fromEntity(this)
+                return this.toModel()
             }
         }
 
@@ -133,7 +134,7 @@ class OrganisationInviteService(
     fun getUserInvites(): List<OrganisationInvite> {
         authTokenService.getUserEmail().let { email ->
             findManyResults(email, organisationInviteRepository::findByEmail).run {
-                return this.map { OrganisationInvite.fromEntity(it) }
+                return this.map { it.toModel() }
             }
         }
     }
@@ -142,7 +143,7 @@ class OrganisationInviteService(
     fun getOrganisationInvites(organisationId: UUID): List<OrganisationInvite> {
         // Fetch all invites for the organisation
         return findManyResults(organisationId, organisationInviteRepository::findByOrganisationId)
-            .map { OrganisationInvite.fromEntity(it) }
+            .map { it.toModel() }
     }
 
     /**

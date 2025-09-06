@@ -71,7 +71,7 @@ fun UserEntity.toModel(): User {
             name = this.name,
             avatarUrl = this.avatarUrl,
             memberships = this.organisations.map { membership -> membership.toDetails(includeOrganisation = true) },
-            defaultOrganisation = this.defaultOrganisation?.toModel(includeMembers = false),
+            defaultOrganisation = this.defaultOrganisation?.toModel(includeMetadata = false),
         )
     }
 }

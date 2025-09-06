@@ -34,12 +34,12 @@ class OrganisationService(
 
 
     /**
-     * This will fetch an organisation by its ID, and optionally include its members.
+     * This will fetch an organisation by its ID, and optionally include its metadata (ie. members, invites, etc).
      */
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
-    fun getOrganisation(organisationId: UUID, includeMembers: Boolean = false): Organisation {
-        return getOrganisationEntity(organisationId).toModel(includeMembers)
+    fun getOrganisation(organisationId: UUID, includeMetadata: Boolean = false): Organisation {
+        return getOrganisationEntity(organisationId).toModel(includeMetadata)
     }
 
     @Throws(NotFoundException::class)
@@ -75,7 +75,7 @@ class OrganisationService(
                 customAttributes = request.customAttributes,
             )
             organisationRepository.save(entity).run {
-                val organisation = this.toModel(includeMembers = false)
+                val organisation = this.toModel(includeMetadata = false)
                 organisation.run {
                     // Log the activity of creating an organisation
                     activityService.logActivity(

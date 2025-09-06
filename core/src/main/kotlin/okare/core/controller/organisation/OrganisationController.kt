@@ -22,11 +22,11 @@ class OrganisationController(
     @GetMapping("/{organisationId}")
     fun getOrganisation(
         @PathVariable organisationId: UUID,
-        @RequestParam includeMembers: Boolean = false
+        @RequestParam includeMetadata: Boolean = false
     ): ResponseEntity<Organisation> {
         val organisation: Organisation = this.organisationService.getOrganisation(
             organisationId = organisationId,
-            includeMembers = includeMembers
+            includeMetadata = includeMetadata
         )
 
         return ResponseEntity.ok(organisation)

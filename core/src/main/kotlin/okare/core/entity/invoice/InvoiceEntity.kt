@@ -112,7 +112,7 @@ fun InvoiceEntity.toModel(): Invoice {
 
         Invoice(
             id = it,
-            organisation = this.organisation.toModel(includeMembers = false),
+            organisation = this.organisation.toModel(includeMetadata = false),
             client = this.client.toModel(),
             invoiceNumber = this.invoiceNumber,
             items = this.items,

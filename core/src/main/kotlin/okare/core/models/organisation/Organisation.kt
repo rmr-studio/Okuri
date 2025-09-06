@@ -20,4 +20,5 @@ data class Organisation(
     val memberCount: Int,
     val createdAt: ZonedDateTime,
     val members: List<OrganisationMember> = listOf(),
+    val invites: List<OrganisationInvite> = listOf()
 )

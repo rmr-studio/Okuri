@@ -72,7 +72,7 @@ fun OrganisationMemberEntity.toModel(): OrganisationMember {
 fun OrganisationMemberEntity.toDetails(includeOrganisation: Boolean = false): MembershipDetails {
     return MembershipDetails(
         organisation = if (includeOrganisation) {
-            this.organisation?.toModel(includeMembers = false)
+            this.organisation?.toModel(includeMetadata = false)
         } else {
             null
         },

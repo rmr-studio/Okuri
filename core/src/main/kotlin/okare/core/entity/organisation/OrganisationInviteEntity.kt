@@ -4,6 +4,7 @@ import jakarta.persistence.*
 import okare.core.entity.user.UserEntity
 import okare.core.enums.organisation.OrganisationInviteStatus
 import okare.core.enums.organisation.OrganisationRoles
+import okare.core.models.organisation.OrganisationInvite
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -70,5 +71,24 @@ data class OrganisationInviteEntity(
                 .map { chars.random() }
                 .joinToString("")
         }
+    }
+}
+
+fun OrganisationInviteEntity.toModel(): OrganisationInvite {
+    this.id.let {
+        if (it == null) {
+            throw IllegalArgumentException("OrganisationInviteEntity must have a non-null id")
+        }
+        return OrganisationInvite(
+            id = it,
+            organisationId = this.organisationId,
+            email = this.email,
+            inviteToken = this.token,
+            invitedBy = this.invitedBy,
+            createdAt = this.createdAt,
+            expiresAt = this.expiresAt,
+            role = this.role,
+            status = this.inviteStatus
+        )
     }
 }

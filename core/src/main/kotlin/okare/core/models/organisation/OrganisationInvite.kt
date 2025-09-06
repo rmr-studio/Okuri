@@ -1,6 +1,5 @@
 package okare.core.models.organisation
 
-import okare.core.entity.organisation.OrganisationInviteEntity
 import okare.core.enums.organisation.OrganisationInviteStatus
 import okare.core.enums.organisation.OrganisationRoles
 import java.time.ZonedDateTime
@@ -16,25 +15,4 @@ data class OrganisationInvite(
     val expiresAt: ZonedDateTime,
     val role: OrganisationRoles,
     val status: OrganisationInviteStatus
-) {
-    companion object Factory {
-        fun fromEntity(entity: OrganisationInviteEntity): OrganisationInvite {
-            return entity.id.let {
-                if (it == null) {
-                    throw IllegalArgumentException("OrganisationInviteEntity must have a non-null id")
-                }
-                OrganisationInvite(
-                    id = it,
-                    organisationId = entity.organisationId,
-                    email = entity.email,
-                    inviteToken = entity.token,
-                    invitedBy = entity.invitedBy,
-                    createdAt = entity.createdAt,
-                    expiresAt = entity.expiresAt,
-                    role = entity.role,
-                    status = entity.inviteStatus
-                )
-            }
-        }
-    }
-}
+)

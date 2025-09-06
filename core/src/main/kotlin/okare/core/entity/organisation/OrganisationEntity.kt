@@ -86,7 +86,7 @@ data class OrganisationEntity(
     }
 }
 
-fun OrganisationEntity.toModel(includeMembers: Boolean = false): Organisation {
+fun OrganisationEntity.toModel(includeMetadata: Boolean = false): Organisation {
     this.id?.let {
         return Organisation(
             id = it,
@@ -101,8 +101,13 @@ fun OrganisationEntity.toModel(includeMembers: Boolean = false): Organisation {
             organisationPaymentDetails = this.organisationPaymentDetails,
             customAttributes = this.customAttributes,
             tileLayout = this.tileLayout,
-            members = if (includeMembers) {
+            members = if (includeMetadata) {
                 this.members.map { member -> member.toModel() }
+            } else {
+                emptyList()
+            },
+            invites = if (includeMetadata) {
+                this.invites.map { invite -> invite.toModel() }
             } else {
                 emptyList()
             },
