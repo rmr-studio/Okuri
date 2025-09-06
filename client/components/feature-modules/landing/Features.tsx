@@ -35,8 +35,9 @@ export default function Features() {
                     Time-saving Solutions
                 </h2>
                 <p className="mt-4 text-muted-foreground sm:text-lg">
-                    Discover how Okuri can simplify your workflow and enhance productivity to ensure
-                    your time is spent business growing, and not on managing menial tasks.
+                    Discover how Okuri can simplify your workflow, cut out menial admin tasks and
+                    enhance productivity to ensure you can focus on what matters most - growing your
+                    business.
                 </p>
             </div>
             <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 md:grid-cols-2">
