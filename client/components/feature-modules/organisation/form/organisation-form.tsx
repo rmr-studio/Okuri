@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { AddressFormSchema } from "@/components/ui/forms/bespoke/AddressFormSection";
@@ -10,18 +8,18 @@ import { PaymentDetailsFormSchema } from "@/components/ui/forms/bespoke/PaymentD
 import { FormStepper } from "@/components/ui/forms/form-stepper";
 import { Separator } from "@/components/ui/separator";
 import { useProfile } from "@/hooks/useProfile";
+import { ClassNameProps } from "@/lib/interfaces/interface";
 import { Organisation } from "@/lib/interfaces/organisation.interface";
 import { Step } from "@/lib/util/form/form.util";
-import { isValidCurrency } from "@/lib/util/utils";
+import { cn, isValidCurrency } from "@/lib/util/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CornerUpLeftIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { FC, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import OrganisationDetailsForm from "./1.organisation-details";
 import OrganisationBillingForm from "./2.organisation-billing";
 import OrganisationAttributesForm from "./3.organisation-attributes";
+import { OrganisationFormPreview } from "./organisation-preview";
 
 const OrganisationDetailsFormSchema = z.object({
     displayName: z
@@ -41,8 +39,9 @@ const OrganisationDetailsFormSchema = z.object({
 export type OrganisationFormDetails = z.infer<typeof OrganisationDetailsFormSchema>;
 export type OrganisationFormTab = "base" | "billing" | "custom";
 
-interface Props {
+interface Props extends ClassNameProps {
     organisation?: Organisation;
+    renderHeader: () => React.ReactNode;
     onSubmit: (values: OrganisationFormDetails) => Promise<void>;
     setUploadedAvatar: (file: Blob | null) => void;
 }
@@ -55,37 +54,41 @@ export interface OrganisationStepFormProps {
     handleFormSubmit: (values: OrganisationFormDetails) => Promise<void>;
 }
 
-export const OrganisationForm: FC<Props> = ({ organisation, onSubmit, setUploadedAvatar }) => {
+export const OrganisationForm: FC<Props> = ({
+    organisation,
+    onSubmit,
+    setUploadedAvatar,
+    renderHeader,
+    className,
+}) => {
     const { data: user } = useProfile();
-    const router = useRouter();
     const [activeTab, setActiveTab] = useState<OrganisationFormTab>("base");
 
-    const OrganisationFormDetailsForm: UseFormReturn<OrganisationFormDetails> =
-        useForm<OrganisationFormDetails>({
-            resolver: zodResolver(OrganisationDetailsFormSchema),
-            defaultValues: {
-                displayName: organisation?.name || "",
-                avatarUrl: organisation?.avatarUrl || undefined,
-                isDefault: user?.memberships.length === 0,
-                plan: organisation?.plan || "FREE",
-                defaultCurrency: organisation?.defaultCurrency?.currencyCode || "AUD",
-                businessNumber: organisation?.businessNumber || "",
-                taxId: organisation?.taxId || "",
-                address: {
-                    street: organisation?.address?.street || "",
-                    city: organisation?.address?.city || "",
-                    state: organisation?.address?.state || "",
-                    postalCode: organisation?.address?.postalCode || "",
-                    country: organisation?.address?.country || "AU",
-                },
-                payment: {
-                    bsb: organisation?.organisationPaymentDetails?.bsb || "",
-                    accountNumber: organisation?.organisationPaymentDetails?.accountNumber || "",
-                    accountName: organisation?.organisationPaymentDetails?.accountName || "",
-                },
-                customAttributes: organisation?.customAttributes || {},
+    const form: UseFormReturn<OrganisationFormDetails> = useForm<OrganisationFormDetails>({
+        resolver: zodResolver(OrganisationDetailsFormSchema),
+        defaultValues: {
+            displayName: organisation?.name || "",
+            avatarUrl: organisation?.avatarUrl || undefined,
+            isDefault: user?.memberships.length === 0,
+            plan: organisation?.plan || "FREE",
+            defaultCurrency: organisation?.defaultCurrency?.currencyCode || "AUD",
+            businessNumber: organisation?.businessNumber || "",
+            taxId: organisation?.taxId || "",
+            address: {
+                street: organisation?.address?.street || "",
+                city: organisation?.address?.city || "",
+                state: organisation?.address?.state || "",
+                postalCode: organisation?.address?.postalCode || "",
+                country: organisation?.address?.country || "AU",
             },
-        });
+            payment: {
+                bsb: organisation?.organisationPaymentDetails?.bsb || "",
+                accountNumber: organisation?.organisationPaymentDetails?.accountNumber || "",
+                accountName: organisation?.organisationPaymentDetails?.accountName || "",
+            },
+            customAttributes: organisation?.customAttributes || {},
+        },
+    });
 
     const handleNextPage = (tab: OrganisationFormTab) => {
         setActiveTab(tab);
@@ -95,13 +98,9 @@ export const OrganisationForm: FC<Props> = ({ organisation, onSubmit, setUploade
         setActiveTab(tab);
     };
 
-    const handleCancel = () => {
-        router.push("/dashboard/organisation");
-    };
-
     const renderStepComponent = (tab: OrganisationFormTab) => {
         const props: OrganisationStepFormProps = {
-            form: OrganisationFormDetailsForm,
+            form: form,
             setUploadedAvatar: setUploadedAvatar,
             handlePreviousPage: handlePreviousPage,
             handleNextPage: handleNextPage,
@@ -141,52 +140,50 @@ export const OrganisationForm: FC<Props> = ({ organisation, onSubmit, setUploade
     ];
 
     return (
-        <Card className="w-auto flex-grow lg:max-w-2xl h-fit m-2 md:m-6 lg:m-12 relative">
-            <Button className="absolute left-4 top-4" variant={"secondary"} onClick={handleCancel}>
-                <CornerUpLeftIcon />
-                <span className="hidden sm:block">Cancel</span>
-            </Button>
-            <Form {...OrganisationFormDetailsForm}>
-                <form onSubmit={OrganisationFormDetailsForm.handleSubmit(onSubmit)}>
-                    <CardHeader>
-                        <CardTitle className="text-center">Create a new organisation</CardTitle>
-                        <CardDescription>
-                            <br />
-                            Your organisation display name will be publicly visible to all users
-                            when creating event routers.
-                            <br />
-                            Your display name will need to be unique.
-                        </CardDescription>
-                    </CardHeader>
-                    <section className="mr-8">
-                        <FormField
-                            control={OrganisationFormDetailsForm.control}
-                            name="isDefault"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-end gap-2 mt-4 mb-2">
-                                    <FormControl>
-                                        <Checkbox
-                                            disabled={user?.memberships.length === 0}
-                                            checked={field.value}
-                                            onCheckedChange={(checked) => {
-                                                field.onChange(checked);
-                                            }}
-                                        />
-                                    </FormControl>
-                                    <FormLabel className="text-sm font-normal">
-                                        Set as default organisation
-                                    </FormLabel>
-                                </FormItem>
-                            )}
-                        />
-                    </section>
-                    <section className="mt-2">
-                        <FormStepper steps={steps} currentStep={activeTab} descriptionType="icon" />
-                        <Separator className="mt-6 mb-4" />
-                    </section>
-                    {renderStepComponent(activeTab)}
-                </form>
-            </Form>
-        </Card>
+        <div className="flex flex-col md:flex-row p-2 min-h-[100dvh]">
+            <section className={cn("w-full md:w-2/5", className)}>
+                <header>{renderHeader()}</header>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                        <section className="mr-8">
+                            <FormField
+                                control={form.control}
+                                name="isDefault"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-end gap-2 mt-4 mb-2">
+                                        <FormControl>
+                                            <Checkbox
+                                                disabled={user?.memberships.length === 0}
+                                                checked={field.value}
+                                                onCheckedChange={(checked) => {
+                                                    field.onChange(checked);
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormLabel className="text-sm font-normal">
+                                            Set as default organisation
+                                        </FormLabel>
+                                    </FormItem>
+                                )}
+                            />
+                        </section>
+                        <section className="mt-2">
+                            <FormStepper
+                                steps={steps}
+                                currentStep={activeTab}
+                                descriptionType="icon"
+                            />
+                            <Separator className="mt-6 mb-4" />
+                        </section>
+                        {renderStepComponent(activeTab)}
+                    </form>
+                </Form>
+            </section>
+            <section className="flex flex-grow flex-col relative bg-accent rounded-sm">
+                <div className="sticky top-8">
+                    <OrganisationFormPreview data={form.watch()} />
+                </div>
+            </section>
+        </div>
     );
 };

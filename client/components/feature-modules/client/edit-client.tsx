@@ -118,7 +118,7 @@ const EditClient: FC = () => {
         return <div>Loading...</div>;
     }
 
-    if (!client) return;
+    if (!session || !client) return null;
 
     const trail: BreadCrumbTrail[] = [
         { label: "Home", href: "/dashboard" },
@@ -135,7 +135,7 @@ const EditClient: FC = () => {
         { label: "Edit", href: "#", active: true },
     ];
 
-    if (!session || !client) return null;
+    
     return (
         <ClientForm
             className="m-8"

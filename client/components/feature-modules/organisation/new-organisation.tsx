@@ -1,6 +1,7 @@
-"use client`";
+"use client";
 
 import { useAuth } from "@/components/provider/auth-context";
+import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { createOrganisation } from "@/controller/organisation.controller";
 import { useProfile } from "@/hooks/useProfile";
 import { OrganisationCreationRequest } from "@/lib/interfaces/organisation.interface";
@@ -8,10 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-    OrganisationFormDetails,
-    OrganisationForm,
-} from "./form/organisation-form";
+import { OrganisationForm, OrganisationFormDetails } from "./form/organisation-form";
 
 const NewOrganisation = () => {
     const { session, client } = useAuth();
@@ -72,13 +70,29 @@ const NewOrganisation = () => {
         organisationMutation.mutate(organisation);
     };
 
+    const trail: BreadCrumbTrail[] = [
+        { label: "Home", href: "/dashboard" },
+        { label: "Organisations", href: "/dashboard/organisations" },
+        { label: "New", href: "#", active: true },
+    ];
+
     return (
-        <div>
-            <OrganisationForm
-                onSubmit={handleSubmission}
-                setUploadedAvatar={setUploadedAvatar}
-            />
-        </div>
+        <OrganisationForm
+            className="m-8"
+            onSubmit={handleSubmission}
+            setUploadedAvatar={setUploadedAvatar}
+            renderHeader={() => (
+                <>
+                    <BreadCrumbGroup items={trail} className="mb-4" />
+                    <h1 className="text-xl font-bold text-primary mb-2">Create New Organisation</h1>
+                    <p className="text-muted-foreground text-sm">
+                        Set up your organisation in just a few steps. This will help manage and
+                        store all important information you need when managing and invoicing your
+                        clients.
+                    </p>
+                </>
+            )}
+        />
     );
 };
 

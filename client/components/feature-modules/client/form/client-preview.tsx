@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { CardTitle } from "@/components/ui/card";
-import { ClientCreation } from "./form/client-form";
+import { ClientCreation } from "./client-form";
 
 interface ClientPreviewProps {
     data: ClientCreation;
@@ -12,7 +12,7 @@ interface ClientPreviewProps {
 export function ClientPreview({ data }: ClientPreviewProps) {
     return (
         <>
-            <CardTitle className="text-lg font-semibold">Client Preview</CardTitle>
+            <h2 className="text-lg font-semibold">Client Preview</h2>
 
             <div>
                 <h3 className="font-medium text-sm text-muted-foreground mb-2">

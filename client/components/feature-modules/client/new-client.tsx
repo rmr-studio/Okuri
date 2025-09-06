@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-context";
+import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { createClient } from "@/controller/client.controller";
 import { useOrganisation } from "@/hooks/useOrganisation";
 import {
@@ -147,11 +148,26 @@ const NewClient = () => {
         },
     });
 
+    const trail: BreadCrumbTrail[] = [
+        { label: "Home", href: "/dashboard" },
+        { label: "Organisations", href: "/dashboard/organisations", truncate: true },
+        {
+            label: organisation?.name || "Organisation",
+            href: `/dashboard/organisation/${organisation?.id}/clients`,
+        },
+        {
+            label: "Clients",
+            href: `/dashboard/organisation/${organisation?.id}/clients/`,
+        },
+        { label: "New", href: "#", active: true },
+    ];
+
     return (
         <ClientForm
             className="m-8"
             renderHeader={() => (
                 <>
+                    <BreadCrumbGroup items={trail} className="mb-4" />
                     <h1 className="text-xl font-bold text-primary mb-2">Create New Client</h1>
                     <p className="text-muted-foreground text-sm">
                         Set up your client profile in just a few steps. This will help your team

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-context";
+import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { updateOrganisation } from "@/controller/organisation.controller";
 import { useOrganisation } from "@/hooks/useOrganisation";
 import { useOrganisationRole } from "@/hooks/useOrganisationRole";
@@ -9,6 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { OrganisationForm, OrganisationFormDetails } from "./form/organisation-form";
 
 const EditOrganisation = () => {
     const { session, client } = useAuth();
@@ -47,17 +49,63 @@ const EditOrganisation = () => {
         },
     });
 
-    const handleSubmission = async (values: Organisation) => {
+    const handleSubmission = async (values: OrganisationFormDetails) => {
         if (!session || !client) {
             toast.error("No active session found");
             return;
         }
 
+        if (!organisation) {
+            toast.error("Organisation not found");
+            return;
+        }
+
+        const updatedOrganisation: Organisation = {
+            ...organisation,
+            ...values,
+            defaultCurrency: { currencyCode: values.defaultCurrency },
+            organisationPaymentDetails: {
+                ...values.payment,
+            },
+            customAttributes: values.customAttributes,
+        };
+
         // Create the organisation
-        organisationMutation.mutate(organisation);
+        organisationMutation.mutate(updatedOrganisation);
     };
 
-    return <div></div>;
+    const trail: BreadCrumbTrail[] = [
+        { label: "Home", href: "/dashboard" },
+        { label: "Organisations", href: "/dashboard/organisations", truncate: true },
+        {
+            label: organisation?.name || "Organisation",
+            href: `/dashboard/organisation/${organisation?.id}/clients`,
+        },
+        { label: "Edit", href: "#", active: true },
+    ];
+
+    if (!session || !organisation) return null;
+    return (
+        <OrganisationForm
+            className="m-8"
+            onSubmit={handleSubmission}
+            organisation={organisation}
+            setUploadedAvatar={setUploadedAvatar}
+            renderHeader={() => (
+                <>
+                    <BreadCrumbGroup items={trail} className="mb-4" />
+                    <h1 className="text-xl font-bold text-primary mb-2">
+                        Manage {organisation?.name}
+                    </h1>
+                    <p className="text-muted-foreground text-sm">
+                        Set up your organisation in just a few steps. This will help manage and
+                        store all important information you need when managing and invoicing your
+                        clients.
+                    </p>
+                </>
+            )}
+        />
+    );
 };
 
 export default EditOrganisation;

@@ -16,10 +16,10 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { isMobilePhone } from "validator";
 import { z } from "zod";
-import { ClientPreview } from "../client-preview";
 import { ClientDetailsFormStep } from "./1.client-details";
 import { ClientAddressFormStep } from "./2.client-address";
 import { ClientAttributesFormStep } from "./3.client-attributes";
+import { ClientPreview } from "./client-preview";
 
 export interface ClientStepFormProps {
     form: UseFormReturn<ClientCreation>;

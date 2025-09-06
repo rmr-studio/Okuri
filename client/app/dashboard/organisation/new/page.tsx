@@ -1,5 +1,7 @@
-const NewOrganisation = () => {
+import NewOrganisation from "@/components/feature-modules/organisation/new-organisation";
+
+const NewOrganisationPage = () => {
     return <NewOrganisation />;
 };
 
-export default NewOrganisation;
+export default NewOrganisationPage;
