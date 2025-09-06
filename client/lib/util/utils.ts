@@ -50,3 +50,17 @@ export const api = () => {
 
     return url;
 };
+
+export const currency = () => {
+    return new Set(
+        Intl.supportedValuesOf
+            ? Intl.supportedValuesOf("currency") // modern browsers
+            : ["USD", "EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "CNY", "SEK", "NZD"] // fallback
+    );
+};
+
+export const isValidCurrency = (value: string): boolean => {
+    if (!value) return false;
+    const validCurrencies = currency();
+    return validCurrencies.has(value.toUpperCase());
+};

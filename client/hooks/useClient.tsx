@@ -1,37 +1,22 @@
-"use client";
-
-import { useAuth } from "@/components/provider/AuthContext";
-import { fetchUserClients } from "@/controller/client.controller";
-import { fromError, isResponseError } from "@/lib/util/error/error.util";
+import { useAuth } from "@/components/provider/auth-context";
+import { getClient } from "@/controller/client.controller";
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 
-export function useClient() {
+export const useClient = () => {
     const { session, loading } = useAuth();
+    // Extract organization name from URL params
+    // Assuming the route is defined like: /dashboard/clients/:clientId
+    const { clientId } = useParams<{ clientId: string }>();
 
+    // Use TanStack Query to fetch organization data
     const query = useQuery({
-        queryKey: ["userClients", session?.user.id],
-        queryFn: () => {
-            if (!session?.user.id) {
-                throw fromError({
-                    message: "No active session found",
-                    status: 401,
-                    error: "NO_SESSION",
-                });
-            }
-            return fetchUserClients(session);
-        },
-        enabled: !!session?.user.id, // Only fetch if user is authenticated
-        retry: (count, error) => {
-            // Retry once on failure, but not on network errors
-            if (isResponseError(error)) return false;
-
-            return count < 2;
-        }, // Retry once on failure
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes,
+        queryKey: ["client", clientId], // Unique key for caching
+        queryFn: () => getClient(session, { clientId }), // Fetch function
+        enabled: !!clientId && !!session?.user.id, // Only fetch if orgName exists and the user is authenticated
+        retry: 1,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
-    return {
-        ...query,
-        isLoadingAuth: loading,
-    };
-}
+    return { isLoadingAuth: loading, ...query };
+};

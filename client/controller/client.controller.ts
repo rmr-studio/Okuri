@@ -1,9 +1,21 @@
-import { Client, ClientCreationRequest } from "@/lib/interfaces/client.interface";
+import {
+    CreateClientRequest,
+    CreateClientResponse,
+    GetClientByIdPathParams,
+    GetClientByIdResponse,
+    GetOrganisationClientsResponse,
+    UpdateClientRequest,
+    UpdateClientResponse,
+} from "@/lib/interfaces/client.interface";
+import { Organisation } from "@/lib/interfaces/organisation.interface";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { api, isUUID } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
 
-export const fetchUserClients = async (session: Session | null): Promise<Client[]> => {
+export const fetchOrganisationClients = async (
+    session: Session | null,
+    organisation: Organisation
+): Promise<GetOrganisationClientsResponse> => {
     try {
         // Validate session and access token
         if (!session?.access_token) {
@@ -16,7 +28,7 @@ export const fetchUserClients = async (session: Session | null): Promise<Client[
 
         const url = api();
 
-        const response = await fetch(`${url}/v1/client/`, {
+        const response = await fetch(`${url}/v1/client/organisation/${organisation.id}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -47,7 +59,10 @@ export const fetchUserClients = async (session: Session | null): Promise<Client[
     }
 };
 
-export const updateClient = async (session: Session | null, client: Client): Promise<Client> => {
+export const updateClient = async (
+    session: Session | null,
+    request: UpdateClientRequest
+): Promise<UpdateClientResponse> => {
     try {
         // Validate session and access token
         if (!session?.access_token) {
@@ -60,13 +75,13 @@ export const updateClient = async (session: Session | null, client: Client): Pro
 
         const url = api();
 
-        const response = await fetch(`${url}/v1/client/${client.id}`, {
+        const response = await fetch(`${url}/v1/client/${request.id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify(client),
+            body: JSON.stringify(request),
         });
 
         if (response.ok) {
@@ -92,10 +107,14 @@ export const updateClient = async (session: Session | null, client: Client): Pro
     }
 };
 
-export const getClient = async (session: Session | null, id: string): Promise<Client> => {
+export const getClient = async (
+    session: Session | null,
+    params: GetClientByIdPathParams
+): Promise<GetClientByIdResponse> => {
+    const { clientId } = params;
     try {
         // Validate id is a UUID
-        if (!isUUID(id)) {
+        if (!isUUID(clientId)) {
             throw fromError({
                 message: "Invalid organization ID format. Expected a UUID.",
                 status: 400,
@@ -113,7 +132,7 @@ export const getClient = async (session: Session | null, id: string): Promise<Cl
         }
 
         const url = api();
-        const response = await fetch(`${url}/v1/client/${id}`, {
+        const response = await fetch(`${url}/v1/client/${clientId}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -146,8 +165,8 @@ export const getClient = async (session: Session | null, id: string): Promise<Cl
 
 export const createClient = async (
     session: Session | null,
-    client: ClientCreationRequest
-): Promise<Client> => {
+    request: CreateClientRequest
+): Promise<CreateClientResponse> => {
     try {
         // Validate session and access token
         if (!session?.access_token) {
@@ -166,7 +185,7 @@ export const createClient = async (
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify(client),
+            body: JSON.stringify(request),
         });
 
         if (response.ok) {

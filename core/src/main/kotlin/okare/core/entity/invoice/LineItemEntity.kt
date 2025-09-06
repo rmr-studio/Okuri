@@ -1,6 +1,8 @@
 package okare.core.entity.invoice
 
 import jakarta.persistence.*
+import okare.core.models.invoice.LineItem
+import okare.core.models.invoice.LineItemType
 import java.math.BigDecimal
 import java.time.ZonedDateTime
 import java.util.*
@@ -9,10 +11,10 @@ import java.util.*
 @Table(
     name = "line_item",
     uniqueConstraints = [
-        UniqueConstraint(name = "uq_line_item_name_user", columnNames = ["user_id", "name"])
+        UniqueConstraint(name = "uq_line_item_name_organisation", columnNames = ["organisation_id", "name"])
     ],
     indexes = [
-        Index(name = "idx_line_item_user_id", columnList = "user_id"),
+        Index(name = "idx_line_item_organisation_id", columnList = "organisation_id"),
     ]
 )
 data class LineItemEntity(
@@ -21,17 +23,20 @@ data class LineItemEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @Column(name = "user_id", nullable = false)
-    val userId: UUID,
+    @Column(name = "organisation_id", nullable = false)
+    val organisationId: UUID,
 
     @Column(name = "name", nullable = false)
-    val name: String,
+    var name: String,
 
     @Column(name = "description", nullable = true)
-    val description: String? = null,
+    var description: String? = null,
 
     @Column(name = "charge_rate", nullable = false, precision = 19, scale = 4)
-    val chargeRate: BigDecimal,
+    var chargeRate: BigDecimal,
+
+    @Column(name = "type", nullable = false)
+    var type: LineItemType = LineItemType.SERVICE,
 
     @Column(
         name = "created_at",
@@ -50,5 +55,21 @@ data class LineItemEntity(
     @PreUpdate
     fun onPreUpdate() {
         updatedAt = ZonedDateTime.now()
+    }
+}
+
+fun LineItemEntity.toModel(): LineItem {
+    this.id.let {
+        if (it == null) {
+            throw IllegalArgumentException("LineItemEntity id cannot be null")
+        }
+        return LineItem(
+            id = it,
+            organisationId = this.organisationId,
+            description = this.description,
+            name = this.name,
+            chargeRate = this.chargeRate,
+            type = this.type
+        )
     }
 }

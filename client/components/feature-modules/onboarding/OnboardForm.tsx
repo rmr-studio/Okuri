@@ -1,6 +1,6 @@
-import { useAuth } from "@/components/provider/AuthContext";
+import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
 import { updateUser } from "@/controller/user.controller";
 import { useProfile } from "@/hooks/useProfile";
@@ -13,71 +13,56 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { isMobilePhone } from "validator";
 
-import { Progress } from "@/components/ui/progress";
+import { AvatarUploader } from "@/components/ui/AvatarUploader";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { TextSeparator } from "@/components/ui/text-separator";
+import { OTPFormSchema } from "@/lib/util/form/form.util";
 import { z } from "zod";
-import OnboardUserForm from "./form/1.User";
-import OnboardCompanyForm from "./form/2.Company";
 
+// Avatar blob is sent to the backend. So is not included in form
 const userOnboardDetailsSchema = z.object({
     displayName: z
         .string({ required_error: "Display Name is required" })
         .min(3, "Display Name is too short"),
-    phone: z.string().min(10, "Invalid Phone Number").refine(isMobilePhone),
-    street: z
-        .string({ required_error: "Street is required" })
-        .nonempty("A street address is required"),
-    city: z.string({ required_error: "City is required" }).nonempty("A city is required"),
-    state: z.string({ required_error: "State is required" }).nonempty("A state is required"),
-    country: z.string({ required_error: "Country is required" }).nonempty("A country is required"),
-    postalCode: z
-        .string({ required_error: "Postal Code is required" })
-        .nonempty("A postal code is required"),
+    phone: z
+        .string()
+        .min(10, "Invalid Phone Number")
+        .refine(isMobilePhone)
+        .optional()
+        .or(z.literal("")),
 
-    companyName: z.string().optional(),
-    businessNumber: z.string().optional(),
-    publicHolidayMultiplier: z.coerce.number().min(1, "Multiplier must be at least 1").optional(),
-    saturdayMultiplier: z.coerce.number().min(1, "Multiplier must be at least 1").optional(),
-    sundayMultiplier: z.coerce.number().min(1, "Multiplier must be at least 1").optional(),
-    bsb: z.string(),
-    accountNumber: z.string(),
-    accountName: z.string(),
+    // OTP is only required if phone number is provided
+    otp: OTPFormSchema.shape.otp.or(z.literal("")),
 });
 
 export type UserOnboard = z.infer<typeof userOnboardDetailsSchema>;
-
-type OnboardFormTab = "user" | "company";
 
 export const OnboardForm: FC<Propless> = () => {
     const { client, session } = useAuth();
     const { data: user } = useProfile();
     const queryClient = useQueryClient();
-    const [progress, setProgress] = useState<number>(20);
-    const [currentTab, setCurrentTab] = useState<OnboardFormTab>("user");
+    const [uploadedAvatar, setUploadedAvatar] = useState<Blob | null>(null);
+    const [currentAvatar, setCurrentAvatar] = useState<string | undefined>(user?.avatarUrl);
+
     const toastRef = useRef<string | number | null>(null);
 
-    const userOnboardForm: UseFormReturn<UserOnboard> = useForm<UserOnboard>({
+    const form: UseFormReturn<UserOnboard> = useForm<UserOnboard>({
         resolver: zodResolver(userOnboardDetailsSchema),
         defaultValues: {
             displayName: user?.name || "",
             phone: user?.phone || undefined,
-            street: user?.address?.street || "",
-            city: user?.address?.city || "",
-            state: user?.address?.state || "",
-            country: user?.address?.country || "",
-            postalCode: user?.address?.postalCode || "",
-            companyName: user?.company?.name || "",
-            businessNumber: user?.company?.abn || "",
-            publicHolidayMultiplier: user?.chargeRate?.publicHolidayMultiplier || 1,
-            saturdayMultiplier: user?.chargeRate?.saturdayMultiplier || 1,
-            sundayMultiplier: user?.chargeRate?.sundayMultiplier || 1,
-            bsb: user?.paymentDetails?.bsb || "",
-            accountNumber: user?.paymentDetails?.accountNumber || "",
-            accountName: user?.paymentDetails?.accountName || "",
+            otp: "",
         },
     });
 
+    const handleAvatarRemoval = () => {
+        setUploadedAvatar(null);
+        setCurrentAvatar(user?.avatarUrl);
+    };
+
     const userMutation = useMutation({
-        mutationFn: (user: User) => updateUser(session, user),
+        mutationFn: (user: User) => updateUser(session, user, uploadedAvatar),
         onMutate: () => {
             toastRef.current = toast.loading("Updating Profile...");
         },
@@ -85,13 +70,15 @@ export const OnboardForm: FC<Propless> = () => {
             console.error("Error updating user profile:", error);
             if (toastRef.current !== null) {
                 toast.dismiss(toastRef.current);
+                toastRef.current = null;
             }
 
             toast.error("Failed to update Profile");
         },
-        onSuccess: (response) => {
+        onSuccess: (response: User) => {
             if (toastRef.current !== null) {
                 toast.dismiss(toastRef.current);
+                toastRef.current = null;
             }
 
             toast.success("Profile Updated Successfully");
@@ -107,89 +94,80 @@ export const OnboardForm: FC<Propless> = () => {
             ...user,
             phone: values.phone,
             name: values.displayName,
-            address: {
-                street: values.street,
-                city: values.city,
-                state: values.state,
-                country: values.country,
-                postalCode: values.postalCode,
-            },
-            company: {
-                name: values.companyName,
-                abn: values.businessNumber,
-            },
-            chargeRate: {
-                publicHolidayMultiplier: values.publicHolidayMultiplier || 1,
-                saturdayMultiplier: values.saturdayMultiplier || 1,
-                sundayMultiplier: values.sundayMultiplier || 1,
-            },
-            paymentDetails: {
-                bsb: values.bsb,
-                accountNumber: values.accountNumber,
-                accountName: values.accountName,
-            },
         };
 
         userMutation.mutate(updatedUser);
     };
 
-    const handleNextTab = async () => {
-        if (currentTab === "user") {
-            const tabValidation = await userOnboardForm.trigger([
-                "displayName",
-                "phone",
-                "street",
-                "city",
-                "state",
-                "country",
-                "postalCode",
-            ]);
-
-            if (!tabValidation) return;
-
-            setCurrentTab("company");
-            setProgress(100);
-        } else {
-            const tabValidation = await userOnboardForm.trigger([
-                "companyName",
-                "businessNumber",
-                "publicHolidayMultiplier",
-                "saturdayMultiplier",
-                "sundayMultiplier",
-                "bsb",
-                "accountNumber",
-                "accountName",
-            ]);
-
-            if (!tabValidation) return;
-
-            handleSubmission(userOnboardForm.getValues());
-        }
+    const handleAvatarUpload = (file: Blob) => {
+        setUploadedAvatar(file);
+        setCurrentAvatar(URL.createObjectURL(file));
     };
 
     return (
-        <Form {...userOnboardForm}>
-            <form onSubmit={userOnboardForm.handleSubmit(handleSubmission)}>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmission)}>
                 <SheetTitle className="text-2xl mt-2 font-bold">Complete your profile</SheetTitle>
-                <Progress value={progress} className="my-4" />
                 <SheetDescription className="mt-2">
                     Please fill out the details below to complete your profile.
-                    <br />
-                    This will be used when generating invoices and other documents.
-                    <br />
                 </SheetDescription>
                 <div className="mt-4 italic text-sm text-muted-foreground">
                     <span className="font-semibold">Note:</span> You can update these details later
                     in your profile settings.
                 </div>
-                <div className="mt-4">
-                    {currentTab === "user" && <OnboardUserForm {...userOnboardForm} />}
-                    {currentTab === "company" && <OnboardCompanyForm {...userOnboardForm} />}
-                </div>
+                <section className="my-4">
+                    <TextSeparator>
+                        <span className="text-[1rem] leading-1 font-semibold">Your details</span>
+                    </TextSeparator>
+                    <div className="flex flex-col lg:flex-row md:space-x-4">
+                        <FormLabel className="pb-0 md:hidden font-semibold">
+                            Profile Picture
+                        </FormLabel>
+                        <AvatarUploader
+                            imageURL={currentAvatar}
+                            onUpload={handleAvatarUpload}
+                            onRemove={handleAvatarRemoval}
+                            validation={{
+                                allowedTypes: ["image/jpeg", "image/png", "image/gif"],
+                                maxSize: 2 * 1024 * 1024, // 2 MB
+                                errorMessage:
+                                    "Please upload a valid image (JPEG, PNG, GIF) under 2MB.",
+                            }}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="displayName"
+                            render={({ field }) => (
+                                <FormItem className="mt-6 w-full lg:w-3/5">
+                                    <FormLabel className="font-semibold">Display Name *</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} placeholder="John Doe" />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                                <FormItem className="mt-6 w-full lg:w-2/5">
+                                    <FormLabel className="font-semibold">Phone *</FormLabel>
+                                    <FormControl>
+                                        <PhoneInput
+                                            {...field}
+                                            placeholder="0455 555 555"
+                                            defaultCountry="AU"
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </section>
 
                 <SheetFooter className="justify-end flex flex-row px-0">
-                    <Button className="w-32 cursor-pointer" type="button" onClick={handleNextTab}>
-                        {currentTab === "user" ? "Next" : "Submit"}
+                    <Button className="w-32 cursor-pointer" type="submit">
+                        Save Changes
                     </Button>
                 </SheetFooter>
             </form>

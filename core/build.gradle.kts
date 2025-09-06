@@ -68,10 +68,13 @@ dependencies {
 
 
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+    // Testing
     testImplementation("com.nimbusds:nimbus-jose-jwt:9.37.2")
+    testImplementation("com.h2database:h2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.springframework.security:spring-security-test")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

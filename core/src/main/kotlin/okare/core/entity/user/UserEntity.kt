@@ -1,12 +1,12 @@
 package okare.core.entity.user
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okare.core.models.invoice.ChargeRate
-import okare.core.models.user.Address
-import okare.core.models.user.Company
+import okare.core.entity.organisation.OrganisationEntity
+import okare.core.entity.organisation.OrganisationMemberEntity
+import okare.core.entity.organisation.toDetails
+import okare.core.entity.organisation.toModel
 import okare.core.models.user.User
-import org.hibernate.annotations.Type
+import okare.core.models.user.UserDisplay
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -26,23 +26,11 @@ data class UserEntity(
     @Column(name = "email", nullable = false)
     var email: String,
 
-    @Column(name = "phone", nullable = false)
-    var phone: String,
+    @Column(name = "phone", nullable = true)
+    var phone: String?,
 
-    @Type(JsonBinaryType::class)
-    @Column(name = "address", nullable = true, columnDefinition = "jsonb")
-    var address: Address? = null,
-
-    @Type(JsonBinaryType::class)
-    @Column(name = "company", nullable = true, columnDefinition = "jsonb")
-    var company: Company? = null,
-
-    @Type(JsonBinaryType::class)
-    @Column(name = "charge_rate", columnDefinition = "jsonb", nullable = true)
-    var chargeRate: ChargeRate? = null,
-
-    @Embedded
-    var paymentDetails: Payment? = null,
+    @Column(name = "avatar_url", nullable = true)
+    var avatarUrl: String? = null,
 
     @Column(
         name = "created_at",
@@ -50,8 +38,15 @@ data class UserEntity(
         updatable = false
     ) var createdAt: ZonedDateTime = ZonedDateTime.now(),
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "default_organisation_id", referencedColumnName = "id", insertable = true, updatable = true)
+    var defaultOrganisation: OrganisationEntity? = null,
+
     @Column(name = "updated_at", nullable = false) var updatedAt: ZonedDateTime = ZonedDateTime.now()
 ) {
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    var organisations: MutableSet<OrganisationMemberEntity> = mutableSetOf()
+
     @PrePersist
     fun onPrePersist() {
         createdAt = ZonedDateTime.now()
@@ -62,18 +57,6 @@ data class UserEntity(
     fun onPreUpdate() {
         updatedAt = ZonedDateTime.now()
     }
-
-    @Embeddable
-    data class Payment(
-        @Column(name = "bsb")
-        var bsb: String,
-
-        @Column(name = "account_number")
-        var accountNumber: String,
-
-        @Column(name = "account_name")
-        var accountName: String
-    )
 }
 
 fun UserEntity.toModel(): User {
@@ -86,10 +69,23 @@ fun UserEntity.toModel(): User {
             email = this.email,
             phone = this.phone,
             name = this.name,
-            company = this.company,
-            chargeRate = this.chargeRate,
-            paymentDetails = this.paymentDetails,
-            address = this.address,
+            avatarUrl = this.avatarUrl,
+            memberships = this.organisations.map { membership -> membership.toDetails(includeOrganisation = true) },
+            defaultOrganisation = this.defaultOrganisation?.toModel(includeMetadata = false),
+        )
+    }
+}
+
+fun UserEntity.toDisplay(): UserDisplay {
+    this.id.let {
+        if (it == null) {
+            throw IllegalArgumentException("UserEntity id cannot be null")
+        }
+        return UserDisplay(
+            id = it,
+            email = this.email,
+            name = this.name,
+            avatarUrl = this.avatarUrl,
         )
     }
 }

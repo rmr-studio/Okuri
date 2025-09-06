@@ -3,12 +3,7 @@ import { components, operations } from "@/lib/types/types";
 // --- 🎯 Core Invoice Models ---
 export type Invoice = components["schemas"]["Invoice"];
 export type Billable = components["schemas"]["Billable"];
-export type LineItem = components["schemas"]["LineItem"];
-export type InvoiceCreationRequest =
-    components["schemas"]["InvoiceCreationRequest"];
-export type Client = components["schemas"]["Client"];
-export type Address = components["schemas"]["Address"];
-export type User = components["schemas"]["User"];
+export type InvoiceCreationRequest = components["schemas"]["InvoiceCreationRequest"];
 
 // --- 📦 Request Payloads ---
 export type CreateInvoiceRequest =
@@ -41,14 +36,10 @@ export type GenerateInvoiceDocumentResponse =
 // No response body for deleteInvoice
 
 // --- 📎 Path Parameters ---
-export type GetInvoiceByIdPathParams =
-    operations["getInvoiceById"]["parameters"]["path"];
-export type UpdateInvoicePathParams =
-    operations["updateInvoice"]["parameters"]["path"];
-export type DeleteInvoicePathParams =
-    operations["deleteInvoice"]["parameters"]["path"];
-export type CancelInvoicePathParams =
-    operations["cancelInvoice"]["parameters"]["path"];
+export type GetInvoiceByIdPathParams = operations["getInvoiceById"]["parameters"]["path"];
+export type UpdateInvoicePathParams = operations["updateInvoice"]["parameters"]["path"];
+export type DeleteInvoicePathParams = operations["deleteInvoice"]["parameters"]["path"];
+export type CancelInvoicePathParams = operations["cancelInvoice"]["parameters"]["path"];
 export type GenerateInvoiceDocumentPathParams =
     operations["generateInvoiceDocument"]["parameters"]["path"];
 

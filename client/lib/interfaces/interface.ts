@@ -42,7 +42,6 @@ export interface FormFieldProps<T> {
 }
 
 export interface SidebarGroupProps {
-    title: string;
     items: Array<{
         icon: Icon;
         title: string;

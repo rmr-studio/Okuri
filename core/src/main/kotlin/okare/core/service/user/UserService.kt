@@ -2,6 +2,7 @@ package okare.core.service.user
 
 import io.github.oshai.kotlinlogging.KLogger
 import jakarta.transaction.Transactional
+import okare.core.entity.organisation.toEntity
 import okare.core.entity.user.UserEntity
 import okare.core.entity.user.toModel
 import okare.core.exceptions.NotFoundException
@@ -47,10 +48,8 @@ class UserService(
             name = user.name
             email = user.email
             phone = user.phone
-            company = user.company
-            chargeRate = user.chargeRate
-            address = user.address
-            paymentDetails = user.paymentDetails
+            avatarUrl = user.avatarUrl
+            defaultOrganisation = user.defaultOrganisation?.toEntity()
         }.run {
             repository.save(this)
             logger.info { "Updated user profile with ID: ${this.id}" }

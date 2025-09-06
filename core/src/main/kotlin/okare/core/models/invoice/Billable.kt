@@ -7,5 +7,10 @@ data class Billable(
     val date: ZonedDateTime,
     val description: String,
     val lineItem: LineItem,
-    val hours: Number,
+    val billableType: BillableType,
+    val quantity: Number,
 ) : Serializable
+
+enum class BillableType {
+    HOURS, DISTANCE, QUANTITY, FIXED
+}

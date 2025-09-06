@@ -4,11 +4,16 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okare.core.entity.client.ClientEntity
 import okare.core.entity.client.toModel
-import okare.core.entity.user.UserEntity
-import okare.core.entity.user.toModel
+import okare.core.entity.organisation.OrganisationEntity
+import okare.core.entity.organisation.toModel
+import okare.core.entity.template.TemplateEntity
 import okare.core.enums.invoice.InvoiceStatus
 import okare.core.models.invoice.Billable
 import okare.core.models.invoice.Invoice
+import okare.core.models.invoice.InvoiceDates
+import okare.core.models.template.invoice.InvoiceTemplateFieldStructure
+import okare.core.models.template.report.ReportTemplateFieldStructure
+import okare.core.models.template.toModel
 import org.hibernate.annotations.Type
 import java.math.BigDecimal
 import java.time.ZonedDateTime
@@ -19,10 +24,10 @@ import java.util.*
     name = "invoice",
     uniqueConstraints = [UniqueConstraint(
         name = "uq_invoice_number_user",
-        columnNames = ["user_id", "invoice_number"]
+        columnNames = ["organisation_id", "invoice_number"]
     )],
     indexes = [
-        Index(name = "idx_invoice_user_id", columnList = "user_id"),
+        Index(name = "idx_invoice_organisation_id", columnList = "organisation_id"),
         Index(name = "idx_invoice_client_id", columnList = "client_id"),
     ],
 )
@@ -32,16 +37,16 @@ data class InvoiceEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @JoinColumn(name = "user_id", nullable = false, updatable = false)
+    @JoinColumn(name = "organisation_id", nullable = false, updatable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    val user: UserEntity,
+    val organisation: OrganisationEntity,
 
     @JoinColumn(name = "client_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     val client: ClientEntity,
 
     @Column(name = "invoice_number", nullable = false, unique = true, columnDefinition = "integer")
-    var invoiceNumber: Int,
+    var invoiceNumber: String,
 
     @Type(JsonBinaryType::class)
     @Column(name = "billable_work", columnDefinition = "jsonb", nullable = false)
@@ -50,6 +55,18 @@ data class InvoiceEntity(
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     var amount: BigDecimal,
 
+    @JoinColumn(name = "invoice_template_id", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    val invoiceTemplate: TemplateEntity<InvoiceTemplateFieldStructure>? = null,
+
+    @JoinColumn(name = "report_template_id", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    var reportTemplate: TemplateEntity<ReportTemplateFieldStructure>? = null,
+
+    @Column(name = "custom_fields", columnDefinition = "jsonb")
+    @Type(JsonBinaryType::class)
+    var customFields: Map<String, Any> = emptyMap(), // JSONB for custom data
+
     @Column(name = "currency", nullable = false)
     var currency: Currency,
 
@@ -57,14 +74,17 @@ data class InvoiceEntity(
     @Enumerated(EnumType.STRING)
     var status: InvoiceStatus = InvoiceStatus.PENDING,
 
-    @Column(name = "invoice_start_date", nullable = false)
-    var startDate: ZonedDateTime,
+    @Column(name = "invoice_start_date", nullable = true)
+    var startDate: ZonedDateTime? = null,
 
-    @Column(name = "invoice_end_date", nullable = false)
-    var endDate: ZonedDateTime,
+    @Column(name = "invoice_end_date", nullable = true)
+    var endDate: ZonedDateTime? = null,
 
-    @Column(name = "invoice_due_date", nullable = false)
-    var dueDate: ZonedDateTime,
+    @Column(name = "invoice_issue_date", nullable = false)
+    var issueDate: ZonedDateTime,
+
+    @Column(name = "invoice_due_date", nullable = true)
+    var dueDate: ZonedDateTime? = null,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: ZonedDateTime = ZonedDateTime.now(),
@@ -92,17 +112,23 @@ fun InvoiceEntity.toModel(): Invoice {
 
         Invoice(
             id = it,
-            user = this.user.toModel(),
+            organisation = this.organisation.toModel(includeMetadata = false),
             client = this.client.toModel(),
             invoiceNumber = this.invoiceNumber,
             items = this.items,
             amount = this.amount,
             currency = this.currency,
             status = this.status,
-            startDate = this.startDate,
-            endDate = this.endDate,
-            dueDate = this.dueDate,
-            createdAt = this.createdAt
+            template = this.invoiceTemplate?.toModel(),
+            reportTemplate = this.reportTemplate?.toModel(),
+            dates = InvoiceDates(
+                startDate = this.startDate,
+                endDate = this.endDate,
+                issueDate = this.issueDate,
+                dueDate = this.dueDate,
+                invoiceCreatedAt = this.createdAt,
+                invoiceUpdatedAt = this.updatedAt
+            ),
         )
     }
 }

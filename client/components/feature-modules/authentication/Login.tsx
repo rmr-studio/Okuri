@@ -11,7 +11,12 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { AuthenticationProps } from "@/lib/interfaces/auth.interface";
+import {
+    AuthenticationCredentials,
+    AuthResponse,
+    SocialProviders,
+} from "@/lib/interfaces/auth.interface";
+import { createClient } from "@/lib/util/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,12 +33,10 @@ const loginSchema = z.object({
 
 type Login = z.infer<typeof loginSchema>;
 
-const LoginForm: FC<AuthenticationProps> = ({ callbacks }) => {
-    const {
-        loginWithEmailPasswordCredentials,
-        authenticateWithSocialProvider,
-    } = callbacks;
+const LoginForm: FC = () => {
     const router = useRouter();
+    const client = createClient();
+
     const loginForm: UseFormReturn<Login> = useForm<Login>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
@@ -41,6 +44,40 @@ const LoginForm: FC<AuthenticationProps> = ({ callbacks }) => {
             password: "",
         },
     });
+
+    const loginWithEmailPasswordCredentials = async (
+        credentials: AuthenticationCredentials
+    ): Promise<AuthResponse> => {
+        const { email, password } = credentials;
+        const { error } = await client.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        return {
+            ok: error === null,
+            error: error || undefined,
+        };
+    };
+
+    const authenticateWithSocialProvider = async (
+        provider: SocialProviders
+    ): Promise<void> => {
+        const { data } = await client.auth.signInWithOAuth({
+            provider,
+            options: {
+                redirectTo: `${process.env.NEXT_PUBLIC_HOSTED_URL}api/auth/token/callback`,
+                queryParams: {
+                    access_type: "offline",
+                    prompt: "consent",
+                },
+            },
+        });
+
+        if (data.url) {
+            window.location.href = data.url;
+        }
+    };
 
     const handleLoginSubmission = async (values: Login) => {
         const response = () =>

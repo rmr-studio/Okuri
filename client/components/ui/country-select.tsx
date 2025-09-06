@@ -29,6 +29,7 @@ type CountrySelectProps = {
     showCountryName?: boolean;
     className?: string;
     renderFlag?: (country: RPNInput.Country, countryName: string) => React.ReactNode;
+    error?: string;
 };
 
 export const CountrySelect = ({
@@ -39,6 +40,7 @@ export const CountrySelect = ({
     showCountryName = false,
     className,
     onChange,
+    error,
 }: CountrySelectProps) => {
     const [open, setOpen] = useState(false);
 
@@ -48,7 +50,7 @@ export const CountrySelect = ({
     };
 
     return (
-        <Popover modal={true} open={open} onOpenChange={setOpen}>
+        <Popover modal={false} open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     type="button"

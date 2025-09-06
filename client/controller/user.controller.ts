@@ -1,4 +1,8 @@
-import { User } from "@/lib/interfaces/user.interface";
+import {
+    GetCurrentUserResponse,
+    UpdateUserProfileRequest,
+    UpdateUserProfileResponse,
+} from "@/lib/interfaces/user.interface";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { api } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
@@ -7,9 +11,11 @@ import { Session } from "@supabase/supabase-js";
  * Will fetch the Current authenticated user's detailed profile from the
  * active session token
  * @param {Session} session - The current active session for the user
- * @returns {UserDTO} - The user's profile
+ * @returns {GetCurrentUserResponse} - The user's profile
  */
-export const fetchSessionUser = async (session: Session | null): Promise<User> => {
+export const fetchSessionUser = async (
+    session: Session | null
+): Promise<GetCurrentUserResponse> => {
     try {
         // Validate session and access token
         if (!session?.access_token) {
@@ -54,7 +60,11 @@ export const fetchSessionUser = async (session: Session | null): Promise<User> =
     }
 };
 
-export const updateUser = async (session: Session | null, user: User): Promise<User> => {
+export const updateUser = async (
+    session: Session | null,
+    request: UpdateUserProfileRequest,
+    updatedAvatar?: Blob | null
+): Promise<UpdateUserProfileResponse> => {
     try {
         // Validate session and access token
         if (!session?.access_token) {
@@ -73,7 +83,7 @@ export const updateUser = async (session: Session | null, user: User): Promise<U
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify(user),
+            body: JSON.stringify(request),
         });
 
         if (response.ok) {

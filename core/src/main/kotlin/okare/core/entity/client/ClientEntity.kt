@@ -2,7 +2,11 @@ package okare.core.entity.client
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okare.core.models.user.Address
+import okare.core.entity.template.TemplateEntity
+import okare.core.models.client.Client
+import okare.core.models.client.ContactDetails
+import okare.core.models.template.client.ClientTemplateFieldStructure
+import okare.core.models.template.toModel
 import org.hibernate.annotations.Type
 import java.time.ZonedDateTime
 import java.util.*
@@ -10,12 +14,8 @@ import java.util.*
 @Entity
 @Table(
     name = "clients",
-    uniqueConstraints = [
-        UniqueConstraint(name = "uq_client_phone_user", columnNames = ["user_id", "phone"]),
-        UniqueConstraint(name = "uq_client_ndis_user", columnNames = ["user_id", "ndis_number"])
-    ],
     indexes = [
-        Index(name = "idx_client_user_id", columnList = "user_id")
+        Index(name = "idx_client_organisation_id", columnList = "organisation_id")
     ]
 )
 data class ClientEntity(
@@ -24,21 +24,26 @@ data class ClientEntity(
     @Column(name = "id")
     val id: UUID? = null,
 
-    @Column(name = "user_id", nullable = false)
-    val userId: UUID,
+    @Column(name = "organisation_id", nullable = false)
+    val organisationId: UUID,
 
     @Column(name = "name", nullable = false)
     var name: String,
 
+    @Column(name = "archived", nullable = false)
+    var archived: Boolean = false,
+
+    @Column(name = "contact_details", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
-    @Column(name = "address", nullable = false, columnDefinition = "jsonb")
-    var address: Address,
+    var contactDetails: ContactDetails? = null,
 
-    @Column(name = "phone", nullable = false)
-    var phone: String,
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "template_id", referencedColumnName = "id")
+    var template: TemplateEntity<ClientTemplateFieldStructure>? = null, // Link to which template was used for client structure
 
-    @Column(name = "ndis_number", nullable = false)
-    var ndisNumber: String,
+    @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
+    @Type(JsonBinaryType::class)
+    var attributes: Map<String, Any>? = null, // E.g., {"industry": "Healthcare", "size": "50-100"}
 
     @Column(
         name = "created_at",
@@ -60,19 +65,19 @@ data class ClientEntity(
     }
 }
 
-fun ClientEntity.toModel(): okare.core.models.client.Client {
+fun ClientEntity.toModel(): Client {
     this.id.let {
         if (it == null) {
             throw IllegalStateException("ClientEntity ID cannot be null when converting to model")
         }
 
-        return okare.core.models.client.Client(
+        return Client(
             id = it,
-            userId = this.userId,
+            organisationId = this.organisationId,
+            template = this.template?.toModel(),
             name = this.name,
-            address = this.address,
-            phone = this.phone,
-            ndisNumber = this.ndisNumber
+            contactDetails = this.contactDetails,
+            attributes = this.attributes
         )
 
     }

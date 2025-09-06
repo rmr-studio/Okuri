@@ -1,25 +1,48 @@
-import { Button } from "@/components/ui/button";
-
 export default function Hero() {
     return (
-        <div className="relative pt-32 pb-20 sm:pt-40 sm:pb-24">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-8">
-                    Everything App
-                    <br />
-                    <span className="text-gray-400">
-                        for Client Management and Invoice Generation
-                    </span>
-                </h1>
-                <p className="max-w-2xl mx-auto text-lg sm:text-xl text-gray-400 mb-10">
-                    Okare, an open-source platform, serves as an all-in-one solution for Independant
-                    carers
-                </p>
-                <Button className="relative group px-8 py-6 text-lg bg-gradient-to-r from-primary to-primary/40 hover:opacity-90">
-                    <span className="relative z-10">Try it free</span>
-                    <div className="absolute inset-0 bg-white/20 blur-lg group-hover:blur-xl transition-all duration-300 opacity-0 group-hover:opacity-100" />
-                </Button>
+        <main className="h-screen-without-header relative">
+            <div className="absolute bottom-24 left-24 z-20 max-w-3xl">
+                <div className="text-left">
+                    <div
+                        className="inline-flex items-center px-3 py-1 rounded-full bg-white/5 backdrop-blur-sm mb-4 relative"
+                        style={{
+                            filter: "url(#glass-effect)",
+                        }}
+                    >
+                        <div className="absolute top-0 left-1 right-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
+                        <span className="text-white/90 text-xs font-light relative z-10">
+                            ✨ A new client management experience
+                        </span>
+                    </div>
+
+                    {/* Main Heading */}
+                    <h1 className="text-5xl md:text-6xl md:leading-16 tracking-tight font-light text-white mb-4">
+                        <span className="font-medium italic instrument">Next Generation</span>{" "}
+                        Client
+                        <br />
+                        <span className="font-light tracking-tight text-white">
+                            and Invoice Management
+                        </span>
+                    </h1>
+
+                    {/* Description */}
+                    <p className="text-xs font-light text-white/70 mb-4 leading-relaxed">
+                        Create stunning visual experiences with our advanced shader technology.
+                        Interactive lighting, smooth animations, and beautiful effects that respond
+                        to your every move.
+                    </p>
+
+                    {/* Buttons */}
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <button className="px-8 py-3 rounded-full bg-transparent border border-white/30 text-white font-normal text-xs transition-all duration-200 hover:bg-white/10 hover:border-white/50 cursor-pointer">
+                            Pricing
+                        </button>
+                        <button className="px-8 py-3 rounded-full bg-white text-black font-normal text-xs transition-all duration-200 hover:bg-white/90 cursor-pointer">
+                            Get Started
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
-    );
+    </main>
+);
 }
