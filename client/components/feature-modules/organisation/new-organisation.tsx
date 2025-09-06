@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-    OrganisationCreation,
+    OrganisationFormDetails,
     OrganisationForm,
 } from "./form/organisation-form";
 
@@ -49,7 +49,7 @@ const NewOrganisation = () => {
         },
     });
 
-    const handleSubmission = async (values: OrganisationCreation) => {
+    const handleSubmission = async (values: OrganisationFormDetails) => {
         if (!session || !client) {
             toast.error("No active session found");
             return;

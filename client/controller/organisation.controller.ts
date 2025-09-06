@@ -117,7 +117,7 @@ export const updateOrganisation = async (
 export const getOrganisation = async (
     session: Session | null,
     params: GetOrganisationPathParams,
-    includeMembers: boolean = false
+    includeMetadata: boolean = false
 ): Promise<GetOrganisationResponse> => {
     const { organisationId } = params;
     try {
@@ -141,7 +141,7 @@ export const getOrganisation = async (
 
         const url = api();
         const response = await fetch(
-            `${url}/v1/organisation/${organisationId}?includeMembers=${includeMembers}`,
+            `${url}/v1/organisation/${organisationId}?includeMetadata=${includeMetadata}`,
             {
                 method: "GET",
                 headers: {
@@ -274,10 +274,7 @@ export const getOrganisationInvites = async (
     }
 };
 
-export const revokeInvite = async (
-    session: Session | null,
-    params: RevokeInvitePathParams
-) => {
+export const revokeInvite = async (session: Session | null, params: RevokeInvitePathParams) => {
     const { organisationId, id } = params;
     try {
         // Validate session and access token

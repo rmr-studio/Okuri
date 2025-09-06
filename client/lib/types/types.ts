@@ -123,7 +123,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get a client by ID
+         * @description Retrieves a specific client by its ID, if the user has access.
+         */
+        get: operations["getClientById"];
         /**
          * Update an existing client
          * @description Updates a client with the specified ID, if the user has access.
@@ -444,26 +448,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/client/client/{clientId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get a client by ID
-         * @description Retrieves a specific client by its ID, if the user has access.
-         */
-        get: operations["getClientById"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/organisation/{organisationId}/member": {
         parameters: {
             query?: never;
@@ -546,6 +530,25 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             members: components["schemas"]["OrganisationMember"][];
+            invites: components["schemas"]["OrganisationInvite"][];
+        };
+        OrganisationInvite: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            organisationId: string;
+            email: string;
+            inviteToken: string;
+            /** Format: uuid */
+            invitedBy?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+            /** @enum {string} */
+            status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED";
         };
         OrganisationMember: {
             user: components["schemas"]["UserDisplay"];
@@ -741,24 +744,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-        };
-        OrganisationInvite: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            organisationId: string;
-            email: string;
-            inviteToken: string;
-            /** Format: uuid */
-            invitedBy?: string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            expiresAt: string;
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
-            /** @enum {string} */
-            status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED";
         };
         OrganisationCreationRequest: {
             name: string;
@@ -1314,6 +1299,46 @@ export interface operations {
             };
         };
     };
+    getClientById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"];
+                };
+            };
+            /** @description Client not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Client"];
+                };
+            };
+        };
+    };
     updateClient: {
         parameters: {
             query?: never;
@@ -1835,7 +1860,7 @@ export interface operations {
     getOrganisation: {
         parameters: {
             query?: {
-                includeMembers?: boolean;
+                includeMetadata?: boolean;
             };
             header?: never;
             path: {
@@ -2076,46 +2101,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Client"][];
-                };
-            };
-        };
-    };
-    getClientById: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                clientId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Client retrieved successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"];
-                };
-            };
-            /** @description Unauthorized access */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"];
-                };
-            };
-            /** @description Client not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["Client"];
                 };
             };
         };

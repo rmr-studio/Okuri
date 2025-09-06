@@ -1,21 +1,11 @@
 import { useAuth } from "@/components/provider/auth-context";
-import { getOrganisationWithMembers } from "@/controller/organisation.controller";
-import { OrganisationMember } from "@/lib/interfaces/organisation.interface";
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { OrganisationRole } from "@/lib/interfaces/organisation.interface";
+import { useOrganisation } from "./useOrganisation";
 
-export type OrganisationRole = "OWNER" | "ADMIN" | "MEMBER";
-
-export interface UseOrganisationRoleReturn {
-    isLoadingAuth: boolean;
+interface UseOrganisationRoleReturn {
     isLoading: boolean;
     error: Error | null;
     role: OrganisationRole | null;
-    member: OrganisationMember | null;
-    organisation: any | null;
-    isOwner: boolean;
-    isAdmin: boolean;
-    isMember: boolean;
     hasRole: (role: OrganisationRole) => boolean;
 }
 
@@ -45,28 +35,12 @@ export interface UseOrganisationRoleReturn {
  */
 export const useOrganisationRole = (): UseOrganisationRoleReturn => {
     const { session, loading } = useAuth();
-    const { id: orgId } = useParams<{ id: string }>();
+    const { data: organisation, isPending, isLoadingAuth, error } = useOrganisation();
 
-    // Use TanStack Query to fetch organization data with members
-    const query = useQuery({
-        queryKey: ["organization-with-members", orgId],
-        queryFn: () => getOrganisationWithMembers(session, { organisationId: orgId }),
-        enabled: !!orgId && !!session?.user.id,
-        retry: 1,
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    });
-
-    // Extract current user's role from members
-    const currentUserMember = query.data?.members?.find(
-        (member) => member.user.id === session?.user.id
-    );
-
-    const role: OrganisationRole | null = currentUserMember?.role || null;
-
-    // Helper functions for role checking
-    const isOwner = role === "OWNER";
-    const isAdmin = role === "ADMIN" || role === "OWNER";
-    const isMember = role === "MEMBER" || role === "ADMIN" || role === "OWNER";
+    // Extract current user's role from members. Given the organisation can be fetched, and the user is apart of that organisation,
+    const role: OrganisationRole | null =
+        organisation?.members?.find((member) => member.user.id === session?.user.id)
+            ?.membershipDetails.role ?? null;
 
     /**
      * Check if the current user has at least the specified role level
@@ -88,15 +62,9 @@ export const useOrganisationRole = (): UseOrganisationRoleReturn => {
     };
 
     return {
-        isLoadingAuth: loading,
-        isLoading: query.isLoading,
-        error: query.error,
+        isLoading: isPending || isLoadingAuth || loading,
+        error,
         role,
-        member: currentUserMember || null,
-        organisation: query.data || null,
-        isOwner,
-        isAdmin,
-        isMember,
         hasRole,
     };
 };

@@ -21,7 +21,7 @@ const ShaderPageContainer: FCWC<Props> = ({ children, className }) => {
     return (
         <div
             ref={containerRef}
-            className={cn(`min-h-screen w-full bg-neutral-900 relative overflow-hidden`, className)}
+            className={cn(`min-h-screen w-full bg-neutral-950 relative overflow-hidden`, className)}
         >
             {/* SVG Filters */}
             <svg className="absolute inset-0 w-0 h-0">
@@ -71,18 +71,14 @@ const ShaderPageContainer: FCWC<Props> = ({ children, className }) => {
             </svg>
 
             <MeshGradient
-                className="absolute inset-0 w-full h-full dark:opacity-70 opacity-80"
+                className="absolute inset-0 w-full h-full opacity-30"
                 colors={darkModeColors}
                 speed={0.2}
                 // backgroundColor="#0c0a09"
             />
 
             <div
-                className="absolute inset-0 w-full h-full opacity-5 dark:opacity-5 pointer-events-none"
-                style={{ filter: "url(#film-grain-high)" }}
-            />
-            <div
-                className="absolute inset-0 w-full h-full opacity-10 dark:opacity-10 pointer-events-none"
+                className="absolute inset-0 w-full h-full opacity-10 pointer-events-none backdrop-blur-sm"
                 style={{ filter: "url(#film-grain-medium)" }}
             />
 

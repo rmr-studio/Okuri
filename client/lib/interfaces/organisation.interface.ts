@@ -6,6 +6,10 @@ export type Organisation = components["schemas"]["Organisation"];
 export type OrganisationMember = components["schemas"]["OrganisationMember"];
 export type MembershipDetails = components["schemas"]["MembershipDetails"];
 export type OrganisationInvite = components["schemas"]["OrganisationInvite"];
+export type OrganisationInviteStatus = components["schemas"]["OrganisationInvite"]["status"];
+export type OrganisationPlan = components["schemas"]["Organisation"]["plan"];
+export type OrganisationRole =
+    components["schemas"]["OrganisationMember"]["membershipDetails"]["role"];
 
 // --- 🎨 Tile Layout Types ---
 export interface TileLayoutConfig {

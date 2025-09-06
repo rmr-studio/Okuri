@@ -60,13 +60,6 @@ export const ClientOverview = () => {
     }, [loading, clientError, orgError, client, router]);
 
     /**
-     * Navigate back to Organisation Client list
-     */
-    const onBack = () => {
-        router.back();
-    };
-
-    /**
      * Navigate to client edit form page with client-id param
      */
     const onEdit = () => {
