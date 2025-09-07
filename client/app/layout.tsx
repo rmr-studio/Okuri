@@ -9,23 +9,23 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "Okuri | The client and invoice management platform for Independent carers",
+    title: "Okuri | The Next-Gen Client & Invoice Management Platform",
     description:
-        "Okuri is a client and invoice management platform designed for independent carers, helping you manage your clients, invoices, and payments seamlessly.",
+        "Okuri is the next step in managing your invoices, clients and reports. Designed for all types of businesses, big, small or solo. Okuri is the perfect tool to help you manage your administration seamlessly.",
     openGraph: {
         locale: "en_AU",
         type: "website",
-        url: "https://Okuri.app",
-        title: "Okuri | The client and invoice management platform for Independent carers",
+        url: "https://okuri.app",
+        title: "Okuri | The Next-Gen Client & Invoice Management Platform",
         description:
-            "Okuri is a client and invoice management platform designed for independent carers, helping you manage your clients, invoices, and payments seamlessly.",
+            "Okuri is the next step in managing your invoices, clients and reports. Designed for all types of businesses, big, small or solo. Okuri is the perfect tool to help you manage your administration seamlessly.",
         siteName: "Okuri",
     },
 };
 
 const MontserratFont = Montserrat({
     subsets: ["latin"],
-    weight: ["100", "400", "700"],
+    weight: ["200", "400", "700"],
 });
 
 export default function RootLayout({
