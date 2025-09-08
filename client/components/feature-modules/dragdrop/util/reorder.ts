@@ -1,4 +1,4 @@
-import { SortableItemProps } from "../sortable-wrapper";
+import { SortableItemProps } from "../blocks/sortable-wrapper";
 
 /**
  * Reorder items in a list by moving `activeId` to the position of `overId`.
