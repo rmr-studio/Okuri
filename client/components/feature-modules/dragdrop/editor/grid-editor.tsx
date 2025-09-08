@@ -65,7 +65,7 @@ export const BlockEditor = () => {
             // ✅ Calculate proportional sizes
             const prevSizes =
                 target.block?.sizes ||
-                (target.block?.children?.map(() => 100 / (target.block?.children?.length || 1))) ||
+                target.block?.children?.map(() => 100 / (target.block?.children?.length || 1)) ||
                 [];
             const oldCount = prevSizes.length;
             const newCount = newChildren.length;
@@ -88,7 +88,11 @@ export const BlockEditor = () => {
 
             const promotedTarget: GridBlockProps = {
                 ...target.block,
-                type: "containerBlock",
+                type: target.block.type.includes("container")
+                    ? target.block.type
+                    : "containerBlock", // default to row container
+                direction:
+                    target.block.direction || DragRegistry[target.block.type]?.direction || "row",
                 children: newChildren,
                 sizes: newSizes,
             };

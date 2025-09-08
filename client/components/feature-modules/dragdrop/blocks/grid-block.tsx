@@ -5,10 +5,13 @@ import { FC, useCallback } from "react";
 import { DragRegistry } from "../util/registry";
 import { SortableItem } from "./sortable-item";
 
+export type Direction = "row" | "column";
+
 export interface GridBlockProps {
     id: string | number;
     type: string;
     children?: GridBlockProps[];
+    direction?: Direction;
     sizes?: number[]; // panel proportions (0–100)
     className?: string;
     onResize?: (id: string | number, sizes: number[]) => void;
@@ -72,17 +75,18 @@ export const GridBlock: FC<GridBlockProps> = ({
                 </ResizablePanelGroup>
             ) : (
                 <div className={`p-4 bg-white rounded shadow h-full ${className || ""}`}>
-                    {config?.render(id, { children }) ??
-                        children.map((child) => (
-                            <GridBlock
-                                key={child.id}
-                                id={child.id}
-                                type={child.type}
-                                children={child.children}
-                                sizes={child.sizes}
-                                onResize={onResize}
-                            />
-                        ))}
+                    {typeof config?.render === "function"
+                        ? config.render(id, { children })
+                        : children.map((child) => (
+                              <GridBlock
+                                  key={child.id}
+                                  id={child.id}
+                                  type={child.type}
+                                  children={child.children}
+                                  sizes={child.sizes}
+                                  onResize={onResize}
+                              />
+                          ))}
                 </div>
             )}
         </SortableItem>
