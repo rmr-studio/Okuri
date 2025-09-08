@@ -45,7 +45,7 @@ export default function RootLayout({
                     <AuthProvider>
                         <QueryClientWrapper>
                             <StoreProviderWrapper>
-                                <main className="w-full">{children}</main>
+                                <main className="w-full relative">{children}</main>
                             </StoreProviderWrapper>
                         </QueryClientWrapper>
                     </AuthProvider>
