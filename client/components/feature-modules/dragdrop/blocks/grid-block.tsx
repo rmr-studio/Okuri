@@ -1,27 +1,20 @@
 "use client";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { FC, useCallback } from "react";
+import { FC, useCallback, useMemo } from "react";
 import { DragRegistry } from "../util/registry";
+import { BlockDirection, GridBlockProps } from "../util/types";
 import { SortableItem } from "./sortable-item";
 
-export type Direction = "row" | "column";
-
-export interface GridBlockProps {
-    id: string | number;
-    type: string;
-    children?: GridBlockProps[];
-    direction?: Direction;
-    sizes?: number[]; // panel proportions (0–100)
-    className?: string;
-    onResize?: (id: string | number, sizes: number[]) => void;
-}
-
 /**
- * GridBlock
+ * GridBlock - Unified component for rendering all block types
  *
- * - Handles both leaf and container blocks.
- * - When container, persists resizable panel sizes via `onResize`.
+ * Features:
+ * - Handles both leaf and container blocks
+ * - Proper resizing with size persistence
+ * - Drag and drop support
+ * - Type-safe data handling
+ * - Proper container detection and rendering
  */
 export const GridBlock: FC<GridBlockProps> = ({
     id,
@@ -30,10 +23,31 @@ export const GridBlock: FC<GridBlockProps> = ({
     sizes,
     className,
     onResize,
+    data,
 }) => {
     const config = DragRegistry[type];
-    const isContainer = config?.behaviors?.nestable && children.length > 0;
-    const isResizable = config?.behaviors?.resizable;
+
+    if (!config) {
+        console.warn(`GridBlock: Unknown block type "${type}" not found in DragRegistry`);
+        return (
+            <div className="p-4 bg-red-100 border border-red-300 rounded">
+                <p className="text-red-600">Unknown block type: {type}</p>
+            </div>
+        );
+    }
+
+    // Determine if this is a container block
+    const isContainer = config.behaviors?.nestable && children.length > 0;
+    const isResizable = config.behaviors?.resizable;
+    const direction = (config.direction || "row") as BlockDirection;
+
+    // Calculate default sizes if not provided
+    const defaultSizes = useMemo(() => {
+        if (sizes && sizes.length === children.length) {
+            return sizes;
+        }
+        return children.map(() => 100 / children.length);
+    }, [sizes, children.length]);
 
     const handleResize = useCallback(
         (updatedSizes: number[]) => {
@@ -42,53 +56,81 @@ export const GridBlock: FC<GridBlockProps> = ({
         [id, onResize]
     );
 
-    return (
-        <SortableItem id={id} className="flex-1">
-            {isContainer && isResizable ? (
+    // Render container blocks with resizable panels
+    if (isContainer && isResizable) {
+        return (
+            <SortableItem id={id} className="flex-1 min-h-[200px]">
                 <ResizablePanelGroup
-                    direction="horizontal"
-                    className="flex w-full h-full rounded-lg border shadow-sm overflow-hidden"
-                    onLayout={handleResize} // 📌 capture sizes
+                    direction={direction === "row" ? "horizontal" : "vertical"}
+                    className="flex w-full h-full rounded-lg border shadow-sm overflow-hidden bg-gray-50"
+                    onLayout={handleResize}
                 >
                     {children.map((child, index) => (
-                        <>
+                        <div key={child.id}>
                             <ResizablePanel
-                                key={child.id}
-                                defaultSize={sizes?.[index] || 100 / children.length}
+                                defaultSize={defaultSizes[index]}
                                 minSize={10}
+                                className="relative"
                             >
-                                <div className="p-4 bg-white h-full">
+                                <div className="p-2 h-full">
                                     <GridBlock
-                                        key={child.id}
                                         id={child.id}
                                         type={child.type}
                                         children={child.children}
                                         sizes={child.sizes}
-                                        onResize={onResize} // bubble up resize changes
+                                        onResize={onResize}
+                                        data={child.data}
+                                        className={child.className}
                                     />
                                 </div>
                             </ResizablePanel>
-
-                            {index < children.length - 1 && <ResizableHandle withHandle />}
-                        </>
+                            {index < children.length - 1 && (
+                                <ResizableHandle
+                                    withHandle
+                                    className="bg-gray-300 hover:bg-gray-400"
+                                />
+                            )}
+                        </div>
                     ))}
                 </ResizablePanelGroup>
-            ) : (
-                <div className={`p-4 bg-white rounded shadow h-full ${className || ""}`}>
-                    {typeof config?.render === "function"
-                        ? config.render(id, { children })
-                        : children.map((child) => (
-                              <GridBlock
-                                  key={child.id}
-                                  id={child.id}
-                                  type={child.type}
-                                  children={child.children}
-                                  sizes={child.sizes}
-                                  onResize={onResize}
-                              />
-                          ))}
-                </div>
-            )}
+            </SortableItem>
+        );
+    }
+
+    // Render leaf blocks or non-resizable containers
+    return (
+        <SortableItem id={id} className="flex-1">
+            <div className={`p-4 bg-card rounded-lg shadow-sm border h-full ${className || ""}`}>
+                {config.render ? (
+                    config.render(id, data)
+                ) : (
+                    <div className="text-gray-500 text-sm">
+                        {config.label} - No render function defined
+                    </div>
+                )}
+
+                {/* Render children for non-resizable containers */}
+                {children.length > 0 && !isResizable && (
+                    <div
+                        className={`mt-4 flex gap-2 ${
+                            direction === "column" ? "flex-col" : "flex-row"
+                        }`}
+                    >
+                        {children.map((child) => (
+                            <GridBlock
+                                key={child.id}
+                                id={child.id}
+                                type={child.type}
+                                children={child.children}
+                                sizes={child.sizes}
+                                onResize={onResize}
+                                data={child.data}
+                                className={child.className}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
         </SortableItem>
     );
 };

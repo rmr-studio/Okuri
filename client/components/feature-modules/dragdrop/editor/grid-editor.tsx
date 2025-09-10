@@ -1,132 +1,122 @@
 "use client";
 
-import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
-import { useState } from "react";
-import { GridBlock, GridBlockProps } from "../blocks/grid-block";
+import {
+    DndContext,
+    DragEndEvent,
+    DragOverlay,
+    closestCenter,
+} from "@dnd-kit/core";
+import { useCallback, useState } from "react";
+import { GridBlock } from "../blocks/grid-block";
 import { SortableList } from "../blocks/sortable-wrapper";
+import { createBlockTreeManager } from "../util/block-operations";
 import { DragRegistry } from "../util/registry";
+import { GridBlockProps } from "../util/types";
 
+/**
+ * BlockEditor - Advanced grid editor with full drag and drop support
+ *
+ * Features:
+ * - Complete drag and drop with validation
+ * - Automatic container promotion
+ * - Resize handling
+ * - Drag overlay support
+ * - Error handling and logging
+ */
 export const BlockEditor = () => {
     const [blocks, setBlocks] = useState<GridBlockProps[]>([
-        { id: "1", type: "displayBlock" },
-        { id: "2", type: "displayBlock" },
+        {
+            id: "1",
+            type: "displayBlock",
+            data: { title: "Block 1" },
+        },
+        {
+            id: "2",
+            type: "displayBlock",
+            data: { title: "Block 2" },
+        },
     ]);
 
-    const handleResize = (blockId: string | number, sizes: number[]) => {
-        setBlocks((prev) =>
-            prev.map((b) =>
-                b.id === blockId
-                    ? { ...b, sizes }
-                    : {
-                          ...b,
-                          children: b.children?.map((c) =>
-                              c.id === blockId ? { ...c, sizes } : c
-                          ),
-                      }
-            )
-        );
-    };
+    const [activeId, setActiveId] = useState<string | number | null>(null);
+    const [blockManager] = useState(() => createBlockTreeManager(blocks));
 
-    // 📌 Handle drag/drop + promotion into container blocks
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (!over || active.id === over.id) return;
+    // Update manager when blocks change
+    blockManager.setBlocks(blocks);
 
-        setBlocks((prev) => {
-            const findBlock = (
-                nodes: GridBlockProps[],
-                id: string | number
-            ): { block?: GridBlockProps; parent?: GridBlockProps; index?: number } => {
-                for (let i = 0; i < nodes.length; i++) {
-                    if (nodes[i].id === id) return { block: nodes[i], index: i };
-                    if (nodes[i].children) {
-                        const res = findBlock(nodes[i].children!, id);
-                        if (res.block) return { ...res, parent: nodes[i] };
-                    }
-                }
-                return {};
-            };
+    const handleResize = useCallback(
+        (blockId: string | number, sizes: number[]) => {
+            const updatedBlocks = blockManager.resizeBlock(blockId, sizes);
+            setBlocks(updatedBlocks);
+        },
+        [blockManager]
+    );
 
-            const source = findBlock(prev, active.id);
-            const target = findBlock(prev, over.id);
+    const handleDragStart = useCallback((event: any) => {
+        setActiveId(event.active.id);
+    }, []);
 
-            if (!source.block || !target.block) return prev;
+    const handleDragEnd = useCallback(
+        (event: DragEndEvent) => {
+            const { active, over } = event;
+            setActiveId(null);
 
-            const targetConfig = DragRegistry[target.block.type];
-            const isValidDrop =
-                targetConfig?.behaviors?.nestable &&
-                targetConfig?.validChildren?.includes(source.block.type);
+            if (!over || active.id === over.id) return;
 
-            if (!isValidDrop) return prev;
+            const result = blockManager.handleDragDrop(active.id, over.id);
 
-            // ✅ Build new children
-            const newChildren = [...(target.block.children || []), source.block];
-
-            // ✅ Calculate proportional sizes
-            const prevSizes =
-                target.block?.sizes ||
-                target.block?.children?.map(() => 100 / (target.block?.children?.length || 1)) ||
-                [];
-            const oldCount = prevSizes.length;
-            const newCount = newChildren.length;
-
-            let newSizes: number[];
-            if (oldCount > 0) {
-                // Scale old sizes to (100 * oldCount / newCount)
-                const scale = oldCount / newCount;
-                const scaled = prevSizes.map((s) => s * scale);
-
-                // Remaining space goes to the new child
-                const used = scaled.reduce((a, b) => a + b, 0);
-                const remainder = Math.max(0, 100 - used);
-
-                newSizes = [...scaled, remainder];
+            if (result.success) {
+                setBlocks(result.blocks);
             } else {
-                // If no sizes existed, just split evenly
-                newSizes = newChildren.map(() => 100 / newCount);
+                console.warn("Drag drop failed:", result.error);
+                // You could show a toast notification here
             }
+        },
+        [blockManager]
+    );
 
-            const promotedTarget: GridBlockProps = {
-                ...target.block,
-                type: target.block.type.includes("container")
-                    ? target.block.type
-                    : "containerBlock", // default to row container
-                direction:
-                    target.block.direction || DragRegistry[target.block.type]?.direction || "row",
-                children: newChildren,
-                sizes: newSizes,
-            };
+    const handleDragCancel = useCallback(() => {
+        setActiveId(null);
+    }, []);
 
-            // ✅ Rebuild tree
-            const replaceBlock = (nodes: GridBlockProps[]): GridBlockProps[] => {
-                return nodes
-                    .filter((b) => b.id !== source.block!.id)
-                    .map((b) =>
-                        b.id === target.block!.id
-                            ? promotedTarget
-                            : { ...b, children: b.children ? replaceBlock(b.children) : [] }
-                    );
-            };
+    const renderDragOverlay = useCallback(() => {
+        if (!activeId) return null;
 
-            return replaceBlock(prev);
-        });
-    };
+        const block = blockManager.findBlock(activeId).block;
+        if (!block) return null;
+
+        const config = DragRegistry[block.type];
+        if (!config?.renderOverlay) return null;
+
+        return config.renderOverlay(block.id, block.data);
+    }, [activeId, blockManager]);
 
     return (
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableList items={blocks}>
-                {blocks.map((block) => (
-                    <GridBlock
-                        key={block.id}
-                        id={block.id}
-                        type={block.type}
-                        children={block.children}
-                        sizes={block.sizes}
-                        onResize={handleResize}
-                        className="mb-4"
-                    />
-                ))}
-            </SortableList>
-        </DndContext>
+        <div className="p-6">
+            <DndContext
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+            >
+                <SortableList items={blocks}>
+                    <div className="space-y-4">
+                        {blocks.map((block) => (
+                            <GridBlock
+                                key={block.id}
+                                id={block.id}
+                                type={block.type}
+                                children={block.children}
+                                sizes={block.sizes}
+                                onResize={handleResize}
+                                data={block.data}
+                                className="min-h-[200px]"
+                            />
+                        ))}
+                    </div>
+                </SortableList>
+
+                <DragOverlay>{renderDragOverlay()}</DragOverlay>
+            </DndContext>
+        </div>
     );
 };
