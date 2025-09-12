@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import { Toaster } from "sonner";
 
+import "gridstack/dist/gridstack.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

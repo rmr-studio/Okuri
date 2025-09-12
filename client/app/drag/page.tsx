@@ -1,7 +1,7 @@
-import { ComprehensiveExample } from "@/components/feature-modules/dragdrop/demo/comprehensive-example";
+import { GridStackDemo } from "@/components/feature-modules/grid/demo/grid-demo";
 
 const page = () => {
-    return <ComprehensiveExample />;
+    return <GridStackDemo />;
 };
 
 export default page;
