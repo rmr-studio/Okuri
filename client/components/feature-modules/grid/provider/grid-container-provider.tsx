@@ -26,12 +26,15 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
     const renderCBFn = useCallback(
         (element: HTMLElement, widget: GridStackWidget & { grid?: GridStack }) => {
-            if (widget.id && widget.grid) {
+            const grid =
+                widget.grid ||
+                ((element.closest(".grid-stack") as any)?.gridstack as GridStack | undefined);
+            if (widget.id && grid) {
                 // Get or create the widget container map for this grid instance
-                let containers = gridWidgetContainersMap.get(widget.grid);
+                let containers = gridWidgetContainersMap.get(grid);
                 if (!containers) {
                     containers = new Map<string, HTMLElement>();
-                    gridWidgetContainersMap.set(widget.grid, containers);
+                    gridWidgetContainersMap.set(grid, containers);
                 }
                 containers.set(widget.id, element);
 
@@ -82,6 +85,25 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
             }
         }
     }, [gridStack, initGrid, setGridStack]);
+
+    useLayoutEffect(() => {
+        return () => {
+            try {
+                if (gridStack) {
+                    gridStack.destroy(false);
+                    gridWidgetContainersMap.delete(gridStack);
+                }
+                if (GridStack.renderCB === renderCBFn) {
+                    // best-effort restore
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore
+                    GridStack.renderCB = undefined;
+                }
+            } catch (e) {
+                console.error("Error cleaning up gridstack", e);
+            }
+        };
+    }, [gridStack, renderCBFn]);
 
     return (
         <GridStackRenderContext.Provider

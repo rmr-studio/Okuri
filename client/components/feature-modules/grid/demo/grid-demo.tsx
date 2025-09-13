@@ -6,14 +6,12 @@ import { ComponentProps, useEffect, useState } from "react";
 import "gridstack/dist/gridstack.css";
 import { GridContainerProvider } from "../provider/grid-container-provider";
 import { GridProvider, useGrid } from "../provider/grid-provider";
-import {
-    ComponentDataType,
-    ComponentMap,
-    WidgetRenderProvider,
-} from "../provider/grid-widget-provider";
+import { ComponentDataType, WidgetRenderProvider } from "../provider/grid-widget-provider";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TextWidget } from "../item/text-item";
+import { WIDGETS } from "../util/registry";
 
 const CELL_HEIGHT = 50;
 const BREAKPOINTS = [
@@ -22,18 +20,6 @@ const BREAKPOINTS = [
     { c: 6, w: 950 },
     { c: 8, w: 1100 },
 ];
-
-function Text({ content }: { content: string }) {
-    return (
-        <div className="w-full h-full flex items-center justify-center bg-muted border border-border rounded">
-            {content}
-        </div>
-    );
-}
-
-const COMPONENT_MAP: ComponentMap = {
-    Text,
-};
 
 // ! Content must be json string like this:
 // { name: "Text", props: { content: "Item 1" } }
@@ -48,7 +34,6 @@ const gridOptions: GridStackOptions = {
     margin: 8,
     cellHeight: CELL_HEIGHT,
     subGridOpts: {
-        class: "bg-blue-500",
         acceptWidgets: true,
         subGridDynamic: true,
         columnOpts: {
@@ -67,9 +52,9 @@ const gridOptions: GridStackOptions = {
             x: 0,
             y: 0,
             content: JSON.stringify({
-                name: "Text",
+                name: "TEXT",
                 props: { content: "Item 1" },
-            } satisfies ComponentDataType<ComponentProps<typeof Text>>),
+            } satisfies ComponentDataType<ComponentProps<typeof TextWidget>>),
         },
         {
             id: "item2",
@@ -78,7 +63,7 @@ const gridOptions: GridStackOptions = {
             x: 2,
             y: 0,
             content: JSON.stringify({
-                name: "Text",
+                name: "TEXT",
                 props: { content: "Item 2" },
             }),
         },
@@ -87,10 +72,8 @@ const gridOptions: GridStackOptions = {
             h: 5,
             sizeToContent: true,
             subGridOpts: {
-                class: "bg-red-500",
                 acceptWidgets: true,
                 cellHeight: CELL_HEIGHT,
-                alwaysShowResizeHandle: false,
                 subGridDynamic: true,
                 column: "auto",
                 minRow: 2,
@@ -106,7 +89,7 @@ const gridOptions: GridStackOptions = {
                         x: 0,
                         y: 0,
                         content: JSON.stringify({
-                            name: "Text",
+                            name: "TEXT",
                             props: { content: "Sub Grid 1 Title" },
                         }),
                     },
@@ -117,7 +100,7 @@ const gridOptions: GridStackOptions = {
                         x: 0,
                         y: 1,
                         content: JSON.stringify({
-                            name: "Text",
+                            name: "TEXT",
                             props: { content: "Item 3" },
                         }),
                     },
@@ -128,7 +111,7 @@ const gridOptions: GridStackOptions = {
                         x: 2,
                         y: 0,
                         content: JSON.stringify({
-                            name: "Text",
+                            name: "TEXT",
                             props: { content: "Item 4" },
                         }),
                     },
@@ -148,7 +131,7 @@ export function GridStackDemo() {
         <GridProvider initialOptions={initialOptions}>
             <Toolbar />
             <GridContainerProvider>
-                <WidgetRenderProvider componentMap={COMPONENT_MAP} />
+                <WidgetRenderProvider componentMap={WIDGETS} />
             </GridContainerProvider>
             <DebugInfo />
         </GridProvider>
@@ -173,7 +156,7 @@ function Toolbar() {
                             x: 0,
                             y: 0,
                             content: JSON.stringify({
-                                name: "Text",
+                                name: "TEXT",
                                 props: { content: id },
                             }),
                         }));
@@ -205,7 +188,7 @@ function Toolbar() {
                                         x: 0,
                                         y: 0,
                                         content: JSON.stringify({
-                                            name: "Text",
+                                            name: "TEXT",
                                             props: { content: "Sub Grid 1 Title" + id },
                                         }),
                                     }),

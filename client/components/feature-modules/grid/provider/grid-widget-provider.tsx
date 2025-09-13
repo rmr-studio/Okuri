@@ -51,14 +51,10 @@ export function WidgetRenderProvider(props: { componentMap: ComponentMap }) {
         <>
             {Array.from(_rawWidgetMetaMap.value.entries()).map(([id, meta]) => {
                 const componentData = parseWeightMetaToComponentData(meta);
-
                 const WidgetComponent = props.componentMap[componentData.name];
-
                 const widgetContainer = getWidgetContainer(id);
 
-                if (!widgetContainer) {
-                    throw new Error(`Widget container not found for id: ${id}`);
-                }
+                if (!WidgetComponent || !widgetContainer) return null;
 
                 return (
                     <GridStackWidgetContext.Provider key={id} value={{ widget: { id } }}>

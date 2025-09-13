@@ -7,12 +7,13 @@ export const useGrid = (options: GridStackOptions = {}) => {
 
     const initGrid = useCallback(() => {
         if (gridRef.current && !gridInstanceRef.current) {
+            gridRef.current.classList.add("grid-stack");
             gridInstanceRef.current = GridStack.addGrid(gridRef.current, options);
         }
         return gridInstanceRef.current;
     }, [options]);
 
-    const destroyGrid = useCallback((removeDOM = true) => {
+    const destroyGrid = useCallback((removeDOM = false) => {
         if (gridInstanceRef.current) {
             gridInstanceRef.current.destroy(removeDOM);
             gridInstanceRef.current = null;
@@ -43,7 +44,9 @@ export const useGrid = (options: GridStackOptions = {}) => {
 
     return {
         gridRef,
-        gridInstance: gridInstanceRef.current,
+        get gridInstance() {
+            return gridInstanceRef.current;
+        },
         initGrid,
         destroyGrid,
         addWidget,

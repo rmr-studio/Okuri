@@ -1,7 +1,7 @@
 import { GridStackDemo } from "@/components/feature-modules/grid/demo/grid-demo";
 
-const page = () => {
+const Page = () => {
     return <GridStackDemo />;
 };
 
-export default page;
+export default Page;

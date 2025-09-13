@@ -62,7 +62,7 @@ export function GridProvider({
             gridStack?.addWidget({ ...widget, id: newId });
             setRawWidgetMetaMap((prev) => {
                 const newMap = new Map<string, GridStackWidget>(prev);
-                newMap.set(newId, widget);
+                newMap.set(newId, { ...widget, id: newId });
                 return newMap;
             });
         },
@@ -81,8 +81,9 @@ export function GridProvider({
 
             const widget = fn(newId, (w) => {
                 const subWidgetId = `widget-${Math.random().toString(36).substring(2, 15)}`;
-                subWidgetIdMap.set(subWidgetId, w);
-                return { ...w, id: subWidgetId };
+                const withId = { ...w, id: subWidgetId };
+                subWidgetIdMap.set(subWidgetId, withId);
+                return withId;
             });
 
             gridStack?.addWidget({ ...widget, id: newId });
@@ -100,7 +101,12 @@ export function GridProvider({
 
     const removeWidget = useCallback(
         (id: string) => {
-            gridStack?.removeWidget(id);
+            if (!gridStack) return;
+            const element: HTMLElement | null = gridStack.el?.querySelector(`[gs-id='${id}']`);
+            if (!element) return;
+
+            gridStack.removeWidget(element, true);
+
             setRawWidgetMetaMap((prev) => {
                 const newMap = new Map<string, GridStackWidget>(prev);
                 newMap.delete(id);
