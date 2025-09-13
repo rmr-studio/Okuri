@@ -38,6 +38,17 @@ const maskClasses: Record<BGMaskType, string> = {
     none: "",
 };
 
+/**
+ * Returns a CSS `background-image` value for a tiled pattern.
+ *
+ * Generates a CSS gradient (or combination of gradients) matching `variant` using `fill` as the pattern color.
+ * The returned string is suitable for assigning to `style.backgroundImage`.
+ *
+ * @param variant - Pattern variant to generate. Supported: "dots", "grid", "diagonal-stripes", "horizontal-lines", "vertical-lines", "checkerboard".
+ * @param fill - Color used for the pattern (any valid CSS color).
+ * @param size - Tile size in pixels; used by patterns that repeat at a given spacing (e.g., `diagonal-stripes` and as the `background-size` elsewhere).
+ * @returns A CSS `background-image` string for the requested pattern, or `undefined` if `variant` is not recognized.
+ */
 function geBgImage(variant: BGVariantType, fill: string, size: number) {
     switch (variant) {
         case "dots":
