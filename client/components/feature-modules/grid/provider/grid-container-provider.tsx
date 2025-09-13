@@ -14,6 +14,23 @@ import { useGrid } from "./grid-provider";
 // WeakMap to store widget containers for each grid instance
 export const gridWidgetContainersMap = new WeakMap<GridStack, Map<string, HTMLElement>>();
 
+/**
+ * React provider that initializes and manages a GridStack instance and exposes
+ * a lookup API for widget container elements.
+ *
+ * Initializes GridStack on an internal container element, registers a render
+ * callback that records each widget's DOM container into a per-grid WeakMap
+ * (gridWidgetContainersMap) and a local fallback map, and reinitializes the
+ * GridStack instance when the provider's initial options change. Cleans up
+ * GridStack and the per-grid map on unmount and restores the render callback
+ * if it was set by this provider.
+ *
+ * The provider value exposes getWidgetContainer(widgetId) => HTMLElement | null,
+ * which first looks up the container for the current GridStack instance and
+ * falls back to a local map for backward compatibility.
+ *
+ * @returns A React element wrapping children with GridStackRenderContext.
+ */
 export function GridContainerProvider({ children }: PropsWithChildren) {
     const {
         _gridStack: { value: gridStack, set: setGridStack },
@@ -135,6 +152,16 @@ export const GridStackRenderContext = createContext<{
     getWidgetContainer: (widgetId: string) => HTMLElement | null;
 } | null>(null);
 
+/**
+ * React hook to access the GridStack render context exposing widget container lookup.
+ *
+ * Returns the context object provided by GridContainerProvider, which includes
+ * getWidgetContainer(widgetId: string): HTMLElement | null.
+ *
+ * @returns The GridStack render context with `getWidgetContainer`.
+ *
+ * @throws Error if called outside of a GridContainerProvider.
+ */
 export function useContainer() {
     const context = useContext(GridStackRenderContext);
     if (!context) {

@@ -124,6 +124,15 @@ const gridOptions: GridStackOptions = {
     ],
 };
 
+/**
+ * Demo page that mounts a GridStack-powered editor with toolbar, widget area, and debug panel.
+ *
+ * Initializes the grid with the file-level `gridOptions` and provides that to the GridProvider.
+ * Renders the Toolbar (controls to add widgets/sub-grids), the GridContainer with the registered
+ * widget renderer mapping, and a DebugInfo panel that shows initial and live grid options.
+ *
+ * @returns The demo React element.
+ */
 export function GridStackDemo() {
     const [initialOptions] = useState(gridOptions);
 
@@ -138,6 +147,13 @@ export function GridStackDemo() {
     );
 }
 
+/**
+ * Toolbar with actions to add widgets to the current grid.
+ *
+ * Renders two buttons that call the grid context's addWidget and addSubGrid callbacks:
+ * - "Add Text (2x2)": inserts a 2x2 TEXT widget whose `content` payload contains the generated widget id.
+ * - "Add Sub Grid (12x1)": inserts a 12-wide sub-grid (height 5, sizeToContent) whose sub-grid options include a locked full-width title child.
+ */
 function Toolbar() {
     const { addWidget, addSubGrid } = useGrid();
 
@@ -207,6 +223,16 @@ function Toolbar() {
     );
 }
 
+/**
+ * Renders a debug panel that shows the initial grid options and a live snapshot of the grid state.
+ *
+ * The component reads `initialOptions` and `saveOptions` from `useGrid()`. It polls `saveOptions()` every
+ * 2 seconds (if available) to update a realtime snapshot shown alongside the immutable initial options.
+ * The polling interval is cleaned up on unmount.
+ *
+ * @remarks
+ * Useful for inspecting the configured GridStack options and the current saved widget/layout data while interacting with the demo.
+ */
 function DebugInfo() {
     const { initialOptions, saveOptions } = useGrid();
 

@@ -32,6 +32,28 @@ export const GridStackContext = createContext<{
     };
 } | null>(null);
 
+/**
+ * React context provider that manages a GridStack instance and widget metadata.
+ *
+ * Provides context values and helper actions for adding/removing widgets and sub-grids,
+ * persisting layout, and accessing internal state:
+ * - addWidget(fn): generates a unique widget id, calls `fn(id)` to obtain widget data,
+ *   adds it to the GridStack (if mounted) and updates the internal widget meta map.
+ * - addSubGrid(fn): generates a unique sub-grid id, lets `fn` create the sub-grid widget
+ *   and its children via a `withWidget` helper (which assigns unique ids for each child),
+ *   adds the sub-grid to GridStack and merges created child metadata into the map.
+ * - removeWidget(id): finds the DOM element with `gs-id` === id, removes it from GridStack
+ *   (if present) and deletes its metadata from the map.
+ * - saveOptions(): delegates to `gridStack.save(true, true, ...)` to capture the current layout.
+ *
+ * The provider initializes an internal Map of widget metadata by recursively scanning
+ * `initialOptions.children` for widgets that have both `id` and `content`. It also exposes
+ * internal setters via `_gridStack` and `_rawWidgetMetaMap` to allow consumers to read or
+ * update the underlying GridStack instance and raw widget metadata map.
+ *
+ * @param initialOptions - Initial GridStackOptions used to populate the provider and to
+ *   pre-seed the internal widget metadata map (recursively inspects `initialOptions.children`).
+ */
 export function GridProvider({
     children,
     initialOptions,
@@ -146,6 +168,12 @@ export function GridProvider({
     );
 }
 
+/**
+ * Retrieves the current GridStack context value for consuming components.
+ *
+ * @returns The value from GridStackContext (includes initialOptions, gridStack, addWidget, removeWidget, addSubGrid, saveOptions, and internal setters).
+ * @throws Error if called outside of a GridProvider (no GridStackContext is available).
+ */
 export function useGrid() {
     const context = useContext(GridStackContext);
     if (!context) {

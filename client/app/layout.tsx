@@ -29,6 +29,16 @@ const MontserratFont = Montserrat({
     weight: ["200", "400", "700"],
 });
 
+/**
+ * App root layout that wraps page content with global providers and layout scaffolding.
+ *
+ * Renders the top-level HTML structure with the Montserrat font and hydration warning suppressed,
+ * then composes Theme, Auth, QueryClient, and Store providers around the page `children`.
+ * A global Toaster is mounted outside the provider tree.
+ *
+ * @param children - The page content to render inside the app's provider hierarchy.
+ * @returns The application's root HTML/JSX element used by Next.js as the app layout.
+ */
 export default function RootLayout({
     children,
 }: Readonly<{
