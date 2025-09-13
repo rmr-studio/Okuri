@@ -1,3 +1,20 @@
-export const MediaWidget = () => {
+import { FC } from "react";
+import { z } from "zod";
+import { WidgetSchema } from "../widget.schema";
+
+export const MediaWidgetSchema = WidgetSchema.extend({
+    type: z.literal("MEDIA"),
+    data: z.object({
+        src: z.string().url().optional(), // blank until upload
+        alt: z.string().optional(),
+        fit: z.enum(["cover", "contain", "fill"]).default("contain"),
+        width: z.number().optional(),
+        height: z.number().optional(),
+    }),
+});
+
+type Props = z.infer<typeof MediaWidgetSchema>;
+
+export const MediaWidget: FC<Props> = ({ id, data: { src, alt, fit, width, height } }) => {
     return <div>Media Widget</div>;
 };

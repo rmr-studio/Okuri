@@ -8,8 +8,8 @@ export const InteractionSchema = z.object({
 
 export const WidgetSchema = z.object({
     id: z.string().min(1, "ID is required"),
-    type: z.enum(["table", "media", "keyValue"]),
-    data: z.record(z.any()).default({}),
+    type: z.literal("text"), // to be overridden
+    data: z.record(z.any()).default({}), // to be overridden
     position: z.object({
         x: z.number().min(0, "X must be at least 0"),
         y: z.number().min(0, "Y must be at least 0"),
@@ -18,3 +18,5 @@ export const WidgetSchema = z.object({
     }),
     interactions: InteractionSchema.default({}),
 });
+
+export type BaseWidget = z.infer<typeof WidgetSchema>;
