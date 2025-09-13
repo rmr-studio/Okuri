@@ -1,0 +1,20 @@
+import { z } from "zod";
+
+export const InteractionSchema = z.object({
+    draggable: z.boolean().default(true),
+    resizable: z.boolean().default(true),
+    deletable: z.boolean().default(true),
+});
+
+export const WidgetSchema = z.object({
+    id: z.string().min(1, "ID is required"),
+    type: z.enum(["table", "media", "keyValue"]),
+    data: z.record(z.any()).default({}),
+    position: z.object({
+        x: z.number().min(0, "X must be at least 0"),
+        y: z.number().min(0, "Y must be at least 0"),
+        width: z.number().min(1, "Width must be at least 1"),
+        height: z.number().min(1, "Height must be at least 1"),
+    }),
+    interactions: InteractionSchema.default({}),
+});

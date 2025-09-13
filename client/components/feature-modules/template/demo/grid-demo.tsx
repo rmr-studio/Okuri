@@ -10,8 +10,8 @@ import { ComponentDataType, WidgetRenderProvider } from "../provider/grid-widget
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TextWidget } from "../item/text-item";
 import { WIDGETS } from "../util/registry";
+import { TextWidget } from "../widgets/atomic/text-widget";
 
 const CELL_HEIGHT = 50;
 const BREAKPOINTS = [
@@ -190,7 +190,10 @@ function Toolbar() {
                             sizeToContent: true,
                             subGridOpts: {
                                 acceptWidgets: true,
-                                columnOpts: { breakpoints: BREAKPOINTS, layout: "moveScale" },
+                                columnOpts: {
+                                    breakpoints: BREAKPOINTS,
+                                    layout: "moveScale",
+                                },
                                 margin: 8,
                                 minRow: 2,
                                 cellHeight: CELL_HEIGHT,
@@ -205,7 +208,9 @@ function Toolbar() {
                                         y: 0,
                                         content: JSON.stringify({
                                             name: "TEXT",
-                                            props: { content: "Sub Grid 1 Title" + id },
+                                            props: {
+                                                content: "Sub Grid 1 Title" + id,
+                                            },
                                         }),
                                     }),
                                 ],
