@@ -1,3 +1,5 @@
+"use client";
+
 import { FCWC } from "@/lib/interfaces/interface";
 import {
     closestCenter,
@@ -13,25 +15,40 @@ import {
 } from "@dnd-kit/core";
 
 interface Props {
-    strategy: CollisionDetection;
+    strategy?: CollisionDetection;
     handleDragStart?: (event: DragStartEvent) => void;
     handleDragOver?: (event: DragOverEvent) => void;
     handleDragEnd?: (event: DragEndEvent) => void;
 }
 
-export const DragDropProvider: FCWC<Props> = ({ children, strategy = closestCenter }) => {
+export const DragDropProvider: FCWC<Props> = ({
+    children,
+    strategy = closestCenter,
+    handleDragEnd,
+    handleDragOver,
+    handleDragStart,
+}) => {
     const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
-    const handleDragStart = (event: DragStartEvent) => {
-        console.log("Drag started:", event);
+    const onDragStart = (event: DragStartEvent) => {
+        if (process.env.NODE_ENV === "development") {
+            console.log("Drag started:", event);
+        }
+        handleDragStart?.(event);
     };
 
-    const handleDragOver = (event: DragOverEvent) => {
-        console.log("Drag over:", event);
+    const onDragOver = (event: DragOverEvent) => {
+        if (process.env.NODE_ENV === "development") {
+            console.log("Drag over:", event);
+        }
+        handleDragOver?.(event);
     };
 
-    const handleDragEnd = (event: DragEndEvent) => {
-        console.log("Drag ended:", event);
+    const onDragEnd = (event: DragEndEvent) => {
+        if (process.env.NODE_ENV === "development") {
+            console.log("Drag ended:", event);
+        }
+        handleDragEnd?.(event);
     };
 
     return (

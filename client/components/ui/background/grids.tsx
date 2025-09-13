@@ -1,4 +1,4 @@
-import { cnw } from "@/lib/util/utils";
+import { cn } from "@/lib/util/utils";
 import React from "react";
 
 type BGVariantType =
