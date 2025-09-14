@@ -33,17 +33,17 @@ export const TextStyleSchema = z
         textOverflow: z.enum(["clip", "ellipsis"]).default("clip"),
         whiteSpace: z.enum(["normal", "nowrap", "pre", "pre-wrap", "pre-line"]).default("normal"),
         wordBreak: z.enum(["normal", "break-all", "keep-all", "break-word"]).default("normal"),
-        maxLines: z.number().min(1).max(100).default(0),
+        maxLines: z.number().min(1).max(100).default(0).optional(),
         link: z.string().url().optional(),
-        linkTarget: z.enum(["_self", "_blank", "_parent", "_top"]).default("_self"),
+        linkTarget: z.enum(["_self", "_blank", "_parent", "_top"]).default("_self").optional(),
     })
     .default({});
 
 export const TextValidationSchema = z
     .object({
         required: z.boolean().default(false),
-        minLength: z.number().min(0).max(1000).optional(),
-        maxLength: z.number().min(1).max(1000).optional(),
+        // minLength: z.number().min(0).max(1000).optional(),
+        // maxLength: z.number().min(1).max(1000).optional(),
         pattern: z.string().optional(),
         options: z.array(z.string()).optional(),
     })
@@ -90,10 +90,10 @@ export const Text: FC<Props> = ({ id, data: { content, style, validation, varian
         whiteSpace: style.whiteSpace,
         wordBreak: style.wordBreak,
         display: "-webkit-box", // needed for maxLines
-        WebkitLineClamp: style.maxLines > 0 ? style.maxLines : undefined,
-        WebkitBoxOrient: style.maxLines > 0 ? "vertical" : undefined,
-        overflow: style.maxLines > 0 ? "hidden" : undefined,
-        boxShadow: style.shadow
+        WebkitLineClamp: style?.maxLines ?? undefined,
+        WebkitBoxOrient: style?.maxLines ? "vertical" : undefined,
+        overflow: style?.maxLines ? "hidden" : undefined,
+        boxShadow: style?.shadow
             ? `${style.shadowOffsetX}px ${style.shadowOffsetY}px ${
                   style.shadowBlur
               }px rgba(${hexToRgb(style.shadowColor)}, ${style.shadowOpacity})`

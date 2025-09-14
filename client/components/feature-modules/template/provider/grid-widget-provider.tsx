@@ -3,55 +3,49 @@
 import type { GridStackWidget } from "gridstack";
 import { ComponentType, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
+import { WidgetRegistry, WidgetType } from "../util/registry";
 import { useContainer } from "./grid-container-provider";
 import { useGrid } from "./grid-provider";
 
 export interface ComponentDataType<T = Record<string, unknown>> {
-    name: string;
+    type: WidgetType;
     props: T;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ComponentMap = Record<string, ComponentType<any>>;
-
 /**
- * Extracts component `name` and `props` from a widget's JSON `content`, capturing any parse error.
+ * Extracts widget `type` and `props` from a widget's JSON `content`, capturing any parse error.
  *
- * Parses `meta.content` (if present) as JSON with shape `{ name: string; props: object }`.
- * On success returns the parsed `name` and `props`; on failure returns empty `name`/`props` and sets `error` to the thrown value.
+ * Parses `meta.content` (if present) as JSON with shape matching your widget schema.
+ * On success returns the parsed `type` and `props`; on failure returns default values and sets `error`.
  *
  * @param meta - GridStack widget metadata (expected to contain a JSON `content` string).
- * @returns An object with `name`, `props`, and `error` (null when parsing succeeded).
+ * @returns An object with `type`, `props`, and `error` (null when parsing succeeded).
  */
 const parseWidgetMetaToComponentData = (
     meta: GridStackWidget
 ): ComponentDataType & { error: unknown } => {
     let error = null;
-    let name = "";
+    let type: WidgetType = "TEXT"; // default fallback
     let props: Record<string, unknown> = {};
+
     try {
         if (meta.content) {
-            const result = JSON.parse(meta.content) as {
-                name: string;
-                props: object;
-            };
-            if (typeof result.name === "string") {
-                name = result.name;
+            const result = JSON.parse(meta.content);
+
+            // Expect the full widget schema structure
+            if (result.type && typeof result.type === "string") {
+                type = result.type as WidgetType;
+                props = result; // Pass the entire widget object as props
             } else {
-                // keep best-effort defaults, record validation error
-                error = error ?? new Error("Invalid widget meta: 'name' must be a string");
-            }
-            if (result.props && typeof result.props === "object" && !Array.isArray(result.props)) {
-                props = result.props as Record<string, unknown>;
-            } else if (result.props !== undefined) {
-                error = error ?? new Error("Invalid widget meta: 'props' must be an object");
+                error = new Error("Invalid widget meta: 'type' must be a string");
             }
         }
     } catch (e) {
         error = e;
     }
+
     return {
-        name,
+        type,
         props,
         error,
     };
@@ -67,19 +61,16 @@ export const GridStackWidgetContext = createContext<{
  * Renders dynamic widget components into their GridStack DOM containers using React portals.
  *
  * For each entry in the grid's internal `_rawWidgetMetaMap`, this provider:
- * - parses the widget metadata to determine a component `name` and `props`,
- * - looks up the component in `componentMap`,
+ * - parses the widget metadata to determine a component `type` and `props`,
+ * - looks up the component in the widget registry,
  * - obtains the DOM container for the widget via the grid container API,
  * - if both component and container exist, mounts the component into the container using `createPortal`
  *   and wraps it with `GridStackWidgetContext.Provider` that supplies the widget `id`.
  *
- * Entries with missing components or containers are skipped. Widget metadata parsing errors are
- * captured by `parseWidgetMetaToComponentData` (they do not throw here).
- *
- * @param props.componentMap - Mapping from widget names to React component constructors used to resolve and render widgets.
+ * @param props.componentMap - Widget registry mapping from widget types to widget metadata
  * @returns A fragment containing portals that mount resolved widget components into their external DOM containers.
  */
-export function WidgetRenderProvider(props: { componentMap: ComponentMap }) {
+export function WidgetRenderProvider(props: { componentMap: WidgetRegistry }) {
     const { _rawWidgetMetaMap } = useGrid();
     const { getWidgetContainer } = useContainer();
 
@@ -87,22 +78,20 @@ export function WidgetRenderProvider(props: { componentMap: ComponentMap }) {
         <>
             {Array.from(_rawWidgetMetaMap.value.entries()).map(([id, meta]) => {
                 const componentData = parseWidgetMetaToComponentData(meta);
-                const WidgetComponent = props.componentMap[componentData.name];
+                const widgetMeta = props.componentMap[componentData.type];
                 const widgetContainer = getWidgetContainer(id);
 
-                if (!WidgetComponent) {
+                if (!widgetMeta) {
                     if (process.env.NODE_ENV !== "production") {
-                        // Unknown component name in meta
-                        // eslint-disable-next-line no-console
                         console.warn(
-                            `[WidgetRenderProvider] Unknown widget component "${componentData.name}" for id "${id}".`
+                            `[WidgetRenderProvider] Unknown widget type "${componentData.type}" for id "${id}".`
                         );
                     }
                     return null;
                 }
+
                 if (!widgetContainer) {
                     if (process.env.NODE_ENV !== "production") {
-                        // eslint-disable-next-line no-console
                         console.warn(
                             `[WidgetRenderProvider] Missing container for widget "${id}".`
                         );
@@ -110,12 +99,39 @@ export function WidgetRenderProvider(props: { componentMap: ComponentMap }) {
                     return null;
                 }
 
+                // Extract the actual component from the widget metadata
+                const WidgetComponent = widgetMeta.component as ComponentType<
+                    typeof validatedProps
+                >;
+
+                // Validate props against widget schema
+                let validatedProps: any;
+                try {
+                    validatedProps = widgetMeta.schema.parse(componentData.props);
+                } catch (validationError) {
+                    if (process.env.NODE_ENV !== "production") {
+                        console.error(
+                            `[WidgetRenderProvider] Schema validation failed for widget "${id}" of type "${componentData.type}":`,
+                            validationError
+                        );
+                    }
+                    // Use default values from schema
+                    try {
+                        validatedProps = widgetMeta.schema.parse({
+                            id,
+                            type: componentData.type,
+                            data: {},
+                            position: { x: 0, y: 0, width: 1, height: 1 },
+                            interactions: {},
+                        });
+                    } catch {
+                        return null; // Skip if even defaults fail
+                    }
+                }
+
                 return (
                     <GridStackWidgetContext.Provider key={id} value={{ widget: { id } }}>
-                        {createPortal(
-                            <WidgetComponent {...componentData.props} />,
-                            widgetContainer
-                        )}
+                        {createPortal(<WidgetComponent {...validatedProps} />, widgetContainer)}
                     </GridStackWidgetContext.Provider>
                 );
             })}
@@ -129,7 +145,7 @@ export function WidgetRenderProvider(props: { componentMap: ComponentMap }) {
  * Throws if called outside the widget provider.
  *
  * @returns The non-null widget context: `{ widget: { id: string } }`.
- * @throws Error if the hook is used outside a GridStackWidgetProvider
+ * @throws Error if the hook is used outside a WidgetRenderProvider
  */
 export function useWidget() {
     const context = useContext(GridStackWidgetContext);

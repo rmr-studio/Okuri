@@ -2,10 +2,10 @@ import { PencilIcon } from "lucide-react";
 import { z, ZodTypeAny } from "zod";
 import { BadgeWidget } from "../widgets/atomic/badge-widget";
 import { ChartWidget } from "../widgets/atomic/chart-widget";
+import { DateWidget } from "../widgets/atomic/date-widget";
 import { MediaWidget } from "../widgets/atomic/media-widget";
 import { TableWidget } from "../widgets/atomic/table-widget";
 import { TextWidget } from "../widgets/atomic/text-widget";
-import { DateWidget } from "../widgets/atomic/date-widget";
 
 const WIDGET_TYPE = ["TEXT", "MEDIA", "CHART", "BADGE", "TABLE", "DATE"] as const;
 export type WidgetType = (typeof WIDGET_TYPE)[number];
@@ -34,5 +34,6 @@ export const WIDGETS = {
 } as const;
 
 // Inferred discriminated union
+export type WidgetProps<W> = W extends WidgetMetadata<infer T> ? z.infer<T> : never;
 export type WidgetRegistry = typeof WIDGETS;
 export type AnyWidget = WidgetRegistry[keyof WidgetRegistry];

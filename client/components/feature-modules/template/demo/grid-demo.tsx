@@ -1,17 +1,16 @@
 "use client";
 
 import { GridStackOptions, GridStackWidget } from "gridstack";
-import { ComponentProps, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "gridstack/dist/gridstack.css";
 import { GridContainerProvider } from "../provider/grid-container-provider";
 import { GridProvider, useGrid } from "../provider/grid-provider";
-import { ComponentDataType, WidgetRenderProvider } from "../provider/grid-widget-provider";
+import { WidgetRenderProvider } from "../provider/grid-widget-provider";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WIDGETS } from "../util/registry";
-import { TextWidget } from "../widgets/atomic/text-widget";
 
 const CELL_HEIGHT = 50;
 const BREAKPOINTS = [
@@ -21,8 +20,7 @@ const BREAKPOINTS = [
     { c: 8, w: 1100 },
 ];
 
-// ! Content must be json string like this:
-// { name: "Text", props: { content: "Item 1" } }
+// Content must match your widget schema structure
 const gridOptions: GridStackOptions = {
     acceptWidgets: true,
     columnOpts: {
@@ -52,9 +50,33 @@ const gridOptions: GridStackOptions = {
             x: 0,
             y: 0,
             content: JSON.stringify({
-                name: "TEXT",
-                props: { content: "Item 1" },
-            } satisfies ComponentDataType<ComponentProps<typeof TextWidget>>),
+                id: "item1",
+                type: "TEXT",
+                data: {
+                    content: "Item 2",
+                    variant: "input",
+                    style: {
+                        size: 16,
+                        color: "#000000",
+                        horizontalAlign: "center",
+                        verticalAlign: "center",
+                    },
+                    validation: {
+                        required: false,
+                    },
+                },
+                position: {
+                    x: 0,
+                    y: 0,
+                    width: 2,
+                    height: 2,
+                },
+                interactions: {
+                    draggable: true,
+                    resizable: true,
+                    deletable: true,
+                },
+            }),
         },
         {
             id: "item2",
@@ -63,8 +85,23 @@ const gridOptions: GridStackOptions = {
             x: 2,
             y: 0,
             content: JSON.stringify({
-                name: "TEXT",
-                props: { content: "Item 2" },
+                id: "item2",
+                type: "TEXT",
+                data: {
+                    content: "Item 2",
+                    variant: "input",
+                    style: {
+                        size: 14,
+                        color: "#333333",
+                    },
+                },
+                position: {
+                    x: 2,
+                    y: 0,
+                    width: 2,
+                    height: 2,
+                },
+                interactions: {},
             }),
         },
         {
@@ -89,8 +126,28 @@ const gridOptions: GridStackOptions = {
                         x: 0,
                         y: 0,
                         content: JSON.stringify({
-                            name: "TEXT",
-                            props: { content: "Sub Grid 1 Title" },
+                            id: "sub-grid-1-title",
+                            type: "TEXT",
+                            data: {
+                                content: "Sub Grid 1 Title",
+                                variant: "input",
+                                style: {
+                                    size: 18,
+                                    weight: "bold",
+                                    color: "#000000",
+                                },
+                            },
+                            position: {
+                                x: 0,
+                                y: 0,
+                                width: 12,
+                                height: 1,
+                            },
+                            interactions: {
+                                draggable: false,
+                                resizable: false,
+                                deletable: false,
+                            },
                         }),
                     },
                     {
@@ -100,8 +157,18 @@ const gridOptions: GridStackOptions = {
                         x: 0,
                         y: 1,
                         content: JSON.stringify({
-                            name: "TEXT",
-                            props: { content: "Item 3" },
+                            id: "item3",
+                            type: "TEXT",
+                            data: {
+                                content: "Item 3",
+                            },
+                            position: {
+                                x: 0,
+                                y: 1,
+                                width: 2,
+                                height: 2,
+                            },
+                            interactions: {},
                         }),
                     },
                     {
@@ -111,8 +178,18 @@ const gridOptions: GridStackOptions = {
                         x: 2,
                         y: 0,
                         content: JSON.stringify({
-                            name: "TEXT",
-                            props: { content: "Item 4" },
+                            id: "item4",
+                            type: "TEXT",
+                            data: {
+                                content: "Item 4",
+                            },
+                            position: {
+                                x: 2,
+                                y: 0,
+                                width: 2,
+                                height: 2,
+                            },
+                            interactions: {},
                         }),
                     },
                 ],
@@ -150,9 +227,8 @@ export function GridStackDemo() {
 /**
  * Toolbar with actions to add widgets to the current grid.
  *
- * Renders two buttons that call the grid context's addWidget and addSubGrid callbacks:
- * - "Add Text (2x2)": inserts a 2x2 TEXT widget whose `content` payload contains the generated widget id.
- * - "Add Sub Grid (12x1)": inserts a 12-wide sub-grid (height 5, sizeToContent) whose sub-grid options include a locked full-width title child.
+ * Renders buttons that call the grid context's addWidget and addSubGrid callbacks using
+ * the proper widget schema structure.
  */
 function Toolbar() {
     const { addWidget, addSubGrid } = useGrid();
@@ -162,7 +238,7 @@ function Toolbar() {
             <CardHeader>
                 <CardTitle>Toolbar</CardTitle>
             </CardHeader>
-            <CardContent className="flex gap-4">
+            <CardContent className="flex gap-4 flex-wrap">
                 <Button
                     variant="default"
                     onClick={() => {
@@ -172,13 +248,92 @@ function Toolbar() {
                             x: 0,
                             y: 0,
                             content: JSON.stringify({
-                                name: "TEXT",
-                                props: { content: id },
+                                id,
+                                type: "TEXT",
+                                data: {
+                                    content: `Dynamic Text ${id}`,
+                                    variant: "input",
+                                    style: {
+                                        size: 16,
+                                        color: "#000000",
+                                    },
+                                },
+                                position: {
+                                    x: 0,
+                                    y: 0,
+                                    width: 2,
+                                    height: 2,
+                                },
+                                interactions: {
+                                    draggable: true,
+                                    resizable: true,
+                                    deletable: true,
+                                },
                             }),
                         }));
                     }}
                 >
-                    Add Text (2x2)
+                    Add Text Widget (2x2)
+                </Button>
+
+                <Button
+                    variant="outline"
+                    onClick={() => {
+                        addWidget((id) => ({
+                            w: 3,
+                            h: 3,
+                            x: 0,
+                            y: 0,
+                            content: JSON.stringify({
+                                id,
+                                type: "MEDIA",
+                                data: {
+                                    // Add MEDIA widget specific data here based on your MediaWidget schema
+                                    src: "https://via.placeholder.com/300x200",
+                                    alt: `Media ${id}`,
+                                },
+                                position: {
+                                    x: 0,
+                                    y: 0,
+                                    width: 3,
+                                    height: 3,
+                                },
+                                interactions: {},
+                            }),
+                        }));
+                    }}
+                >
+                    Add Media Widget (3x3)
+                </Button>
+
+                <Button
+                    variant="outline"
+                    onClick={() => {
+                        addWidget((id) => ({
+                            w: 4,
+                            h: 3,
+                            x: 0,
+                            y: 0,
+                            content: JSON.stringify({
+                                id,
+                                type: "CHART",
+                                data: {
+                                    // Add CHART widget specific data here based on your ChartWidget schema
+                                    title: `Chart ${id}`,
+                                    type: "bar",
+                                },
+                                position: {
+                                    x: 0,
+                                    y: 0,
+                                    width: 4,
+                                    height: 3,
+                                },
+                                interactions: {},
+                            }),
+                        }));
+                    }}
+                >
+                    Add Chart Widget (4x3)
                 </Button>
 
                 <Button
@@ -207,9 +362,27 @@ function Toolbar() {
                                         x: 0,
                                         y: 0,
                                         content: JSON.stringify({
-                                            name: "TEXT",
-                                            props: {
-                                                content: "Sub Grid 1 Title" + id,
+                                            id: `${id}-title`,
+                                            type: "TEXT",
+                                            data: {
+                                                content: `Sub Grid Title ${id}`,
+                                                variant: "input",
+                                                style: {
+                                                    size: 18,
+                                                    weight: "bold",
+                                                    horizontalAlign: "center",
+                                                },
+                                            },
+                                            position: {
+                                                x: 0,
+                                                y: 0,
+                                                width: 12,
+                                                height: 1,
+                                            },
+                                            interactions: {
+                                                draggable: false,
+                                                resizable: false,
+                                                deletable: false,
                                             },
                                         }),
                                     }),
