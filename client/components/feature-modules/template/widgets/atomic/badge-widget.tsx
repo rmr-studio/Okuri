@@ -3,7 +3,7 @@ import { ShieldIcon } from "lucide-react";
 import { FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget.schema";
+import { WidgetSchema } from "../widget";
 
 const BadgeWidgetSchema = WidgetSchema.extend({
     type: z.literal("BADGE"),

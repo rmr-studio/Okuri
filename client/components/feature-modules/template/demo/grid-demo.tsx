@@ -344,6 +344,7 @@ function Toolbar() {
                             noResize: false,
                             sizeToContent: true,
                             subGridOpts: {
+                                class: "border",
                                 acceptWidgets: true,
                                 columnOpts: {
                                     breakpoints: BREAKPOINTS,
@@ -380,8 +381,6 @@ function Toolbar() {
                                                 height: 1,
                                             },
                                             interactions: {
-                                                draggable: false,
-                                                resizable: false,
                                                 deletable: false,
                                             },
                                         }),

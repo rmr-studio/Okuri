@@ -1,8 +1,7 @@
+import { FCWC } from "@/lib/interfaces/interface";
 import { z } from "zod";
 
 export const InteractionSchema = z.object({
-    draggable: z.boolean().default(true),
-    resizable: z.boolean().default(true),
     deletable: z.boolean().default(true),
 });
 
@@ -20,3 +19,11 @@ export const WidgetSchema = z.object({
 });
 
 export type BaseWidget = z.infer<typeof WidgetSchema>;
+
+export interface WidgetProps {
+    onDelete?: (id: string) => void;
+}
+
+export const Widget: FCWC<WidgetProps> = ({ onDelete }) => {
+    return <div className="relative">Widget</div>;
+};

@@ -2,7 +2,7 @@ import { Calendar1Icon } from "lucide-react";
 import { FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget.schema";
+import { WidgetSchema } from "../widget";
 
 const DateWidgetSchema = WidgetSchema.extend({
     type: z.literal("DATE"),

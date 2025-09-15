@@ -94,7 +94,6 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     }, [initialOptions, gridStack, initGrid, setGridStack]);
 
     useLayoutEffect(() => {
-        console.log("hey");
         if (!gridStack) {
             try {
                 setGridStack(initGrid());
