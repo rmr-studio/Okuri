@@ -94,6 +94,7 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     }, [initialOptions, gridStack, initGrid, setGridStack]);
 
     useLayoutEffect(() => {
+        console.log("hey");
         if (!gridStack) {
             try {
                 setGridStack(initGrid());
@@ -101,7 +102,9 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 console.error("Error initializing gridstack", e);
             }
         }
-    }, [gridStack, initGrid, setGridStack]);
+        GridStack.renderCB = renderCBFn;
+        setGridStack(initGrid());
+    }, [gridStack, initGrid, setGridStack, renderCBFn]);
 
     useLayoutEffect(() => {
         return () => {
