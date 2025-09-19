@@ -2,7 +2,7 @@ import { Calendar1Icon } from "lucide-react";
 import { FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget";
+import { BaseWidget, BaseWidgetProps, WidgetSchema } from "../widget";
 
 const DateWidgetSchema = WidgetSchema.extend({
     type: z.literal("DATE"),
@@ -13,10 +13,14 @@ const DateWidgetSchema = WidgetSchema.extend({
     }),
 });
 
-type Props = z.infer<typeof DateWidgetSchema>;
+type Props = z.infer<typeof DateWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { value, format, mode } }) => {
-    return <div>Date Widget</div>;
+const Widget: FC<Props> = ({ id, data: { value, format, mode }, onDelete, style }) => {
+    return (
+        <BaseWidget id={id} onDelete={onDelete} style={style}>
+            Date Widget
+        </BaseWidget>
+    );
 };
 
 export const DateWidget = createWidget({

@@ -2,7 +2,7 @@ import { TextQuoteIcon } from "lucide-react";
 import { CSSProperties, FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget";
+import { BaseWidget, BaseWidgetProps, WidgetSchema } from "../widget";
 
 export const TextStyleSchema = z
     .object({
@@ -16,7 +16,6 @@ export const TextStyleSchema = z
         color: z.string().default("#000000"),
         backgroundColor: z.string().default("#FFFFFF"),
         padding: z.number().min(0).max(50).default(5),
-        margin: z.number().min(0).max(50).default(5),
         borderRadius: z.number().min(0).max(50).default(0),
         borderWidth: z.number().min(0).max(20).default(1),
         borderColor: z.string().default("#000000"),
@@ -61,9 +60,9 @@ export const TextWidgetSchema = WidgetSchema.extend({
     }),
 });
 
-type Props = z.infer<typeof TextWidgetSchema>;
+type Props = z.infer<typeof TextWidgetSchema> & BaseWidgetProps;
 
-export const Text: FC<Props> = ({ id, data: { content, style, validation, variant } }) => {
+const Widget: FC<Props> = ({ id, data: { content, style, validation, variant }, onDelete }) => {
     const css: CSSProperties = {
         fontSize: style.size,
         fontWeight: style.weight,
@@ -77,7 +76,6 @@ export const Text: FC<Props> = ({ id, data: { content, style, validation, varian
         color: style.color,
         backgroundColor: style.backgroundColor,
         padding: style.padding,
-        margin: style.margin,
         borderRadius: style.borderRadius,
         borderWidth: style.borderWidth,
         borderStyle: style.borderWidth > 0 ? "solid" : "none",
@@ -110,7 +108,11 @@ export const Text: FC<Props> = ({ id, data: { content, style, validation, varian
         content
     );
 
-    return <div style={css}>{contentElement}</div>;
+    return (
+        <BaseWidget id={id} onDelete={onDelete} style={css}>
+            {contentElement}
+        </BaseWidget>
+    );
 };
 
 // util: convert hex to rgb string
@@ -129,5 +131,5 @@ export const TextWidget = createWidget({
     description: "A widget to display customizable text content.",
     icon: TextQuoteIcon,
     schema: TextWidgetSchema,
-    component: Text,
+    component: Widget,
 });

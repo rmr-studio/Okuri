@@ -2,7 +2,7 @@ import { ChartBarIcon } from "lucide-react";
 import { FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget";
+import { BaseWidget, BaseWidgetProps, WidgetSchema } from "../widget";
 
 const ChartWidgetSchema = WidgetSchema.extend({
     type: z.literal("CHART"),
@@ -12,10 +12,14 @@ const ChartWidgetSchema = WidgetSchema.extend({
     }),
 });
 
-type Props = z.infer<typeof ChartWidgetSchema>;
+type Props = z.infer<typeof ChartWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { title, data } }) => {
-    return <div>Chart Widget</div>;
+const Widget: FC<Props> = ({ id, data: { title, data }, onDelete, style }) => {
+    return (
+        <BaseWidget id={id} onDelete={onDelete} style={style}>
+            Chart Widget
+        </BaseWidget>
+    );
 };
 
 export const ChartWidget = createWidget({

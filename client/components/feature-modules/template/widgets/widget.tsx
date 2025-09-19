@@ -20,10 +20,16 @@ export const WidgetSchema = z.object({
 
 export type BaseWidget = z.infer<typeof WidgetSchema>;
 
-export interface WidgetProps {
+export interface BaseWidgetProps {
+    id: string;
     onDelete?: (id: string) => void;
+    style?: React.CSSProperties;
 }
 
-export const Widget: FCWC<WidgetProps> = ({ onDelete }) => {
-    return <div className="relative">Widget</div>;
+export const BaseWidget: FCWC<BaseWidgetProps> = ({ onDelete, children, style }) => {
+    return (
+        <div style={style} className="relative h-full w-full">
+            {children}
+        </div>
+    );
 };

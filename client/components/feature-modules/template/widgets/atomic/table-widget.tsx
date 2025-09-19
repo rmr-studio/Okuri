@@ -2,7 +2,7 @@ import { Table2Icon } from "lucide-react";
 import { FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget";
+import { BaseWidget, BaseWidgetProps, WidgetSchema } from "../widget";
 
 const TableWidgetSchema = WidgetSchema.extend({
     type: z.literal("TABLE"),
@@ -18,10 +18,14 @@ const TableWidgetSchema = WidgetSchema.extend({
     }),
 });
 
-type Props = z.infer<typeof TableWidgetSchema>;
+type Props = z.infer<typeof TableWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { columns, rows } }) => {
-    return <div>Table Widget</div>;
+const Widget: FC<Props> = ({ id, data: { columns, rows }, onDelete, style }) => {
+    return (
+        <BaseWidget id={id} onDelete={onDelete} style={style}>
+            Table Widget
+        </BaseWidget>
+    );
 };
 
 export const TableWidget = createWidget({

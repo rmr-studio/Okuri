@@ -3,7 +3,7 @@ import { ShieldIcon } from "lucide-react";
 import { FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget";
+import { BaseWidget, BaseWidgetProps, WidgetSchema } from "../widget";
 
 const BadgeWidgetSchema = WidgetSchema.extend({
     type: z.literal("BADGE"),
@@ -14,10 +14,14 @@ const BadgeWidgetSchema = WidgetSchema.extend({
     }),
 });
 
-type Props = z.infer<typeof BadgeWidgetSchema>;
+type Props = z.infer<typeof BadgeWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { label, variant, size } }) => {
-    return <Badge variant={variant}>{label}</Badge>;
+const Widget: FC<Props> = ({ id, data: { label, variant, size }, onDelete, style }) => {
+    return (
+        <BaseWidget id={id} onDelete={onDelete} style={style}>
+            <Badge variant={variant}>{label}</Badge>
+        </BaseWidget>
+    );
 };
 
 export const BadgeWidget = createWidget({

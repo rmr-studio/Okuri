@@ -88,10 +88,10 @@ const gridOptions: GridStackOptions = {
                 id: "item2",
                 type: "TEXT",
                 data: {
-                    content: "Item 2",
+                    content: "Item 5",
                     variant: "input",
                     style: {
-                        size: 14,
+                        size: 32,
                         color: "#333333",
                     },
                 },
@@ -217,7 +217,7 @@ export function GridStackDemo() {
         <GridProvider initialOptions={initialOptions}>
             <Toolbar />
             <GridContainerProvider>
-                <WidgetRenderProvider componentMap={WIDGETS} />
+                <WidgetRenderProvider map={WIDGETS} onDelete={(id) => {}} />
             </GridContainerProvider>
             <DebugInfo />
         </GridProvider>
@@ -254,8 +254,11 @@ function Toolbar() {
                                     content: `Dynamic Text ${id}`,
                                     variant: "input",
                                     style: {
-                                        size: 16,
+                                        size: 32,
                                         color: "#000000",
+                                        horizontalAlign: "center",
+                                        verticalAlign: "center",
+                                        lineHeight: 2,
                                     },
                                 },
                                 position: {

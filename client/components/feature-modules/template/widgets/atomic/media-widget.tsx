@@ -2,7 +2,7 @@ import { PictureInPicture2 } from "lucide-react";
 import { FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
-import { WidgetSchema } from "../widget";
+import { BaseWidget, BaseWidgetProps, WidgetSchema } from "../widget";
 
 const MediaWidgetSchema = WidgetSchema.extend({
     type: z.literal("MEDIA"),
@@ -15,10 +15,14 @@ const MediaWidgetSchema = WidgetSchema.extend({
     }),
 });
 
-type Props = z.infer<typeof MediaWidgetSchema>;
+type Props = z.infer<typeof MediaWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { src, alt, fit, width, height } }) => {
-    return <div>Media Widget</div>;
+const Widget: FC<Props> = ({ id, data: { src, alt, fit, width, height }, onDelete, style }) => {
+    return (
+        <BaseWidget id={id} onDelete={onDelete} style={style}>
+            Media Widget
+        </BaseWidget>
+    );
 };
 
 export const MediaWidget = createWidget({

@@ -1,7 +1,7 @@
 "use client";
 
 import type { GridStackWidget } from "gridstack";
-import { ComponentType, createContext, useContext } from "react";
+import { ComponentType, createContext, FC, useContext } from "react";
 import { createPortal } from "react-dom";
 import { WidgetRegistry, WidgetType } from "../util/registry";
 import { useContainer } from "./grid-container-provider";
@@ -13,13 +13,7 @@ export interface ComponentDataType<T = Record<string, unknown>> {
 }
 
 /**
- * Extracts widget `type` and `props` from a widget's JSON `content`, capturing any parse error.
- *
- * Parses `meta.content` (if present) as JSON with shape matching your widget schema.
- * On success returns the parsed `type` and `props`; on failure returns default values and sets `error`.
- *
- * @param meta - GridStack widget metadata (expected to contain a JSON `content` string).
- * @returns An object with `type`, `props`, and `error` (null when parsing succeeded).
+ * Extracts widget type and props from a widget's JSON content, capturing any parse error.
  */
 const parseWidgetMetaToComponentData = (
     meta: GridStackWidget
@@ -57,20 +51,12 @@ export const GridStackWidgetContext = createContext<{
     };
 } | null>(null);
 
-/**
- * Renders dynamic widget components into their GridStack DOM containers using React portals.
- *
- * For each entry in the grid's internal `_rawWidgetMetaMap`, this provider:
- * - parses the widget metadata to determine a component `type` and `props`,
- * - looks up the component in the widget registry,
- * - obtains the DOM container for the widget via the grid container API,
- * - if both component and container exist, mounts the component into the container using `createPortal`
- *   and wraps it with `GridStackWidgetContext.Provider` that supplies the widget `id`.
- *
- * @param props.componentMap - Widget registry mapping from widget types to widget metadata
- * @returns A fragment containing portals that mount resolved widget components into their external DOM containers.
- */
-export function WidgetRenderProvider(props: { componentMap: WidgetRegistry }) {
+interface Props {
+    map: WidgetRegistry;
+    onDelete: (id: string) => void;
+}
+
+export const WidgetRenderProvider: FC<Props> = ({ map, onDelete }) => {
     const { _rawWidgetMetaMap } = useGrid();
     const { getWidgetContainer } = useContainer();
 
@@ -78,7 +64,7 @@ export function WidgetRenderProvider(props: { componentMap: WidgetRegistry }) {
         <>
             {Array.from(_rawWidgetMetaMap.value.entries()).map(([id, meta]) => {
                 const componentData = parseWidgetMetaToComponentData(meta);
-                const widgetMeta = props.componentMap[componentData.type];
+                const widgetMeta = map[componentData.type as keyof WidgetRegistry];
                 const widgetContainer = getWidgetContainer(id);
 
                 if (!widgetMeta) {
@@ -99,14 +85,14 @@ export function WidgetRenderProvider(props: { componentMap: WidgetRegistry }) {
                     return null;
                 }
 
-                // Extract the actual component from the widget metadata
-                const WidgetComponent = widgetMeta.component as ComponentType<
-                    typeof validatedProps
-                >;
+                // FIX: Access the component correctly from the WidgetMetadata structure
+                // widgetMeta is the result of createWidget(), which has a .component property
+                const WidgetComponent = widgetMeta.component as ComponentType<any>;
 
                 // Validate props against widget schema
                 let validatedProps: any;
                 try {
+                    // FIX: Use the schema from the widget metadata
                     validatedProps = widgetMeta.schema.parse(componentData.props);
                 } catch (validationError) {
                     if (process.env.NODE_ENV !== "production") {
@@ -129,23 +115,24 @@ export function WidgetRenderProvider(props: { componentMap: WidgetRegistry }) {
                     }
                 }
 
+                // FIX: Pass onDelete prop to the component
+                const propsWithDelete = {
+                    ...validatedProps,
+                    onDelete: () => onDelete(id),
+                };
+
                 return (
                     <GridStackWidgetContext.Provider key={id} value={{ widget: { id } }}>
-                        {createPortal(<WidgetComponent {...validatedProps} />, widgetContainer)}
+                        {createPortal(<WidgetComponent {...propsWithDelete} />, widgetContainer)}
                     </GridStackWidgetContext.Provider>
                 );
             })}
         </>
     );
-}
+};
 
 /**
  * Returns the current widget context (contains the widget id) from React context.
- *
- * Throws if called outside the widget provider.
- *
- * @returns The non-null widget context: `{ widget: { id: string } }`.
- * @throws Error if the hook is used outside a WidgetRenderProvider
  */
 export function useWidget() {
     const context = useContext(GridStackWidgetContext);
