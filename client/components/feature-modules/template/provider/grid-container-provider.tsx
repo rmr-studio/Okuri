@@ -1,3 +1,5 @@
+"use client";
+
 import { GridStack, GridStackOptions, GridStackWidget } from "gridstack";
 import {
     createContext,
@@ -101,8 +103,11 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 console.error("Error initializing gridstack", e);
             }
         }
-        GridStack.renderCB = renderCBFn;
-        setGridStack(initGrid());
+        if (!GridStack.renderCB) {
+            console.log("Setting GridStack.renderCB");
+            GridStack.renderCB = renderCBFn;
+            setGridStack(initGrid());
+        }
     }, [gridStack, initGrid, setGridStack, renderCBFn]);
 
     useLayoutEffect(() => {

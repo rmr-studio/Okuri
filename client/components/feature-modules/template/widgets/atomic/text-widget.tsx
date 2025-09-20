@@ -3,6 +3,7 @@ import { CSSProperties, FC } from "react";
 import { z } from "zod";
 import { createWidget } from "../../util/registry";
 import { BaseWidget, BaseWidgetProps, WidgetSchema } from "../widget";
+import { hexToRgb } from "@/lib/util/utils";
 
 export const TextStyleSchema = z
     .object({
@@ -101,7 +102,7 @@ const Widget: FC<Props> = ({ id, data: { content, style, validation, variant }, 
     };
 
     const contentElement = style.link ? (
-        <a href={style.link} target={style.linkTarget}>
+        <a href={style.link} target={style.linkTarget} rel="noopener noreferrer">
             {content}
         </a>
     ) : (
@@ -115,15 +116,7 @@ const Widget: FC<Props> = ({ id, data: { content, style, validation, variant }, 
     );
 };
 
-// util: convert hex to rgb string
-function hexToRgb(hex: string): string {
-    const cleaned = hex.replace("#", "");
-    const bigint = parseInt(cleaned, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `${r}, ${g}, ${b}`;
-}
+
 
 export const TextWidget = createWidget({
     type: TextWidgetSchema.shape.type._def.value,

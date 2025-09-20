@@ -64,3 +64,21 @@ export const isValidCurrency = (value: string): boolean => {
     const validCurrencies = currency();
     return validCurrencies.has(value.toUpperCase());
 };
+
+export const hexToRgb = (hex: string): string => {
+    const cleaned = hex.trim().replace(/^#/, "");
+    const is3 = /^[0-9a-fA-F]{3}$/.test(cleaned);
+    const is6 = /^[0-9a-fA-F]{6}$/.test(cleaned);
+    if (!is3 && !is6) return "0, 0, 0";
+    const value = is3
+        ? cleaned
+              .split("")
+              .map((c) => c + c)
+              .join("")
+        : cleaned;
+    const bigint = parseInt(value, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `${r}, ${g}, ${b}`;
+};

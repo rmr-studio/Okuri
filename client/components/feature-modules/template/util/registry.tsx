@@ -1,5 +1,6 @@
 import { PencilIcon } from "lucide-react";
 import { z, ZodTypeAny } from "zod";
+import { AttachmentWidget } from "../widgets/atomic/attachment-widget";
 import { BadgeWidget } from "../widgets/atomic/badge-widget";
 import { ChartWidget } from "../widgets/atomic/chart-widget";
 import { DateWidget } from "../widgets/atomic/date-widget";
@@ -7,7 +8,7 @@ import { MediaWidget } from "../widgets/atomic/media-widget";
 import { TableWidget } from "../widgets/atomic/table-widget";
 import { TextWidget } from "../widgets/atomic/text-widget";
 
-const WIDGET_TYPE = ["TEXT", "MEDIA", "CHART", "BADGE", "TABLE", "DATE"] as const;
+const WIDGET_TYPE = ["TEXT", "MEDIA", "CHART", "BADGE", "TABLE", "DATE", "ATTACHMENT"] as const;
 export type WidgetType = (typeof WIDGET_TYPE)[number];
 
 export interface WidgetMetadata<T extends ZodTypeAny> {
@@ -31,6 +32,7 @@ export const WIDGETS = {
     BADGE: BadgeWidget,
     TABLE: TableWidget,
     DATE: DateWidget,
+    ATTACHMENT: AttachmentWidget,
 } as const;
 
 // Inferred discriminated union
