@@ -18,9 +18,10 @@ CREATE TABLE IF NOT EXISTS "organisations"
     "tile_layout"       jsonb,
     "member_count"      INTEGER          NOT NULL DEFAULT 0,
     "created_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP
+    "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
+    "created_by"        UUID,
+    "updated_by"        UUID
 );
-
 
 CREATE TABLE IF NOT EXISTS "organisation_members"
 (
@@ -156,6 +157,51 @@ begin
 end;
 $$;
 
+-- Content Blocks
+
+CREATE TABLE block_types
+(
+    "id"              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "key"             text    NOT NULL,                                         -- machine key e.g. "contact_card"
+    "display_name"    text    NOT NULL,
+    "description"     text,
+    "organisation_id" uuid    REFERENCES organisations (id) ON DELETE SET NULL, -- null for global
+    "private"         boolean NOT NULL DEFAULT false,
+    "system"          boolean          DEFAULT FALSE,                           -- system types you control
+    "schema"          jsonb,                                                    -- JSON Schema for validation (optional)
+    "ui_hints"        jsonb,                                                    -- UI metadata for frontend (widget hints, layout)
+    "created_at"      timestamptz      DEFAULT now(),
+    "updated_at"      timestamptz      DEFAULT now(),
+    "created_by"      uuid,                                                     -- optional user id
+    "updated_by"      uuid,                                                     -- optional user id
+    UNIQUE (organisation_id, key)
+);
+
+-- Blocks: first-class rows, tenant-scoped
+CREATE TABLE blocks
+(
+    "id"              uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
+    "organisation_id" uuid REFERENCES organisations (id) NOT NULL,
+    "type_id"         uuid REFERENCES block_types (id)   NOT NULL,                                  -- true if payload contains references to another block/entities
+    "name"            text,                                                                         -- human-friendly title
+    "payload"         jsonb                    DEFAULT '{}',                                        -- flexible content
+    "parent_id"       uuid                               REFERENCES blocks (id) ON DELETE SET NULL, -- optional single-parent
+    "archived"        boolean                  DEFAULT false,                                       -- archives
+    "created_by"      uuid,
+    "updated_by"      uuid,
+    "created_at"      TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    "updated_at"      TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE BLOCK_REFERENCES
+(
+    "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "block_id"    uuid REFERENCES blocks (id) ON DELETE CASCADE,
+    "entity_type" text NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
+    "entity_id"   uuid NOT NULL, -- id of the referenced entity
+    UNIQUE (block_id, entity_type, entity_id)
+);
+
 -- Templates
 
 CREATE TABLE IF NOT EXISTS template
@@ -184,13 +230,18 @@ create table if not exists "clients"
     "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
     "name"            varchar(50)      not null,
     "archived"        boolean          not null default false,
-    "contact_details" jsonb,
+    "contact_details" jsonb            not null,
     "template_id"     uuid             null references public.template (id) on delete cascade,
     "attributes"      jsonb,
     "created_at"      timestamp with time zone  default current_timestamp,
-    "updated_at"      timestamp with time zone  default current_timestamp
+    "updated_at"      timestamp with time zone  default current_timestamp,
+    "created_by"      uuid,
+    "updated_by"      uuid
 );
 
+
+ALTER TABLE public.clients
+    ADD CONSTRAINT uq_client_name_organisation UNIQUE (organisation_id, name);
 
 create index if not exists idx_client_organisation_id
     on public.clients (organisation_id);
@@ -236,8 +287,11 @@ create table if not exists "invoice"
     "invoice_issue_date"  timestamp with time zone not null,
     "invoice_due_date"    timestamp with time zone null,
     "created_at"          timestamp with time zone          default current_timestamp,
-    "updated_at"          timestamp with time zone          default current_timestamp
+    "updated_at"          timestamp with time zone          default current_timestamp,
+    "created_by"          uuid,
+    "updated_by"          uuid
 );
+
 
 create index if not exists idx_invoice_organisation_id
     on public.invoice (organisation_id);
@@ -248,6 +302,7 @@ create index if not exists idx_invoice_client_id
 
 ALTER TABLE public.invoice
     ADD CONSTRAINT uq_invoice_number_organisation UNIQUE (organisation_id, invoice_number);
+
 
 /* Add Organisation Roles to Supabase JWT */
 CREATE or replace FUNCTION public.custom_access_token_hook(event jsonb)
