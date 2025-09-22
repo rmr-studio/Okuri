@@ -1,4 +1,4 @@
-package okuri.core.models.block
+package okuri.core.models.block.structure
 
 import java.io.Serializable
 import java.util.*

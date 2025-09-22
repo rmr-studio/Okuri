@@ -2,6 +2,7 @@ package okuri.core.entity.block
 
 
 import jakarta.persistence.*
+import okuri.core.enums.block.EntityType
 import java.util.*
 
 @Entity
@@ -29,12 +30,3 @@ data class BlockReferenceEntity(
     val entityId: UUID
 )
 
-enum class EntityType {
-    LINE_ITEM,
-    CLIENT,
-    INVOICE,
-    BLOCK,
-    REPORT,
-    DOCUMENT,
-    PROJECT
-}

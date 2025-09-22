@@ -3,8 +3,8 @@ package okuri.core.entity.block
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
-import okuri.core.models.block.type.BlockSchema
-import okuri.core.models.block.type.BlockUiHint
+import okuri.core.models.block.structure.BlockDisplay
+import okuri.core.models.block.structure.BlockSchema
 import org.hibernate.annotations.Type
 import java.util.*
 
@@ -13,6 +13,9 @@ import java.util.*
     name = "block_types",
     uniqueConstraints = [
         UniqueConstraint(columnNames = ["organisation_id", "key"])
+    ],
+    indexes = [
+        Index(name = "idx_block_types_organisation_id", columnList = "organisation_id")
     ]
 )
 data class BlockTypeEntity(
@@ -44,7 +47,7 @@ data class BlockTypeEntity(
     @Type(JsonBinaryType::class)
     val schema: BlockSchema? = null,
 
-    @Column(name = "ui_hints", columnDefinition = "jsonb")
+    @Column(name = "display_structure", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
-    val uiHints: BlockUiHint? = null,
+    val displayStructure: BlockDisplay? = null,
 ) : AuditableEntity()
