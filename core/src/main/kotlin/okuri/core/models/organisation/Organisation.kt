@@ -18,7 +18,7 @@ data class Organisation(
     var customAttributes: Map<String, Any> = emptyMap(), // JSONB for industry-specific fields
     var tileLayout: Map<String, Any>? = null, // JSONB for custom tile layout configuration
     val memberCount: Int,
-    val createdAt: ZonedDateTime,
+    val createdAt: ZonedDateTime?,
     val members: List<OrganisationMember> = listOf(),
     val invites: List<OrganisationInvite> = listOf()
 )

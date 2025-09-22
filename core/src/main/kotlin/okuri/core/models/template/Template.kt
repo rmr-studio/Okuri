@@ -25,8 +25,8 @@ data class Template<T>(
     val structure: Map<String, T>, // JSONB for type-specific schema (fields, layout, calculations)
     val isDefault: Boolean = false,
     val isPremade: Boolean = false,
-    val createdAt: ZonedDateTime = ZonedDateTime.now(),
-    val updatedAt: ZonedDateTime = ZonedDateTime.now()
+    val createdAt: ZonedDateTime?,
+    val updatedAt: ZonedDateTime?
 ) : Serializable
 
 enum class TemplateType {
@@ -70,8 +70,6 @@ fun <T> Template<T>.toEntity(): TemplateEntity<T> {
         structure = this.structure,
         isDefault = this.isDefault,
         isPremade = this.isPremade,
-        createdAt = this.createdAt,
-        updatedAt = this.updatedAt
     )
 }
 

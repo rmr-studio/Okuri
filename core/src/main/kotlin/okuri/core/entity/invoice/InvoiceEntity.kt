@@ -7,6 +7,7 @@ import okuri.core.entity.client.toModel
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.toModel
 import okuri.core.entity.template.TemplateEntity
+import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.invoice.InvoiceStatus
 import okuri.core.models.invoice.Billable
 import okuri.core.models.invoice.Invoice
@@ -85,24 +86,7 @@ data class InvoiceEntity(
 
     @Column(name = "invoice_due_date", nullable = true)
     var dueDate: ZonedDateTime? = null,
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    var createdAt: ZonedDateTime = ZonedDateTime.now(),
-
-    @Column(name = "updated_at", nullable = false)
-    var updatedAt: ZonedDateTime = ZonedDateTime.now()
-) {
-    @PrePersist
-    fun onPrePersist() {
-        createdAt = ZonedDateTime.now()
-        updatedAt = ZonedDateTime.now()
-    }
-
-    @PreUpdate
-    fun onPreUpdate() {
-        updatedAt = ZonedDateTime.now()
-    }
-}
+) : AuditableEntity()
 
 fun InvoiceEntity.toModel(): Invoice {
     return this.id.let {

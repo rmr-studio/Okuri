@@ -2,12 +2,12 @@ package okuri.core.entity.organisation
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
+import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.organisation.OrganisationPlan
 import okuri.core.models.common.Address
 import okuri.core.models.organisation.Organisation
 import okuri.core.models.organisation.OrganisationPaymentDetails
 import org.hibernate.annotations.Type
-import java.time.ZonedDateTime
 import java.util.*
 
 @Entity
@@ -35,12 +35,6 @@ data class OrganisationEntity(
     @Column(name = "member_count", nullable = false, updatable = false)
     val memberCount: Int = 0,
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    var createdAt: ZonedDateTime = ZonedDateTime.now(),
-
-    @Column(name = "updated_at", nullable = false, updatable = true)
-    var updatedAt: ZonedDateTime = ZonedDateTime.now(),
-
     @Type(JsonBinaryType::class)
     @Column(name = "address", nullable = true, columnDefinition = "jsonb")
     var address: Address? = null,
@@ -67,23 +61,12 @@ data class OrganisationEntity(
     @Column(name = "tile_layout", nullable = true, updatable = true, columnDefinition = "jsonb")
     var tileLayout: Map<String, Any>? = null // JSONB for custom tile layout configuration
 
-) {
+) : AuditableEntity() {
     @OneToMany(mappedBy = "organisation", cascade = [CascadeType.ALL], fetch = FetchType.LAZY, orphanRemoval = true)
     var members: MutableSet<OrganisationMemberEntity> = mutableSetOf()
 
     @OneToMany(mappedBy = "organisation", cascade = [CascadeType.ALL], fetch = FetchType.LAZY, orphanRemoval = true)
     var invites: MutableSet<OrganisationInviteEntity> = mutableSetOf()
-
-    @PrePersist
-    fun onPrePersist() {
-        createdAt = ZonedDateTime.now()
-        updatedAt = ZonedDateTime.now()
-    }
-
-    @PreUpdate
-    fun onPreUpdate() {
-        updatedAt = ZonedDateTime.now()
-    }
 }
 
 fun OrganisationEntity.toModel(includeMetadata: Boolean = false): Organisation {
@@ -120,7 +103,6 @@ fun Organisation.toEntity(): OrganisationEntity {
         id = this.id,
         name = this.name,
         avatarUrl = this.avatarUrl,
-        createdAt = this.createdAt,
         memberCount = this.memberCount,
         businessNumber = this.businessNumber,
         taxId = this.taxId,

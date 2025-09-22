@@ -3,12 +3,12 @@ package okuri.core.entity.client
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.template.TemplateEntity
+import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.client.Client
-import okuri.core.models.client.ContactDetails
+import okuri.core.models.common.Contact
 import okuri.core.models.template.client.ClientTemplateFieldStructure
 import okuri.core.models.template.toModel
 import org.hibernate.annotations.Type
-import java.time.ZonedDateTime
 import java.util.*
 
 @Entity
@@ -33,9 +33,9 @@ data class ClientEntity(
     @Column(name = "archived", nullable = false)
     var archived: Boolean = false,
 
-    @Column(name = "contact_details", columnDefinition = "jsonb")
+    @Column(name = "contact_details", columnDefinition = "jsonb", nullable = false)
     @Type(JsonBinaryType::class)
-    var contactDetails: ContactDetails? = null,
+    var contactDetails: Contact,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "template_id", referencedColumnName = "id")
@@ -44,26 +44,7 @@ data class ClientEntity(
     @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
     var attributes: Map<String, Any>? = null, // E.g., {"industry": "Healthcare", "size": "50-100"}
-
-    @Column(
-        name = "created_at",
-        nullable = false,
-        updatable = false
-    ) var createdAt: ZonedDateTime = ZonedDateTime.now(),
-
-    @Column(name = "updated_at", nullable = false) var updatedAt: ZonedDateTime = ZonedDateTime.now()
-) {
-    @PrePersist
-    fun onPrePersist() {
-        createdAt = ZonedDateTime.now()
-        updatedAt = ZonedDateTime.now()
-    }
-
-    @PreUpdate
-    fun onPreUpdate() {
-        updatedAt = ZonedDateTime.now()
-    }
-}
+) : AuditableEntity()
 
 fun ClientEntity.toModel(): Client {
     this.id.let {

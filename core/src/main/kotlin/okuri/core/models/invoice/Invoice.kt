@@ -33,6 +33,6 @@ data class InvoiceDates(
     var endDate: ZonedDateTime? = null,
     var issueDate: ZonedDateTime,
     var dueDate: ZonedDateTime? = null,
-    val invoiceCreatedAt: ZonedDateTime,
-    val invoiceUpdatedAt: ZonedDateTime
+    val invoiceCreatedAt: ZonedDateTime? = null,
+    val invoiceUpdatedAt: ZonedDateTime? = null
 )
