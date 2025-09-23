@@ -46,6 +46,14 @@ data class ClientEntity(
     var attributes: Map<String, Any>? = null, // E.g., {"industry": "Healthcare", "size": "50-100"}
 ) : AuditableEntity()
 
+/**
+ * Converts this persistent ClientEntity to a domain Client model.
+ *
+ * Returns a Client populated from the entity fields. The entity's `id` must be non-null.
+ *
+ * @return a Client domain model with values copied from this entity.
+ * @throws IllegalStateException if `id` is null.
+ */
 fun ClientEntity.toModel(): Client {
     this.id.let {
         if (it == null) {

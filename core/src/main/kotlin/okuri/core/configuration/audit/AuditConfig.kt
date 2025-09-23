@@ -9,6 +9,14 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing
 @EnableJpaAuditing(auditorAwareRef = "auditorProvider")
 class AuditConfig {
 
+    /**
+     * Registers a SecurityAuditorAware bean for JPA auditing.
+     *
+     * This bean is exposed as "auditorProvider" and supplies the current auditor (user)
+     * to Spring Data JPA's auditing infrastructure.
+     *
+     * @return a SecurityAuditorAware instance used to determine the current auditor.
+     */
     @Bean
     fun auditorProvider(): SecurityAuditorAware = SecurityAuditorAware()
 }
