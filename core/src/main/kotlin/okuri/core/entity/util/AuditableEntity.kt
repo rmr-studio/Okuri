@@ -3,6 +3,7 @@ package okuri.core.entity.util
 import jakarta.persistence.Column
 import jakarta.persistence.EntityListeners
 import jakarta.persistence.MappedSuperclass
+import jakarta.persistence.PrePersist
 import org.springframework.data.annotation.CreatedBy
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedBy
@@ -30,4 +31,10 @@ abstract class AuditableEntity {
     @LastModifiedBy
     @Column(name = "updated_by", columnDefinition = "uuid")
     var updatedBy: UUID? = null
+
+    @PrePersist
+    fun prePersist() {
+        if (createdAt != null) return
+        createdAt = ZonedDateTime.now()
+    }
 }

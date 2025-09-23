@@ -6,15 +6,11 @@ import okuri.core.entity.client.ClientEntity
 import okuri.core.entity.client.toModel
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.toModel
-import okuri.core.entity.template.TemplateEntity
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.invoice.InvoiceStatus
 import okuri.core.models.invoice.Billable
 import okuri.core.models.invoice.Invoice
 import okuri.core.models.invoice.InvoiceDates
-import okuri.core.models.template.invoice.InvoiceTemplateFieldStructure
-import okuri.core.models.template.report.ReportTemplateFieldStructure
-import okuri.core.models.template.toModel
 import org.hibernate.annotations.Type
 import java.math.BigDecimal
 import java.time.ZonedDateTime
@@ -56,14 +52,6 @@ data class InvoiceEntity(
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     var amount: BigDecimal,
 
-    @JoinColumn(name = "invoice_template_id", nullable = true)
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    val invoiceTemplate: TemplateEntity<InvoiceTemplateFieldStructure>? = null,
-
-    @JoinColumn(name = "report_template_id", nullable = true)
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    var reportTemplate: TemplateEntity<ReportTemplateFieldStructure>? = null,
-
     @Column(name = "custom_fields", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
     var customFields: Map<String, Any> = emptyMap(), // JSONB for custom data
@@ -103,8 +91,6 @@ fun InvoiceEntity.toModel(): Invoice {
             amount = this.amount,
             currency = this.currency,
             status = this.status,
-            template = this.invoiceTemplate?.toModel(),
-            reportTemplate = this.reportTemplate?.toModel(),
             dates = InvoiceDates(
                 startDate = this.startDate,
                 endDate = this.endDate,

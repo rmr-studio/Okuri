@@ -198,11 +198,13 @@ CREATE TABLE blocks
 CREATE TABLE BLOCK_REFERENCES
 (
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "block_id"    uuid REFERENCES blocks (id) ON DELETE CASCADE,
+    "block_id"    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
     "entity_type" text NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
     "entity_id"   uuid NOT NULL, -- id of the referenced entity
     UNIQUE (block_id, entity_type, entity_id)
 );
+CREATE INDEX idx_blocks_organisation_id ON block_references (block_id);
+CREATE INDEX idx_block_references_entity ON block_references (entity_type, entity_id);
 
 -- Templates
 
@@ -273,25 +275,23 @@ create index if not exists idx_line_item_organisation_id
 
 create table if not exists "invoice"
 (
-    "id"                  uuid primary key         not null default uuid_generate_v4(),
-    "organisation_id"     uuid                     not null references public.organisations (id) on delete cascade,
-    "client_id"           uuid                     not null references public.clients (id) on delete cascade,
-    "invoice_number"      TEXT                     not null,
-    "invoice_template_id" uuid                     null references public.template (id) on delete cascade,
-    "report_template_id"  uuid                     null references public.template (id) on delete cascade,
-    "billable_work"       jsonb                    not null,
-    "amount"              DECIMAL(19, 4)           not null default 0.00,
-    "custom_fields"       jsonb                    not null default '{}',
-    "currency"            varchar(3)               not null default 'AUD',
-    "status"              varchar(25)              not null default 'PENDING' CHECK (status IN ('DRAFT', 'PENDING', 'SENT', 'PAID', 'OVERDUE', 'VOID')),
-    "invoice_start_date"  timestamp with time zone null,
-    "invoice_end_date"    timestamp with time zone null,
-    "invoice_issue_date"  timestamp with time zone not null,
-    "invoice_due_date"    timestamp with time zone null,
-    "created_at"          timestamp with time zone          default current_timestamp,
-    "updated_at"          timestamp with time zone          default current_timestamp,
-    "created_by"          uuid,
-    "updated_by"          uuid
+    "id"                 uuid primary key         not null default uuid_generate_v4(),
+    "organisation_id"    uuid                     not null references public.organisations (id) on delete cascade,
+    "client_id"          uuid                     not null references public.clients (id) on delete cascade,
+    "invoice_number"     TEXT                     not null,
+    "billable_work"      jsonb                    not null,
+    "amount"             DECIMAL(19, 4)           not null default 0.00,
+    "custom_fields"      jsonb                    not null default '{}',
+    "currency"           varchar(3)               not null default 'AUD',
+    "status"             varchar(25)              not null default 'PENDING' CHECK (status IN ('DRAFT', 'PENDING', 'SENT', 'PAID', 'OVERDUE', 'VOID')),
+    "invoice_start_date" timestamp with time zone null,
+    "invoice_end_date"   timestamp with time zone null,
+    "invoice_issue_date" timestamp with time zone not null,
+    "invoice_due_date"   timestamp with time zone null,
+    "created_at"         timestamp with time zone          default current_timestamp,
+    "updated_at"         timestamp with time zone          default current_timestamp,
+    "created_by"         uuid,
+    "updated_by"         uuid
 );
 
 

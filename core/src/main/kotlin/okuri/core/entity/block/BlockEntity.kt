@@ -27,8 +27,8 @@ data class BlockEntity(
     val name: String? = null,
 
     @Type(JsonBinaryType::class)
-    @Column(name = "payload", columnDefinition = "jsonb")
-    val payload: BlockMetadata,   // you can wrap with Jackson later
+    @Column(name = "payload", columnDefinition = "jsonb", nullable = false)
+    val payload: BlockMetadata,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
@@ -37,3 +37,16 @@ data class BlockEntity(
     @Column(name = "archived", columnDefinition = "boolean default false")
     val archived: Boolean = false,
 ) : AuditableEntity()
+
+fun BlockEntity.toModel(audit: Boolean = false) = okuri.core.models.block.Block(
+    id = this.id!!,
+    organisationId = this.organisationId,
+    type = this.type.toModel(),
+    name = this.name,
+    payload = this.payload,
+    archived = this.archived,
+    createdAt = if (audit) this.createdAt else null,
+    updatedAt = if (audit) this.updatedAt else null,
+    createdBy = if (audit) this.createdBy else null,
+    updatedBy = if (audit) this.updatedBy else null,
+)

@@ -51,3 +51,19 @@ data class BlockTypeEntity(
     @Type(JsonBinaryType::class)
     val displayStructure: BlockDisplay? = null,
 ) : AuditableEntity()
+
+fun BlockTypeEntity.toModel() = okuri.core.models.block.BlockType(
+    id = this.id!!,
+    key = this.key,
+    name = this.displayName,
+    description = this.description,
+    organisationId = this.organisationId!!,
+    private = this.private,
+    system = this.system,
+    schema = this.schema,
+    display = this.displayStructure,
+    createdAt = this.createdAt,
+    updatedAt = this.updatedAt,
+    createdBy = this.createdBy,
+    updatedBy = this.updatedBy,
+)
