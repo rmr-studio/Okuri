@@ -1,4 +1,4 @@
-package okuri.core.enums.block
+package okuri.core.enums.core
 
 enum class ComponentType {
     CONTACT_CARD,

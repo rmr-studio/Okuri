@@ -1,6 +1,6 @@
 package okuri.core.models.block
 
-import okuri.core.enums.block.EntityType
+import okuri.core.enums.core.EntityType
 import java.util.*
 
 data class BlockReference<T>(

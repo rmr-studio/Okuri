@@ -1,6 +1,7 @@
 package okuri.core.models.block.structure
 
-import okuri.core.enums.block.DataType
+import okuri.core.enums.core.DataFormat
+import okuri.core.enums.core.DataType
 
 /**
  * The Block Schema defines the structure and data storage requirements for a given block.
@@ -30,6 +31,7 @@ data class BlockSchema(
     val name: String,
     val description: String? = null,
     val type: DataType = DataType.OBJECT,
+    val format: DataFormat? = null,
     val required: Boolean = false,
     val properties: Map<String, BlockSchema>? = null,
     val items: BlockSchema? = null

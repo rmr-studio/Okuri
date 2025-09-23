@@ -1,6 +1,6 @@
 package okuri.core.models.block.structure
 
-import okuri.core.enums.block.ComponentType
+import okuri.core.enums.core.ComponentType
 
 /**
  * Defines the UI Structure of the Component used to display the data stored in a block

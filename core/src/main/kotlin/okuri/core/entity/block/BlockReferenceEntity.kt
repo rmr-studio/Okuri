@@ -3,7 +3,7 @@ package okuri.core.entity.block
 
 import jakarta.persistence.*
 import okuri.core.entity.client.toModel
-import okuri.core.enums.block.EntityType
+import okuri.core.enums.core.EntityType
 import java.util.*
 
 @Entity
@@ -69,7 +69,7 @@ fun <T> BlockReferenceEntity.toModel(entity: T?) {
                 entity = entity.toModel()
             )
         }
-        
+
         // todo: Flesh out remaining entity types
 
         // Add other entity types here as needed
