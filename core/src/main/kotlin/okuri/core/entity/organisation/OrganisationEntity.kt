@@ -69,6 +69,17 @@ data class OrganisationEntity(
     var invites: MutableSet<OrganisationInviteEntity> = mutableSetOf()
 }
 
+/**
+ * Converts this OrganisationEntity into a domain Organisation model.
+ *
+ * When `includeMetadata` is true, member and invite entities are converted and populated;
+ * otherwise those lists are returned empty. The resulting model uses the entity's
+ * persisted timestamps (inherited from AuditableEntity).
+ *
+ * @param includeMetadata If true, include converted members and invites in the returned model.
+ * @return A populated [Organisation] domain model representing this entity.
+ * @throws IllegalArgumentException if this entity's `id` is null.
+ */
 fun OrganisationEntity.toModel(includeMetadata: Boolean = false): Organisation {
     this.id?.let {
         return Organisation(
@@ -98,6 +109,16 @@ fun OrganisationEntity.toModel(includeMetadata: Boolean = false): Organisation {
     } ?: throw IllegalArgumentException("OrganisationEntity must have a non-null id")
 }
 
+/**
+ * Converts this domain Organisation model into a persistable OrganisationEntity.
+ *
+ * Maps primary scalar and JSON-backed fields (id, name, avatarUrl, memberCount,
+ * businessNumber, taxId, organisationPaymentDetails, customAttributes, tileLayout,
+ * address, plan). Does not populate relational collections (members, invites) or
+ * audit fields — those are handled by the entity lifecycle / base class.
+ *
+ * @return A new OrganisationEntity with values copied from this Organisation.
+ */
 fun Organisation.toEntity(): OrganisationEntity {
     return OrganisationEntity(
         id = this.id,

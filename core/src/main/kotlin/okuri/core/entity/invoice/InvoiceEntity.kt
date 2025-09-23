@@ -76,6 +76,15 @@ data class InvoiceEntity(
     var dueDate: ZonedDateTime? = null,
 ) : AuditableEntity()
 
+/**
+ * Converts this persistent InvoiceEntity into its domain model representation (Invoice).
+ *
+ * The resulting Invoice contains mapped organisation and client models, optional invoice/report templates,
+ * invoice line items, monetary and status fields, and invoice-related dates (including audit timestamps).
+ *
+ * @return the domain Invoice corresponding to this entity.
+ * @throws IllegalArgumentException if the entity's `id` is null.
+ */
 fun InvoiceEntity.toModel(): Invoice {
     return this.id.let {
         if (it == null) {

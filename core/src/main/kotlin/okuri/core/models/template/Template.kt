@@ -60,6 +60,14 @@ fun <T> TemplateEntity<T>.toModel(): Template<T> {
     )
 }
 
+/**
+ * Converts this Template into a persistable TemplateEntity with the same generic structure.
+ *
+ * The returned entity copies id, userId, name, description, type, structure, isDefault, and isPremade.
+ * Note: createdAt and updatedAt are intentionally not set by this conversion (they are managed by the persistence layer).
+ *
+ * @return A TemplateEntity<T> containing the mapped fields from this Template.
+ */
 fun <T> Template<T>.toEntity(): TemplateEntity<T> {
     return TemplateEntity(
         id = this.id,
