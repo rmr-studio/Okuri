@@ -3,6 +3,8 @@ package okuri.core.entity.block
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
+import okuri.core.models.block.Block
+import okuri.core.models.block.Referenceable
 import okuri.core.models.block.structure.BlockMetadata
 import org.hibernate.annotations.Type
 import java.util.*
@@ -36,17 +38,23 @@ data class BlockEntity(
 
     @Column(name = "archived", columnDefinition = "boolean default false")
     val archived: Boolean = false,
-) : AuditableEntity()
+) : AuditableEntity(), Referenceable<Block> {
 
-fun BlockEntity.toModel(audit: Boolean = false) = okuri.core.models.block.Block(
-    id = this.id!!,
-    organisationId = this.organisationId,
-    type = this.type.toModel(),
-    name = this.name,
-    payload = this.payload,
-    archived = this.archived,
-    createdAt = if (audit) this.createdAt else null,
-    updatedAt = if (audit) this.updatedAt else null,
-    createdBy = if (audit) this.createdBy else null,
-    updatedBy = if (audit) this.updatedBy else null,
-)
+
+    override fun toReference() = this.toModel(audit = false)
+
+    fun toModel(audit: Boolean = false) = Block(
+        id = this.id!!,
+        organisationId = this.organisationId,
+        type = this.type.toModel(),
+        name = this.name,
+        payload = this.payload,
+        archived = this.archived,
+        createdAt = if (audit) this.createdAt else null,
+        updatedAt = if (audit) this.updatedAt else null,
+        createdBy = if (audit) this.createdBy else null,
+        updatedBy = if (audit) this.updatedBy else null,
+    )
+
+}
+

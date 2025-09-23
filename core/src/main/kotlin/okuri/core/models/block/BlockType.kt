@@ -1,5 +1,6 @@
 package okuri.core.models.block
 
+import okuri.core.enums.block.BlockTypeScope
 import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.BlockSchema
 import java.time.ZonedDateTime
@@ -10,8 +11,8 @@ data class BlockType(
     val key: String,
     val name: String,
     val description: String?,
-    val organisationId: UUID,
-    val private: Boolean,
+    val organisationId: UUID?,
+    val scope: BlockTypeScope,
     val system: Boolean,
     val schema: BlockSchema?,
     val display: BlockDisplay?,

@@ -3,6 +3,8 @@ package okuri.core.entity.block
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
+import okuri.core.enums.block.BlockTypeScope
+import okuri.core.models.block.BlockType
 import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.BlockSchema
 import org.hibernate.annotations.Type
@@ -37,8 +39,9 @@ data class BlockTypeEntity(
     @Column(name = "organisation_id", columnDefinition = "uuid")
     val organisationId: UUID? = null,
 
-    @Column(name = "private", nullable = false)
-    val private: Boolean = false,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scope", nullable = false)
+    val scope: BlockTypeScope = BlockTypeScope.ORGANISATION,
 
     @Column(name = "system", nullable = false)
     val system: Boolean = false,
@@ -52,13 +55,13 @@ data class BlockTypeEntity(
     val displayStructure: BlockDisplay? = null,
 ) : AuditableEntity()
 
-fun BlockTypeEntity.toModel() = okuri.core.models.block.BlockType(
+fun BlockTypeEntity.toModel() = BlockType(
     id = this.id!!,
     key = this.key,
     name = this.displayName,
     description = this.description,
-    organisationId = this.organisationId!!,
-    private = this.private,
+    organisationId = this.organisationId,
+    scope = this.scope,
     system = this.system,
     schema = this.schema,
     display = this.displayStructure,

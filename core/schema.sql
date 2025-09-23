@@ -162,20 +162,21 @@ $$;
 CREATE TABLE block_types
 (
     "id"                uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "key"               text    NOT NULL,                                         -- machine key e.g. "contact_card"
-    "display_name"      text    NOT NULL,
+    "key"               text NOT NULL,                                         -- machine key e.g. "contact_card"
+    "display_name"      text NOT NULL,
     "description"       text,
-    "organisation_id"   uuid    REFERENCES organisations (id) ON DELETE SET NULL, -- null for global
-    "private"           boolean NOT NULL DEFAULT false,
-    "system"            boolean          DEFAULT FALSE,                           -- system types you control
-    "schema"            jsonb,                                                    -- JSON Schema for validation (optional)
-    "display_structure" jsonb,                                                    -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
+    "organisation_id"   uuid REFERENCES organisations (id) ON DELETE SET NULL, -- null for global
+    "scope"             text NOT NULL    DEFAULT 'organisation',
+    "system"            boolean          DEFAULT FALSE,                        -- system types you control
+    "schema"            jsonb,                                                 -- JSON Schema for validation (optional)
+    "display_structure" jsonb,                                                 -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
     "created_at"        timestamptz      DEFAULT now(),
     "updated_at"        timestamptz      DEFAULT now(),
-    "created_by"        uuid,                                                     -- optional user id
-    "updated_by"        uuid,                                                     -- optional user id
+    "created_by"        uuid,                                                  -- optional user id
+    "updated_by"        uuid,                                                  -- optional user id
     UNIQUE (organisation_id, key)
 );
+
 
 CREATE INDEX idx_block_types_organisation_id ON block_types (organisation_id);
 

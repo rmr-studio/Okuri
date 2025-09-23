@@ -2,8 +2,9 @@ package okuri.core.entity.block
 
 
 import jakarta.persistence.*
-import okuri.core.entity.client.toModel
 import okuri.core.enums.core.EntityType
+import okuri.core.models.block.BlockReference
+import okuri.core.models.block.Referenceable
 import java.util.*
 
 @Entity
@@ -36,7 +37,7 @@ data class BlockReferenceEntity(
  * Convert BlockReferenceEntity to BlockReference model, given the associated entity
  * of type T has been fetched, and matches the associated entity type declared in entityType.
  */
-fun <T> BlockReferenceEntity.toModel(entity: T?) {
+fun <T : Referenceable<E>, E : Any> BlockReferenceEntity.toModel(entity: T?): BlockReference<E> {
     if (entity == null) {
         throw IllegalArgumentException("Associated entity must be provided to convert BlockReferenceEntity to model")
     }
@@ -47,12 +48,12 @@ fun <T> BlockReferenceEntity.toModel(entity: T?) {
                 throw IllegalArgumentException("Expected entity of type BlockEntity for EntityType.BLOCK")
             }
             // Convert to model
-            okuri.core.models.block.BlockReference(
+            return BlockReference(
                 id = this.id!!,
                 block = this.block.toModel(),
                 entityType = this.entityType,
                 entityId = this.entityId,
-                entity = entity.toModel()
+                entity = entity.toReference() as E
             )
         }
 
@@ -61,12 +62,12 @@ fun <T> BlockReferenceEntity.toModel(entity: T?) {
                 throw IllegalArgumentException("Expected entity of type ClientEntity for EntityType.CLIENT")
             }
             // Convert to model
-            okuri.core.models.block.BlockReference(
+            BlockReference(
                 id = this.id!!,
                 block = this.block.toModel(),
                 entityType = this.entityType,
                 entityId = this.entityId,
-                entity = entity.toModel()
+                entity = entity.toReference()
             )
         }
 
