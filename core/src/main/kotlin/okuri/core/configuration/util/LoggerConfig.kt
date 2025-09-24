@@ -1,4 +1,4 @@
-package okuri.core.configuration
+package okuri.core.configuration.util
 
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging

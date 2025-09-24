@@ -3,12 +3,13 @@ package okuri.core.entity.client
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.template.TemplateEntity
+import okuri.core.entity.util.AuditableEntity
+import okuri.core.models.block.Referenceable
 import okuri.core.models.client.Client
-import okuri.core.models.client.ContactDetails
+import okuri.core.models.common.Contact
 import okuri.core.models.template.client.ClientTemplateFieldStructure
 import okuri.core.models.template.toModel
 import org.hibernate.annotations.Type
-import java.time.ZonedDateTime
 import java.util.*
 
 @Entity
@@ -20,7 +21,7 @@ import java.util.*
 )
 data class ClientEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 
@@ -33,9 +34,9 @@ data class ClientEntity(
     @Column(name = "archived", nullable = false)
     var archived: Boolean = false,
 
-    @Column(name = "contact_details", columnDefinition = "jsonb")
+    @Column(name = "contact_details", columnDefinition = "jsonb", nullable = false)
     @Type(JsonBinaryType::class)
-    var contactDetails: ContactDetails? = null,
+    var contactDetails: Contact,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "template_id", referencedColumnName = "id")
@@ -44,35 +45,21 @@ data class ClientEntity(
     @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
     var attributes: Map<String, Any>? = null, // E.g., {"industry": "Healthcare", "size": "50-100"}
+) : AuditableEntity(), Referenceable<Client> {
+    override fun toReference() = this.toModel()
 
-    @Column(
-        name = "created_at",
-        nullable = false,
-        updatable = false
-    ) var createdAt: ZonedDateTime = ZonedDateTime.now(),
-
-    @Column(name = "updated_at", nullable = false) var updatedAt: ZonedDateTime = ZonedDateTime.now()
-) {
-    @PrePersist
-    fun onPrePersist() {
-        createdAt = ZonedDateTime.now()
-        updatedAt = ZonedDateTime.now()
-    }
-
-    @PreUpdate
-    fun onPreUpdate() {
-        updatedAt = ZonedDateTime.now()
-    }
-}
-
-fun ClientEntity.toModel(): Client {
-    this.id.let {
-        if (it == null) {
-            throw IllegalStateException("ClientEntity ID cannot be null when converting to model")
-        }
-
+    /**
+     * Converts this persistent ClientEntity to a domain Client model.
+     *
+     * Returns a Client populated from the entity fields. The entity's `id` must be non-null.
+     *
+     * @return a Client domain model with values copied from this entity.
+     * @throws IllegalStateException if `id` is null.
+     */
+    fun toModel(): Client {
+        val id = requireNotNull(this.id) { "ClientEntity ID cannot be null when converting to model" }
         return Client(
-            id = it,
+            id = id,
             organisationId = this.organisationId,
             template = this.template?.toModel(),
             name = this.name,
@@ -80,6 +67,8 @@ fun ClientEntity.toModel(): Client {
             attributes = this.attributes
         )
 
+
     }
 
 }
+

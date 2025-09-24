@@ -2,10 +2,10 @@ package okuri.core.entity.template
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
+import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.template.TemplateType
 import org.hibernate.annotations.Type
 import java.io.Serializable
-import java.time.ZonedDateTime
 import java.util.*
 
 /**
@@ -23,7 +23,7 @@ import java.util.*
 @Table
 data class TemplateEntity<T>(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 
@@ -49,17 +49,7 @@ data class TemplateEntity<T>(
 
     @Column(name = "is_premade", nullable = false)
     val isPremade: Boolean = false,
-
-    @Column(
-        name = "created_at",
-        nullable = false,
-        updatable = false
-    )
-    val createdAt: ZonedDateTime = ZonedDateTime.now(),
-
-    @Column(name = "updated_at", nullable = false)
-    val updatedAt: ZonedDateTime = ZonedDateTime.now()
-) : Serializable
+) : AuditableEntity(), Serializable
 
 
 

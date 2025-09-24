@@ -2,12 +2,12 @@ package okuri.core.entity.organisation
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
+import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.organisation.OrganisationPlan
 import okuri.core.models.common.Address
 import okuri.core.models.organisation.Organisation
 import okuri.core.models.organisation.OrganisationPaymentDetails
 import org.hibernate.annotations.Type
-import java.time.ZonedDateTime
 import java.util.*
 
 @Entity
@@ -19,7 +19,7 @@ import java.util.*
 )
 data class OrganisationEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", columnDefinition = "UUID DEFAULT uuid_generate_v4()", nullable = false)
     val id: UUID? = null,
 
@@ -34,12 +34,6 @@ data class OrganisationEntity(
 
     @Column(name = "member_count", nullable = false, updatable = false)
     val memberCount: Int = 0,
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    var createdAt: ZonedDateTime = ZonedDateTime.now(),
-
-    @Column(name = "updated_at", nullable = false, updatable = true)
-    var updatedAt: ZonedDateTime = ZonedDateTime.now(),
 
     @Type(JsonBinaryType::class)
     @Column(name = "address", nullable = true, columnDefinition = "jsonb")
@@ -67,25 +61,25 @@ data class OrganisationEntity(
     @Column(name = "tile_layout", nullable = true, updatable = true, columnDefinition = "jsonb")
     var tileLayout: Map<String, Any>? = null // JSONB for custom tile layout configuration
 
-) {
+) : AuditableEntity() {
     @OneToMany(mappedBy = "organisation", cascade = [CascadeType.ALL], fetch = FetchType.LAZY, orphanRemoval = true)
     var members: MutableSet<OrganisationMemberEntity> = mutableSetOf()
 
     @OneToMany(mappedBy = "organisation", cascade = [CascadeType.ALL], fetch = FetchType.LAZY, orphanRemoval = true)
     var invites: MutableSet<OrganisationInviteEntity> = mutableSetOf()
-
-    @PrePersist
-    fun onPrePersist() {
-        createdAt = ZonedDateTime.now()
-        updatedAt = ZonedDateTime.now()
-    }
-
-    @PreUpdate
-    fun onPreUpdate() {
-        updatedAt = ZonedDateTime.now()
-    }
 }
 
+/**
+ * Converts this OrganisationEntity into a domain Organisation model.
+ *
+ * When `includeMetadata` is true, member and invite entities are converted and populated;
+ * otherwise those lists are returned empty. The resulting model uses the entity's
+ * persisted timestamps (inherited from AuditableEntity).
+ *
+ * @param includeMetadata If true, include converted members and invites in the returned model.
+ * @return A populated [Organisation] domain model representing this entity.
+ * @throws IllegalArgumentException if this entity's `id` is null.
+ */
 fun OrganisationEntity.toModel(includeMetadata: Boolean = false): Organisation {
     this.id?.let {
         return Organisation(
@@ -115,12 +109,21 @@ fun OrganisationEntity.toModel(includeMetadata: Boolean = false): Organisation {
     } ?: throw IllegalArgumentException("OrganisationEntity must have a non-null id")
 }
 
+/**
+ * Converts this domain Organisation model into a persistable OrganisationEntity.
+ *
+ * Maps primary scalar and JSON-backed fields (id, name, avatarUrl, memberCount,
+ * businessNumber, taxId, organisationPaymentDetails, customAttributes, tileLayout,
+ * address, plan). Does not populate relational collections (members, invites) or
+ * audit fields — those are handled by the entity lifecycle / base class.
+ *
+ * @return A new OrganisationEntity with values copied from this Organisation.
+ */
 fun Organisation.toEntity(): OrganisationEntity {
     return OrganisationEntity(
         id = this.id,
         name = this.name,
         avatarUrl = this.avatarUrl,
-        createdAt = this.createdAt,
         memberCount = this.memberCount,
         businessNumber = this.businessNumber,
         taxId = this.taxId,

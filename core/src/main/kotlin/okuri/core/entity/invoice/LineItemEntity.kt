@@ -19,7 +19,7 @@ import java.util.*
 )
 data class LineItemEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 

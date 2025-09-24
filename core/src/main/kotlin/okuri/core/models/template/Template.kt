@@ -25,8 +25,8 @@ data class Template<T>(
     val structure: Map<String, T>, // JSONB for type-specific schema (fields, layout, calculations)
     val isDefault: Boolean = false,
     val isPremade: Boolean = false,
-    val createdAt: ZonedDateTime = ZonedDateTime.now(),
-    val updatedAt: ZonedDateTime = ZonedDateTime.now()
+    val createdAt: ZonedDateTime?,
+    val updatedAt: ZonedDateTime?
 ) : Serializable
 
 enum class TemplateType {
@@ -60,6 +60,14 @@ fun <T> TemplateEntity<T>.toModel(): Template<T> {
     )
 }
 
+/**
+ * Converts this Template into a persistable TemplateEntity with the same generic structure.
+ *
+ * The returned entity copies id, userId, name, description, type, structure, isDefault, and isPremade.
+ * Note: createdAt and updatedAt are intentionally not set by this conversion (they are managed by the persistence layer).
+ *
+ * @return A TemplateEntity<T> containing the mapped fields from this Template.
+ */
 fun <T> Template<T>.toEntity(): TemplateEntity<T> {
     return TemplateEntity(
         id = this.id,
@@ -70,8 +78,6 @@ fun <T> Template<T>.toEntity(): TemplateEntity<T> {
         structure = this.structure,
         isDefault = this.isDefault,
         isPremade = this.isPremade,
-        createdAt = this.createdAt,
-        updatedAt = this.updatedAt
     )
 }
 

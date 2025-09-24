@@ -3,17 +3,13 @@ package okuri.core.entity.invoice
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.client.ClientEntity
-import okuri.core.entity.client.toModel
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.toModel
-import okuri.core.entity.template.TemplateEntity
+import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.invoice.InvoiceStatus
 import okuri.core.models.invoice.Billable
 import okuri.core.models.invoice.Invoice
 import okuri.core.models.invoice.InvoiceDates
-import okuri.core.models.template.invoice.InvoiceTemplateFieldStructure
-import okuri.core.models.template.report.ReportTemplateFieldStructure
-import okuri.core.models.template.toModel
 import org.hibernate.annotations.Type
 import java.math.BigDecimal
 import java.time.ZonedDateTime
@@ -33,7 +29,7 @@ import java.util.*
 )
 data class InvoiceEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 
@@ -54,14 +50,6 @@ data class InvoiceEntity(
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     var amount: BigDecimal,
-
-    @JoinColumn(name = "invoice_template_id", nullable = true)
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    val invoiceTemplate: TemplateEntity<InvoiceTemplateFieldStructure>? = null,
-
-    @JoinColumn(name = "report_template_id", nullable = true)
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    var reportTemplate: TemplateEntity<ReportTemplateFieldStructure>? = null,
 
     @Column(name = "custom_fields", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
@@ -85,25 +73,17 @@ data class InvoiceEntity(
 
     @Column(name = "invoice_due_date", nullable = true)
     var dueDate: ZonedDateTime? = null,
+) : AuditableEntity()
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    var createdAt: ZonedDateTime = ZonedDateTime.now(),
-
-    @Column(name = "updated_at", nullable = false)
-    var updatedAt: ZonedDateTime = ZonedDateTime.now()
-) {
-    @PrePersist
-    fun onPrePersist() {
-        createdAt = ZonedDateTime.now()
-        updatedAt = ZonedDateTime.now()
-    }
-
-    @PreUpdate
-    fun onPreUpdate() {
-        updatedAt = ZonedDateTime.now()
-    }
-}
-
+/**
+ * Converts this persistent InvoiceEntity into its domain model representation (Invoice).
+ *
+ * The resulting Invoice contains mapped organisation and client models, optional invoice/report templates,
+ * invoice line items, monetary and status fields, and invoice-related dates (including audit timestamps).
+ *
+ * @return the domain Invoice corresponding to this entity.
+ * @throws IllegalArgumentException if the entity's `id` is null.
+ */
 fun InvoiceEntity.toModel(): Invoice {
     return this.id.let {
         if (it == null) {
@@ -119,8 +99,6 @@ fun InvoiceEntity.toModel(): Invoice {
             amount = this.amount,
             currency = this.currency,
             status = this.status,
-            template = this.invoiceTemplate?.toModel(),
-            reportTemplate = this.reportTemplate?.toModel(),
             dates = InvoiceDates(
                 startDate = this.startDate,
                 endDate = this.endDate,
