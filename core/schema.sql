@@ -294,22 +294,22 @@ CREATE TABLE IF NOT EXISTS template
 CREATE INDEX idx_template_organisation_id ON template (organisation_id);
 
 -- Clients
-drop table if exists "clients" cascade;
-create table if not exists "clients"
+drop table if exists public.clients cascade;
+create table if not exists public.clients
 (
     "id"              uuid primary key not null default uuid_generate_v4(),
     "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
     "name"            varchar(50)      not null,
     "archived"        boolean          not null default false,
     "contact_details" jsonb            not null,
-    "template_id"     uuid             null references public.template (id) on delete cascade,
+    "company_details" jsonb,
+    "metadata"        jsonb,
     "attributes"      jsonb,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp,
     "created_by"      uuid,
     "updated_by"      uuid
 );
-
 
 ALTER TABLE public.clients
     ADD CONSTRAINT uq_client_name_organisation UNIQUE (organisation_id, name);
@@ -318,15 +318,13 @@ create index if not exists idx_client_organisation_id
     on public.clients (organisation_id);
 
 -- Line Items
-
-create table if not exists "line_item"
+drop table if exists line_item;
+create table if not exists public.line_item
 (
     "id"              uuid primary key not null default uuid_generate_v4(),
     "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
     "name"            varchar(50)      not null,
-    "type"            VARCHAR          not null default 'SERVICE' CHECK (type IN ('SERVICE', 'PRODUCT', 'FEE', 'DISCOUNT')),
     "description"     text             not null,
-    "charge_rate"     DECIMAL(19, 4)   not null,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp
 );

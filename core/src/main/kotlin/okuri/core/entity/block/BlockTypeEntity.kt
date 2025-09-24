@@ -55,18 +55,22 @@ data class BlockTypeEntity(
     val displayStructure: BlockDisplay? = null,
 ) : AuditableEntity()
 
-fun BlockTypeEntity.toModel() = BlockType(
-    id = this.id!!,
-    key = this.key,
-    name = this.displayName,
-    description = this.description,
-    organisationId = this.organisationId,
-    scope = this.scope,
-    system = this.system,
-    schema = this.schema,
-    display = this.displayStructure,
-    createdAt = this.createdAt,
-    updatedAt = this.updatedAt,
-    createdBy = this.createdBy,
-    updatedBy = this.updatedBy,
-)
+fun BlockTypeEntity.toModel(): BlockType {
+    val id = requireNotNull(this.id) { "BlockTypeEntity ID cannot be null when converting to model" }
+
+    return BlockType(
+        id = id,
+        key = this.key,
+        name = this.displayName,
+        description = this.description,
+        organisationId = this.organisationId,
+        scope = this.scope,
+        system = this.system,
+        schema = this.schema,
+        display = this.displayStructure,
+        createdAt = this.createdAt,
+        updatedAt = this.updatedAt,
+        createdBy = this.createdBy,
+        updatedBy = this.updatedBy,
+    )
+}

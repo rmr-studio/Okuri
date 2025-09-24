@@ -2,13 +2,12 @@ package okuri.core.entity.client
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okuri.core.entity.template.TemplateEntity
+import okuri.core.entity.block.BlockTreeEntityReference
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.block.Referenceable
 import okuri.core.models.client.Client
+import okuri.core.models.common.Company
 import okuri.core.models.common.Contact
-import okuri.core.models.template.client.ClientTemplateFieldStructure
-import okuri.core.models.template.toModel
 import org.hibernate.annotations.Type
 import java.util.*
 
@@ -36,20 +35,27 @@ data class ClientEntity(
 
     @Column(name = "contact_details", columnDefinition = "jsonb", nullable = false)
     @Type(JsonBinaryType::class)
-    var contactDetails: Contact,
+    var contact: Contact,
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "template_id", referencedColumnName = "id")
-    var template: TemplateEntity<ClientTemplateFieldStructure>? = null, // Link to which template was used for client structure
+    @Column(name = "company_details", columnDefinition = "jsonb", nullable = true)
+    @Type(JsonBinaryType::class)
+    var company: Company? = null,
+
+    @Column(name = "type_metadata", columnDefinition = "jsonb", nullable = true)
+    @Type(JsonBinaryType::class)
+    var metadata: ClientTypeMetadataReference? = null,
 
     @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
-    var attributes: Map<String, Any>? = null, // E.g., {"industry": "Healthcare", "size": "50-100"}
+    var attributes: BlockTreeEntityReference? = null,
 ) : AuditableEntity(), Referenceable<Client> {
     override fun toReference() = this.toModel()
 
     /**
-     * Converts this persistent ClientEntity to a domain Client model.
+     * Converts this persistent ClientEntity to a semi-structured Client model.
+     *
+     * This would require additional service layer logic to reconstruct a more detailed model
+     * with all metadata and attributes fully populated.
      *
      * Returns a Client populated from the entity fields. The entity's `id` must be non-null.
      *
@@ -61,13 +67,10 @@ data class ClientEntity(
         return Client(
             id = id,
             organisationId = this.organisationId,
-            template = this.template?.toModel(),
             name = this.name,
-            contactDetails = this.contactDetails,
-            attributes = this.attributes
+            contact = this.contact,
+            company = this.company,
         )
-
-
     }
 
 }
