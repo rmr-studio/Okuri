@@ -3,7 +3,6 @@ package okuri.core.entity.invoice
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.client.ClientEntity
-import okuri.core.entity.client.toModel
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.toModel
 import okuri.core.entity.util.AuditableEntity
@@ -30,7 +29,7 @@ import java.util.*
 )
 data class InvoiceEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 

@@ -14,7 +14,7 @@ import java.util.*
 data class BlockEntity(
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, columnDefinition = "uuid")
     val id: UUID? = null,
 
@@ -43,18 +43,22 @@ data class BlockEntity(
 
     override fun toReference() = this.toModel(audit = false)
 
-    fun toModel(audit: Boolean = false) = Block(
-        id = this.id!!,
-        organisationId = this.organisationId,
-        type = this.type.toModel(),
-        name = this.name,
-        payload = this.payload,
-        archived = this.archived,
-        createdAt = if (audit) this.createdAt else null,
-        updatedAt = if (audit) this.updatedAt else null,
-        createdBy = if (audit) this.createdBy else null,
-        updatedBy = if (audit) this.updatedBy else null,
-    )
+    fun toModel(audit: Boolean = false): Block {
+        val id = requireNotNull(this.id) { "BlockEntity ID cannot be null when converting to model" }
+        return Block(
+            id = id,
+            organisationId = this.organisationId,
+            type = this.type.toModel(),
+            name = this.name,
+            payload = this.payload,
+            archived = this.archived,
+            createdAt = if (audit) this.createdAt else null,
+            updatedAt = if (audit) this.updatedAt else null,
+            createdBy = if (audit) this.createdBy else null,
+            updatedBy = if (audit) this.updatedBy else null,
+        )
+    }
+
 
 }
 

@@ -23,7 +23,7 @@ import java.util.*
 @Table
 data class TemplateEntity<T>(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 

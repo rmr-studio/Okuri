@@ -3,13 +3,12 @@ package okuri.core.models.block.structure
 import okuri.core.enums.block.FormWidgetType
 
 /**
- * Defines the UI structure of:
- *      - How the form fields are laid out
- *          - The types of widgets used for each field
- *          - Any additional configuration for each widget (e.g., placeholder text, options for dropdowns)
- *          - Internal Validation
+ * Defines per-field widget configuration for a form.
+ * - Layout is handled by BlockRenderStructure.
+ * - This structure specifies the widget type and its per-field configuration (e.g., placeholder text, options).
+ * - Validation is out of scope here; enforce via schema/services or extend this model with validation rules.
  *
- *      The fields should match all keys defined in the BlockSchema for the block
+ * The map keys must match the BlockSchema keys for the block.
  *
  *      Example JSON Structure:
  *          "fields": {

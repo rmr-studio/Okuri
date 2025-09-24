@@ -159,7 +159,7 @@ $$;
 
 -- Content Blocks
 
-CREATE TABLE block_types
+CREATE TABLE if not exists public.block_types
 (
     "id"                uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     "key"               text NOT NULL,                                         -- machine key e.g. "contact_card"
@@ -167,6 +167,7 @@ CREATE TABLE block_types
     "description"       text,
     "organisation_id"   uuid REFERENCES organisations (id) ON DELETE SET NULL, -- null for global
     "scope"             text NOT NULL    DEFAULT 'organisation',
+    check ( scope in ('organisation', 'global') ),
     "system"            boolean          DEFAULT FALSE,                        -- system types you control
     "schema"            jsonb,                                                 -- JSON Schema for validation (optional)
     "display_structure" jsonb,                                                 -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
@@ -174,14 +175,33 @@ CREATE TABLE block_types
     "updated_at"        timestamptz      DEFAULT now(),
     "created_by"        uuid,                                                  -- optional user id
     "updated_by"        uuid,                                                  -- optional user id
-    UNIQUE (organisation_id, key)
+    unique (organisation_id, key)
 );
 
+create index idx_block_types_organisation_id on block_types (organisation_id);
+-- Ensure a single global definition per key
+CREATE UNIQUE INDEX IF NOT EXISTS uq_block_types_key_global
+    ON public.block_types (key) WHERE organisation_id IS NULL;
 
-CREATE INDEX idx_block_types_organisation_id ON block_types (organisation_id);
+-- Tenant isolation (Supabase RLS)
+ALTER TABLE public.block_types
+    ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "block_types_select_by_org" ON public.block_types
+    FOR SELECT TO authenticated
+    USING (organisation_id IS NULL OR organisation_id IN (SELECT organisation_id
+                                                          FROM public.organisation_members
+                                                          WHERE user_id = auth.uid()));
+CREATE POLICY "block_types_write_by_org" ON public.block_types
+    FOR ALL TO authenticated
+    USING (organisation_id IN (SELECT organisation_id
+                               FROM public.organisation_members
+                               WHERE user_id = auth.uid()))
+    WITH CHECK (organisation_id IN (SELECT organisation_id
+                                    FROM public.organisation_members
+                                    WHERE user_id = auth.uid()));
 
 -- Blocks: first-class rows, tenant-scoped
-CREATE TABLE blocks
+create table if not exists public.blocks
 (
     "id"              uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
     "organisation_id" uuid REFERENCES organisations (id) NOT NULL,
@@ -190,13 +210,35 @@ CREATE TABLE blocks
     "payload"         jsonb                    DEFAULT '{}',                                        -- flexible content
     "parent_id"       uuid                               REFERENCES blocks (id) ON DELETE SET NULL, -- optional single-parent
     "archived"        boolean                  DEFAULT false,                                       -- archives
-    "created_by"      uuid,
-    "updated_by"      uuid,
+    "created_by"      uuid                               references public.users (id) ON DELETE SET NULL,
+    "updated_by"      uuid                               references public.users (id) ON DELETE SET NULL,
     "created_at"      TIMESTAMP WITH TIME ZONE DEFAULT now(),
     "updated_at"      TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-CREATE TABLE BLOCK_REFERENCES
+CREATE INDEX IF NOT EXISTS idx_blocks_org ON public.blocks (organisation_id);
+CREATE INDEX IF NOT EXISTS idx_blocks_type ON public.blocks (type_id);
+CREATE INDEX IF NOT EXISTS idx_blocks_parent ON public.blocks (parent_id);
+CREATE INDEX IF NOT EXISTS idx_blocks_archived ON public.blocks (archived);
+
+-- RLS
+ALTER TABLE public.blocks
+    ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "blocks_select_by_org" ON public.blocks
+    FOR SELECT TO authenticated
+    USING (organisation_id IN (SELECT organisation_id
+                               FROM public.organisation_members
+                               WHERE user_id = auth.uid()));
+CREATE POLICY "blocks_write_by_org" ON public.blocks
+    FOR ALL TO authenticated
+    USING (organisation_id IN (SELECT organisation_id
+                               FROM public.organisation_members
+                               WHERE user_id = auth.uid()))
+    WITH CHECK (organisation_id IN (SELECT organisation_id
+                                    FROM public.organisation_members
+                                    WHERE user_id = auth.uid()));
+
+CREATE TABLE public.block_references
 (
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     "block_id"    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
@@ -204,8 +246,32 @@ CREATE TABLE BLOCK_REFERENCES
     "entity_id"   uuid NOT NULL, -- id of the referenced entity
     UNIQUE (block_id, entity_type, entity_id)
 );
-CREATE INDEX idx_blocks_organisation_id ON block_references (block_id);
+CREATE INDEX idx_blocks_references_block ON block_references (block_id);
 CREATE INDEX idx_block_references_entity ON block_references (entity_type, entity_id);
+
+-- RLS scoped by parent block's organisation
+ALTER TABLE public.block_references
+    ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "block_refs_select_by_org" ON public.block_references
+    FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1
+                   FROM public.blocks b
+                   WHERE b.id = block_id
+                     AND b.organisation_id IN
+                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
+CREATE POLICY "block_refs_write_by_org" ON public.block_references
+    FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1
+                   FROM public.blocks b
+                   WHERE b.id = block_id
+                     AND b.organisation_id IN
+                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1
+                        FROM public.blocks b
+                        WHERE b.id = block_id
+                          AND b.organisation_id IN
+                              (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
+
 
 -- Templates
 

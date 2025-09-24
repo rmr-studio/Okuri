@@ -23,7 +23,7 @@ import java.util.*
 data class BlockTypeEntity(
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, columnDefinition = "uuid")
     val id: UUID? = null,
 

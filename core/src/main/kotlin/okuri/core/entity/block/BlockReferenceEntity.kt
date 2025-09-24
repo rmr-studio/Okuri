@@ -16,7 +16,7 @@ import java.util.*
 )
 data class BlockReferenceEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, columnDefinition = "uuid")
     val id: UUID? = null,
 
@@ -37,10 +37,9 @@ data class BlockReferenceEntity(
  * Convert BlockReferenceEntity to BlockReference model, given the associated entity
  * of type T has been fetched, and matches the associated entity type declared in entityType.
  */
-fun <T : Referenceable<E>, E : Any> BlockReferenceEntity.toModel(entity: T?): BlockReference<E> {
-    if (entity == null) {
-        throw IllegalArgumentException("Associated entity must be provided to convert BlockReferenceEntity to model")
-    }
+fun <T : Referenceable<E>, E : Any> BlockReferenceEntity.toModel(entity: T?): BlockReference<*> {
+    requireNotNull(entity) { "Associated entity cannot be null when converting to model" }
+    val id = requireNotNull(this.id) { "BlockReferenceEntity ID cannot be null when converting to model" }
 
     when (this.entityType) {
         EntityType.BLOCK -> {
@@ -49,11 +48,11 @@ fun <T : Referenceable<E>, E : Any> BlockReferenceEntity.toModel(entity: T?): Bl
             }
             // Convert to model
             return BlockReference(
-                id = this.id!!,
+                id = id,
                 block = this.block.toModel(),
                 entityType = this.entityType,
                 entityId = this.entityId,
-                entity = entity.toReference() as E
+                entity = entity.toReference()
             )
         }
 
@@ -62,8 +61,8 @@ fun <T : Referenceable<E>, E : Any> BlockReferenceEntity.toModel(entity: T?): Bl
                 throw IllegalArgumentException("Expected entity of type ClientEntity for EntityType.CLIENT")
             }
             // Convert to model
-            BlockReference(
-                id = this.id!!,
+            return BlockReference(
+                id = id,
                 block = this.block.toModel(),
                 entityType = this.entityType,
                 entityId = this.entityId,

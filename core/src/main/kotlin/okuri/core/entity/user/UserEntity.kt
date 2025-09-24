@@ -16,7 +16,7 @@ import java.util.*
 )
 data class UserEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 

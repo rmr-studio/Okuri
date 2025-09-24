@@ -19,9 +19,9 @@ data class Block(
     val payload: BlockMetadata,
     val archived: Boolean,
     // Keep these hidden unless within an internal organisation context
-    var createdAt: ZonedDateTime? = null,
-    var updatedAt: ZonedDateTime? = null,
-    var createdBy: UUID? = null,
-    var updatedBy: UUID? = null,
+    val createdAt: ZonedDateTime? = null,
+    val updatedAt: ZonedDateTime? = null,
+    val createdBy: UUID? = null,
+    val updatedBy: UUID? = null,
 ) : Serializable
 

@@ -21,7 +21,7 @@ import java.util.*
 )
 data class ClientEntity(
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     val id: UUID? = null,
 
@@ -57,21 +57,16 @@ data class ClientEntity(
      * @throws IllegalStateException if `id` is null.
      */
     fun toModel(): Client {
-        this.id.let {
-            if (it == null) {
-                throw IllegalStateException("ClientEntity ID cannot be null when converting to model")
-            }
+        val id = requireNotNull(this.id) { "ClientEntity ID cannot be null when converting to model" }
+        return Client(
+            id = id,
+            organisationId = this.organisationId,
+            template = this.template?.toModel(),
+            name = this.name,
+            contactDetails = this.contactDetails,
+            attributes = this.attributes
+        )
 
-            return Client(
-                id = it,
-                organisationId = this.organisationId,
-                template = this.template?.toModel(),
-                name = this.name,
-                contactDetails = this.contactDetails,
-                attributes = this.attributes
-            )
-
-        }
 
     }
 
