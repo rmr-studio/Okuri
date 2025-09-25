@@ -3,10 +3,10 @@ package okuri.core.entity.client
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.block.BlockTreeEntityReference
+import okuri.core.entity.company.CompanyEntity
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.block.Referenceable
 import okuri.core.models.client.Client
-import okuri.core.models.common.Company
 import okuri.core.models.common.Contact
 import org.hibernate.annotations.Type
 import java.util.*
@@ -37,10 +37,13 @@ data class ClientEntity(
     @Type(JsonBinaryType::class)
     var contact: Contact,
 
-    @Column(name = "company_details", columnDefinition = "jsonb", nullable = true)
-    @Type(JsonBinaryType::class)
-    var company: Company? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = true)
+    var company: CompanyEntity? = null,
 
+    @Column(name = "company_role", nullable = true)
+    var companyRole: String? = null,
+    
     @Column(name = "type_metadata", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
     var metadata: ClientTypeMetadataReference? = null,

@@ -85,15 +85,15 @@ CREATE POLICY "Users can view their own organisations" on organisations
 
 CREATE TABLE IF NOT EXISTS "organisation_invites"
 (
-    "id"              UUID PRIMARY KEY           NOT NULL DEFAULT uuid_generate_v4(),
-    "organisation_id" UUID                       NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
-    "email"           VARCHAR(100)               NOT NULL,
-    "status"          ORGANISATION_INVITE_STATUS NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED')),
-    "invite_code"     VARCHAR(12)                NOT NULL CHECK (LENGTH(invite_code) = 12),
-    "role"            VARCHAR                    NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
-    "invited_by"      UUID                       NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
-    "created_at"      TIMESTAMP WITH TIME ZONE            DEFAULT CURRENT_TIMESTAMP,
-    "expires_at"      TIMESTAMP WITH TIME ZONE            DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 days'
+    "id"              UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
+    "organisation_id" UUID             NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
+    "email"           VARCHAR(100)     NOT NULL,
+    "status"          VARCHAR(100)     NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED')),
+    "invite_code"     VARCHAR(12)      NOT NULL CHECK (LENGTH(invite_code) = 12),
+    "role"            VARCHAR          NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
+    "invited_by"      UUID             NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    "created_at"      TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
+    "expires_at"      TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 days'
 );
 
 CREATE INDEX idx_invite_organisation_id ON public.organisation_invites (organisation_id);
@@ -161,18 +161,18 @@ $$;
 
 CREATE TABLE if not exists public.block_types
 (
-    "id"                uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "id"                uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
     "key"               text NOT NULL,                                         -- machine key e.g. "contact_card"
     "display_name"      text NOT NULL,
     "description"       text,
     "organisation_id"   uuid REFERENCES organisations (id) ON DELETE SET NULL, -- null for global
-    "scope"             text NOT NULL    DEFAULT 'organisation',
+    "scope"             text NOT NULL            DEFAULT 'organisation',
     check ( scope in ('organisation', 'global') ),
-    "system"            boolean          DEFAULT FALSE,                        -- system types you control
+    "system"            boolean                  DEFAULT FALSE,                -- system types you control
     "schema"            jsonb,                                                 -- JSON Schema for validation (optional)
     "display_structure" jsonb,                                                 -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
-    "created_at"        timestamptz      DEFAULT now(),
-    "updated_at"        timestamptz      DEFAULT now(),
+    "created_at"        timestamp with time zone default current_timestamp,
+    "updated_at"        timestamp with time zone default current_timestamp,
     "created_by"        uuid,                                                  -- optional user id
     "updated_by"        uuid,                                                  -- optional user id
     unique (organisation_id, key)
@@ -301,15 +301,38 @@ create table if not exists public.clients
     "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
     "name"            varchar(50)      not null,
     "archived"        boolean          not null default false,
-    "contact_details" jsonb            not null,
-    "company_details" jsonb,
-    "metadata"        jsonb,
-    "attributes"      jsonb,
+    "contact_details" jsonb            not null default '{}'::jsonb,
+    "company_id"      uuid             references public.companies (id) on delete set null,
+    "company_role"    varchar(50),
+    "metadata"        jsonb                     default '{}'::jsonb,
+    "attributes"      jsonb                     default '{}'::jsonb,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp,
     "created_by"      uuid,
     "updated_by"      uuid
 );
+
+drop table if exists public.companies;
+create table if not exists public.companies
+(
+    "id"              uuid primary key not null default uuid_generate_v4(),
+    "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
+    "name"            varchar(100)     not null,
+    "address"         jsonb,
+    "phone"           varchar(15),
+    "email"           varchar(100),
+    "website"         varchar(100),
+    "business_number" varchar(50),
+    "logo_url"        text,
+    "attributes"      jsonb                     default '{}'::jsonb,
+    "created_at"      timestamp with time zone  default current_timestamp,
+    "updated_at"      timestamp with time zone  default current_timestamp,
+    "created_by"      uuid,
+    "updated_by"      uuid
+);
+
+create index if not exists idx_company_organisation_id
+    on public.companies (organisation_id);
 
 ALTER TABLE public.clients
     ADD CONSTRAINT uq_client_name_organisation UNIQUE (organisation_id, name);
@@ -346,7 +369,7 @@ create table if not exists "invoice"
     "invoice_number"     TEXT                     not null,
     "billable_work"      jsonb                    not null,
     "amount"             DECIMAL(19, 4)           not null default 0.00,
-    "custom_fields"      jsonb                    not null default '{}',
+    "custom_fields"      jsonb                    not null default '{}'::jsonb,
     "currency"           varchar(3)               not null default 'AUD',
     "status"             varchar(25)              not null default 'PENDING' CHECK (status IN ('DRAFT', 'PENDING', 'SENT', 'PAID', 'OVERDUE', 'VOID')),
     "invoice_start_date" timestamp with time zone null,

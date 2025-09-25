@@ -10,7 +10,9 @@ data class Client(
     val organisationId: UUID,
     val name: String,
     var contact: Contact,
+    // Optional company details for service/enterprise based clients
     var company: Company? = null,
+    var role: String? = null,
     var archived: Boolean = false,
     var metadata: ClientTypeMetadata? = null,
     var attributes: Map<String, Block>? = null
