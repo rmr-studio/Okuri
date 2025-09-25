@@ -2,10 +2,9 @@ package okuri.core.entity.company
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okuri.core.entity.block.BlockTreeEntityReference
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.common.Address
-import okuri.core.models.common.Company
+import okuri.core.models.company.Company
 import org.hibernate.annotations.Type
 import java.util.*
 
@@ -26,26 +25,29 @@ data class CompanyEntity(
     val organisationId: UUID,
 
     @Column(name = "name", length = 100, nullable = false)
-    val name: String,
+    var name: String,
 
     @Column(name = "address", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
-    val address: Address? = null,
+    var address: Address? = null,
 
     @Column(name = "phone", length = 15)
-    val phone: String? = null,
+    var phone: String? = null,
 
     @Column(name = "email", length = 100)
-    val email: String? = null,
+    var email: String? = null,
 
     @Column(name = "website", length = 100)
-    val website: String? = null,
+    var website: String? = null,
 
     @Column(name = "business_number", length = 50)
-    val businessNumber: String? = null,
+    var businessNumber: String? = null,
 
     @Column(name = "logo_url", columnDefinition = "text")
-    val logoUrl: String? = null,
+    var logoUrl: String? = null,
+
+    @Column(name = "archived", nullable = false)
+    var archived: Boolean = false,
 
     @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
@@ -73,6 +75,7 @@ data class CompanyEntity(
             website = this.website,
             businessNumber = this.businessNumber,
             logoUrl = this.logoUrl,
+            archived = this.archived,
             attributes = null, // Requires service layer to populate
             createdAt = if (audit) this.createdAt else null,
             updatedAt = if (audit) this.updatedAt else null,

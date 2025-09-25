@@ -238,6 +238,7 @@ CREATE POLICY "blocks_write_by_org" ON public.blocks
                                     FROM public.organisation_members
                                     WHERE user_id = auth.uid()));
 
+-- Mapping a block to other blocks or entities (client, line item, etc)
 CREATE TABLE public.block_references
 (
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -246,6 +247,18 @@ CREATE TABLE public.block_references
     "entity_id"   uuid NOT NULL, -- id of the referenced entity
     UNIQUE (block_id, entity_type, entity_id)
 );
+
+-- Mapping an entity (client, line item, etc) to the parent level blocks it should display
+CREATE TABLE entity_blocks
+(
+    id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    entity_id   uuid NOT NULL, -- id of client, line item, etc
+    entity_type text NOT NULL, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
+    block_id    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    key         text,          -- optional: semantic key ("point_of_contact", "order_history")
+    UNIQUE (entity_id, entity_type, key)
+);
+
 CREATE INDEX idx_blocks_references_block ON block_references (block_id);
 CREATE INDEX idx_block_references_entity ON block_references (entity_type, entity_id);
 
@@ -324,6 +337,7 @@ create table if not exists public.companies
     "website"         varchar(100),
     "business_number" varchar(50),
     "logo_url"        text,
+    "archived"        boolean          not null default false,
     "attributes"      jsonb                     default '{}'::jsonb,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp,

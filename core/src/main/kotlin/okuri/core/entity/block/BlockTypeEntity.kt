@@ -10,6 +10,13 @@ import okuri.core.models.block.structure.BlockSchema
 import org.hibernate.annotations.Type
 import java.util.*
 
+/**
+ * Defines a type of block that can be used within the system. This will hold all information
+ * about
+ *  - The data structure of the block
+ *  - The format for data input
+ *  - The components and display structure when rendering the block
+ */
 @Entity
 @Table(
     name = "block_types",
@@ -53,24 +60,26 @@ data class BlockTypeEntity(
     @Column(name = "display_structure", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
     val displayStructure: BlockDisplay? = null,
-) : AuditableEntity()
+) : AuditableEntity() {
+    fun toModel(): BlockType {
+        val id = requireNotNull(this.id) { "BlockTypeEntity ID cannot be null when converting to model" }
 
-fun BlockTypeEntity.toModel(): BlockType {
-    val id = requireNotNull(this.id) { "BlockTypeEntity ID cannot be null when converting to model" }
-
-    return BlockType(
-        id = id,
-        key = this.key,
-        name = this.displayName,
-        description = this.description,
-        organisationId = this.organisationId,
-        scope = this.scope,
-        system = this.system,
-        schema = this.schema,
-        display = this.displayStructure,
-        createdAt = this.createdAt,
-        updatedAt = this.updatedAt,
-        createdBy = this.createdBy,
-        updatedBy = this.updatedBy,
-    )
+        return BlockType(
+            id = id,
+            key = this.key,
+            name = this.displayName,
+            description = this.description,
+            organisationId = this.organisationId,
+            scope = this.scope,
+            system = this.system,
+            schema = this.schema,
+            display = this.displayStructure,
+            createdAt = this.createdAt,
+            updatedAt = this.updatedAt,
+            createdBy = this.createdBy,
+            updatedBy = this.updatedBy,
+        )
+    }
 }
+
+

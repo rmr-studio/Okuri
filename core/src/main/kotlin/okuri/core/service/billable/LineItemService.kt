@@ -1,4 +1,4 @@
-package okuri.core.service.client
+package okuri.core.service.billable
 
 import io.ktor.server.plugins.*
 import okuri.core.entity.invoice.LineItemEntity
@@ -7,7 +7,7 @@ import okuri.core.enums.activity.Activity
 import okuri.core.enums.util.OperationType
 import okuri.core.models.client.request.LineItemCreationRequest
 import okuri.core.models.invoice.LineItem
-import okuri.core.repository.client.LineItemRepository
+import okuri.core.repository.billable.LineItemRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.util.ServiceUtil.findManyResults

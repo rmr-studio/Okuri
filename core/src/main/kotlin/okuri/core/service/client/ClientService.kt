@@ -2,7 +2,7 @@ package okuri.core.service.client
 
 import io.ktor.server.plugins.*
 import okuri.core.entity.client.ClientEntity
-import okuri.core.entity.client.toModel
+import okuri.core.entity.company.CompanyEntity
 import okuri.core.enums.activity.Activity
 import okuri.core.enums.util.OperationType
 import okuri.core.models.client.Client
@@ -10,6 +10,7 @@ import okuri.core.models.client.request.ClientCreationRequest
 import okuri.core.repository.client.ClientRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
+import okuri.core.service.company.CompanyService
 import okuri.core.util.ServiceUtil.findManyResults
 import okuri.core.util.ServiceUtil.findOrThrow
 import org.springframework.security.access.prepost.PostAuthorize
@@ -23,6 +24,7 @@ class ClientService(
     private val repository: ClientRepository,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
+    private val companyService: CompanyService
 ) {
 
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
@@ -40,10 +42,17 @@ class ClientService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun createClient(client: ClientCreationRequest): Client {
+        // Fetch associated company if companyId is provided, throw error if not found
+        val company: CompanyEntity? = client.companyId?.let {
+            companyService.getCompanyById(it)
+        }
+
         ClientEntity(
             organisationId = client.organisationId,
+            company = company,
+            companyRole = client.companyRole,
             name = client.name,
-            contactDetails = client.contact,
+            contact = client.contact,
             attributes = client.attributes
         ).run {
             repository.save(this).let { entity ->

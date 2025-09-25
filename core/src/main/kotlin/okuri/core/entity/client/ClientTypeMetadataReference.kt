@@ -1,6 +1,5 @@
 package okuri.core.entity.client
 
-import okuri.core.entity.block.BlockTreeEntityReference
 import okuri.core.enums.block.client.ClientType
 
 /**

@@ -1,22 +1,22 @@
-package okuri.core.models.client
+package okuri.core.models.company
 
 import okuri.core.entity.util.AuditableModel
-import okuri.core.models.common.Contact
-import okuri.core.models.company.Company
+import okuri.core.models.common.Address
 import org.springframework.cglib.core.Block
 import java.time.ZonedDateTime
 import java.util.*
 
-data class Client(
+data class Company(
     val id: UUID,
     val organisationId: UUID,
     val name: String,
-    var contact: Contact,
-    // Optional company details for service/enterprise based clients
-    var company: Company? = null,
-    var role: String? = null,
-    var archived: Boolean = false,
-    var metadata: ClientTypeMetadata? = null,
+    val address: Address? = null,
+    val phone: String? = null,
+    val email: String? = null,
+    val website: String? = null,
+    val businessNumber: String? = null,
+    val logoUrl: String? = null,
+    val archived: Boolean = false,
     var attributes: Map<String, Block>? = null,
     override val createdAt: ZonedDateTime? = null,
     override val updatedAt: ZonedDateTime? = null,

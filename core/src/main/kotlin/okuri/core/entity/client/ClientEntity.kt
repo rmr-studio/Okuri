@@ -2,7 +2,6 @@ package okuri.core.entity.client
 
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
-import okuri.core.entity.block.BlockTreeEntityReference
 import okuri.core.entity.company.CompanyEntity
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.block.Referenceable

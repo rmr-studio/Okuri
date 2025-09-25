@@ -1,12 +1,10 @@
-package okuri.core.models.common
+package okuri.core.models.company.request
 
-import okuri.core.entity.util.AuditableModel
+import okuri.core.models.common.Address
 import org.springframework.cglib.core.Block
-import java.time.ZonedDateTime
 import java.util.*
 
-data class Company(
-    val id: UUID,
+data class CompanyCreationRequest(
     val organisationId: UUID,
     val name: String,
     val address: Address? = null,
@@ -16,8 +14,4 @@ data class Company(
     val businessNumber: String? = null,
     val logoUrl: String? = null,
     var attributes: Map<String, Block>? = null,
-    override val createdAt: ZonedDateTime? = null,
-    override val updatedAt: ZonedDateTime? = null,
-    override val createdBy: UUID? = null,
-    override val updatedBy: UUID? = null,
-) : AuditableModel()
+)
