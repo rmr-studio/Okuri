@@ -43,7 +43,7 @@ data class ClientEntity(
 
     @Column(name = "company_role", nullable = true)
     var companyRole: String? = null,
-    
+
     @Column(name = "type_metadata", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
     var metadata: ClientTypeMetadataReference? = null,
@@ -60,19 +60,22 @@ data class ClientEntity(
      * This would require additional service layer logic to reconstruct a more detailed model
      * with all metadata and attributes fully populated.
      *
-     * Returns a Client populated from the entity fields. The entity's `id` must be non-null.
-     *
      * @return a Client domain model with values copied from this entity.
      * @throws IllegalStateException if `id` is null.
      */
-    fun toModel(): Client {
+    fun toModel(audit: Boolean = false): Client {
         val id = requireNotNull(this.id) { "ClientEntity ID cannot be null when converting to model" }
         return Client(
             id = id,
             organisationId = this.organisationId,
             name = this.name,
             contact = this.contact,
-            company = this.company,
+            company = this.company?.toModel(),
+            role = this.companyRole,
+            createdAt = if (audit) this.createdAt else null,
+            updatedAt = if (audit) this.updatedAt else null,
+            createdBy = if (audit) this.createdBy else null,
+            updatedBy = if (audit) this.updatedBy else null,
         )
     }
 

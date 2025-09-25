@@ -38,3 +38,10 @@ abstract class AuditableEntity {
         createdAt = ZonedDateTime.now()
     }
 }
+
+abstract class AuditableModel {
+    abstract val createdAt: ZonedDateTime?
+    abstract val updatedAt: ZonedDateTime?
+    abstract val createdBy: UUID?
+    abstract val updatedBy: UUID?
+}

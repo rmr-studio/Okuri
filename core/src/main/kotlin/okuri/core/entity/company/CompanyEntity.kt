@@ -4,6 +4,8 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.block.BlockTreeEntityReference
 import okuri.core.entity.util.AuditableEntity
+import okuri.core.models.common.Address
+import okuri.core.models.common.Company
 import org.hibernate.annotations.Type
 import java.util.*
 
@@ -27,7 +29,8 @@ data class CompanyEntity(
     val name: String,
 
     @Column(name = "address", columnDefinition = "jsonb")
-    val address: String? = null, // You can use a JSON mapper to deserialize into a structured type
+    @Type(JsonBinaryType::class)
+    val address: Address? = null,
 
     @Column(name = "phone", length = 15)
     val phone: String? = null,
@@ -47,4 +50,35 @@ data class CompanyEntity(
     @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
     @Type(JsonBinaryType::class)
     var attributes: BlockTreeEntityReference? = null,
-) : AuditableEntity()
+) : AuditableEntity() {
+
+    /**
+     * Converts this persistent CompanyEntity to a semi-structured Company model.
+     *
+     * This would require additional service layer logic to reconstruct a more detailed model
+     * with all metadata and attributes fully populated.
+     *
+     * @return a Company domain model with values copied from this entity.
+     * @throws IllegalStateException if `id` is null.
+     */
+    fun toModel(audit: Boolean = false): Company {
+        val id = requireNotNull(this.id) { "CompanyEntity ID cannot be null when converting to model" }
+        return Company(
+            id = id,
+            name = this.name,
+            organisationId = this.organisationId,
+            address = this.address,
+            phone = this.phone,
+            email = this.email,
+            website = this.website,
+            businessNumber = this.businessNumber,
+            logoUrl = this.logoUrl,
+            attributes = null, // Requires service layer to populate
+            createdAt = if (audit) this.createdAt else null,
+            updatedAt = if (audit) this.updatedAt else null,
+            createdBy = if (audit) this.createdBy else null,
+            updatedBy = if (audit) this.updatedBy else null,
+        )
+
+    }
+}
