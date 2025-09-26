@@ -40,7 +40,6 @@ data class BlockEntity(
     val archived: Boolean = false,
 ) : AuditableEntity(), Referenceable<Block> {
 
-
     override fun toReference() = this.toModel(audit = false)
 
     fun toModel(audit: Boolean = false): Block {

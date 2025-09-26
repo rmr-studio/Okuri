@@ -53,6 +53,9 @@ data class BlockTypeEntity(
     @Column(name = "system", nullable = false)
     val system: Boolean = false,
 
+    @Column(name = "version", nullable = false, columnDefinition = "integer default 1")
+    val version: Int = 1,
+
     @Column(name = "schema", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
     val schema: BlockSchema? = null,

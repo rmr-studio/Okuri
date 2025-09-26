@@ -158,7 +158,6 @@ end;
 $$;
 
 -- Content Blocks
-
 CREATE TABLE if not exists public.block_types
 (
     "id"                uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
@@ -171,11 +170,12 @@ CREATE TABLE if not exists public.block_types
     "system"            boolean                  DEFAULT FALSE,                -- system types you control
     "schema"            jsonb,                                                 -- JSON Schema for validation (optional)
     "display_structure" jsonb,                                                 -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
+    "version"           integer                  DEFAULT 1,                    -- To handle updates to schema/display_structure over time to ensure that existing blocks are not broken
     "created_at"        timestamp with time zone default current_timestamp,
     "updated_at"        timestamp with time zone default current_timestamp,
     "created_by"        uuid,                                                  -- optional user id
     "updated_by"        uuid,                                                  -- optional user id
-    unique (organisation_id, key)
+    unique (organisation_id, key, version)
 );
 
 create index idx_block_types_organisation_id on block_types (organisation_id);
@@ -255,7 +255,7 @@ CREATE TABLE entity_blocks
     entity_id   uuid NOT NULL, -- id of client, line item, etc
     entity_type text NOT NULL, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
     block_id    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
-    key         text,          -- optional: semantic key ("point_of_contact", "order_history")
+    key         text NOT NULL,
     UNIQUE (entity_id, entity_type, key)
 );
 
@@ -317,8 +317,7 @@ create table if not exists public.clients
     "contact_details" jsonb            not null default '{}'::jsonb,
     "company_id"      uuid             references public.companies (id) on delete set null,
     "company_role"    varchar(50),
-    "metadata"        jsonb                     default '{}'::jsonb,
-    "attributes"      jsonb                     default '{}'::jsonb,
+    "type"            varchar(50),
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp,
     "created_by"      uuid,
