@@ -27,10 +27,9 @@ data class EntityBlocksReferenceEntity(
     @Enumerated(EnumType.STRING)
     @Column(name = "entity_type", nullable = false)
     val entityType: EntityType,
-
-    // Optional key to identify different block references for the same entity, should be mandatory in global scopes
-    @Column(name = "key", nullable = true)
-    val key: String?,
+    
+    @Column(name = "key", nullable = false)
+    val key: String,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "block_id", nullable = false)

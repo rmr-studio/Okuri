@@ -31,20 +31,25 @@ class OrganisationService(
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService
 ) {
-
-
     /**
-     * This will fetch an organisation by its ID, and optionally include its metadata (ie. members, invites, etc).
+     * Fetch an organisation by its ID with pre-authorization to ensure the user has access to the organisation.
+     * Returns organisation model, with optional metadata such as audit info and team members.
+     * Used by controller layer to return organisation data to the user.
      */
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
-    fun getOrganisation(organisationId: UUID, includeMetadata: Boolean = false): Organisation {
-        return getOrganisationEntity(organisationId).toModel(includeMetadata)
+    fun getOrganisationById(organisationId: UUID, includeMetadata: Boolean = false): Organisation {
+        return getEntityById(organisationId).toModel(includeMetadata)
     }
 
+    /**
+     * Fetch an organisation by its ID with post-authorization to ensure the user has access to the organisation
+     * Returns organisation access entity.
+     * Only used for internal service layer operations. Should not be exposed directly via controller.
+     */
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
-    fun getOrganisationEntity(organisationId: UUID): OrganisationEntity {
+    fun getEntityById(organisationId: UUID): OrganisationEntity {
         return findOrThrow(organisationId, organisationRepository::findById)
     }
 

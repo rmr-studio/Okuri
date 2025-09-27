@@ -71,7 +71,7 @@ class OrganisationServiceTest {
         )
 
         Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(entity))
-        val organisation = organisationService.getOrganisation(organisationId1)
+        val organisation = organisationService.getOrganisationById(organisationId1)
         assert(organisation.id == organisationId1)
 
     }
@@ -87,7 +87,7 @@ class OrganisationServiceTest {
         Mockito.`when`(organisationRepository.findById(organisationId3)).thenReturn(Optional.of(entity))
 
         assertThrows<AccessDeniedException> {
-            organisationService.getOrganisation(organisationId3)
+            organisationService.getOrganisationById(organisationId3)
         }
     }
 
@@ -107,7 +107,7 @@ class OrganisationServiceTest {
 
         Mockito.`when`(organisationRepository.findById(organisationId2)).thenReturn(Optional.of(entity))
         // Assert user can fetch the organisation given org roles
-        organisationService.getOrganisation(organisationId2).run {
+        organisationService.getOrganisationById(organisationId2).run {
             assert(id == organisationId2) { "Organisation ID does not match expected ID" }
             assert(name == "Test Organisation 2") { "Organisation name does not match expected name" }
         }
@@ -145,7 +145,7 @@ class OrganisationServiceTest {
             .`when`(organisationMemberRepository)
             .deleteById(Mockito.any())
         // Assert user can fetch the organisation given org roles
-        organisationService.getOrganisation(organisationId1).run {
+        organisationService.getOrganisationById(organisationId1).run {
             assert(id == organisationId1) { "Organisation ID does not match expected ID" }
             assert(name == "Test Organisation 1") { "Organisation name does not match expected name" }
         }

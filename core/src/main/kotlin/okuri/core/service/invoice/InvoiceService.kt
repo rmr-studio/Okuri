@@ -58,7 +58,7 @@ class InvoiceService(
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun createInvoice(request: InvoiceCreationRequest): Invoice {
         val organisation: OrganisationEntity =
-            organisationService.getOrganisationEntity(request.organisationId)
+            organisationService.getEntityById(request.organisationId)
         val client = clientService.getClientById(request.clientId)
         return InvoiceEntity(
             organisation = organisation,

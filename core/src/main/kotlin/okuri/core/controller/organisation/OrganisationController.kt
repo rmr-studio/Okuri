@@ -24,7 +24,7 @@ class OrganisationController(
         @PathVariable organisationId: UUID,
         @RequestParam includeMetadata: Boolean = false
     ): ResponseEntity<Organisation> {
-        val organisation: Organisation = this.organisationService.getOrganisation(
+        val organisation: Organisation = this.organisationService.getOrganisationById(
             organisationId = organisationId,
             includeMetadata = includeMetadata
         )

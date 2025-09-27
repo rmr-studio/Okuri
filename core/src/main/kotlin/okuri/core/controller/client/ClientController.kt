@@ -43,8 +43,11 @@ class ClientController(private val clientService: ClientService) {
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
         ApiResponse(responseCode = "404", description = "Client not found")
     )
-    fun getClientById(@PathVariable clientId: UUID): ResponseEntity<Client> {
-        val client: Client = clientService.getClientById(clientId).toModel()
+    fun getClientById(
+        @PathVariable clientId: UUID,
+        @RequestParam includeMetadata: Boolean = false
+    ): ResponseEntity<Client> {
+        val client: Client = clientService.getClientById(clientId, audit = includeMetadata)
         return ResponseEntity.ok(client)
     }
 

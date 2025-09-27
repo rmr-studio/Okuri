@@ -33,10 +33,26 @@ class ClientService(
         return findManyResults(organisationId, repository::findByOrganisationId)
     }
 
+    /**
+     * Fetch a client by its ID with post-authorization to ensure the user has access to the client's organisation.
+     * Returns client access entity.
+     * Only used for internal service layer operations. Should not be exposed directly via controller.
+     */
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
-    fun getClientById(id: UUID): ClientEntity {
+    fun getEntityById(id: UUID): ClientEntity {
         return findOrThrow(id, repository::findById)
+    }
+
+    /**
+     * Fetch a client by its ID with post-authorization to ensure the user has access to the client's organisation.
+     * Returns client model, with optional audit metadata.
+     * Used by controller layer to return client data to the user.
+     */
+    @Throws(NotFoundException::class)
+    @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
+    fun getClientById(id: UUID, audit: Boolean = false): Client {
+        return findOrThrow(id, repository::findById).toModel(audit)
     }
 
 
@@ -70,23 +86,24 @@ class ClientService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun updateClient(client: Client): Client {
-        findOrThrow(client.id, repository::findById).apply {
-            name = client.name
-            contactDetails = client.contactDetails
-            attributes = client.attributes
-        }.run {
-            repository.save(this).run {
-                activityService.logActivity(
-                    activity = Activity.CLIENT,
-                    operation = OperationType.UPDATE,
-                    userId = authTokenService.getUserId(),
-                    organisationId = this.organisationId,
-                    additionalDetails = "Updated client with ID: ${this.id}"
-                )
-
-                return this.toModel()
-            }
-        }
+        TODO()
+//        findOrThrow(client.id, repository::findById).apply {
+//            name = client.name
+//            contactDetails = client.contactDetails
+//            attributes = client.attributes
+//        }.run {
+//            repository.save(this).run {
+//                activityService.logActivity(
+//                    activity = Activity.CLIENT,
+//                    operation = OperationType.UPDATE,
+//                    userId = authTokenService.getUserId(),
+//                    organisationId = this.organisationId,
+//                    additionalDetails = "Updated client with ID: ${this.id}"
+//                )
+//
+//                return this.toModel()
+//            }
+//        }
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
@@ -119,6 +136,4 @@ class ClientService(
             }
         }
     }
-
-
 }

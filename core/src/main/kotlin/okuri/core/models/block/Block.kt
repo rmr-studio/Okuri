@@ -19,6 +19,8 @@ data class Block(
     val type: BlockType,
     val payload: BlockMetadata,
     val archived: Boolean,
+    // If there are any validation errors with this block's payload
+    val validationErrors: List<String>? = null,
     // Keep these hidden unless within an internal organisation context
     override val createdAt: ZonedDateTime? = null,
     override val updatedAt: ZonedDateTime? = null,

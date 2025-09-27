@@ -180,6 +180,7 @@ CREATE TABLE if not exists public.block_types
 );
 
 create index idx_block_types_organisation_id on block_types (organisation_id);
+create index idx_block_types_key on block_types (key);
 -- Ensure a single global definition per key
 CREATE UNIQUE INDEX IF NOT EXISTS uq_block_types_key_global
     ON public.block_types (key) WHERE organisation_id IS NULL;
