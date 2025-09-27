@@ -62,7 +62,9 @@ dependencies {
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.9.2")
     runtimeOnly("org.postgresql:postgresql")
 
-
+    // Schema Validation
+    implementation("com.networknt:json-schema-validator:1.0.83")
+    
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     // Testing
     testImplementation("com.nimbusds:nimbus-jose-jwt:9.37.2")

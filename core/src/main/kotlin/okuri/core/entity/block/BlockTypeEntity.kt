@@ -4,6 +4,7 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.block.BlockTypeScope
+import okuri.core.enums.block.BlockValidationScope
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.BlockSchema
@@ -56,6 +57,10 @@ data class BlockTypeEntity(
     @Column(name = "version", nullable = false, columnDefinition = "integer default 1")
     val version: Int = 1,
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "strictness", nullable = false, columnDefinition = "text default 'SOFT'")
+    val strictness: BlockValidationScope = BlockValidationScope.SOFT,
+
     @Column(name = "schema", columnDefinition = "jsonb")
     @Type(JsonBinaryType::class)
     val schema: BlockSchema? = null,
@@ -70,6 +75,7 @@ data class BlockTypeEntity(
         return BlockType(
             id = id,
             key = this.key,
+            version = this.version,
             name = this.displayName,
             description = this.description,
             organisationId = this.organisationId,

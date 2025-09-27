@@ -9,6 +9,7 @@ import java.util.*
 data class BlockType(
     val id: UUID,
     val key: String,
+    val version: Int,
     val name: String,
     val description: String?,
     val organisationId: UUID?,
