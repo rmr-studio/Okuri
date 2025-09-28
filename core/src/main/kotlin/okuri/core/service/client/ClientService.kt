@@ -69,7 +69,6 @@ class ClientService(
             companyRole = client.companyRole,
             name = client.name,
             contact = client.contact,
-            attributes = client.attributes
         ).run {
             repository.save(this).let { entity ->
                 activityService.logActivity(

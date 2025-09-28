@@ -14,6 +14,11 @@ object ServiceUtil {
             .orElseThrow { NotFoundException("Entity not found for query: $data") }
     }
 
+    fun <T, V> findOrThrow(data: T, query: (T) -> V?): V {
+        return query.invoke(data)
+            ?: throw NotFoundException("Entity not found for query: $data")
+    }
+
     fun <T, V> findManyResults(data: T, query: (T) -> List<V>): List<V> {
         return query.invoke(data)
     }

@@ -161,17 +161,18 @@ $$;
 CREATE TABLE if not exists public.block_types
 (
     "id"                uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
-    "key"               text NOT NULL,                                                                              -- machine key e.g. "contact_card"
-    "display_name"      text NOT NULL,
+    "key"               text  NOT NULL,                                                                             -- machine key e.g. "contact_card"
+    "display_name"      text  NOT NULL,
     "description"       text,
-    "organisation_id"   uuid REFERENCES organisations (id) ON DELETE SET NULL,                                      -- null for global
-    "scope"             text NOT NULL            DEFAULT 'organisation',
+    "organisation_id"   uuid  REFERENCES organisations (id) ON DELETE SET NULL,                                     -- null for global
+    "scope"             text  NOT NULL           DEFAULT 'organisation',
     check ( scope in ('organisation', 'global') ),
     "system"            boolean                  DEFAULT FALSE,                                                     -- system types you control
-    "schema"            jsonb,                                                                                      -- JSON Schema for validation (optional)
-    "display_structure" jsonb,                                                                                      -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
-    "strictness"        text NOT NULL            default 'soft' check ( strictness in ('none', 'soft', 'strict') ), -- how strictly to enforce schema (none, soft (warn), strict (reject))
-    "version"           integer                  DEFAULT 1,                                                         -- To handle updates to schema/display_structure over time to ensure that existing blocks are not broken
+    "schema"            jsonb NOT NULL,                                                                             -- JSON Schema for validation
+    "display_structure" jsonb not NULL,                                                                             -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
+    "strictness"        text  NOT NULL           default 'soft' check ( strictness in ('none', 'soft', 'strict') ), -- how strictly to enforce schema (none, soft (warn), strict (reject))
+    "version"           integer                  DEFAULT 1,                                                         -- To handle updates to schema/display_structure over time to ensure that existing blocks are not broken,
+    "archived"          boolean                  DEFAULT FALSE,                                                     -- soft delete
     "created_at"        timestamp with time zone default current_timestamp,
     "updated_at"        timestamp with time zone default current_timestamp,
     "created_by"        uuid,                                                                                       -- optional user id

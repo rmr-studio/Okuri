@@ -6,6 +6,7 @@ import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.block.BlockTypeScope
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.models.block.BlockType
+import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.BlockSchema
 import org.hibernate.annotations.Type
@@ -61,13 +62,16 @@ data class BlockTypeEntity(
     @Column(name = "strictness", nullable = false, columnDefinition = "text default 'SOFT'")
     val strictness: BlockValidationScope = BlockValidationScope.SOFT,
 
-    @Column(name = "schema", columnDefinition = "jsonb")
+    @Column(name = "schema", columnDefinition = "jsonb", nullable = false)
     @Type(JsonBinaryType::class)
-    val schema: BlockSchema? = null,
+    val schema: BlockSchema,
 
-    @Column(name = "display_structure", columnDefinition = "jsonb")
+    @Column(name = "archived", nullable = false, columnDefinition = "boolean default false")
+    val archived: Boolean = false,
+    
+    @Column(name = "display_structure", columnDefinition = "jsonb", nullable = false)
     @Type(JsonBinaryType::class)
-    val displayStructure: BlockDisplay? = null,
+    val displayStructure: BlockDisplay,
 ) : AuditableEntity() {
     fun toModel(): BlockType {
         val id = requireNotNull(this.id) { "BlockTypeEntity ID cannot be null when converting to model" }
@@ -82,12 +86,45 @@ data class BlockTypeEntity(
             scope = this.scope,
             system = this.system,
             schema = this.schema,
+            validationMode = this.strictness,
             display = this.displayStructure,
             createdAt = this.createdAt,
             updatedAt = this.updatedAt,
             createdBy = this.createdBy,
             updatedBy = this.updatedBy,
         )
+    }
+
+    fun updateFromModel(model: BlockType): BlockTypeEntity {
+        return this.copy(
+            displayName = model.name,
+            description = model.description,
+            // organisationId is immutable
+            // scope is immutable
+            // system is immutable
+            version = this.version + 1, // Increment version on update
+            strictness = model.validationMode,
+            schema = model.schema,
+            displayStructure = model.display,
+        )
+    }
+
+    companion object {
+        fun fromRequest(request: CreateBlockTypeRequest): BlockTypeEntity {
+            return BlockTypeEntity(
+                key = request.key,
+                displayName = request.name,
+                description = request.description,
+                // Organisation should only be null for system types
+                organisationId = request.organisationId,
+                scope = request.scope,
+                // System block types cannot be created via this method
+                system = false,
+                strictness = request.mode,
+                schema = request.schema,
+                displayStructure = request.display,
+            )
+        }
     }
 }
 
