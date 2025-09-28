@@ -24,7 +24,7 @@ class UserService(
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun getUserFromSession(): UserEntity {
         return authTokenService.getUserId().let {
-            findOrThrow(it, repository::findById).apply {
+            findOrThrow { repository.findById(it) }.apply {
                 logger.info { "Retrieved user profile for ID: $it" }
             }
         }
@@ -32,7 +32,7 @@ class UserService(
 
     @Throws(NotFoundException::class)
     fun getUserById(id: UUID): UserEntity {
-        return findOrThrow(id, repository::findById)
+        return findOrThrow { repository.findById(id) }
     }
 
     @Throws(NotFoundException::class, IllegalArgumentException::class)
@@ -44,7 +44,7 @@ class UserService(
             }
         }
 
-        findOrThrow(user.id, repository::findById).apply {
+        findOrThrow { repository.findById(user.id) }.apply {
             name = user.name
             email = user.email
             phone = user.phone
@@ -63,7 +63,7 @@ class UserService(
     @Transactional
     @Throws(NotFoundException::class)
     fun deleteUserProfile(userId: UUID) {
-        findOrThrow(userId, repository::findById) // Ensure the user exists before deletion
+        findOrThrow { repository.findById(userId) } // Ensure the user exists before deletion
         repository.deleteById(userId)
         logger.info { "Deleted user profile with ID: $userId" }
     }

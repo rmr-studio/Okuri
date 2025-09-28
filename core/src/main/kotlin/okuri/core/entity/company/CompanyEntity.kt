@@ -48,10 +48,6 @@ data class CompanyEntity(
 
     @Column(name = "archived", nullable = false)
     var archived: Boolean = false,
-
-    @Column(name = "attributes", columnDefinition = "jsonb", nullable = true)
-    @Type(JsonBinaryType::class)
-    var attributes: BlockTreeEntityReference? = null,
 ) : AuditableEntity() {
 
     /**
@@ -76,7 +72,6 @@ data class CompanyEntity(
             businessNumber = this.businessNumber,
             logoUrl = this.logoUrl,
             archived = this.archived,
-            attributes = null, // Requires service layer to populate
             createdAt = if (audit) this.createdAt else null,
             updatedAt = if (audit) this.updatedAt else null,
             createdBy = if (audit) this.createdBy else null,

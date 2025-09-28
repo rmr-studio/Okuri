@@ -10,7 +10,6 @@ import okuri.core.enums.util.OperationType
 import okuri.core.models.client.Client
 import okuri.core.models.invoice.Invoice
 import okuri.core.models.invoice.request.InvoiceCreationRequest
-import okuri.core.models.template.toEntity
 import okuri.core.repository.invoice.InvoiceRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -35,14 +34,14 @@ class InvoiceService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisationInvoices(organisationId: UUID): List<InvoiceEntity> {
-        return findManyResults(organisationId, invoiceRepository::findByOrganisationId).map { entity ->
+        return findManyResults { invoiceRepository.findByOrganisationId(organisationId) }.map { entity ->
             entity
         }
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun getInvoicesByClientId(client: Client): List<InvoiceEntity> {
-        return findManyResults(client.id, invoiceRepository::findByClientId).map { entity ->
+        return findManyResults { invoiceRepository.findByClientId(client.id) }.map { entity ->
             entity
         }
     }
@@ -51,7 +50,7 @@ class InvoiceService(
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisation.id)")
     fun getInvoiceById(id: UUID): InvoiceEntity {
         authTokenService.getUserId().let {
-            return findOrThrow(id, invoiceRepository::findById)
+            return findOrThrow { invoiceRepository.findById(id) }
         }
     }
 
@@ -59,13 +58,11 @@ class InvoiceService(
     fun createInvoice(request: InvoiceCreationRequest): Invoice {
         val organisation: OrganisationEntity =
             organisationService.getEntityById(request.organisationId)
-        val client = clientService.getClientById(request.clientId)
+        val client = clientService.getEntityById(request.clientId)
         return InvoiceEntity(
             organisation = organisation,
             client = client,
             invoiceNumber = request.invoiceNumber,
-            invoiceTemplate = request.template.toEntity(),
-            reportTemplate = request.reportTemplate?.toEntity(),
             items = request.items,
             amount = request.amount,
             currency = request.currency,
@@ -92,12 +89,11 @@ class InvoiceService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#invoice.organisation.id)")
     fun updateInvoice(invoice: Invoice): Invoice {
-        return findOrThrow(invoice.id, invoiceRepository::findById).apply {
+        return findOrThrow { invoiceRepository.findById(invoice.id) }.apply {
             invoiceNumber = invoice.invoiceNumber // Assuming invoiceNumber is a String in Invoice
             items = invoice.items
             amount = invoice.amount
             currency = invoice.currency
-            reportTemplate = invoice.reportTemplate?.toEntity()
             customFields = invoice.customFields
             status = invoice.status
             startDate = invoice.dates.startDate
@@ -126,7 +122,7 @@ class InvoiceService(
     @PreAuthorize("@organisationSecurity.hasOrg(#invoice.organisation.id)")
     fun cancelInvoice(invoice: Invoice): Invoice {
         // Logic to cancel the invoice by ID
-        return findOrThrow(invoice.id, invoiceRepository::findById).apply {
+        return findOrThrow { invoiceRepository.findById(invoice.id) }.apply {
             if (this.status == InvoiceStatus.PAID) {
                 throw IllegalArgumentException("Cannot cancel a paid invoice")
             }
@@ -151,7 +147,7 @@ class InvoiceService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#invoice.organisation.id)")
     fun deleteInvoice(invoice: Invoice) {
-        findOrThrow(invoice.id, invoiceRepository::findById).run {
+        findOrThrow { invoiceRepository.findById(invoice.id) }.run {
             if (this.status == InvoiceStatus.PAID) {
                 throw IllegalArgumentException("Cannot delete a paid invoice")
             }

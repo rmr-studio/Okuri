@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import okuri.core.entity.client.toModel
 import okuri.core.models.client.Client
 import okuri.core.models.client.request.ClientCreationRequest
 import okuri.core.service.client.ClientService
@@ -98,10 +97,10 @@ class ClientController(private val clientService: ClientService) {
         ApiResponse(responseCode = "404", description = "Client not found")
     )
     fun deleteClientById(@PathVariable clientId: UUID): ResponseEntity<Unit> {
-        // Check ownership of client
-        val client = clientService.getClientById(clientId).toModel()
-        clientService.deleteClient(client)
-        return ResponseEntity.noContent().build()
+        clientService.getClientById(clientId).run {
+            clientService.deleteClient(this)
+            return ResponseEntity.noContent().build()
+        }
     }
 
     @PutMapping("/{clientId}/archive/{status}")
@@ -120,8 +119,9 @@ class ClientController(private val clientService: ClientService) {
         @PathVariable status: Boolean
     ): ResponseEntity<Unit> {
         // Check ownership of client
-        val client = clientService.getClientById(clientId).toModel()
-        clientService.archiveClient(client, status)
-        return ResponseEntity.noContent().build()
+        clientService.getClientById(clientId).run {
+            clientService.archiveClient(this, status)
+            return ResponseEntity.noContent().build()
+        }
     }
 }

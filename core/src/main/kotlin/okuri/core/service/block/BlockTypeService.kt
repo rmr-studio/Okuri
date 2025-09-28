@@ -7,6 +7,7 @@ import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.repository.block.BlockTypeRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
+import okuri.core.util.ServiceUtil.findManyResults
 import okuri.core.util.ServiceUtil.findOrThrow
 import org.springframework.stereotype.Service
 import java.util.*
@@ -24,7 +25,7 @@ class BlockTypeService(
      * This function creates and publishes a new block type based on the provided request data.
      * It logs the creation activity for auditing purposes.
      */
-    fun publishBlockType(request: CreateBlockTypeRequest) {
+    fun publishBlockType(request: CreateBlockTypeRequest): BlockType {
         authTokenService.getUserId().let { userId ->
             val entity = BlockTypeEntity.fromRequest(request)
             blockTypeRepository.save(entity).run {
@@ -36,6 +37,8 @@ class BlockTypeService(
                     targetId = entity.id,
                     additionalDetails = "Block Type '${entity.key}' created with ID: ${entity.id}"
                 )
+
+                return this.toModel()
             }
         }
     }
@@ -50,7 +53,7 @@ class BlockTypeService(
      */
     fun updateBlockType(type: BlockType) {
         authTokenService.getUserId().let { userId ->
-            findOrThrow(type.id, blockTypeRepository::findById).let { existing ->
+            findOrThrow { blockTypeRepository.findById(type.id) }.let { existing ->
                 val updated = existing.updateFromModel(type)
                 blockTypeRepository.save(updated).run {
                     activityService.logActivity(
@@ -69,13 +72,13 @@ class BlockTypeService(
     }
 
     /**
-     * This function archives a block type identified by its unique ID.
+     * This function will either archive or un-archive a block type identified by its unique ID.
      * The block type will still be visible to users who are currently using it in their layouts
      * but cannot be used in new blocks.
      */
-    fun archiveBlockType(id: UUID) {
+    fun archiveBlockType(id: UUID, status: Boolean) {
         authTokenService.getUserId().let { userId ->
-            findOrThrow(id, blockTypeRepository::findById).let { existing ->
+            findOrThrow { blockTypeRepository.findById(id) }.let { existing ->
                 val archived = existing.copy(archived = true)
                 blockTypeRepository.save(archived).run {
                     activityService.logActivity(
@@ -96,13 +99,15 @@ class BlockTypeService(
      * The scope determines who can access and use the block type within the application.
      */
     fun changeBlockTypeVisibility(scope: BlockTypeScope) {
-
+        TODO()
     }
 
     /**
      * This function creates a fork of an existing block type, allowing for modifications
      */
-    fun forkBlockType(source: BlockType, scope: BlockTypeScope) {}
+    fun forkBlockType(source: BlockType, scope: BlockTypeScope) {
+        TODO()
+    }
 
     /**
      * This function retrieves a block type based on its unique key.
@@ -110,16 +115,23 @@ class BlockTypeService(
      * @return The block type associated with the given key, or null if not found.
      */
     fun getEntityByKey(key: String): BlockTypeEntity {
-        return findOrThrow(key, blockTypeRepository::findByKey)
+        return findOrThrow { blockTypeRepository.findByKey(key) }
     }
 
     /**
      * This function retrieves block types associated with a specific organisation.
+     * It will also return all available pre-generated system block types.
+     *
      * @param organisationId The ID of the organisation to filter block types by.
      * @return A list of block types associated with the given organisation ID.
      */
-    fun getBlockTypesByOrganisation(organisationId: UUID): List<BlockType> {
-        TODO()
+    fun getBlockTypesByOrganisation(organisationId: UUID, includeSystemResults: Boolean = true): List<BlockType> {
+        return findManyResults {
+            blockTypeRepository.findByOrganisationIdOrSystem(
+                organisationId,
+                includeSystemResults
+            )
+        }.map { it.toModel() }
     }
 
     /**
@@ -133,5 +145,7 @@ class BlockTypeService(
      *
      * Todo: Implement filtering logic based on the provided filter map.
      */
-    fun getBlockTypes(scope: BlockTypeScope, organisationId: UUID?, filter: Map<String, Any>?) {}
+    fun getBlockTypes(scope: BlockTypeScope, organisationId: UUID?, filter: Map<String, Any>?): List<BlockType> {
+        TODO()
+    }
 }

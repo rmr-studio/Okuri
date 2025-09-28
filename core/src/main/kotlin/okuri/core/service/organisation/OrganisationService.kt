@@ -50,7 +50,7 @@ class OrganisationService(
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getEntityById(organisationId: UUID): OrganisationEntity {
-        return findOrThrow(organisationId, organisationRepository::findById)
+        return findOrThrow { organisationRepository.findById(organisationId) }
     }
 
     /**
@@ -125,7 +125,7 @@ class OrganisationService(
     @PreAuthorize("@organisationSecurity.hasOrgRoleOrHigher(#organisation.id, 'ADMIN')")
     fun updateOrganisation(organisation: Organisation): Organisation {
         authTokenService.getUserId().let { userId ->
-            findOrThrow(organisation.id, organisationRepository::findById).run {
+            findOrThrow { organisationRepository.findById(organisation.id) }.run {
                 val entity = this.apply {
                     avatarUrl = organisation.avatarUrl
                     name = organisation.name
@@ -162,7 +162,7 @@ class OrganisationService(
 
 
             // Check if the organisation exists
-            val organisation: OrganisationEntity = findOrThrow(organisationId, organisationRepository::findById)
+            val organisation: OrganisationEntity = findOrThrow { organisationRepository.findById(organisationId) }
 
             // Delete all members associated with the organisation
             organisationMemberRepository.deleteByIdOrganisationId(organisationId)
@@ -224,7 +224,7 @@ class OrganisationService(
                 organisationId = organisationId,
                 userId = member.user.id
             ).run {
-                findOrThrow(this, organisationMemberRepository::findById)
+                findOrThrow { organisationMemberRepository.findById(this) }
                 organisationMemberRepository.deleteById(this)
                 activityService.logActivity(
                     activity = okuri.core.enums.activity.Activity.ORGANISATION_MEMBER,
@@ -264,7 +264,7 @@ class OrganisationService(
                 organisationId = organisationId,
                 userId = member.user.id
             ).run {
-                findOrThrow(this, organisationMemberRepository::findById).run {
+                findOrThrow { organisationMemberRepository.findById(this) }.run {
                     this.apply {
                         this.role = role
                     }

@@ -26,13 +26,13 @@ class CompanyService(
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun getOrganisationCompanies(organisationId: UUID): List<CompanyEntity> {
-        return findManyResults(organisationId, repository::findByOrganisationId)
+        return findManyResults { repository.findByOrganisationId(organisationId) }
     }
 
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
     fun getCompanyById(id: UUID): CompanyEntity {
-        return findOrThrow(id, repository::findById)
+        return findOrThrow { repository.findById(id) }
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
@@ -46,7 +46,6 @@ class CompanyService(
             website = request.website,
             businessNumber = request.businessNumber,
             logoUrl = request.logoUrl,
-            attributes = null // can be handled later
         ).run {
             repository.save(this).let { entity ->
                 activityService.logActivity(
@@ -63,7 +62,7 @@ class CompanyService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#company.organisationId)")
     fun updateCompany(company: Company): Company {
-        findOrThrow(company.id, repository::findById).apply {
+        findOrThrow { repository.findById(company.id) }.apply {
             name = company.name
             address = company.address
             phone = company.phone
@@ -101,7 +100,7 @@ class CompanyService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#company.organisationId)")
     fun archiveCompany(company: Company, archive: Boolean): Company {
-        findOrThrow(company.id, repository::findById).apply {
+        findOrThrow { repository.findById(company.id) }.apply {
             archived = archive
         }.run {
             repository.save(this).run {

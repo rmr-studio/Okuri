@@ -340,7 +340,6 @@ create table if not exists public.companies
     "business_number" varchar(50),
     "logo_url"        text,
     "archived"        boolean          not null default false,
-    "attributes"      jsonb                     default '{}'::jsonb,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp,
     "created_by"      uuid,

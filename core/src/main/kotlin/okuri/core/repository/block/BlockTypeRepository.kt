@@ -5,7 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.*
 
 interface BlockTypeRepository : JpaRepository<BlockTypeEntity, UUID> {
-    fun findByKey(key: String): BlockTypeEntity?
-    fun findByKeyAndOrganisationId(key: String, organisationId: UUID?): BlockTypeEntity?
-    fun findAllByOrganisationIdOrSystem(organisationId: UUID, includeSystem: Boolean = true): List<BlockTypeEntity>
+    fun findByKey(key: String): Optional<BlockTypeEntity>
+    fun findByKeyAndOrganisationId(key: String, organisationId: UUID?): Optional<BlockTypeEntity>
+
+    fun findByOrganisationIdOrSystem(organisationId: UUID?, system: Boolean = true): List<BlockTypeEntity>
 }

@@ -27,13 +27,13 @@ class LineItemService(
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisationLineItem(organisationId: UUID): List<LineItemEntity> {
-        return findManyResults(organisationId, repository::findByOrganisationId)
+        return findManyResults { repository.findByOrganisationId(organisationId) }
     }
 
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
     fun getLineItemById(id: UUID): LineItemEntity {
-        return findOrThrow(id, repository::findById)
+        return findOrThrow { repository.findById(id) }
     }
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
@@ -61,7 +61,7 @@ class LineItemService(
     @PreAuthorize("@organisationSecurity.hasOrg(#lineItem.organisationId)")
     fun updateLineItem(lineItem: LineItem): LineItem {
 
-        findOrThrow(lineItem.id, repository::findById).apply {
+        findOrThrow { repository.findById(lineItem.id) }.apply {
             name = lineItem.name
             description = lineItem.description
             chargeRate = lineItem.chargeRate

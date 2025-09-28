@@ -39,10 +39,9 @@ class OrganisationInviteService(
             throw IllegalArgumentException("Cannot create an invite with the Owner role. Use transfer ownership methods instead.")
         }
 
-        findManyResults(
-            organisationId,
-            organisationMemberRepository::findByIdOrganisationId
-        ).run {
+        findManyResults {
+            organisationMemberRepository.findByIdOrganisationId(organisationId)
+        }.run {
             // Assert that the email is not already a member of the organisation.
             if (this.any {
                     it.user?.email == email
@@ -88,7 +87,7 @@ class OrganisationInviteService(
     @Throws(AccessDeniedException::class, IllegalArgumentException::class)
     @Transactional
     fun handleInvitationResponse(token: String, accepted: Boolean) {
-        findOrThrow(token, organisationInviteRepository::findByToken).let { invitation ->
+        findOrThrow { organisationInviteRepository.findByToken(token) }.let { invitation ->
             // Assert the user is the one who was invited
             authTokenService.getUserEmail().let {
                 if (it != invitation.email) {
@@ -133,7 +132,7 @@ class OrganisationInviteService(
      */
     fun getUserInvites(): List<OrganisationInvite> {
         authTokenService.getUserEmail().let { email ->
-            findManyResults(email, organisationInviteRepository::findByEmail).run {
+            findManyResults { organisationInviteRepository.findByEmail(email) }.run {
                 return this.map { it.toModel() }
             }
         }
@@ -142,7 +141,7 @@ class OrganisationInviteService(
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisationInvites(organisationId: UUID): List<OrganisationInvite> {
         // Fetch all invites for the organisation
-        return findManyResults(organisationId, organisationInviteRepository::findByOrganisationId)
+        return findManyResults { organisationInviteRepository.findByOrganisationId(organisationId) }
             .map { it.toModel() }
     }
 
@@ -152,7 +151,7 @@ class OrganisationInviteService(
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId) and @organisationSecurity.hasOrgRoleOrHigher(#organisationId, 'ADMIN')")
     fun revokeOrganisationInvite(organisationId: UUID, id: UUID) {
         // Find the invite by ID
-        findOrThrow(id, organisationInviteRepository::findById).let { invite ->
+        findOrThrow { organisationInviteRepository.findById(id) }.let { invite ->
             // Ensure the invite is still pending
             if (invite.inviteStatus != OrganisationInviteStatus.PENDING) {
                 throw IllegalArgumentException("Cannot revoke an invitation that is not pending.")

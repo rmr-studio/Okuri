@@ -30,7 +30,7 @@ class ClientService(
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun getOrganisationClients(organisationId: UUID): List<ClientEntity> {
-        return findManyResults(organisationId, repository::findByOrganisationId)
+        return findManyResults { repository.findByOrganisationId(organisationId) }
     }
 
     /**
@@ -41,7 +41,7 @@ class ClientService(
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
     fun getEntityById(id: UUID): ClientEntity {
-        return findOrThrow(id, repository::findById)
+        return findOrThrow { repository.findById(id) }
     }
 
     /**
@@ -52,7 +52,7 @@ class ClientService(
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
     fun getClientById(id: UUID, audit: Boolean = false): Client {
-        return findOrThrow(id, repository::findById).toModel(audit)
+        return findOrThrow { repository.findById(id) }.toModel(audit)
     }
 
 
@@ -120,7 +120,7 @@ class ClientService(
 
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun archiveClient(client: Client, archive: Boolean): Client {
-        findOrThrow(client.id, repository::findById).apply {
+        findOrThrow { repository.findById(client.id) }.apply {
             archived = archive
         }.run {
             repository.save(this).run {
