@@ -1,7 +1,11 @@
 package okuri.core.service.block
 
+import okuri.core.models.block.Block
+import okuri.core.models.block.request.BlockTree
+import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.repository.block.BlockRepository
 import org.springframework.stereotype.Service
+import java.util.*
 
 /**
  * Service layer for managing blocks within the application.
@@ -9,4 +13,55 @@ import org.springframework.stereotype.Service
 @Service
 class BlockService(
     private val blockRepository: BlockRepository,
-)
+) {
+    fun createBlock(request: CreateBlockRequest): Block {
+        TODO()
+    }
+
+    fun updateBlock(block: Block): Block {
+        TODO()
+    }
+
+    /**
+     * This function retrieves a block by its ID, with options to expand references and set maximum depth for child blocks.
+     * If expandRefs is true, any referenced blocks will be fully expanded up to the specified maxDepth.
+     * If expandRefs is false, only the immediate children of the block will be included, without expanding references.
+     * The maxDepth parameter controls how deep the child blocks are fetched in the hierarchy.
+     * If maxDepth is 1, only the immediate children are included. If maxDepth is greater than 1, the function will recursively fetch child blocks up to the specified depth.
+     *
+     * @param blockId The UUID of the block to be retrieved.
+     * @param expandRefs Whether to expand referenced blocks or not. Default is false.
+     * @param maxDepth The maximum depth of child blocks to retrieve. Default is 1.
+     *
+     * @return The block tree starting from the specified block, including its children and expanded references as per the parameters.
+     */
+    fun getBlock(blockId: UUID, expandRefs: Boolean = false, maxDepth: Int = 1): BlockTree {
+        TODO()
+    }
+
+    /**
+     * This function will update the archival status of a block.
+     * If a block is archived, all it's children that are not being actively referenced by another block will also be archived.
+     * For a block to be unarchived, it's parent block must also be unarchived first.
+     *
+     * @param block The block to be archived or unarchived.
+     * @param archive True to archive the block, false to unarchive it.
+     *
+     * @return The updated block tree starting from the affected block.
+     *
+     */
+    fun archiveBlock(block: Block, archive: Boolean): BlockTree {
+        TODO()
+    }
+
+    /**
+     * Deletes a block by its ID.
+     * This will then also delete all child blocks who are not referenced by any other blocks in the system.
+     *
+     * @param blockId The UUID of the block to be deleted.
+     * @return The number of blocks deleted.
+     */
+    fun deleteBlock(blockId: UUID): Int {
+        TODO()
+    }
+}
