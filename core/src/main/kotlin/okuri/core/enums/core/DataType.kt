@@ -1,11 +1,10 @@
 package okuri.core.enums.core
 
-enum class DataType {
-    STRING,
-    NUMBER,
-    BOOLEAN,
-    OBJECT,
-    ARRAY,
-
+enum class DataType(val jsonValue: String) {
+    STRING("string"),
+    NUMBER("number"),
+    BOOLEAN("boolean"),
+    OBJECT("object"),
+    ARRAY("array"),
 }
 

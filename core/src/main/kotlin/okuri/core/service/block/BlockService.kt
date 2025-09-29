@@ -4,6 +4,7 @@ import okuri.core.models.block.Block
 import okuri.core.models.block.request.BlockTree
 import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.repository.block.BlockRepository
+import okuri.core.service.schema.SchemaService
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -13,11 +14,31 @@ import java.util.*
 @Service
 class BlockService(
     private val blockRepository: BlockRepository,
+    private val blockTypeService: BlockTypeService,
+    private val blockReferenceService: BlockReferenceService,
+    private val schemaService: SchemaService
 ) {
+    /**
+     * This function creates a new block based on the provided request data.
+     * It ensures that the block type specified in the request exists before creating the block.
+     * Depending on the block type's validation scope. It will also examine the payload and cross validate with the
+     * provided schema. And throw an error if the payload does not conform to the schema.
+     *
+     * @param request The request object containing details for the new block.
+     * @return The created block.
+     */
     fun createBlock(request: CreateBlockRequest): Block {
         TODO()
     }
 
+    /**
+     * This function updates an existing block with new information.
+     * It ensures that the block type specified in the block exists before updating the block.
+     * It will also examine the payload and cross validate with the provided schema based on the provided validation settings.
+     *
+     * @param block The block model containing updated information.
+     * @return The updated block.
+     */
     fun updateBlock(block: Block): Block {
         TODO()
     }
