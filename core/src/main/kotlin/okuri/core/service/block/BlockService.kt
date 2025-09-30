@@ -3,6 +3,7 @@ package okuri.core.service.block
 import okuri.core.models.block.Block
 import okuri.core.models.block.request.BlockTree
 import okuri.core.models.block.request.CreateBlockRequest
+import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.schema.SchemaService
 import org.springframework.stereotype.Service
@@ -15,7 +16,7 @@ import java.util.*
 class BlockService(
     private val blockRepository: BlockRepository,
     private val blockTypeService: BlockTypeService,
-    private val blockReferenceService: BlockReferenceService,
+    private val blockReferenceRepository: BlockReferenceRepository,
     private val schemaService: SchemaService
 ) {
     /**
