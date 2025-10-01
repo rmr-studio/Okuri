@@ -43,24 +43,29 @@ data class BlockSchema(
  * This is so we can leverage existing JSON Schema validation libraries
  * And have an in-house validation schema
  */
-fun BlockSchema.toJsonSchema(): Map<String, Any?> {
+fun BlockSchema.toJsonSchema(allowAdditionalProperties: Boolean = true): Map<String, Any?> {
     val schema = mutableMapOf<String, Any?>(
         "type" to type.jsonValue
     )
 
     description?.let { schema["description"] = it }
 
-    properties?.let {
-        schema["properties"] = it.mapValues { (_, v) -> v.toJsonSchema() }
-        // Collect required props at this object level
-        val requiredProps = it.filterValues { v -> v.required }.keys
-        if (requiredProps.isNotEmpty()) {
-            schema["required"] = requiredProps.toList()
+    if (type == DataType.OBJECT) {
+        properties?.let {
+            schema["properties"] = it.mapValues { (_, v) -> v.toJsonSchema(allowAdditionalProperties) }
+            val requiredProps = it.filterValues { v -> v.required }.keys
+            if (requiredProps.isNotEmpty()) {
+                schema["required"] = requiredProps.toList()
+            }
         }
+        // Disallow properties not explicitly defined
+        schema["additionalProperties"] = allowAdditionalProperties
     }
 
-    items?.let {
-        schema["items"] = it.toJsonSchema()
+    if (type == DataType.ARRAY) {
+        items?.let {
+            schema["items"] = it.toJsonSchema()
+        }
     }
 
     return schema

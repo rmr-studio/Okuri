@@ -1,14 +1,21 @@
 package okuri.core.service.schema
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.networknt.schema.JsonSchemaFactory
+import com.networknt.schema.SpecVersion
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.DataFormat
 import okuri.core.enums.core.DataType
 import okuri.core.models.block.structure.BlockSchema
+import okuri.core.models.block.structure.toJsonSchema
+import org.springframework.stereotype.Service
 
+@Service
 class SchemaService(
     private val objectMapper: ObjectMapper
 ) {
+    private val schemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909)
 
     fun validate(
         schema: BlockSchema,
@@ -16,10 +23,23 @@ class SchemaService(
         scope: BlockValidationScope = BlockValidationScope.STRICT,
         path: String = "$"
     ): List<String> {
-        if (scope == BlockValidationScope.NONE) {
-            return emptyList()
-        }
-        return validateRecursive(schema, payload, path, scope)
+        if (scope == BlockValidationScope.NONE) return emptyList()
+
+        val errors = mutableListOf<String>()
+
+        // Step 1: Structural validation with JSON Schema
+        val schemaMap = schema.toJsonSchema(allowAdditionalProperties = scope == BlockValidationScope.SOFT)
+        val schemaNode: JsonNode = objectMapper.valueToTree(schemaMap)
+        val payloadNode: JsonNode = objectMapper.valueToTree(payload)
+
+        val jsonSchema = schemaFactory.getSchema(schemaNode)
+        val structuralErrors = jsonSchema.validate(payloadNode)
+        structuralErrors.forEach { errors.add(it.message) }
+
+        // Step 2: Custom recursive validation (formats + lenience)
+        errors += validateRecursive(schema, payload, path, scope)
+
+        return errors
     }
 
     private fun validateRecursive(

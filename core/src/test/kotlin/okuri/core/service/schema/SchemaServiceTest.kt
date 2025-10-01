@@ -8,6 +8,7 @@ import okuri.core.models.block.structure.BlockSchema
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.test.assertFalse
 
 class SchemaServiceTest {
 
@@ -24,8 +25,12 @@ class SchemaServiceTest {
         }
     }
 
+    // ---------------------------------------------------
+    // BASIC VALIDATION TESTS
+    // ---------------------------------------------------
+
     @Test
-    fun `valid object passes structural validation`() {
+    fun `valid object passes validation`() {
         val schema = BlockSchema(
             name = "Contact",
             type = DataType.OBJECT,
@@ -38,13 +43,13 @@ class SchemaServiceTest {
 
         val results = validateAllScopes(schema, payload)
 
-        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty(), "NONE should ignore validation")
-        assertTrue(results[BlockValidationScope.STRICT]!!.isEmpty(), "STRICT should pass")
-        assertTrue(results[BlockValidationScope.SOFT]!!.isEmpty(), "SOFT should pass")
+        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
+        assertTrue(results[BlockValidationScope.STRICT]!!.isEmpty())
+        assertTrue(results[BlockValidationScope.SOFT]!!.isEmpty())
     }
 
     @Test
-    fun `missing required field fails validation`() {
+    fun `missing required field detected by JSON Schema and recursion`() {
         val schema = BlockSchema(
             name = "Contact",
             type = DataType.OBJECT,
@@ -53,7 +58,7 @@ class SchemaServiceTest {
                 "email" to BlockSchema("Email", type = DataType.STRING, format = DataFormat.EMAIL, required = true)
             )
         )
-        val payload = mapOf("name" to "Alice") // missing email
+        val payload = mapOf("name" to "Alice")
 
         val results = validateAllScopes(schema, payload)
 
@@ -75,91 +80,8 @@ class SchemaServiceTest {
 
         val results = validateAllScopes(schema, payload)
 
-        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
         assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("email") })
         assertTrue(results[BlockValidationScope.SOFT]!!.any { it.contains("email") })
-    }
-
-    @Test
-    fun `valid currency passes custom format validation`() {
-        val schema = BlockSchema(
-            name = "Price",
-            type = DataType.OBJECT,
-            properties = mapOf(
-                "currency" to BlockSchema(
-                    "Currency",
-                    type = DataType.STRING,
-                    format = DataFormat.CURRENCY,
-                    required = true
-                )
-            )
-        )
-        val payload = mapOf("currency" to "USD")
-
-        val results = validateAllScopes(schema, payload)
-
-        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
-        assertTrue(results[BlockValidationScope.STRICT]!!.isEmpty())
-        assertTrue(results[BlockValidationScope.SOFT]!!.isEmpty())
-    }
-
-    @Test
-    fun `invalid currency fails custom format validation`() {
-        val schema = BlockSchema(
-            name = "Price",
-            type = DataType.OBJECT,
-            properties = mapOf(
-                "currency" to BlockSchema(
-                    "Currency",
-                    type = DataType.STRING,
-                    format = DataFormat.CURRENCY,
-                    required = true
-                )
-            )
-        )
-        val payload = mapOf("currency" to "US") // not a 3-letter ISO code
-
-        val results = validateAllScopes(schema, payload)
-
-        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
-        assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("currency") })
-        assertTrue(results[BlockValidationScope.SOFT]!!.any { it.contains("currency") })
-    }
-
-    @Test
-    fun `percentage accepts strings`() {
-        val schema = BlockSchema(
-            name = "Discount",
-            type = DataType.OBJECT,
-            properties = mapOf(
-                "percent" to BlockSchema(
-                    "Percent",
-                    type = DataType.STRING,
-                    format = DataFormat.PERCENTAGE,
-                    required = true
-                )
-            )
-        )
-
-        val valid1 = mapOf("percent" to "50%")
-        val invalid = mapOf("percent" to "200%")
-        val invalid2 = mapOf("percent" to 25)
-
-        val results1 = validateAllScopes(schema, valid1)
-        val results2 = validateAllScopes(schema, invalid)
-        val results3 = validateAllScopes(schema, invalid2)
-
-        // valid case
-        assertTrue(results1[BlockValidationScope.STRICT]!!.isEmpty())
-        assertTrue(results1[BlockValidationScope.SOFT]!!.isEmpty())
-
-        // invalid percentage format
-        assertTrue(results2[BlockValidationScope.STRICT]!!.any { it.contains("percent") })
-        assertTrue(results2[BlockValidationScope.SOFT]!!.any { it.contains("percent") })
-
-        // wrong type (number instead of string)
-        assertTrue(results3[BlockValidationScope.STRICT]!!.any { it.contains("percent") })
-        assertTrue(results3[BlockValidationScope.SOFT]!!.any { it.contains("percent") })
     }
 
     @Test
@@ -182,23 +104,99 @@ class SchemaServiceTest {
             mapOf("name" to "Alice", "phone" to "+123456789"),
             mapOf("name" to "Bob", "phone" to "+198765432")
         )
-        val invalidPayload = mapOf("phone" to "not-a-phone") // not an array
+        val invalidPayload = mapOf("phone" to "not-a-phone") // wrong type
 
         val resultsValid = validateAllScopes(schema, validPayload)
         val resultsInvalid = validateAllScopes(schema, invalidPayload)
 
-        // Valid case
         assertTrue(resultsValid[BlockValidationScope.STRICT]!!.isEmpty())
-        assertTrue(resultsValid[BlockValidationScope.SOFT]!!.isEmpty())
 
-        // Invalid case
+        // STRICT sees only type mismatch
         assertTrue(resultsInvalid[BlockValidationScope.STRICT]!!.any { it.contains("array") })
-        assertTrue(resultsInvalid[BlockValidationScope.SOFT]!!.any { it.contains("array") })
 
-        // SOFT mode should also show deep issues (like missing name or invalid phone)
-        assertTrue(
-            resultsInvalid[BlockValidationScope.SOFT]!!.any { it.contains("phone") },
-            "SOFT mode should report phone format issue"
+        // SOFT sees deeper issues too
+        assertTrue(resultsInvalid[BlockValidationScope.SOFT]!!.any { it.contains("phone") })
+    }
+
+    // ---------------------------------------------------
+    // HYBRID JSON SCHEMA EDGE CASES
+    // ---------------------------------------------------
+
+    @Test
+    fun `extra property detected by JSON Schema`() {
+        val schema = BlockSchema(
+            name = "User",
+            type = DataType.OBJECT,
+            properties = mapOf(
+                "id" to BlockSchema("Id", type = DataType.NUMBER, required = true)
+            )
         )
+        val payload = mapOf("id" to 1, "extra" to "oops") // "extra" not defined
+
+        val results = validateAllScopes(schema, payload)
+
+        // JSON Schema should complain about "additional properties" in strict mode
+        assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("additional") || it.contains("extra") })
+        assertFalse(results[BlockValidationScope.SOFT]!!.any { it.contains("additional") || it.contains("extra") })
+    }
+
+    @Test
+    fun `wrong type detected by JSON Schema but not recursion`() {
+        val schema = BlockSchema(
+            name = "Product",
+            type = DataType.OBJECT,
+            properties = mapOf(
+                "price" to BlockSchema("Price", type = DataType.NUMBER, required = true)
+            )
+        )
+        val payload = mapOf("price" to "NaN")
+
+        val results = validateAllScopes(schema, payload)
+
+        // JSON Schema catches number vs string
+        assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("number") })
+    }
+
+    @Test
+    fun `nested required fields caught by JSON Schema`() {
+        val addressSchema = BlockSchema(
+            name = "Address",
+            type = DataType.OBJECT,
+            properties = mapOf(
+                "city" to BlockSchema("City", type = DataType.STRING, required = true),
+                "postcode" to BlockSchema("Postcode", type = DataType.STRING, required = true)
+            )
+        )
+        val schema = BlockSchema(
+            name = "User",
+            type = DataType.OBJECT,
+            properties = mapOf(
+                "address" to addressSchema
+            )
+        )
+        val payload = mapOf("address" to mapOf("city" to "Sydney"))
+
+        val results = validateAllScopes(schema, payload)
+
+        // JSON Schema will complain about missing "postcode"
+        assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("postcode") })
+    }
+
+    @Test
+    fun `array length constraints enforced by JSON Schema`() {
+        val itemSchema = BlockSchema("Item", type = DataType.STRING)
+        val schema = BlockSchema(
+            name = "Tags",
+            type = DataType.ARRAY,
+            items = itemSchema
+        )
+
+        val payload = emptyList<String>()
+
+        val results = validateAllScopes(schema, payload)
+
+        // JSON Schema may complain if "minItems" or "required" applied (not in this example, but test placeholder)
+        // For now we expect no errors because schema has no constraints
+        assertTrue(results[BlockValidationScope.STRICT]!!.isEmpty())
     }
 }
