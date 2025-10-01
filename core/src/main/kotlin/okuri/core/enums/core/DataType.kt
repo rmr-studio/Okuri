@@ -6,5 +6,6 @@ enum class DataType(val jsonValue: String) {
     BOOLEAN("boolean"),
     OBJECT("object"),
     ARRAY("array"),
+    NULL("null"),
 }
 

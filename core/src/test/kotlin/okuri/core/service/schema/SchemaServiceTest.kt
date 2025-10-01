@@ -1,6 +1,7 @@
 package okuri.core.service.schema
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.DataFormat
 import okuri.core.enums.core.DataType
 import okuri.core.models.block.structure.BlockSchema
@@ -17,6 +18,12 @@ class SchemaServiceTest {
         schemaService = SchemaService(ObjectMapper())
     }
 
+    private fun validateAllScopes(schema: BlockSchema, payload: Any?): Map<BlockValidationScope, List<String>> {
+        return BlockValidationScope.entries.associateWith { scope ->
+            schemaService.validate(schema, payload, scope)
+        }
+    }
+
     @Test
     fun `valid object passes structural validation`() {
         val schema = BlockSchema(
@@ -27,11 +34,13 @@ class SchemaServiceTest {
                 "email" to BlockSchema("Email", type = DataType.STRING, format = DataFormat.EMAIL, required = true)
             )
         )
-
         val payload = mapOf("name" to "Alice", "email" to "alice@example.com")
 
-        val errors = schemaService.validate(schema, payload)
-        assertTrue(errors.isEmpty(), "Expected no validation errors but got $errors")
+        val results = validateAllScopes(schema, payload)
+
+        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty(), "NONE should ignore validation")
+        assertTrue(results[BlockValidationScope.STRICT]!!.isEmpty(), "STRICT should pass")
+        assertTrue(results[BlockValidationScope.SOFT]!!.isEmpty(), "SOFT should pass")
     }
 
     @Test
@@ -44,11 +53,13 @@ class SchemaServiceTest {
                 "email" to BlockSchema("Email", type = DataType.STRING, format = DataFormat.EMAIL, required = true)
             )
         )
-
         val payload = mapOf("name" to "Alice") // missing email
 
-        val errors = schemaService.validate(schema, payload)
-        assertTrue(errors.any { it.contains("email") }, "Expected error for missing email field")
+        val results = validateAllScopes(schema, payload)
+
+        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
+        assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("email") })
+        assertTrue(results[BlockValidationScope.SOFT]!!.any { it.contains("email") })
     }
 
     @Test
@@ -60,11 +71,13 @@ class SchemaServiceTest {
                 "email" to BlockSchema("Email", type = DataType.STRING, format = DataFormat.EMAIL, required = true)
             )
         )
-
         val payload = mapOf("email" to "not-an-email")
 
-        val errors = schemaService.validate(schema, payload)
-        assertTrue(errors.any { it.contains("email") }, "Expected email format validation error")
+        val results = validateAllScopes(schema, payload)
+
+        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
+        assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("email") })
+        assertTrue(results[BlockValidationScope.SOFT]!!.any { it.contains("email") })
     }
 
     @Test
@@ -81,11 +94,13 @@ class SchemaServiceTest {
                 )
             )
         )
-
         val payload = mapOf("currency" to "USD")
 
-        val errors = schemaService.validate(schema, payload)
-        assertTrue(errors.isEmpty(), "Expected no errors for valid currency code")
+        val results = validateAllScopes(schema, payload)
+
+        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
+        assertTrue(results[BlockValidationScope.STRICT]!!.isEmpty())
+        assertTrue(results[BlockValidationScope.SOFT]!!.isEmpty())
     }
 
     @Test
@@ -102,11 +117,13 @@ class SchemaServiceTest {
                 )
             )
         )
-
         val payload = mapOf("currency" to "US") // not a 3-letter ISO code
 
-        val errors = schemaService.validate(schema, payload)
-        assertTrue(errors.any { it.contains("currency") }, "Expected error for invalid currency format")
+        val results = validateAllScopes(schema, payload)
+
+        assertTrue(results[BlockValidationScope.NONE]!!.isEmpty())
+        assertTrue(results[BlockValidationScope.STRICT]!!.any { it.contains("currency") })
+        assertTrue(results[BlockValidationScope.SOFT]!!.any { it.contains("currency") })
     }
 
     @Test
@@ -128,9 +145,21 @@ class SchemaServiceTest {
         val invalid = mapOf("percent" to "200%")
         val invalid2 = mapOf("percent" to 25)
 
-        assertTrue(schemaService.validate(schema, valid1).isEmpty())
-        assertTrue(schemaService.validate(schema, invalid).any { it.contains("percent") })
-        assertTrue(schemaService.validate(schema, invalid2).any { it.contains("percent") })
+        val results1 = validateAllScopes(schema, valid1)
+        val results2 = validateAllScopes(schema, invalid)
+        val results3 = validateAllScopes(schema, invalid2)
+
+        // valid case
+        assertTrue(results1[BlockValidationScope.STRICT]!!.isEmpty())
+        assertTrue(results1[BlockValidationScope.SOFT]!!.isEmpty())
+
+        // invalid percentage format
+        assertTrue(results2[BlockValidationScope.STRICT]!!.any { it.contains("percent") })
+        assertTrue(results2[BlockValidationScope.SOFT]!!.any { it.contains("percent") })
+
+        // wrong type (number instead of string)
+        assertTrue(results3[BlockValidationScope.STRICT]!!.any { it.contains("percent") })
+        assertTrue(results3[BlockValidationScope.SOFT]!!.any { it.contains("percent") })
     }
 
     @Test
@@ -143,7 +172,6 @@ class SchemaServiceTest {
                 "phone" to BlockSchema("Phone", type = DataType.STRING, format = DataFormat.PHONE)
             )
         )
-
         val schema = BlockSchema(
             name = "Contacts",
             type = DataType.ARRAY,
@@ -154,11 +182,23 @@ class SchemaServiceTest {
             mapOf("name" to "Alice", "phone" to "+123456789"),
             mapOf("name" to "Bob", "phone" to "+198765432")
         )
+        val invalidPayload = mapOf("phone" to "not-a-phone") // not an array
 
-        val invalidPayload = mapOf("phone" to "not-a-phone") // missing name, invalid phone
+        val resultsValid = validateAllScopes(schema, validPayload)
+        val resultsInvalid = validateAllScopes(schema, invalidPayload)
 
-        assertTrue(schemaService.validate(schema, validPayload).isEmpty())
-        val errors = schemaService.validate(schema, invalidPayload)
-        assertTrue(errors.any { it.contains("array") })
+        // Valid case
+        assertTrue(resultsValid[BlockValidationScope.STRICT]!!.isEmpty())
+        assertTrue(resultsValid[BlockValidationScope.SOFT]!!.isEmpty())
+
+        // Invalid case
+        assertTrue(resultsInvalid[BlockValidationScope.STRICT]!!.any { it.contains("array") })
+        assertTrue(resultsInvalid[BlockValidationScope.SOFT]!!.any { it.contains("array") })
+
+        // SOFT mode should also show deep issues (like missing name or invalid phone)
+        assertTrue(
+            resultsInvalid[BlockValidationScope.SOFT]!!.any { it.contains("phone") },
+            "SOFT mode should report phone format issue"
+        )
     }
 }
