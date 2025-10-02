@@ -1,6 +1,5 @@
 package okuri.core.models.block
 
-import okuri.core.enums.block.BlockTypeScope
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.BlockSchema
@@ -15,7 +14,6 @@ data class BlockType(
     val sourceId: UUID?,
     val description: String?,
     val organisationId: UUID?,
-    val scope: BlockTypeScope,
     val archived: Boolean,
     val validationMode: BlockValidationScope,
     val system: Boolean,

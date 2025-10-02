@@ -3,7 +3,6 @@ package okuri.core.entity.block
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
-import okuri.core.enums.block.BlockTypeScope
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
@@ -52,10 +51,6 @@ data class BlockTypeEntity(
     @Column(name = "source_id", columnDefinition = "uuid")
     val sourceId: UUID? = null,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "scope", nullable = false)
-    val scope: BlockTypeScope = BlockTypeScope.ORGANISATION,
-
     @Column(name = "system", nullable = false)
     val system: Boolean = false,
 
@@ -87,7 +82,6 @@ data class BlockTypeEntity(
             name = this.displayName,
             description = this.description,
             organisationId = this.organisationId,
-            scope = this.scope,
             system = this.system,
             schema = this.schema,
             archived = this.archived,
@@ -100,7 +94,7 @@ data class BlockTypeEntity(
             sourceId = this.sourceId,
         )
     }
-    
+
     companion object {
         fun fromRequest(request: CreateBlockTypeRequest): BlockTypeEntity {
             return BlockTypeEntity(
@@ -109,7 +103,6 @@ data class BlockTypeEntity(
                 description = request.description,
                 // Organisation should only be null for system types
                 organisationId = request.organisationId,
-                scope = request.scope,
                 // System block types cannot be created via this method
                 system = false,
                 strictness = request.mode,

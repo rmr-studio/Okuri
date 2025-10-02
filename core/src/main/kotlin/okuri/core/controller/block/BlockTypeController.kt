@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import okuri.core.enums.block.BlockTypeScope
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.service.block.BlockTypeService
@@ -102,46 +101,11 @@ class BlockTypeController(
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
         ApiResponse(responseCode = "404", description = "No block types found for the organisation")
     )
-    fun getBlockTypesByOrganisation(
-        @PathVariable organisationId: UUID
-    ): ResponseEntity<List<BlockType>> {
-        val blockTypes = blockTypeService.getBlockTypesByOrganisation(organisationId)
-        return ResponseEntity.ok(blockTypes)
-    }
-
-    @GetMapping("/")
-    @Operation(
-        summary = "Get block types with filters",
-        description = "Retrieves block types based on scope, organisation ID, and additional filters."
-    )
-    @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Block types retrieved successfully"),
-        ApiResponse(responseCode = "401", description = "Unauthorized access"),
-        ApiResponse(responseCode = "400", description = "Invalid filter parameters"),
-        ApiResponse(responseCode = "501", description = "Feature not yet implemented")
-    )
     fun getBlockTypes(
-        @RequestParam scope: BlockTypeScope,
-        @RequestParam(required = false) organisationId: UUID?,
-        @RequestParam(required = false) filter: Map<String, Any>?
+        @PathVariable organisationId: UUID,
     ): ResponseEntity<List<BlockType>> {
-        val blockTypes = blockTypeService.getBlockTypes(scope, organisationId, filter)
+        val blockTypes = blockTypeService.getBlockTypes(organisationId)
         return ResponseEntity.ok(blockTypes)
-    }
-
-    @PutMapping("/visibility")
-    @Operation(
-        summary = "Change block type visibility",
-        description = "Changes the visibility scope of a block type, determining who can access and use it."
-    )
-    @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Block type visibility updated successfully"),
-        ApiResponse(responseCode = "401", description = "Unauthorized access"),
-        ApiResponse(responseCode = "501", description = "Feature not yet implemented")
-    )
-    fun changeBlockTypeVisibility(@RequestParam scope: BlockTypeScope): ResponseEntity<Void> {
-        blockTypeService.changeBlockTypeVisibility(scope)
-        return ResponseEntity.ok().build()
     }
 
     @PostMapping("/fork")
@@ -157,9 +121,8 @@ class BlockTypeController(
     )
     fun forkBlockType(
         @RequestBody source: BlockType,
-        @RequestParam scope: BlockTypeScope
     ): ResponseEntity<Void> {
-        blockTypeService.forkBlockType(source, scope)
+        blockTypeService.forkBlockType(source)
         return ResponseEntity.status(HttpStatus.CREATED).build()
     }
 }

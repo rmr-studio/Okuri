@@ -166,8 +166,6 @@ CREATE TABLE if not exists public.block_types
     "source_id"         uuid  references block_types (id) ON DELETE SET NULL,                                       -- if copied from another block type
     "description"       text,
     "organisation_id"   uuid  REFERENCES organisations (id) ON DELETE SET NULL,                                     -- null for global
-    "scope"             text  NOT NULL           DEFAULT 'organisation',
-    check ( scope in ('organisation', 'global') ),
     "system"            boolean                  DEFAULT FALSE,                                                     -- system types you control
     "schema"            jsonb NOT NULL,                                                                             -- JSON Schema for validation
     "display_structure" jsonb not NULL,                                                                             -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
@@ -178,14 +176,23 @@ CREATE TABLE if not exists public.block_types
     "updated_at"        timestamp with time zone default current_timestamp,
     "created_by"        uuid,                                                                                       -- optional user id
     "updated_by"        uuid,                                                                                       -- optional user id
-    unique (organisation_id, key, version)
+    UNIQUE (organisation_id, key, version)
 );
+
+-- System types (your pre-generated defaults) are the ONLY rows without an org_id
+ALTER TABLE block_types
+    ADD CONSTRAINT chk_system_org
+        CHECK (
+            (system = true AND organisation_id IS NULL) OR
+            (system = false AND organisation_id IS NOT NULL)
+            );
 
 create index idx_block_types_organisation_id on block_types (organisation_id);
 create index idx_block_types_key on block_types (key);
--- Ensure a single global definition per key
-CREATE UNIQUE INDEX IF NOT EXISTS uq_block_types_key_global
-    ON public.block_types (key) WHERE organisation_id IS NULL;
+
+ALTER TABLE block_types
+    ADD CONSTRAINT chk_key_slug
+        CHECK (key ~ '^[a-z0-9][a-z0-9._-]{1,62}$');
 
 -- Tenant isolation (Supabase RLS)
 ALTER TABLE public.block_types

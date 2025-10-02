@@ -3,6 +3,7 @@ package okuri.core.service.block
 import jakarta.transaction.Transactional
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockReferenceEntity
+import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.isStrict
 import okuri.core.models.block.Block
 import okuri.core.models.block.request.BlockTree
@@ -37,24 +38,36 @@ class BlockService(
      */
     @Transactional
     fun createBlock(request: CreateBlockRequest): Block {
-        val typeEntity = blockTypeService.getLatestByKey(
-            request.organisationId?.let(UUID::fromString),
-            request.key,
-            includeSystem = true
-        )
-        if (typeEntity.archived) throw IllegalStateException("BlockType '${typeEntity.key}' is archived")
+        val type: BlockTypeEntity = request.let {
+            if (it.typeId != null) {
+                return@let blockTypeService.getById(it.typeId)
+            }
 
-        val scope = typeEntity.strictness
+            if (it.typeKey != null) {
+                return@let blockTypeService.getByKey(
+                    it.typeKey,
+                    request.organisationId,
+                    request.typeVersion
+                )
+            }
+
+            throw IllegalArgumentException("Either typeId or typeKey must be provided")
+        }
+
+
+        if (type.archived) throw IllegalStateException("BlockType '${type.key}' is archived")
+
+        val scope = type.strictness
         val payload = request.payload ?: emptyMap<String, Any?>()
 
-        val errors = schemaService.validate(typeEntity.schema, payload, scope)
+        val errors = schemaService.validate(type.schema, payload, scope)
         if (scope.isStrict() && errors.isNotEmpty()) {
             throw SchemaValidationException(errors)
         }
 
         val entity = BlockEntity(
-            organisationId = requireNotNull(typeEntity.organisationId) { "org required" },
-            type = typeEntity,
+            organisationId = requireNotNull(type.organisationId) { "org required" },
+            type = type,
             name = request.name,
             payload = payload as BlockMetadata, // ensure type alias
             parent = null,

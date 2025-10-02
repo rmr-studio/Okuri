@@ -1,7 +1,6 @@
 package okuri.core.service.block
 
 import okuri.core.entity.block.BlockTypeEntity
-import okuri.core.enums.block.BlockTypeScope
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.repository.block.BlockTypeRepository
@@ -60,7 +59,6 @@ class BlockTypeService(
             displayName = type.name,
             description = type.description,
             organisationId = existing.organisationId,
-            scope = existing.scope,
             system = existing.system,
             version = nextVersion,
             strictness = type.validationMode,
@@ -100,17 +98,9 @@ class BlockTypeService(
     }
 
     /**
-     * This function changes the visibility scope of a block type.
-     * The scope determines who can access and use the block type within the application.
-     */
-    fun changeBlockTypeVisibility(scope: BlockTypeScope) {
-        TODO()
-    }
-
-    /**
      * This function creates a fork of an existing block type, allowing for modifications
      */
-    fun forkBlockType(source: BlockType, scope: BlockTypeScope) {
+    fun forkBlockType(source: BlockType) {
         TODO()
     }
 
@@ -130,7 +120,7 @@ class BlockTypeService(
      * @param organisationId The ID of the organisation to filter block types by.
      * @return A list of block types associated with the given organisation ID.
      */
-    fun getBlockTypesByOrganisation(organisationId: UUID, includeSystemResults: Boolean = true): List<BlockType> {
+    fun getBlockTypes(organisationId: UUID, includeSystemResults: Boolean = true): List<BlockType> {
         return findManyResults {
             blockTypeRepository.findByOrganisationIdOrSystem(
                 organisationId,
@@ -140,34 +130,41 @@ class BlockTypeService(
     }
 
     /**
-     * This function retrieves block types based on scope, organisation ID, and additional filters.
-     *
-     * @param scope The scope of the block types to retrieve (e.g., ORGANISATION, GLOBAL).
-     * @param organisationId The ID of the organisation to filter block types by.
-     * @param filter A map of additional filters to apply to the block type retrieval.
-     *
-     * @return A list of block types matching the specified criteria.
-     *
-     * Todo: Implement filtering logic based on the provided filter map.
-     */
-    fun getBlockTypes(scope: BlockTypeScope, organisationId: UUID?, filter: Map<String, Any>?): List<BlockType> {
-        TODO()
-    }
-
-    /**
      * Fetch latest version of a key within an org, with optional system fallback.
      */
-    fun getLatestByKey(organisationId: UUID?, key: String, includeSystem: Boolean = true): BlockTypeEntity {
-        return if (organisationId != null) {
-            blockTypeRepository.findTopByOrganisationIdAndKeyOrderByVersionDesc(organisationId, key)
-                ?: if (includeSystem)
-                    blockTypeRepository.findTopBySystemTrueAndKeyOrderByVersionDesc(key)
-                        ?: throw NoSuchElementException("BlockType not found for key=$key")
-                else throw NoSuchElementException("BlockType not found for key=$key")
-        } else {
-            // system-level lookup
-            blockTypeRepository.findTopBySystemTrueAndKeyOrderByVersionDesc(key)
-                ?: throw NoSuchElementException("BlockType not found for key=$key")
+    fun getByKey(key: String, organisationId: UUID?, version: Int?): BlockTypeEntity {
+        // Find from Organisation
+        if (organisationId != null) {
+            if (version != null) {
+                findOrThrow {
+                    blockTypeRepository.findByOrganisationIdAndKeyAndVersion(
+                        organisationId,
+                        key,
+                        version
+                    )
+                }.let { return it }
+            } else {
+                blockTypeRepository.findTopByOrganisationIdAndKeyOrderByVersionDesc(
+                    organisationId,
+                    key
+                )?.let { return it }
+            }
         }
+        // Fetch from system
+        return if (version != null) {
+            findOrThrow {
+                blockTypeRepository.findBySystemTrueAndKeyAndVersion(
+                    key,
+                    version
+                )
+            }
+        } else {
+            blockTypeRepository.findTopBySystemTrueAndKeyOrderByVersionDesc(key)
+                ?: throw NoSuchElementException("No BlockType found for key '$key'")
+        }
+    }
+
+    fun getById(id: UUID): BlockTypeEntity {
+        return findOrThrow { blockTypeRepository.findById(id) }
     }
 }

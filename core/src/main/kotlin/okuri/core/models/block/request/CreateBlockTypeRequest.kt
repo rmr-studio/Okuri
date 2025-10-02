@@ -1,6 +1,5 @@
 package okuri.core.models.block.request
 
-import okuri.core.enums.block.BlockTypeScope
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.BlockSchema
