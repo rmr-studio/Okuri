@@ -48,6 +48,10 @@ data class BlockTypeEntity(
     @Column(name = "organisation_id", columnDefinition = "uuid")
     val organisationId: UUID? = null,
 
+
+    @Column(name = "source_id", columnDefinition = "uuid")
+    val sourceId: UUID? = null,
+
     @Enumerated(EnumType.STRING)
     @Column(name = "scope", nullable = false)
     val scope: BlockTypeScope = BlockTypeScope.ORGANISATION,
@@ -93,23 +97,10 @@ data class BlockTypeEntity(
             updatedAt = this.updatedAt,
             createdBy = this.createdBy,
             updatedBy = this.updatedBy,
+            sourceId = this.sourceId,
         )
     }
-
-    fun updateFromModel(model: BlockType): BlockTypeEntity {
-        return this.copy(
-            displayName = model.name,
-            description = model.description,
-            // organisationId is immutable
-            // scope is immutable
-            // system is immutable
-            version = this.version + 1, // Increment version on update
-            strictness = model.validationMode,
-            schema = model.schema,
-            displayStructure = model.display,
-        )
-    }
-
+    
     companion object {
         fun fromRequest(request: CreateBlockTypeRequest): BlockTypeEntity {
             return BlockTypeEntity(

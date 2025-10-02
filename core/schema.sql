@@ -163,6 +163,7 @@ CREATE TABLE if not exists public.block_types
     "id"                uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
     "key"               text  NOT NULL,                                                                             -- machine key e.g. "contact_card"
     "display_name"      text  NOT NULL,
+    "source_id"         uuid  references block_types (id) ON DELETE SET NULL,                                       -- if copied from another block type
     "description"       text,
     "organisation_id"   uuid  REFERENCES organisations (id) ON DELETE SET NULL,                                     -- null for global
     "scope"             text  NOT NULL           DEFAULT 'organisation',

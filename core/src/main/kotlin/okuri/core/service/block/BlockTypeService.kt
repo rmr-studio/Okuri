@@ -44,54 +44,59 @@ class BlockTypeService(
     }
 
     /**
-     * This function updates an existing block type with new information.
-     * This update function does not allow changing the scope of the block type.
-     *
-     * @param type The block type model containing updated information.
-     * @throws NotFoundException if the block type with the given ID does not exist.
-     *
+     * Append-only: create a new versioned row derived from `type`.
+     * Assumes a unique constraint on (organisation_id, key, version).
      */
     fun updateBlockType(type: BlockType) {
-        authTokenService.getUserId().let { userId ->
-            findOrThrow { blockTypeRepository.findById(type.id) }.let { existing ->
-                val updated = existing.updateFromModel(type)
-                blockTypeRepository.save(updated).run {
-                    activityService.logActivity(
-                        activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
-                        operation = okuri.core.enums.util.OperationType.UPDATE,
-                        userId = userId,
-                        organisationId = existing.organisationId,
-                        targetId = existing.id,
-                        additionalDetails = "Block Type '${existing.key}' updated with ID: ${existing.id}"
-                    )
-                }
-            }
+        val userId = authTokenService.getUserId()
+        val existing = findOrThrow { blockTypeRepository.findById(type.id) }
 
-        }
+        // compute next version number (could also query max)
+        val nextVersion = existing.version + 1
 
+        val newRow = BlockTypeEntity(
+            id = null,
+            key = existing.key,
+            displayName = type.name,
+            description = type.description,
+            organisationId = existing.organisationId,
+            scope = existing.scope,
+            system = existing.system,
+            version = nextVersion,
+            strictness = type.validationMode,
+            schema = type.schema,
+            archived = false, // new version starts unarchived unless specified otherwise
+            displayStructure = type.display,
+            // Add this property to your entity (nullable) to record provenance.
+            sourceId = existing.id
+        )
+
+        val saved = blockTypeRepository.save(newRow)
+        activityService.logActivity(
+            activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
+            operation = okuri.core.enums.util.OperationType.CREATE,
+            userId = userId,
+            organisationId = saved.organisationId,
+            targetId = saved.id,
+            additionalDetails = "Block Type '${saved.key}' forked to v${saved.version} from ${existing.id}"
+        )
     }
 
-    /**
-     * This function will either archive or un-archive a block type identified by its unique ID.
-     * The block type will still be visible to users who are currently using it in their layouts
-     * but cannot be used in new blocks.
-     */
     fun archiveBlockType(id: UUID, status: Boolean) {
-        authTokenService.getUserId().let { userId ->
-            findOrThrow { blockTypeRepository.findById(id) }.let { existing ->
-                val archived = existing.copy(archived = true)
-                blockTypeRepository.save(archived).run {
-                    activityService.logActivity(
-                        activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
-                        operation = okuri.core.enums.util.OperationType.DELETE,
-                        userId = userId,
-                        organisationId = existing.organisationId,
-                        targetId = existing.id,
-                        additionalDetails = "Block Type '${existing.key}' archived with ID: ${existing.id}"
-                    )
-                }
-            }
-        }
+        val userId = authTokenService.getUserId()
+        val existing = findOrThrow { blockTypeRepository.findById(id) }
+        if (existing.archived == status) return
+        val updated = existing.copy(archived = status)
+        blockTypeRepository.save(updated)
+        activityService.logActivity(
+            activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
+            operation = if (status) okuri.core.enums.util.OperationType.DELETE
+            else okuri.core.enums.util.OperationType.UPDATE,
+            userId = userId,
+            organisationId = existing.organisationId,
+            targetId = existing.id,
+            additionalDetails = "Block Type '${existing.key}' archive=${status}"
+        )
     }
 
     /**
@@ -147,5 +152,22 @@ class BlockTypeService(
      */
     fun getBlockTypes(scope: BlockTypeScope, organisationId: UUID?, filter: Map<String, Any>?): List<BlockType> {
         TODO()
+    }
+
+    /**
+     * Fetch latest version of a key within an org, with optional system fallback.
+     */
+    fun getLatestByKey(organisationId: UUID?, key: String, includeSystem: Boolean = true): BlockTypeEntity {
+        return if (organisationId != null) {
+            blockTypeRepository.findTopByOrganisationIdAndKeyOrderByVersionDesc(organisationId, key)
+                ?: if (includeSystem)
+                    blockTypeRepository.findTopBySystemTrueAndKeyOrderByVersionDesc(key)
+                        ?: throw NoSuchElementException("BlockType not found for key=$key")
+                else throw NoSuchElementException("BlockType not found for key=$key")
+        } else {
+            // system-level lookup
+            blockTypeRepository.findTopBySystemTrueAndKeyOrderByVersionDesc(key)
+                ?: throw NoSuchElementException("BlockType not found for key=$key")
+        }
     }
 }

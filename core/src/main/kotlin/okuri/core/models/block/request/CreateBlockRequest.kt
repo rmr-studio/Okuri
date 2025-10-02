@@ -8,6 +8,5 @@ data class CreateBlockRequest(
     val key: String,
     val organisationId: String?,
     val name: String?,
-    val payload: Map<String, Any>?,
-    val schemaOverride: Boolean = false,
+    val payload: Map<String, Any>?
 )

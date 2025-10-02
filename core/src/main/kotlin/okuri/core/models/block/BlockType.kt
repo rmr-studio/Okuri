@@ -12,6 +12,7 @@ data class BlockType(
     val key: String,
     val version: Int,
     val name: String,
+    val sourceId: UUID?,
     val description: String?,
     val organisationId: UUID?,
     val scope: BlockTypeScope,

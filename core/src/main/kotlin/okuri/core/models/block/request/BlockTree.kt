@@ -10,5 +10,8 @@ data class BlockTree(
 
 data class BlockNode(
     val block: Block,
-    val children: Map<String, BlockNode> = mapOf(),
+    /** key = logical edge (e.g., "contacts", "lineItems") -> many children */
+    val children: Map<String, List<BlockNode>> = emptyMap(),
+    /** warnings such as missing targets, cycle stubs, etc. */
+    val warnings: List<String> = emptyList()
 )

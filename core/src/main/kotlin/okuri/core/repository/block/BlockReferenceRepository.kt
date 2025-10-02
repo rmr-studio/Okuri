@@ -6,4 +6,5 @@ import java.util.*
 
 interface BlockReferenceRepository : JpaRepository<BlockReferenceEntity, UUID> {
     fun findByBlockId(blockId: UUID): List<BlockReferenceEntity>
+    fun deleteByBlockId(blockId: UUID): Long
 }

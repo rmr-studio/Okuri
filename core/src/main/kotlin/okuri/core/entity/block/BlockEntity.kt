@@ -38,6 +38,10 @@ data class BlockEntity(
 
     @Column(name = "archived", columnDefinition = "boolean default false")
     val archived: Boolean = false,
+
+    @Version
+    @Column(name = "row_version")
+    val rowVersion: Long? = null
 ) : AuditableEntity(), Referenceable<Block> {
 
     override fun toReference() = this.toModel(audit = false)
