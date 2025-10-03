@@ -66,7 +66,7 @@ data class BlockTypeEntity(
     val schema: BlockSchema,
 
     @Column(name = "archived", nullable = false, columnDefinition = "boolean default false")
-    val archived: Boolean = false,
+    var archived: Boolean = false,
 
     @Column(name = "display_structure", columnDefinition = "jsonb", nullable = false)
     @Type(JsonBinaryType::class)
@@ -85,7 +85,7 @@ data class BlockTypeEntity(
             system = this.system,
             schema = this.schema,
             archived = this.archived,
-            validationMode = this.strictness,
+            strictness = this.strictness,
             display = this.displayStructure,
             createdAt = this.createdAt,
             updatedAt = this.updatedAt,

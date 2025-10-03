@@ -26,18 +26,18 @@ data class BlockEntity(
     val type: BlockTypeEntity,
 
     @Column(name = "name", nullable = true)
-    val name: String? = null,
+    var name: String? = null,
 
     @Type(JsonBinaryType::class)
     @Column(name = "payload", columnDefinition = "jsonb", nullable = false)
-    val payload: BlockMetadata,
+    var payload: BlockMetadata,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     val parent: BlockEntity? = null,
 
     @Column(name = "archived", columnDefinition = "boolean default false")
-    val archived: Boolean = false,
+    var archived: Boolean = false,
 
     @Version
     @Column(name = "row_version")

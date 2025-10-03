@@ -15,7 +15,7 @@ data class BlockType(
     val description: String?,
     val organisationId: UUID?,
     val archived: Boolean,
-    val validationMode: BlockValidationScope,
+    val strictness: BlockValidationScope,
     val system: Boolean,
     val schema: BlockSchema,
     val display: BlockDisplay,

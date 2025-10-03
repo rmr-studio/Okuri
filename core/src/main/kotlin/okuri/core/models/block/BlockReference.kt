@@ -1,12 +1,14 @@
 package okuri.core.models.block
 
+import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.core.EntityType
 import java.util.*
 
 data class BlockReference<E>(
     val id: UUID,
-    val block: Block,
     val entityType: EntityType,
     val entityId: UUID,
-    val entity: E
+    val entity: E?,
+    val ownership: BlockOwnership,
+    val path: String,
 )

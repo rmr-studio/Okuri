@@ -2,6 +2,7 @@ package okuri.core.entity.block
 
 
 import jakarta.persistence.*
+import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.BlockReference
 import okuri.core.models.block.Referenceable
@@ -17,7 +18,7 @@ import java.util.*
 @Table(
     name = "block_references",
     uniqueConstraints = [
-        UniqueConstraint(columnNames = ["block_id", "entity_type", "entity_id"])
+        UniqueConstraint(columnNames = ["block_id", "entity_type", "entity_id", "path"])
     ]
 )
 data class BlockReferenceEntity(
@@ -36,7 +37,17 @@ data class BlockReferenceEntity(
     val entityType: EntityType,
 
     @Column(name = "entity_id", nullable = false, columnDefinition = "uuid")
-    val entityId: UUID
+    val entityId: UUID,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ownership", nullable = false)
+    val ownership: BlockOwnership = BlockOwnership.LINKED,
+
+    @Column(name = "path", nullable = false)
+    val path: String,
+
+    @Column(name = "order_index")
+    val orderIndex: Int? = null
 ) {
     /**
      * Convert BlockReferenceEntity to BlockReference model, given the associated entity

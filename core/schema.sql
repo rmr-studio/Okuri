@@ -253,11 +253,16 @@ CREATE POLICY "blocks_write_by_org" ON public.blocks
 CREATE TABLE public.block_references
 (
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "block_id"    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
-    "entity_type" text NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
-    "entity_id"   uuid NOT NULL, -- id of the referenced entity
-    UNIQUE (block_id, entity_type, entity_id)
+    "block_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    "entity_type" text    NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
+    "entity_id"   uuid    NOT NULL, -- id of the referenced entity
+    "path"        text    NOT NULL, -- JSON path within the entity (e.g. "$.data.contact_details.address")
+    "relation"    text    NOT NULL,
+    check ( relation in ('OWNED', 'LINKED') ),
+    "order_index" integer NOT NULL DEFAULT 0,
+    UNIQUE (block_id, entity_type, entity_id, path)
 );
+
 
 -- Mapping an entity (client, line item, etc) to the parent level blocks it should display
 CREATE TABLE entity_blocks
