@@ -107,22 +107,5 @@ class BlockTypeController(
         val blockTypes = blockTypeService.getBlockTypes(organisationId)
         return ResponseEntity.ok(blockTypes)
     }
-
-    @PostMapping("/fork")
-    @Operation(
-        summary = "Fork an existing block type",
-        description = "Creates a fork of an existing block type, allowing for modifications."
-    )
-    @ApiResponses(
-        ApiResponse(responseCode = "201", description = "Block type forked successfully"),
-        ApiResponse(responseCode = "401", description = "Unauthorized access"),
-        ApiResponse(responseCode = "404", description = "Source block type not found"),
-        ApiResponse(responseCode = "501", description = "Feature not yet implemented")
-    )
-    fun forkBlockType(
-        @RequestBody source: BlockType,
-    ): ResponseEntity<Void> {
-        blockTypeService.forkBlockType(source)
-        return ResponseEntity.status(HttpStatus.CREATED).build()
-    }
+    
 }

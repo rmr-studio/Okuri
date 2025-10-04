@@ -48,4 +48,10 @@ object BlockFactory {
         parent = parent,
         archived = false
     )
+
+    fun generateSchema(): BlockSchema = BlockSchema(name = "root")
+    fun generateDisplay(): BlockDisplay = BlockDisplay(
+        form = BlockFormStructure(emptyMap()),
+        render = BlockRenderStructure(ComponentType.TEXT, emptyMap())
+    )
 }

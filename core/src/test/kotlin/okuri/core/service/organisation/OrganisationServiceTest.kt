@@ -30,7 +30,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 
-@SpringBootTest(classes = [OrganisationSecurity::class, OrganisationServiceTest.TestConfig::class, OrganisationService::class])
+@SpringBootTest(classes = [AuthTokenService::class, OrganisationSecurity::class, OrganisationServiceTest.TestConfig::class, OrganisationService::class])
 @WithUserPersona(
     userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
     email = "email@email.com",
@@ -77,9 +77,6 @@ class OrganisationServiceTest {
 
     @MockitoBean
     private lateinit var activityService: ActivityService
-
-    @MockitoBean
-    private lateinit var authTokenService: AuthTokenService
 
     @Autowired
     private lateinit var organisationService: OrganisationService

@@ -1,6 +1,8 @@
 package okuri.core.service.block
 
 import okuri.core.entity.block.BlockTypeEntity
+import okuri.core.enums.activity.Activity
+import okuri.core.enums.util.OperationType
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.repository.block.BlockTypeRepository
@@ -8,6 +10,7 @@ import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.util.ServiceUtil.findManyResults
 import okuri.core.util.ServiceUtil.findOrThrow
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -24,17 +27,18 @@ class BlockTypeService(
      * This function creates and publishes a new block type based on the provided request data.
      * It logs the creation activity for auditing purposes.
      */
+    @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun publishBlockType(request: CreateBlockTypeRequest): BlockType {
         authTokenService.getUserId().let { userId ->
             val entity = BlockTypeEntity.fromRequest(request)
             blockTypeRepository.save(entity).run {
                 activityService.logActivity(
-                    activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
-                    operation = okuri.core.enums.util.OperationType.CREATE,
+                    activity = Activity.BLOCK_TYPE,
+                    operation = OperationType.CREATE,
                     userId = userId,
-                    organisationId = entity.organisationId,
-                    targetId = entity.id,
-                    additionalDetails = "Block Type '${entity.key}' created with ID: ${entity.id}"
+                    organisationId = this.organisationId,
+                    targetId = this.id,
+                    additionalDetails = "Block Type '${this.key}' created with ID: ${this.id}"
                 )
 
                 return this.toModel()
@@ -69,15 +73,16 @@ class BlockTypeService(
             sourceId = existing.id
         )
 
-        val saved = blockTypeRepository.save(newRow)
-        activityService.logActivity(
-            activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
-            operation = okuri.core.enums.util.OperationType.CREATE,
-            userId = userId,
-            organisationId = saved.organisationId,
-            targetId = saved.id,
-            additionalDetails = "Block Type '${saved.key}' forked to v${saved.version} from ${existing.id}"
-        )
+        blockTypeRepository.save(newRow).run {
+            activityService.logActivity(
+                activity = Activity.BLOCK_TYPE,
+                operation = okuri.core.enums.util.OperationType.CREATE,
+                userId = userId,
+                organisationId = this.organisationId,
+                targetId = this.id,
+                additionalDetails = "Block Type '${this.key}' forked to v${this.version} from ${existing.id}"
+            )
+        }
     }
 
     fun archiveBlockType(id: UUID, status: Boolean) {
@@ -87,7 +92,7 @@ class BlockTypeService(
         val updated = existing.copy(archived = status)
         blockTypeRepository.save(updated)
         activityService.logActivity(
-            activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
+            activity = Activity.BLOCK_TYPE,
             operation = if (status) okuri.core.enums.util.OperationType.ARCHIVE
             else okuri.core.enums.util.OperationType.RESTORE,
             userId = userId,
@@ -95,13 +100,6 @@ class BlockTypeService(
             targetId = existing.id,
             additionalDetails = "Block Type '${existing.key}' archive=${status}"
         )
-    }
-
-    /**
-     * This function creates a fork of an existing block type, allowing for modifications
-     */
-    fun forkBlockType(source: BlockType) {
-        TODO()
     }
 
     /**
