@@ -11,6 +11,7 @@ import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.block.resolvers.ReferenceResolver
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 /**
@@ -30,62 +31,94 @@ class BlockReferenceService(
 
     private val resolverByType = entityResolvers.associateBy { it.type }
 
+    @Transactional
     fun upsertReferencesFor(blockEntity: BlockEntity, payloadData: Map<String, Any?>) {
-        extractReferences(payloadData).let { refs ->
+        val blockId = requireNotNull(blockEntity.id)
 
+        // --- 1) Parse incoming refs (NEW desired state) ---
+        val refs = extractReferences(payloadData)
 
-            // 1) rebuild rows for this block
-            blockReferenceRepository.deleteByBlockId(requireNotNull(blockEntity.id))
-            if (refs.isNotEmpty()) {
-                val rows = refs.map {
-                    BlockReferenceEntity(
-                        block = blockEntity,
-                        entityType = it.type,
-                        entityId = it.id,
-                        ownership = it.ownership,
-                        path = it.path,
-                        orderIndex = it.orderIndex
-                    )
-                }
-                blockReferenceRepository.saveAll(rows)
+        // --- 2) Capture PREVIOUS state of OWNED BLOCK children (before we delete rows) ---
+        val prevOwnedRows = blockReferenceRepository
+            .findByBlockIdAndOwnershipAndEntityTypeOrderByPathAscOrderIndexAsc(
+                blockId,
+                BlockOwnership.OWNED,
+                EntityType.BLOCK
+            )
+        val prevOwnedIds: Set<UUID> = prevOwnedRows.map { it.entityId }.toSet()
+
+        // --- 3) Compute NEXT state of OWNED BLOCK children from parsed refs ---
+        val nextOwnedIds: Set<UUID> = refs
+            .asSequence()
+            .filter { it.type == EntityType.BLOCK && it.ownership == BlockOwnership.OWNED }
+            .map { it.id }
+            .toSet()
+
+        // --- 4) Delta = children to UNPARENT (were owned before, not owned now) ---
+        val toUnparent: Set<UUID> = prevOwnedIds - nextOwnedIds
+        if (toUnparent.isNotEmpty()) {
+            val children = blockRepository.findAllById(toUnparent).filter {
+                // Only clear parent if we are the current parent
+                it.parent?.id == blockId
+            }
+            if (children.isNotEmpty()) {
+                // Clear parent in batch
+                val cleared = children.map { it.copy(parent = null) }
+                blockRepository.saveAll(cleared)
+            }
+        }
+
+        // --- 5) Rebuild block_references rows for THIS block ---
+        blockReferenceRepository.deleteByBlockId(blockId)
+        if (refs.isNotEmpty()) {
+            val rows = refs.map {
+                BlockReferenceEntity(
+                    block = blockEntity,
+                    entityType = it.type,
+                    entityId = it.id,
+                    ownership = it.ownership,
+                    path = it.path,
+                    orderIndex = it.orderIndex
+                )
+            }
+            blockReferenceRepository.saveAll(rows)
+        }
+
+        // --- 6) Apply OWNED parenting for CURRENT desired children ---
+        // (enforce single-parent, same-tenant, and basic cycle guard)
+        nextOwnedIds.forEach { childId ->
+            if (childId == blockId) return@forEach // ignore self
+
+            val child = blockRepository.findById(childId).orElse(null) ?: return@forEach
+            require(child.organisationId == blockEntity.organisationId) {
+                "Cross-organisation ownership is not allowed"
+            }
+            // Prevent trivial cycles: if child is an ancestor of the parent, skip
+            if (isAncestor(ancestorId = child.id!!, node = blockEntity)) {
+                // For STRICT mode, you'd throw; for MVP, just skip.
+                return@forEach
             }
 
-            // 2) apply OWNED parenting for BLOCK refs (same org, no self, avoid trivial cycles)
-            refs.filter { it.type == EntityType.BLOCK && it.ownership == BlockOwnership.OWNED }.forEach { r ->
-                if (r.id == blockEntity.id) {
-                    // ignore self
-                    return@forEach
-                }
-                val child = blockRepository.findById(r.id).orElse(null) ?: return@forEach
-                require(child.organisationId == blockEntity.organisationId) {
-                    "Cross-organisation ownership is not allowed"
-                }
-                // naive cycle guard: do not set parent if child is already an ancestor
-                if (isAncestor(ancestorId = child.id!!, node = blockEntity)) {
-                    // skip or log; in STRICT mode you’d throw
-                    return@forEach
-                }
-                if (child.parent?.id != blockEntity.id) {
-                    blockRepository.save(child.copy(parent = blockEntity))
-                }
+            // If child already points to US, nothing to do; else (re)assign
+            if (child.parent?.id != blockId) {
+                blockRepository.save(child.copy(parent = blockEntity))
             }
         }
     }
 
-    private fun isAncestor(ancestorId: UUID, node: BlockEntity?, seen: MutableSet<UUID> = mutableSetOf()): Boolean {
+
+    private fun isAncestor(ancestorId: UUID, node: BlockEntity?): Boolean {
         var cur = node
         while (cur != null) {
             val id = cur.id ?: return false
-            if (!seen.add(id)) return false
             if (id == ancestorId) return true
             cur = cur.parent
         }
         return false
     }
 
-    /** Walk payload and collect {_refType, _refId} refs for block_references. */
-    // Extract inline refs from payload.data
-    private fun extractReferences(value: Any?, path: String = "$"): List<Reference> {
+    /** Walk payload.data and collect {_refType, _refId, _ownership} refs */
+    private fun extractReferences(value: Any?, path: String = "$.data"): List<Reference> {
         val out = mutableListOf<Reference>()
         when (value) {
             is Map<*, *> -> {
@@ -93,7 +126,7 @@ class BlockReferenceService(
                 val id = value["_refId"] as? String
                 val own = (value["_ownership"] as? String)?.uppercase() ?: "LINKED"
                 if (t != null && id != null) {
-                    EntityType.entries.find { it.name == t }?.let { et ->
+                    EntityType.values().find { it.name == t }?.let { et ->
                         runCatching { UUID.fromString(id) }.getOrNull()?.let { uuid ->
                             out += Reference(
                                 type = et,
@@ -135,10 +168,9 @@ class BlockReferenceService(
      * This would most likely include referenced external entities (ie. clients, projects, line items).
      * But can also include referenced subsets of blocks).
      */
-    fun findLinkedBlocks(blockId: UUID): Map<String, List<BlockReference<*>>> {
-        val refs = loadReferences(
-            blockId
-        )
+    fun findLinkedBlocks(blockId: UUID, expand: Boolean = true): Map<String, List<BlockReference<*>>> {
+        val expandTypes = if (expand) setOf(EntityType.CLIENT, EntityType.BLOCK /* + others */) else emptySet()
+        val refs = loadReferences(blockId, expandTypes)
         val linkable = refs.filter {
             it.entityType != EntityType.BLOCK || (it.entityType == EntityType.BLOCK && it.ownership == BlockOwnership.LINKED)
         }

@@ -1,7 +1,6 @@
 package okuri.core.service.user
 
 import io.github.oshai.kotlinlogging.KLogger
-import jakarta.transaction.Transactional
 import okuri.core.entity.organisation.toEntity
 import okuri.core.entity.user.UserEntity
 import okuri.core.entity.user.toModel
@@ -12,6 +11,7 @@ import okuri.core.service.auth.AuthTokenService
 import okuri.core.util.ServiceUtil.findOrThrow
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 @Service

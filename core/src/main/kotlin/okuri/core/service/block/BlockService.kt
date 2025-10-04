@@ -1,6 +1,5 @@
 package okuri.core.service.block
 
-import jakarta.transaction.Transactional
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.isStrict
@@ -11,7 +10,6 @@ import okuri.core.models.block.request.BlockTree
 import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.structure.BlockMeta
 import okuri.core.models.block.structure.BlockMetadata
-import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -19,6 +17,7 @@ import okuri.core.service.schema.SchemaService
 import okuri.core.service.schema.SchemaValidationException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 /**
@@ -29,7 +28,6 @@ class BlockService(
     private val blockRepository: BlockRepository,
     private val blockTypeService: BlockTypeService,
     private val blockReferenceService: BlockReferenceService,
-    private val blockReferenceRepository: BlockReferenceRepository,
     private val schemaService: SchemaService,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService
@@ -96,7 +94,7 @@ class BlockService(
             // Save refs (and OWNED parenting) based on metadata.data
             blockReferenceService.upsertReferencesFor(this, entity.payload.data)
             activityService.logActivity(
-                activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
+                activity = okuri.core.enums.activity.Activity.BLOCK,
                 operation = OperationType.CREATE,
                 userId = authTokenService.getUserId(),
                 organisationId = organisationId,
@@ -147,7 +145,7 @@ class BlockService(
             blockRepository.save(updatedBlock).run {
                 // Rebuild refs (and OWNED parenting) based on merged data
                 activityService.logActivity(
-                    activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
+                    activity = okuri.core.enums.activity.Activity.BLOCK,
                     operation = OperationType.UPDATE,
                     userId = authTokenService.getUserId(),
                     organisationId = organisationId,
@@ -178,14 +176,24 @@ class BlockService(
     fun getBlock(blockId: UUID, expandRefs: Boolean = false, maxDepth: Int = 1): BlockTree {
         val rootEntity = blockRepository.findById(blockId).orElseThrow()
         val visited = mutableSetOf<UUID>()
-        val node = buildNode(rootEntity, depth = if (expandRefs) maxDepth else 1, visited = visited)
+        val node =
+            buildNode(rootEntity, depth = if (expandRefs) maxDepth else 1, visited = visited, expand = expandRefs)
         return BlockTree(maxDepth = if (expandRefs) maxDepth else 1, expandRefs = expandRefs, root = node)
     }
 
-    private fun buildNode(entity: BlockEntity, depth: Int, visited: MutableSet<UUID>): BlockNode {
+    private fun buildNode(
+        entity: BlockEntity,
+        depth: Int,
+        visited: MutableSet<UUID>,
+        expand: Boolean = false
+    ): BlockNode {
         val id = requireNotNull(entity.id) { "Block ID cannot be null" }
         entity.toModel().let { block ->
-            if (depth <= 1) return BlockNode(block = block)
+            if (depth <= 1) {
+                val links = blockReferenceService.findLinkedBlocks(id)
+                return BlockNode(block = block, references = links)
+            }
+
             if (!visited.add(id)) {
                 return BlockNode(block = block, warnings = listOf("Cycle detected at ${block.id}"))
             }
@@ -193,16 +201,18 @@ class BlockService(
             val edges = blockReferenceService.findOwnedBlocks(id)
             val children: Map<String, List<BlockNode>> =
                 edges.mapValues { (_, refs) ->
+                    val ids = refs.map { it.entityId }.toSet()
+                    val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
                     refs.mapNotNull { ref ->
-                        val child = blockRepository.findById(ref.entityId).orElse(null) ?: return@mapNotNull null
+                        val child = childrenById[ref.entityId] ?: return@mapNotNull null
                         buildNode(child, depth - 1, visited)
                     }
                 }
 
-            val links = blockReferenceService.findLinkedBlocks(id)
+            val links = blockReferenceService.findLinkedBlocks(id, expand = expand)
 
             visited.remove(id)
-            return BlockNode(block = block, children = children)
+            return BlockNode(block = block, children = children, references = links)
         }
     }
 
@@ -225,7 +235,7 @@ class BlockService(
                 }.run {
                     blockRepository.save(this)
                     activityService.logActivity(
-                        activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
+                        activity = okuri.core.enums.activity.Activity.BLOCK,
                         operation = if (archive) OperationType.ARCHIVE else OperationType.RESTORE,
                         userId = user,
                         organisationId = block.organisationId,

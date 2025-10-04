@@ -61,7 +61,7 @@ class BlockTypeService(
             organisationId = existing.organisationId,
             system = existing.system,
             version = nextVersion,
-            strictness = type.validationMode,
+            strictness = type.strictness,
             schema = type.schema,
             archived = false, // new version starts unarchived unless specified otherwise
             displayStructure = type.display,
@@ -88,8 +88,8 @@ class BlockTypeService(
         blockTypeRepository.save(updated)
         activityService.logActivity(
             activity = okuri.core.enums.activity.Activity.BLOCK_TYPE,
-            operation = if (status) okuri.core.enums.util.OperationType.DELETE
-            else okuri.core.enums.util.OperationType.UPDATE,
+            operation = if (status) okuri.core.enums.util.OperationType.ARCHIVE
+            else okuri.core.enums.util.OperationType.RESTORE,
             userId = userId,
             organisationId = existing.organisationId,
             targetId = existing.id,

@@ -275,8 +275,9 @@ CREATE TABLE entity_blocks
     UNIQUE (entity_id, entity_type, key)
 );
 
-CREATE INDEX idx_blocks_references_block ON block_references (block_id);
-CREATE INDEX idx_block_references_entity ON block_references (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_blocks_references_block ON block_references (block_id);
+CREATE INDEX IF NOT EXISTS idx_block_references_entity ON block_references (entity_type, entity_id);;
+CREATE INDEX IF NOT EXISTS idx_block_references_path_order ON block_references (path, order_index);
 
 -- RLS scoped by parent block's organisation
 ALTER TABLE public.block_references

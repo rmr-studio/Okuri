@@ -1,6 +1,5 @@
 package okuri.core.service.organisation
 
-import jakarta.transaction.Transactional
 import okuri.core.entity.organisation.OrganisationInviteEntity
 import okuri.core.entity.organisation.toModel
 import okuri.core.enums.activity.Activity
@@ -18,6 +17,7 @@ import okuri.core.util.ServiceUtil.findOrThrow
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 
