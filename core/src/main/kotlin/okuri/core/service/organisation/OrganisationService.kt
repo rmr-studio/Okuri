@@ -33,9 +33,11 @@ class OrganisationService(
     private val activityService: ActivityService
 ) {
     /**
-     * Fetch an organisation by its ID with pre-authorization to ensure the user has access to the organisation.
-     * Returns organisation model, with optional metadata such as audit info and team members.
-     * Used by controller layer to return organisation data to the user.
+     * Retrieve an organisation by its ID, optionally including metadata.
+     *
+     * @param includeMetadata When true, include additional metadata such as audit information and team members.
+     * @return The organisation model corresponding to the given ID.
+     * @throws NotFoundException If no organisation exists with the provided ID.
      */
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
@@ -44,9 +46,11 @@ class OrganisationService(
     }
 
     /**
-     * Fetch an organisation by its ID with post-authorization to ensure the user has access to the organisation
-     * Returns organisation access entity.
-     * Only used for internal service layer operations. Should not be exposed directly via controller.
+     * Retrieve the OrganisationEntity for the given organisationId.
+     *
+     * @param organisationId The UUID of the organisation to fetch.
+     * @return The matching OrganisationEntity.
+     * @throws NotFoundException If no organisation exists with the provided id.
      */
     @Throws(NotFoundException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
@@ -123,6 +127,14 @@ class OrganisationService(
 
     }
 
+    /**
+     * Update an organisation's persisted fields and record the update activity.
+     *
+     * Logs an ORGANISATION UPDATE activity attributed to the caller.
+     *
+     * @param organisation The organisation model containing updated fields; must include a valid `id`.
+     * @return The updated organisation model reflecting the persisted changes.
+     */
     @PreAuthorize("@organisationSecurity.hasOrgRoleOrHigher(#organisation.id, 'ADMIN')")
     fun updateOrganisation(organisation: Organisation): Organisation {
         authTokenService.getUserId().let { userId ->
@@ -154,7 +166,11 @@ class OrganisationService(
     }
 
     /**
-     * Transactional given the need to delete all members associated with the organisation before deleting the organisation itself.
+     * Deletes the organisation identified by [organisationId] along with all associated membership records.
+     *
+     * This operation is transactional and logs an ORGANISATION DELETE activity that includes the organisation name.
+     *
+     * @param organisationId The UUID of the organisation to delete.
      */
     @PreAuthorize("@organisationSecurity.hasOrgRoleOrHigher(#organisationId, 'OWNER')")
     @Transactional
@@ -203,10 +219,13 @@ class OrganisationService(
     }
 
     /**
-     * Allow permission to remove member from organisation under the following conditions:
-     *  - The user is the owner of the organisation
-     *  - The user is an admin and has a role higher than the member's role (ie. ADMIN can remove MEMBER, but not OWNER or ADMIN)
-     *  - The user is trying to remove themselves from the organisation
+     * Remove a member from the specified organisation when the caller is authorized to do so.
+     *
+     * Removes the membership record and records an organisation-member deletion activity.
+     *
+     * @param organisationId ID of the organisation to remove the member from.
+     * @param member The member to remove.
+     * @throws IllegalArgumentException if attempting to remove the organisation owner (ownership must be transferred first).
      */
     @PreAuthorize(
         """
@@ -241,9 +260,15 @@ class OrganisationService(
     }
 
     /**
-     * Allow permission to update a member's role in the organisation under the following conditions:
-     *  - The user is the owner of the organisation
-     *  - The user is an admin and has a role higher than the member's role (ie. ADMIN can alter roles of MEMBER users, but not OWNER or ADMIN)
+     * Update a member's role within an organisation.
+     *
+     * This operation persists the new role for the specified member and logs the change. It does not allow assigning or removing the OWNER role; ownership transfers must use the dedicated transfer method.
+     *
+     * @param organisationId The organisation's ID.
+     * @param member The member to update.
+     * @param role The new role to assign to the member.
+     * @return The updated organisation member model.
+     * @throws IllegalArgumentException If the new role or the member's current role is `OWNER`.
      */
     @PreAuthorize(
         """

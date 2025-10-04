@@ -20,6 +20,11 @@ class BlockController(
     private val blockService: BlockService
 ) {
 
+    /**
+     * Create a new block from the provided request.
+     *
+     * @param request The payload containing details required to create the block.
+     * @return The created `Block` resource. */
     @PostMapping("/")
     @Operation(
         summary = "Create a new block",
@@ -35,6 +40,15 @@ class BlockController(
         return ResponseEntity.status(HttpStatus.CREATED).body(block)
     }
 
+    /**
+     * Update the block identified by the given ID with the provided payload.
+     *
+     * Validates that the payload's `id` matches `blockId`; if they differ the request will be rejected.
+     *
+     * @param blockId UUID of the block to update.
+     * @param block The block payload to apply; its `id` must equal `blockId`.
+     * @return The updated Block.
+     */
     @PutMapping("/{blockId}")
     @Operation(
         summary = "Update an existing block",
@@ -55,6 +69,14 @@ class BlockController(
         return ResponseEntity.ok(updated)
     }
 
+    /**
+     * Retrieve a block tree with optional expansion of referenced blocks and a depth limit.
+     *
+     * @param blockId The UUID of the root block to retrieve.
+     * @param expandRefs If `true`, referenced blocks will be expanded into the returned tree.
+     * @param maxDepth The maximum depth of child blocks to include when expanding references (default 1).
+     * @return The requested BlockTree representing the block and its children according to the expansion and depth settings.
+     */
     @GetMapping("/{blockId}")
     @Operation(
         summary = "Get a block tree",
@@ -74,6 +96,17 @@ class BlockController(
         return ResponseEntity.ok(tree)
     }
 
+    /**
+     * Update a block's archival status.
+     *
+     * Requires the full block payload in the request body for authorization and validation. If the
+     * path `blockId` does not match `block.id`, the request is rejected.
+     *
+     * @param blockId The UUID of the block to update.
+     * @param status `true` to archive the block, `false` to unarchive it.
+     * @param block The full block payload used for authorization and validation.
+     * @return ResponseEntity with HTTP 204 No Content on success; returns 400 if the path and body IDs differ.
+     */
     @PutMapping("/{blockId}/archive/{status}")
     @Operation(
         summary = "Update archival status of a block",
@@ -95,6 +128,15 @@ class BlockController(
         return ResponseEntity.noContent().build()
     }
 
+    /**
+     * Deletes the block identified by the given path ID.
+     *
+     * The request must include the full block payload and the payload's `id` must equal `blockId`; otherwise the request is rejected.
+     *
+     * @param blockId The UUID of the block to delete (from the request path).
+     * @param block The full block payload (from the request body) used for authorization and cascading rules; its `id` must match `blockId`.
+     * @return No content; indicates the block was deleted successfully.
+     */
     @DeleteMapping("/{blockId}")
     @Operation(
         summary = "Delete a block",

@@ -39,14 +39,28 @@ data class BlockSchema(
 )
 
 /**
- * Convert internal BlockSchema to a JSON Schema 2019-09 Map.
- * - `allowAdditionalProperties` controls object additionalProperties.
- * - Lifts per-field `required=true` into parent "required".
- * - Emits unions (e.g., PERCENTAGE accepts number [0..1] OR string "..%").
+ * Produce a JSON Schema (Draft 2019-09) representation of this BlockSchema as a Map.
+ *
+ * Lifts per-field `required = true` into parent `required` arrays and emits a union schema for percentage-formatted fields
+ * (accepting either a number in [0, 1] or a percent string).
+ *
+ * @param allowAdditionalProperties When true, object schemas will include `additionalProperties: true`; when false, they will include `additionalProperties: false`.
+ * @return A Map<String, Any> representing the equivalent JSON Schema fragment for this BlockSchema.
  */
 fun BlockSchema.toJsonSchema(
     allowAdditionalProperties: Boolean
 ): Map<String, Any> {
+    /**
+     * Convert a BlockSchema into a JSON Schema (draft 2019-09) fragment represented as a map.
+     *
+     * Handles object, array, string, number, boolean, and null types and applies format-specific
+     * constraints (for example, email, date, uri). For the PERCENTAGE format, emits a union that
+     * accepts either a numeric value in the range 0..1 or a percentage string (e.g., "12.5%").
+     *
+     * @param schema The BlockSchema to convert.
+     * @param allowAP When true, object schemas will permit additional properties (`additionalProperties: true`); when false, additional properties are disallowed.
+     * @return A map suitable for serialization as a JSON Schema fragment corresponding to the provided schema.
+     */
     fun toJs(schema: BlockSchema, allowAP: Boolean): Map<String, Any> {
         return when (schema.type) {
             DataType.OBJECT -> {

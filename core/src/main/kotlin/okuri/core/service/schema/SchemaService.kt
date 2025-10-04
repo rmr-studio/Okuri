@@ -27,6 +27,15 @@ class SchemaService(
 ) {
     private val schemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909)
 
+    /**
+     * Validates a payload against the given BlockSchema and returns any validation error messages.
+     *
+     * @param schema The BlockSchema describing the expected structure and formats.
+     * @param payload The data to validate; may be null.
+     * @param scope Validation strictness: `NONE` skips validation and returns an empty list; `SOFT` relaxes property checks.
+     * @param path Root path used in recursive error messages (default "$").
+     * @return A list of validation error messages; empty if no validation issues were found.
+     */
     fun validate(
         schema: BlockSchema,
         payload: Any?,
@@ -50,6 +59,14 @@ class SchemaService(
         return errors
     }
 
+    /**
+     * Validates a payload against a BlockSchema and throws when validation fails in strict mode.
+     *
+     * @param schema The schema to validate against.
+     * @param payload The value to validate; may be null.
+     * @param scope The validation scope that controls strictness (errors only cause an exception when `STRICT`).
+     * @throws SchemaValidationException if `scope` is `STRICT` and validation produced one or more errors; the exception's `reasons` list contains the error messages.
+     */
     fun validateOrThrow(
         schema: BlockSchema,
         payload: Any?,
@@ -62,6 +79,20 @@ class SchemaService(
     }
 
 
+    /**
+     * Recursively validates a runtime payload against a BlockSchema and accumulates validation messages.
+     *
+     * Performs type checks, required-field checks, per-type recursive validation for objects and arrays,
+     * and format/number validations for strings and numbers. Respects soft single-item array heuristics
+     * when scope is SOFT and stops accumulating further detailed errors once MAX_ERRORS is reached.
+     *
+     * @param schema The BlockSchema describing expected structure and constraints for this node.
+     * @param payload The runtime value to validate; may be null.
+     * @param path JSON-path-like location of the payload within the root document (e.g., "$", "$/user", "$/items[0]").
+     * @param scope Validation scope that can alter permissiveness (e.g., SOFT allows single-item array heuristics).
+     * @param acc Mutable list used to collect error messages; pass an existing list to accumulate across recursive calls.
+     * @return The same mutable list passed as `acc`, containing any validation error messages collected for this subtree.
+     */
     private fun validateRecursive(
         schema: BlockSchema,
         payload: Any?,
@@ -153,6 +184,14 @@ class SchemaService(
         return acc
     }
 
+    /**
+     * Heuristically determines whether a non-list payload can be treated as a single array item
+     * by checking if the payload's runtime type matches the expected item schema type.
+     *
+     * @param itemSchema The schema describing the expected item type.
+     * @param payload The value to test against the item schema's type.
+     * @return `true` if the payload's runtime type corresponds to `itemSchema.type`, `false` otherwise.
+     */
     private fun looksLikeSingleItem(itemSchema: BlockSchema, payload: Any?): Boolean {
         return when (itemSchema.type) {
             DataType.OBJECT -> payload is Map<*, *>
@@ -164,6 +203,16 @@ class SchemaService(
         }
     }
 
+    /**
+     * Validates a string value against the format declared in the provided schema.
+     *
+     * Supports EMAIL, CURRENCY, PHONE, PERCENTAGE, DATE, DATETIME, and URL formats; returns null when the value conforms.
+     *
+     * @param schema The BlockSchema whose `format` determines which validation to apply.
+     * @param value The string value to validate.
+     * @param path The JSON path used in returned error messages when validation fails.
+     * @return An error message describing the format violation (including `path`), or `null` if the value is valid. 
+     */
     private fun validateStringFormat(schema: BlockSchema, value: String, path: String): String? {
         return when (schema.format) {
             DataFormat.EMAIL ->
@@ -210,6 +259,14 @@ class SchemaService(
         }
     }
 
+    /**
+     * Validates a numeric value against the schema's numeric format constraints.
+     *
+     * @param schema The block schema that may declare a numeric format (e.g., percentage).
+     * @param value The numeric value from the payload to validate.
+     * @param path The JSON-like path to the value, used for error messages.
+     * @return An error message describing the format violation, or `null` if the value satisfies the schema.
+     */
     private fun validateNumberFormat(schema: BlockSchema, value: Double, path: String): String? {
         return when (schema.format) {
             DataFormat.PERCENTAGE -> {

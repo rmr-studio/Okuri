@@ -9,6 +9,15 @@ import java.text.SimpleDateFormat
 object TestObjectMapper {
 
 
+    /**
+     * Creates a preconfigured Jackson ObjectMapper with Kotlin and Java Time support.
+     *
+     * The mapper uses UTC and the pattern "yyyy-MM-dd'T'HH:mm:ss.SSSZ" for date formatting,
+     * ignores unknown properties during deserialization, and writes dates as ISO-8601 strings
+     * instead of timestamps.
+     *
+     * @return A configured `ObjectMapper`.
+     */
     fun init(): ObjectMapper {
         val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
         dateFormat.timeZone = java.util.TimeZone.getTimeZone("UTC")

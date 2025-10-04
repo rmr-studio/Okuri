@@ -30,6 +30,17 @@ class OrganisationInviteService(
     private val activityService: ActivityService
 ) {
 
+    /**
+     * Create an invitation for a user to join an organisation with a specified role.
+     *
+     * @param organisationId The UUID of the organisation to invite the user into.
+     * @param email The invitee's email address.
+     * @param role The role to assign to the invitee; must not be `OWNER` (use ownership transfer methods for that).
+     * @return The created `OrganisationInvite` model representing the persisted invitation.
+     * @throws AccessDeniedException if the caller lacks organisation access or sufficient role.
+     * @throws IllegalArgumentException if `role` is `OWNER` or a pending invite for the email already exists.
+     * @throws ConflictException if the email already belongs to an existing organisation member.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId) and @organisationSecurity.hasOrgRoleOrHigher(#organisationId, 'ADMIN')")
     @Throws(AccessDeniedException::class, IllegalArgumentException::class)
     fun createOrganisationInvitation(organisationId: UUID, email: String, role: OrganisationRoles): OrganisationInvite {
@@ -84,6 +95,19 @@ class OrganisationInviteService(
 
     }
 
+    /**
+     * Handles a user's response to an organisation invitation identified by its token.
+     *
+     * Validates that the authenticated user's email matches the invitation email and that the
+     * invitation is in the PENDING state, then updates the invitation status to ACCEPTED or
+     * DECLINED. If accepted, the authenticated user is added to the organisation with the
+     * invitation's role.
+     *
+     * @param token The invitation token used to locate the invitation.
+     * @param accepted `true` to accept the invitation, `false` to decline it.
+     * @throws AccessDeniedException if the authenticated user's email does not match the invite email.
+     * @throws IllegalArgumentException if the invitation is not in the PENDING state.
+     */
     @Throws(AccessDeniedException::class, IllegalArgumentException::class)
     @Transactional
     fun handleInvitationResponse(token: String, accepted: Boolean) {
@@ -128,7 +152,9 @@ class OrganisationInviteService(
     }
 
     /**
-     * Retrieves a list of invites for the current user, based off value from JWT.
+     * Returns the organisation invites addressed to the authenticated user.
+     *
+     * @return A list of `OrganisationInvite` models for the email extracted from the current user's auth token (empty if none).
      */
     fun getUserInvites(): List<OrganisationInvite> {
         authTokenService.getUserEmail().let { email ->
@@ -138,6 +164,12 @@ class OrganisationInviteService(
         }
     }
 
+    /**
+     * Retrieves all organisation invitations for the specified organisation.
+     *
+     * @param organisationId ID of the organisation whose invites are returned.
+     * @return A list of OrganisationInvite models for the organisation; empty if none exist.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisationInvites(organisationId: UUID): List<OrganisationInvite> {
         // Fetch all invites for the organisation
@@ -146,7 +178,13 @@ class OrganisationInviteService(
     }
 
     /**
-     * Revokes an organisation invite by its ID given the invitation is still in its PENDING state.
+     * Revoke a pending organisation invitation.
+     *
+     * Deletes the invitation identified by [id] for the given organisation only if its status is PENDING.
+     *
+     * @param organisationId The organisation's UUID the invitation belongs to.
+     * @param id The UUID of the invitation to revoke.
+     * @throws IllegalArgumentException if the invitation exists but is not in the PENDING state.
      */
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId) and @organisationSecurity.hasOrgRoleOrHigher(#organisationId, 'ADMIN')")
     fun revokeOrganisationInvite(organisationId: UUID, id: UUID) {

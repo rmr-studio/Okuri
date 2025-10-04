@@ -33,13 +33,16 @@ class BlockService(
     private val activityService: ActivityService
 ) {
     /**
-     * This function creates a new block based on the provided request data.
-     * It ensures that the block type specified in the request exists before creating the block.
-     * Depending on the block type's validation scope. It will also examine the payload and cross validate with the
-     * provided schema. And throw an error if the payload does not conform to the schema.
+     * Create a new block for the given organisation using the specified block type and payload.
      *
-     * @param request The request object containing details for the new block.
-     * @return The created block.
+     * Validates the payload against the block type's schema (respecting strictness), persists the block,
+     * rebuilds references from the payload, and records creation activity.
+     *
+     * @param request Request containing organisationId, a block type identifier (either `typeId` or `typeKey` with `typeVersion`), the block name, and a `payload` map.
+     * @return The created Block model with `validationErrors` populated or `null` if there are no validation errors.
+     * @throws IllegalArgumentException If neither `typeId` nor `typeKey` is provided in the request.
+     * @throws IllegalStateException If the resolved block type is archived.
+     * @throws SchemaValidationException If the block type is strict and the payload fails schema validation.
      */
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     @Transactional
@@ -110,12 +113,12 @@ class BlockService(
     }
 
     /**
-     * This function updates an existing block with new information.
-     * It ensures that the block type specified in the block exists before updating the block.
-     * It will also examine the payload and cross validate with the provided schema based on the provided validation settings.
+     * Apply partial updates to an existing block, validate the merged payload against the block type schema, persist the changes, rebuild references, and record an update activity.
      *
-     * @param block The block model containing updated information.
-     * @return The updated block.
+     * @param block The block model containing updated fields; payload.data is merged with the existing block's data for a partial update.
+     * @return The persisted updated block model; `validationErrors` is `null` when there are no validation errors.
+     * @throws IllegalArgumentException if the block does not belong to the specified organisation or the block cannot be found.
+     * @throws SchemaValidationException when the block type's strictness requires validation and the merged payload fails schema validation.
      */
     @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
     @Transactional
@@ -161,17 +164,12 @@ class BlockService(
     }
 
     /**
-     * This function retrieves a block by its ID, with options to expand references and set maximum depth for child blocks.
-     * If expandRefs is true, any referenced blocks will be fully expanded up to the specified maxDepth.
-     * If expandRefs is false, only the immediate children of the block will be included, without expanding references.
-     * The maxDepth parameter controls how deep the child blocks are fetched in the hierarchy.
-     * If maxDepth is 1, only the immediate children are included. If maxDepth is greater than 1, the function will recursively fetch child blocks up to the specified depth.
+     * Builds a BlockTree for the block with the given id, optionally expanding referenced blocks up to a depth.
      *
-     * @param blockId The UUID of the block to be retrieved.
-     * @param expandRefs Whether to expand referenced blocks or not. Default is false.
-     * @param maxDepth The maximum depth of child blocks to retrieve. Default is 1.
-     *
-     * @return The block tree starting from the specified block, including its children and expanded references as per the parameters.
+     * @param blockId UUID of the root block.
+     * @param expandRefs Whether referenced blocks should be expanded; when true, references are expanded up to maxDepth.
+     * @param maxDepth Maximum depth to traverse for child and (if enabled) referenced blocks; 1 includes only the root's immediate children.
+     * @return A BlockTree containing the root node and metadata (`maxDepth` and `expandRefs`).
      */
     fun getBlock(blockId: UUID, expandRefs: Boolean = false, maxDepth: Int = 1): BlockTree {
         val rootEntity = blockRepository.findById(blockId).orElseThrow()
@@ -181,6 +179,16 @@ class BlockService(
         return BlockTree(maxDepth = if (expandRefs) maxDepth else 1, expandRefs = expandRefs, root = node)
     }
 
+    /**
+     * Constructs a BlockNode for the given BlockEntity, recursively including child nodes up to the specified depth and optionally expanding referenced blocks.
+     *
+     * The function detects cycles and records a warning when a previously visited block is encountered.
+     *
+     * @param entity The root BlockEntity to convert into a BlockNode.
+     * @param depth Maximum recursion depth for including child nodes; when less than or equal to 1 only references are included.
+     * @param visited Mutable set of visited block IDs used for cycle detection; callers should provide and maintain this set across recursion.
+     * @param expand If true, include expanded data for linked references; otherwise include only reference metadata.
+     * @return A BlockNode representing the entity with its children (up to `depth`) and linked references; may contain warnings if a cycle was detected. */
     private fun buildNode(
         entity: BlockEntity,
         depth: Int,
@@ -219,13 +227,11 @@ class BlockService(
     }
 
     /**
-     * This function will update the archival status of a block.
+     * Toggle the archived state of the given block.
      *
-     * @param block The block to be archived or unarchived.
-     * @param archive True to archive the block, false to un-archive it.
-     *
-     * @return The updated block tree starting from the affected block.
-     *
+     * @param block The block whose archived flag will be changed; must belong to the caller's organisation.
+     * @param archive `true` to set the block as archived, `false` to restore it.
+     * @return `true` if the block's archived state was changed, `false` if it was already in the requested state.
      */
     @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
     fun archiveBlock(block: Block, archive: Boolean): Boolean {
@@ -259,17 +265,25 @@ class BlockService(
     }
 
     /**
-     * Deletes a block by its ID.
-     * This will then also delete all child blocks who are not referenced by any other blocks in the system.
+     * Removes the given block and any descendant blocks that are not referenced by other blocks.
      *
-     * @param block The block that is to be delete
-     * @return The number of blocks deleted.
-     */
+     * @param block The root block to delete.
+     * @return The total number of blocks removed.
     fun deleteBlock(block: Block): Int {
         TODO()
     }
 
-    /** Simple deep merge for Map<String, Any?> */
+    /**
+     * Recursively merges two JSON-like maps, producing a new map that combines keys from both.
+     *
+     * Nested maps are merged recursively; when a key exists in both maps and both values are maps,
+     * their entries are merged. For keys where the new value is not a map, the value from
+     * `objectNew` replaces the one from `objectOld`.
+     *
+     * @param objectOld The original map whose entries are used as defaults.
+     * @param objectNew The map with values that override or extend `objectOld`.
+     * @return A new map containing the deep-merged result of `objectOld` and `objectNew`.
+     */
     @Suppress("UNCHECKED_CAST")
     private fun deepMergeJson(objectOld: Map<String, Any?>, objectNew: Map<String, Any?>): Map<String, Any?> {
         val result = objectOld.toMutableMap()

@@ -60,30 +60,42 @@ object FormatValidator {
     )
 
     /**
-     * Validate a value against the given [DataFormat].
+     * Validate a value according to the specified DataFormat.
+     *
+     * If no validator is registered for the format, validation succeeds.
+     *
+     * @param format The DataFormat to validate against.
+     * @param value The value to validate; may be null depending on format rules.
+     * @return `true` if the value conforms to the format or if no validator is registered for the format, `false` otherwise.
      */
     fun validate(format: DataFormat, value: Any?): Boolean {
         return registry[format]?.invoke(value) ?: true // fallback = no validator
     }
 
     /**
-     * Register or override a validator for a [DataFormat].
+     * Adds or replaces the validator associated with a given DataFormat.
+     *
+     * @param format The DataFormat key to register the validator for.
+     * @param validator A function that returns `true` if the provided value satisfies the format, `false` otherwise.
      */
     fun register(format: DataFormat, validator: (Any?) -> Boolean) {
         registry[format] = validator
     }
 
     /**
-     * Remove a validator (use with caution).
+     * Removes the validator associated with the given data format.
+     *
+     * @param format The DataFormat whose validator will be removed from the registry.
      */
     fun unregister(format: DataFormat) {
         registry.remove(format)
     }
 
     /**
-     * Expose all available formats for introspection (useful for debugging).
-     */
+ * Returns the set of data formats currently registered with the validator.
+ *
+ * @return The set of `DataFormat` keys present in the validator registry.
+ */
     fun availableFormats(): Set<DataFormat> = registry.keys
 }
-
 

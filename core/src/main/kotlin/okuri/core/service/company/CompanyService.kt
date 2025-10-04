@@ -23,18 +23,38 @@ class CompanyService(
     private val activityService: ActivityService,
 ) {
 
+    /**
+     * Retrieve all companies for the specified organisation.
+     *
+     * @param organisationId The UUID of the organisation whose companies to retrieve.
+     * @return A list of CompanyEntity objects belonging to the given organisation.
+     * @throws NotFoundException if the organisation or requested resources cannot be found.
+     * @throws IllegalArgumentException if the provided organisationId is invalid.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun getOrganisationCompanies(organisationId: UUID): List<CompanyEntity> {
         return findManyResults { repository.findByOrganisationId(organisationId) }
     }
 
+    /**
+     * Retrieve a company entity by its identifier.
+     *
+     * @return The company entity with the specified id.
+     * @throws NotFoundException if no company with the specified id exists.
+     */
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
     fun getCompanyById(id: UUID): CompanyEntity {
         return findOrThrow { repository.findById(id) }
     }
 
+    /**
+     * Create a new company for the specified organisation.
+     *
+     * @param request Details for the company to create; must include `organisationId` of an existing organisation.
+     * @return The persisted `Company` model with generated identifiers and saved fields.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun createCompany(request: CompanyCreationRequest): Company {
         CompanyEntity(
@@ -60,6 +80,13 @@ class CompanyService(
         }
     }
 
+    /**
+     * Update an existing company using values from the provided company model.
+     *
+     * @param company The company model containing the new field values (the method is pre-authorized using company.organisationId).
+     * @return The updated Company model as persisted.
+     * @throws NotFoundException if no company exists with the given id.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#company.organisationId)")
     fun updateCompany(company: Company): Company {
         findOrThrow { repository.findById(company.id) }.apply {
@@ -85,6 +112,13 @@ class CompanyService(
         }
     }
 
+    /**
+     * Deletes the specified company and records a corresponding activity log.
+     *
+     * Removes the company identified by the provided Company's `id` and logs the delete operation using the company's `organisationId` and the current user's id.
+     *
+     * @param company The company to delete; its `id` is used to remove the record and its `organisationId` is used in the activity log.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#company.organisationId)")
     fun deleteCompany(company: Company) {
         repository.deleteById(company.id).run {
@@ -98,6 +132,13 @@ class CompanyService(
         }
     }
 
+    /**
+     * Sets the archived flag of the given company to the provided value, persists the change, and logs an activity recording the operation.
+     *
+     * @param company The company to archive or unarchive.
+     * @param archive `true` to archive the company, `false` to unarchive it.
+     * @return The updated Company model reflecting the new archived state.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#company.organisationId)")
     fun archiveCompany(company: Company, archive: Boolean): Company {
         findOrThrow { repository.findById(company.id) }.apply {

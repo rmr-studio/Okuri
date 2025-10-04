@@ -27,6 +27,14 @@ class ClientService(
     private val companyService: CompanyService
 ) {
 
+    /**
+     * Retrieve all client entities for the specified organisation.
+     *
+     * @param organisationId UUID of the organisation whose clients should be returned.
+     * @return A list of ClientEntity belonging to the organisation; an empty list if none exist.
+     * @throws NotFoundException if the organisation cannot be found.
+     * @throws IllegalArgumentException if the provided organisationId is invalid.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun getOrganisationClients(organisationId: UUID): List<ClientEntity> {
@@ -34,9 +42,10 @@ class ClientService(
     }
 
     /**
-     * Fetch a client by its ID with post-authorization to ensure the user has access to the client's organisation.
-     * Returns client access entity.
-     * Only used for internal service layer operations. Should not be exposed directly via controller.
+     * Retrieve a ClientEntity by its ID and enforce post-authorization against the entity's organisation.
+     *
+     * @return The found ClientEntity.
+     * @throws NotFoundException if no client with the given ID exists.
      */
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
@@ -45,9 +54,11 @@ class ClientService(
     }
 
     /**
-     * Fetch a client by its ID with post-authorization to ensure the user has access to the client's organisation.
-     * Returns client model, with optional audit metadata.
-     * Used by controller layer to return client data to the user.
+     * Retrieve a client by its ID and enforce organisation access.
+     *
+     * @param audit If `true`, include audit metadata in the returned client model.
+     * @return The client model for the given ID, optionally including audit metadata.
+     * @throws NotFoundException if no client exists with the given ID.
      */
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
@@ -56,6 +67,16 @@ class ClientService(
     }
 
 
+    /**
+     * Creates a new client for the specified organisation and returns the created client model.
+     *
+     * If `client.companyId` is provided, the company is resolved and associated with the new client.
+     * The creation is recorded via ActivityService (CREATE) using the current authenticated user.
+     *
+     * @param client Request object containing organisationId, optional companyId, companyRole, name, and contact information.
+     * @return The created Client model.
+     * @throws NotFoundException if a provided `companyId` does not correspond to an existing company.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun createClient(client: ClientCreationRequest): Client {
         // Fetch associated company if companyId is provided, throw error if not found
@@ -87,6 +108,15 @@ class ClientService(
         }
     }
 
+    /**
+     * Updates an existing client with the provided values, persists the change, and logs an update activity.
+     *
+     * Updates the client's name, contact details, and attributes based on the supplied `client` (identified by its id),
+     * saves the updated entity, and returns the saved client as a model.
+     *
+     * @param client The client model containing the id of the client to update and the new field values.
+     * @return The updated `Client` model reflecting persisted changes.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun updateClient(client: Client): Client {
         TODO()
@@ -109,6 +139,14 @@ class ClientService(
 //        }
     }
 
+    /**
+     * Delete the given client and record the deletion as an activity.
+     *
+     * The client's `id` is used to remove the persisted entity; the action is logged
+     * as an activity tied to the current user and the client's organisation.
+     *
+     * @param client The client to delete; its `id` and `organisationId` are used for deletion and audit logging.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun deleteClient(client: Client) {
         repository.deleteById(client.id).run {
@@ -122,6 +160,13 @@ class ClientService(
         }
     }
 
+    /**
+     * Sets a client's archived state and returns the updated Client model.
+     *
+     * @param client The client to archive or restore.
+     * @param archive `true` to archive the client, `false` to unarchive (restore) it.
+     * @return The updated Client model reflecting the new archived state.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#client.organisationId)")
     fun archiveClient(client: Client, archive: Boolean): Client {
         findOrThrow { repository.findById(client.id) }.apply {

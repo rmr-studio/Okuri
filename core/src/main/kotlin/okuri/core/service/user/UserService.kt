@@ -21,6 +21,13 @@ class UserService(
     private val logger: KLogger
 ) {
 
+    /**
+     * Retrieve the UserEntity for the currently authenticated session.
+     *
+     * @return The UserEntity corresponding to the current session's user ID.
+     * @throws NotFoundException if no user exists for the session user ID.
+     * @throws IllegalArgumentException if an underlying call (repository or auth token service) rejects the input.
+     */
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun getUserFromSession(): UserEntity {
         return authTokenService.getUserId().let {
@@ -30,11 +37,30 @@ class UserService(
         }
     }
 
+    /**
+     * Retrieves the user entity for the given user ID.
+     *
+     * @param id The UUID of the user to retrieve.
+     * @return The UserEntity with the specified ID.
+     * @throws NotFoundException if no user exists with the given ID.
+     */
     @Throws(NotFoundException::class)
     fun getUserById(id: UUID): UserEntity {
         return findOrThrow { repository.findById(id) }
     }
 
+    /**
+     * Update the current session user's profile with the provided user details.
+     *
+     * Validates that the session user ID matches `user.id`, applies the updatable fields to the persisted entity,
+     * saves the entity, and returns the updated model.
+     *
+     * @param user The user model containing updated fields; `user.id` must match the authenticated session user ID.
+     * @return The updated `User` model reflecting persisted changes.
+     * @throws NotFoundException if no persisted user exists with `user.id`.
+     * @throws AccessDeniedException if the session user ID does not match `user.id`.
+     * @throws IllegalArgumentException for invalid arguments propagated from repository operations.
+     */
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     fun updateUserDetails(user: User): User {
         // Validate Session id matches target user
@@ -58,7 +84,12 @@ class UserService(
     }
 
     /**
-     * Transactional given the need to delete all membership entities associated with this user from all related organisations.
+     * Deletes the user identified by [userId] and any associated membership records.
+     *
+     * Ensures the user exists, then removes the user and related membership entities in a single transaction.
+     *
+     * @param userId The UUID of the user to delete.
+     * @throws NotFoundException If no user exists with the given ID.
      */
     @Transactional
     @Throws(NotFoundException::class)
