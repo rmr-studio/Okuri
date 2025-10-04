@@ -41,7 +41,7 @@ class BlockService(
      * @param request The request object containing details for the new block.
      * @return The created block.
      */
-    @PreAuthorize("#organisationSecurity.hasOrg(#request.organisationId)")
+    @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     @Transactional
     fun createBlock(request: CreateBlockRequest): Block {
         // Get Block from specific ID, or Key and version combination
@@ -117,7 +117,7 @@ class BlockService(
      * @param block The block model containing updated information.
      * @return The updated block.
      */
-    @PreAuthorize("#organisationSecurity.hasOrg(#block.organisationId)")
+    @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
     @Transactional
     fun updateBlock(block: Block): Block {
         blockRepository.findById(block.id).orElseThrow().run {
@@ -199,9 +199,11 @@ class BlockService(
             }
 
             val edges = blockReferenceService.findOwnedBlocks(id)
+            // Build children nodes
             val children: Map<String, List<BlockNode>> =
                 edges.mapValues { (_, refs) ->
                     val ids = refs.map { it.entityId }.toSet()
+                    // Bulk fetch all children to avoid N+1
                     val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
                     refs.mapNotNull { ref ->
                         val child = childrenById[ref.entityId] ?: return@mapNotNull null
@@ -225,7 +227,7 @@ class BlockService(
      * @return The updated block tree starting from the affected block.
      *
      */
-    @PreAuthorize("#organisationSecurity.hasOrg(#block.organisationId)")
+    @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
     fun archiveBlock(block: Block, archive: Boolean): Boolean {
         authTokenService.getUserId().let { user ->
             blockRepository.findById(block.id).orElseThrow().let { block ->

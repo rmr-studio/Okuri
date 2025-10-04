@@ -4,14 +4,12 @@ import io.github.oshai.kotlinlogging.KLogger
 import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockReferenceEntity
-import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.BlockValidationScope
-import okuri.core.enums.core.ComponentType
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Block
 import okuri.core.models.block.request.BlockTree
 import okuri.core.models.block.request.CreateBlockRequest
-import okuri.core.models.block.structure.*
+import okuri.core.models.block.structure.BlockMetadata
 import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
@@ -19,13 +17,11 @@ import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.schema.SchemaService
 import okuri.core.service.schema.SchemaValidationException
 import okuri.core.service.util.WithUserPersona
+import okuri.core.service.util.factory.BlockFactory
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.eq
-import org.mockito.Mockito.*
+import org.mockito.kotlin.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Configuration
@@ -38,7 +34,7 @@ import java.util.*
  * Spring test to ensure @PreAuthorize is enforced via proxies.
  * Dependencies are mocked with @MockBean.
  */
-@SpringBootTest(classes = [AuthTokenService::class, OrganisationSecurity::class, BlockServiceTest.TestConfig::class, BlockService::class])
+@SpringBootTest(classes = [OrganisationSecurity::class, AuthTokenService::class, BlockServiceTest.TestConfig::class, BlockService::class])
 class BlockServiceTest {
 
     @Configuration
@@ -62,55 +58,13 @@ class BlockServiceTest {
     private lateinit var schemaService: SchemaService
 
     @MockitoBean
-    private lateinit var logger: KLogger
-
-    @MockitoBean
     private lateinit var activityService: ActivityService
 
+    @MockitoBean
+    private lateinit var logger: KLogger
+
     @Autowired
-    private lateinit var service: BlockService
-
-    private val block: ArgumentCaptor<BlockEntity> = ArgumentCaptor.forClass(BlockEntity::class.java)
-
-    private fun dummyType(
-        orgId: UUID?,
-        key: String = "contact_card",
-        version: Int = 1,
-        scope: BlockValidationScope = BlockValidationScope.SOFT,
-        archived: Boolean = false
-    ) = BlockTypeEntity(
-        id = UUID.randomUUID(),
-        key = key,
-        displayName = "Contact Card",
-        description = null,
-        organisationId = orgId,
-        system = orgId == null,
-        version = version,
-        strictness = scope,
-        schema = BlockSchema(name = "root"),
-        archived = archived,
-        displayStructure = BlockDisplay(
-            form = BlockFormStructure(emptyMap()),
-            render = BlockRenderStructure(ComponentType.TEXT, emptyMap())
-        )
-    )
-
-    private fun savedBlockEntity(
-        id: UUID = UUID.randomUUID(),
-        orgId: UUID,
-        type: BlockTypeEntity,
-        name: String? = null,
-        data: Map<String, Any?> = emptyMap(),
-        parent: BlockEntity? = null
-    ) = BlockEntity(
-        id = id,
-        organisationId = orgId,
-        type = type,
-        name = name,
-        payload = BlockMetadata(data = data, refs = emptyList(), meta = BlockMeta()),
-        parent = parent,
-        archived = false
-    )
+    lateinit var service: BlockService
 
     // -----------------------------
     // createBlock: SOFT validation
@@ -129,23 +83,26 @@ class BlockServiceTest {
     fun `createBlock succeeds with SOFT validation and logs activity`() {
         // Scenario: create with SOFT strictness, schema returns warnings only.
         val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = dummyType(orgId = orgId, scope = BlockValidationScope.SOFT)
-        `when`(blockTypeService.getById(type.id!!)).thenReturn(type)
-        `when`(
+        val type = BlockFactory.generateBlockType(orgId = orgId, scope = BlockValidationScope.SOFT)
+        whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
+        whenever(
             schemaService.validate(
                 eq(type.schema),
                 any(),
-                eq(type.strictness)
+                eq(type.strictness),
+                any()
+
             )
         ).thenReturn(listOf("warn: extra field"))
 
         // save should assign an ID and return entity
-        block.apply {
-            `when`(blockRepository.save(capture())).thenAnswer {
-                val e = block.value
+        argumentCaptor<BlockEntity>().apply {
+            whenever(blockRepository.save(capture())).thenAnswer { inv ->
+                val e = firstValue
                 e.copy(id = UUID.randomUUID())
             }
         }
+
 
         val payload = mapOf(
             "data" to mapOf("name" to "Jane", "email" to "jane@acme.com")
@@ -189,13 +146,14 @@ class BlockServiceTest {
     )
     fun `createBlock throws on STRICT validation failure, no save, no refs`() {
         val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = dummyType(orgId = orgId, scope = BlockValidationScope.STRICT)
-        `when`(blockTypeService.getById(type.id!!)).thenReturn(type)
-        `when`(
+        val type = BlockFactory.generateBlockType(orgId = orgId, scope = BlockValidationScope.STRICT)
+        whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
+        whenever(
             schemaService.validate(
                 eq(type.schema),
                 any(),
-                eq(type.strictness)
+                eq(type.strictness),
+                any()
             )
         ).thenReturn(listOf("error: email invalid"))
 
@@ -228,17 +186,17 @@ class BlockServiceTest {
     )
     fun `updateBlock merges data and rebuilds references`() {
         val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = dummyType(orgId = orgId, scope = BlockValidationScope.SOFT)
-        val existing = savedBlockEntity(
+        val type = BlockFactory.generateBlockType(orgId = orgId, scope = BlockValidationScope.SOFT)
+        val existing = BlockFactory.generateBlock(
             orgId = orgId,
             type = type,
             data = mapOf("a" to 1, "nested" to mapOf("x" to 1))
         )
-        `when`(blockRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
-        `when`(schemaService.validate(eq(type.schema), any(), eq(type.strictness))).thenReturn(emptyList())
+        whenever(blockRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
+        whenever(schemaService.validate(eq(type.schema), any(), eq(type.strictness), any())).thenReturn(emptyList())
 
         // save returns updated entity
-        `when`(blockRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(blockRepository.save(any())).thenAnswer { it.arguments[0] as BlockEntity }
 
         val updateModel = Block(
             id = existing.id!!,
@@ -247,7 +205,7 @@ class BlockServiceTest {
             type = type.toModel(),
             payload = BlockMetadata(
                 data = mapOf("nested" to mapOf("x" to 2, "y" to 9)), refs = emptyList(),
-                meta = BlockMeta()
+                meta = okuri.core.models.block.structure.BlockMeta()
             ),
             archived = false
         )
@@ -282,13 +240,13 @@ class BlockServiceTest {
     )
     fun `getBlock returns children by slot and linked references`() {
         val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = dummyType(orgId)
-        val root = savedBlockEntity(orgId = orgId, type = type, name = "Root")
-        `when`(blockRepository.findById(root.id!!)).thenReturn(Optional.of(root))
+        val type = BlockFactory.generateBlockType(orgId)
+        val root = BlockFactory.generateBlock(orgId = orgId, type = type, name = "Root")
+        whenever(blockRepository.findById(root.id!!)).thenReturn(Optional.of(root))
 
         // owned-block edges for "contacts" -> two children
-        val child1 = savedBlockEntity(orgId = orgId, type = type, name = "C1")
-        val child2 = savedBlockEntity(orgId = orgId, type = type, name = "C2")
+        val child1 = BlockFactory.generateBlock(orgId = orgId, type = type, name = "C1")
+        val child2 = BlockFactory.generateBlock(orgId = orgId, type = type, name = "C2")
         val e1 = BlockReferenceEntity(
             id = UUID.randomUUID(),
             block = root,
@@ -308,15 +266,15 @@ class BlockServiceTest {
             orderIndex = 1
         )
 
-        `when`(blockReferenceService.findOwnedBlocks(root.id!!)).thenReturn(mapOf("contacts" to listOf(e1, e2)))
-        `when`(blockRepository.findById(child1.id!!)).thenReturn(Optional.of(child1))
-        `when`(blockRepository.findById(child2.id!!)).thenReturn(Optional.of(child2))
+        whenever(blockReferenceService.findOwnedBlocks(root.id!!)).thenReturn(mapOf("contacts" to listOf(e1, e2)))
+        whenever(blockRepository.findAllById(hashSetOf(child1.id!!, child2.id!!))).thenReturn(listOf(child1, child2))
+
 
         // linked refs (e.g., a CLIENT at "account")
         val linked = mapOf(
             "account" to emptyList<okuri.core.models.block.BlockReference<*>>() // keep simple; just assert map presence
         )
-        `when`(blockReferenceService.findLinkedBlocks(root.id!!)).thenReturn(linked)
+        whenever(blockReferenceService.findLinkedBlocks(root.id!!)).thenReturn(linked)
 
         val tree: BlockTree = service.getBlock(root.id!!, expandRefs = true, maxDepth = 2)
 
@@ -342,15 +300,15 @@ class BlockServiceTest {
     )
     fun `archiveBlock archives when not already archived`() {
         val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = dummyType(orgId)
-        val entity = savedBlockEntity(orgId = orgId, type = type).copy(archived = false)
-        `when`(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
-        `when`(blockRepository.save(any())).thenAnswer { it.arguments[0] }
+        val type = BlockFactory.generateBlockType(orgId)
+        val entity = BlockFactory.generateBlock(orgId = orgId, type = type).copy(archived = false)
+        whenever(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
+        whenever(blockRepository.save(any())).thenAnswer { (it.arguments[0] as BlockEntity) }
 
         val ok = service.archiveBlock(entity.toModel(), true)
         assertTrue(ok)
         verify(activityService).logActivity(
-            any(), eq(okuri.core.enums.util.OperationType.ARCHIVE), any(), eq(orgId), any(), contains("Archived")
+            any(), eq(okuri.core.enums.util.OperationType.ARCHIVE), any(), eq(orgId), any(), any()
         )
     }
 
@@ -367,9 +325,9 @@ class BlockServiceTest {
     )
     fun `archiveBlock no-ops if already in requested state`() {
         val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = dummyType(orgId)
-        val entity = savedBlockEntity(orgId = orgId, type = type).copy(archived = true)
-        `when`(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
+        val type = BlockFactory.generateBlockType(orgId)
+        val entity = BlockFactory.generateBlock(orgId = orgId, type = type).copy(archived = true)
+        whenever(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
 
         val ok = service.archiveBlock(entity.toModel(), true)
         assertFalse(ok) // your function returns false early

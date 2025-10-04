@@ -4,7 +4,7 @@ import okuri.core.entity.user.UserEntity
 import java.time.ZonedDateTime
 import java.util.*
 
-object MockUserEntityFactory {
+object UserFactory {
 
     fun createUser(
         id: UUID = UUID.randomUUID(),

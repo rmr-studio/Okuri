@@ -15,13 +15,11 @@ import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.util.OrganisationRole
 import okuri.core.service.util.WithUserPersona
-import okuri.core.service.util.factory.MockOrganisationEntityFactory
-import okuri.core.service.util.factory.MockUserEntityFactory
+import okuri.core.service.util.factory.OrganisationFactory
+import okuri.core.service.util.factory.UserFactory
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Configuration
@@ -90,7 +88,7 @@ class OrganisationInviteServiceTest {
 
         val targetEmail: String = "email2@email.com"
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = "email@email.com"
@@ -102,7 +100,7 @@ class OrganisationInviteServiceTest {
         )
 
 
-        val member: OrganisationMemberEntity = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMemberEntity = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.ADMIN
@@ -114,19 +112,19 @@ class OrganisationInviteServiceTest {
         }
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
             members = mutableSetOf(member)
         )
 
         // Organisation that the user is a developer of, so should not have any permissions to invite users to
-        val organisation2: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation2: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId2,
             name = "Test Organisation 2"
         )
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = targetEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -171,7 +169,7 @@ class OrganisationInviteServiceTest {
         // Test setup for a user trying to create an invitation for an email that is already a member of the organisation
         val targetEmail: String = "email@email.com"
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = "email@email.com"
@@ -182,7 +180,7 @@ class OrganisationInviteServiceTest {
             userId = userId
         )
 
-        val member: OrganisationMemberEntity = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMemberEntity = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.ADMIN
@@ -194,7 +192,7 @@ class OrganisationInviteServiceTest {
         }
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
             members = mutableSetOf(member)
@@ -246,18 +244,18 @@ class OrganisationInviteServiceTest {
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
         )
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = userEmail
         )
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -305,18 +303,18 @@ class OrganisationInviteServiceTest {
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
         )
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = userEmail
         )
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -360,7 +358,7 @@ class OrganisationInviteServiceTest {
         val userEmail = "email2@email.com"
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -386,7 +384,7 @@ class OrganisationInviteServiceTest {
         val userEmail = "email@email.com"
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -416,7 +414,7 @@ class OrganisationInviteServiceTest {
     fun `handle rejection if trying to revoke an invitation that is not pending`() {
         val userEmail = "email@email.com"
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -449,7 +447,7 @@ class OrganisationInviteServiceTest {
     fun `handle rejection if trying to revoke an invitation with invalid permissions`() {
         val userEmail = "email@email.com"
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,

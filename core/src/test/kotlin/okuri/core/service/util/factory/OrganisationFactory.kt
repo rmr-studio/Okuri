@@ -8,7 +8,7 @@ import okuri.core.enums.organisation.OrganisationInviteStatus
 import okuri.core.enums.organisation.OrganisationRoles
 import java.util.*
 
-object MockOrganisationEntityFactory {
+object OrganisationFactory {
 
     fun createOrganisation(
         id: UUID = UUID.randomUUID(),

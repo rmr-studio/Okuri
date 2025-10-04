@@ -16,13 +16,11 @@ import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.user.UserService
 import okuri.core.service.util.OrganisationRole
 import okuri.core.service.util.WithUserPersona
-import okuri.core.service.util.factory.MockOrganisationEntityFactory
-import okuri.core.service.util.factory.MockUserEntityFactory
+import okuri.core.service.util.factory.OrganisationFactory
+import okuri.core.service.util.factory.UserFactory
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Configuration
@@ -88,7 +86,7 @@ class OrganisationServiceTest {
 
     @Test
     fun `handle organisation fetch with appropriate permissions`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
@@ -101,7 +99,7 @@ class OrganisationServiceTest {
 
     @Test
     fun `handle organisation fetch without required organisation`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             // This is the organisation the user does not have access to
             id = organisationId3,
             name = "Test Organisation 3",
@@ -116,7 +114,7 @@ class OrganisationServiceTest {
 
     @Test
     fun `handle organisation invocation without required permission`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             // This is the organisation the user is not the owner of
             id = organisationId2,
             name = "Test Organisation 2",
@@ -148,7 +146,7 @@ class OrganisationServiceTest {
 
     @Test
     fun `handle organisation invocation with required permissions`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             // This is the organisation the user is the owner of
             id = organisationId1,
             name = "Test Organisation 1",
@@ -198,12 +196,12 @@ class OrganisationServiceTest {
         ]
     )
     fun `handle self removal from organisation`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             id = userId,
         )
 
@@ -212,7 +210,7 @@ class OrganisationServiceTest {
             userId = userId
         )
 
-        val member: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.ADMIN
@@ -238,12 +236,12 @@ class OrganisationServiceTest {
 
     @Test
     fun `handle rejecting removal of member who has ownership permissions`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             id = userId,
         )
 
@@ -252,7 +250,7 @@ class OrganisationServiceTest {
             userId = userId
         )
 
-        val member: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.OWNER
@@ -276,14 +274,14 @@ class OrganisationServiceTest {
 
     @Test
     fun `handle member removal invocation with correct permissions`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
 
         val targetUserId = UUID.randomUUID()
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUserId,
         )
@@ -293,7 +291,7 @@ class OrganisationServiceTest {
             userId = targetUserId
         )
 
-        val member: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.MEMBER
@@ -329,14 +327,14 @@ class OrganisationServiceTest {
         ]
     )
     fun `handle member removal invocation with incorrect permissions`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
 
         val targetUserId = UUID.randomUUID()
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUserId,
         )
@@ -346,7 +344,7 @@ class OrganisationServiceTest {
             userId = targetUserId
         )
 
-        val member: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.ADMIN
@@ -378,14 +376,14 @@ class OrganisationServiceTest {
         ]
     )
     fun `handle member role update with incorrect positions`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
 
         val targetUserId = UUID.randomUUID()
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUserId,
         )
@@ -395,7 +393,7 @@ class OrganisationServiceTest {
             userId = targetUserId
         )
 
-        val member: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.MEMBER
@@ -428,7 +426,7 @@ class OrganisationServiceTest {
         ]
     )
     fun `handle member role update as an admin`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
@@ -437,17 +435,17 @@ class OrganisationServiceTest {
         val targetUser2Id = UUID.randomUUID()
         val targetUser3Id = UUID.randomUUID()
 
-        val user1: UserEntity = MockUserEntityFactory.createUser(
+        val user1: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUserId,
         )
 
-        val user2: UserEntity = MockUserEntityFactory.createUser(
+        val user2: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUser2Id,
         )
 
-        val user3: UserEntity = MockUserEntityFactory.createUser(
+        val user3: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUser3Id,
         )
@@ -467,7 +465,7 @@ class OrganisationServiceTest {
             userId = targetUser3Id
         )
 
-        val memberDeveloper: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val memberDeveloper: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user1,
             role = OrganisationRoles.MEMBER
@@ -479,7 +477,7 @@ class OrganisationServiceTest {
             it.toModel()
         }
 
-        val memberAdmin: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val memberAdmin: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user2,
             role = OrganisationRoles.ADMIN
@@ -492,7 +490,7 @@ class OrganisationServiceTest {
         }
 
 
-        val memberOwner: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val memberOwner: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user3,
             role = OrganisationRoles.OWNER
@@ -543,7 +541,7 @@ class OrganisationServiceTest {
         ]
     )
     fun `handle member role update as an owner`() {
-        val entity: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val entity: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation",
         )
@@ -551,12 +549,12 @@ class OrganisationServiceTest {
         val targetUserId = UUID.randomUUID()
         val targetUser2Id = UUID.randomUUID()
 
-        val user1: UserEntity = MockUserEntityFactory.createUser(
+        val user1: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUserId,
         )
 
-        val user2: UserEntity = MockUserEntityFactory.createUser(
+        val user2: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = targetUser2Id,
         )
@@ -571,7 +569,7 @@ class OrganisationServiceTest {
             userId = targetUser2Id
         )
 
-        val memberDeveloper: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val memberDeveloper: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user1,
             role = OrganisationRoles.MEMBER
@@ -583,7 +581,7 @@ class OrganisationServiceTest {
             it.toModel()
         }
 
-        val memberAdmin: OrganisationMember = MockOrganisationEntityFactory.createOrganisationMember(
+        val memberAdmin: OrganisationMember = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user2,
             role = OrganisationRoles.ADMIN
