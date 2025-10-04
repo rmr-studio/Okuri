@@ -131,32 +131,4 @@ fun BlockSchema.toJsonSchema(
     }
 }
 
-/**
- * Convert a JsonNode representing a JSON Schema into a BlockSchema.
- * This is so we can easily import JSON Schemas from external sources.
- */
-fun JsonNode.toBlockSchema(): BlockSchema {
-    val type = this["type"]?.asText()?.let { DataType.valueOf(it.uppercase()) } ?: DataType.OBJECT
-    val format = this["format"]?.asText()?.let {
-        DataFormat.entries.find { f -> f.jsonValue == it }
-    }
-
-    val props = this["properties"]?.properties()?.asSequence()?.map { (k, v) ->
-        k to v.toBlockSchema()
-    }?.toMap()
-
-    val required = this["required"]?.map { it.asText() }?.toSet() ?: emptySet()
-
-    return BlockSchema(
-        name = this["title"]?.asText() ?: "Unnamed",
-        description = this["description"]?.asText(),
-        type = type,
-        format = format,
-        required = false, // handled via required list
-        properties = props?.mapValues { (k, v) ->
-            v.copy(required = required.contains(k))
-        },
-        items = this["items"]?.toBlockSchema()
-    )
-}
 

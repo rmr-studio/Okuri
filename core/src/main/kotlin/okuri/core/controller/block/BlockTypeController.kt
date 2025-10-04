@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.service.block.BlockTypeService
@@ -29,7 +30,7 @@ class BlockTypeController(
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
         ApiResponse(responseCode = "400", description = "Invalid request data")
     )
-    fun publishBlockType(@RequestBody request: CreateBlockTypeRequest): ResponseEntity<BlockType> {
+    fun publishBlockType(@Valid @RequestBody request: CreateBlockTypeRequest): ResponseEntity<BlockType> {
         val entity = blockTypeService.publishBlockType(request)
         return ResponseEntity.status(HttpStatus.CREATED).body(entity)
     }
@@ -107,5 +108,5 @@ class BlockTypeController(
         val blockTypes = blockTypeService.getBlockTypes(organisationId)
         return ResponseEntity.ok(blockTypes)
     }
-    
+
 }

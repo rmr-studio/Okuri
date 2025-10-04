@@ -190,7 +190,7 @@ class BlockService(
         val id = requireNotNull(entity.id) { "Block ID cannot be null" }
         entity.toModel().let { block ->
             if (depth <= 1) {
-                val links = blockReferenceService.findLinkedBlocks(id)
+                val links = blockReferenceService.findLinkedBlocks(id, expand)
                 return BlockNode(block = block, references = links)
             }
 

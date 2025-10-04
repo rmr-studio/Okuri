@@ -275,6 +275,29 @@ CREATE TABLE entity_blocks
     UNIQUE (entity_id, entity_type, key)
 );
 
+-- RLS scoped by parent block's organisation
+ALTER TABLE public.entity_blocks
+    ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "entity_blocks_select_by_org" ON public.entity_blocks
+    FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1
+                   FROM public.blocks b
+                   WHERE b.id = block_id
+                     AND b.organisation_id IN
+                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
+CREATE POLICY "entity_blocks_write_by_org" ON public.entity_blocks
+    FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1
+                   FROM public.blocks b
+                   WHERE b.id = block_id
+                     AND b.organisation_id IN
+                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1
+                        FROM public.blocks b
+                        WHERE b.id = block_id
+                          AND b.organisation_id IN
+                              (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
+
 CREATE INDEX IF NOT EXISTS idx_blocks_references_block ON block_references (block_id);
 CREATE INDEX IF NOT EXISTS idx_block_references_entity ON block_references (entity_type, entity_id);;
 CREATE INDEX IF NOT EXISTS idx_block_references_path_order ON block_references (path, order_index);
@@ -323,6 +346,25 @@ CREATE TABLE IF NOT EXISTS template
 
 CREATE INDEX idx_template_organisation_id ON template (organisation_id);
 
+drop table if exists public.companies cascade;
+create table if not exists public.companies
+(
+    "id"              uuid primary key not null default uuid_generate_v4(),
+    "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
+    "name"            varchar(100)     not null,
+    "address"         jsonb,
+    "phone"           varchar(15),
+    "email"           varchar(100),
+    "website"         varchar(100),
+    "business_number" varchar(50),
+    "logo_url"        text,
+    "archived"        boolean          not null default false,
+    "created_at"      timestamp with time zone  default current_timestamp,
+    "updated_at"      timestamp with time zone  default current_timestamp,
+    "created_by"      uuid,
+    "updated_by"      uuid
+);
+
 -- Clients
 drop table if exists public.clients cascade;
 create table if not exists public.clients
@@ -341,24 +383,7 @@ create table if not exists public.clients
     "updated_by"      uuid
 );
 
-drop table if exists public.companies;
-create table if not exists public.companies
-(
-    "id"              uuid primary key not null default uuid_generate_v4(),
-    "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
-    "name"            varchar(100)     not null,
-    "address"         jsonb,
-    "phone"           varchar(15),
-    "email"           varchar(100),
-    "website"         varchar(100),
-    "business_number" varchar(50),
-    "logo_url"        text,
-    "archived"        boolean          not null default false,
-    "created_at"      timestamp with time zone  default current_timestamp,
-    "updated_at"      timestamp with time zone  default current_timestamp,
-    "created_by"      uuid,
-    "updated_by"      uuid
-);
+
 
 create index if not exists idx_company_organisation_id
     on public.companies (organisation_id);

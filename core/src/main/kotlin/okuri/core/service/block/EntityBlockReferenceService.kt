@@ -15,8 +15,12 @@ import java.util.*
 class EntityBlockReferenceService(
     private val entityBlockReferenceRepository: EntityBlockReferenceRepository
 ) {
-    fun attachBlock(request: AttachBlockRequest) {}
-    fun detachBlock(request: DetachBlockRequest) {}
+    fun attachBlock(request: AttachBlockRequest) {
+        TODO()
+    }
+    fun detachBlock(request: DetachBlockRequest) {
+        TODO()
+    }
     fun getBlocksForRoot(
         entityId: UUID,
         entityType: EntityType,

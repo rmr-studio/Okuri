@@ -42,14 +42,14 @@ data class BlockNode(
  *         {
  *           "block": { "id": "c9f9...", "type": {"key":"address"}, "payload": { "data": {...}, "refs": [...], "meta": {...} } },
  *           "children": {},
- *           "links": {}
+ *           "references": {}
  *         }
  *       ],
  *       "contacts": [
- *         { "block": { "...": "..." }, "children": {}, "links": {} }
+ *         { "block": { "...": "..." }, "children": {}, "references": {} }
  *       ]
  *     },
- *     "links": {
+ *     "references": {
  *       "primaryAddress": [
  *         { "entityType": "CLIENT", "entityId":"e1a2...", "entity": { "id":"e1a2...", "name":"Acme Pty Ltd"} }
  *       ]

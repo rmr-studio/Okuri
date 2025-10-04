@@ -111,11 +111,20 @@ class SchemaServiceTest {
 
         assertTrue(resultsValid[BlockValidationScope.STRICT]!!.isEmpty())
 
+        // NONE sees no issues
+        assertTrue(resultsInvalid[BlockValidationScope.NONE]!!.isEmpty())
+
         // STRICT sees only type mismatch
         assertTrue(resultsInvalid[BlockValidationScope.STRICT]!!.any { it.contains("array") })
 
         // SOFT sees deeper issues too
         assertTrue(resultsInvalid[BlockValidationScope.SOFT]!!.any { it.contains("phone") })
+        assertTrue(resultsInvalid[BlockValidationScope.SOFT]!!.any { it.contains("name") })
+
+        // STRICT should not see "phone" or "name" errors because it stops at type mismatch
+        assertFalse(resultsInvalid[BlockValidationScope.STRICT]!!.any { it.contains("phone") })
+        assertFalse(resultsInvalid[BlockValidationScope.STRICT]!!.any { it.contains("name") })
+
     }
 
     // ---------------------------------------------------
