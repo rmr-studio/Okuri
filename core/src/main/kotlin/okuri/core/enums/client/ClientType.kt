@@ -1,4 +1,4 @@
-package okuri.core.enums.block.client
+package okuri.core.enums.client
 
 enum class ClientType {
     PROSPECT,

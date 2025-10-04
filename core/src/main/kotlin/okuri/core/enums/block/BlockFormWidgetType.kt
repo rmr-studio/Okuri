@@ -1,6 +1,6 @@
 package okuri.core.enums.block
 
-enum class FormWidgetType {
+enum class BlockFormWidgetType {
     TEXT_INPUT,
     NUMBER_INPUT,
     CHECKBOX,

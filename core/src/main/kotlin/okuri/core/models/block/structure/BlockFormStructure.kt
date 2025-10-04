@@ -1,6 +1,6 @@
 package okuri.core.models.block.structure
 
-import okuri.core.enums.block.FormWidgetType
+import okuri.core.enums.block.BlockFormWidgetType
 
 /**
  * Defines per-field widget configuration for a form.
@@ -62,7 +62,7 @@ data class BlockFormStructure(
  * @property options     Optional list of options (only relevant for widgets like dropdowns, radios, checkboxes).
  */
 data class FormWidgetConfig(
-    val type: FormWidgetType,
+    val type: BlockFormWidgetType,
     val label: String,
     val description: String? = null,
     val tooltip: String? = null,
