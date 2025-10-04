@@ -2,6 +2,7 @@ package okuri.core.entity.block
 
 
 import jakarta.persistence.*
+import okuri.core.entity.client.ClientEntity
 import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.BlockReference
@@ -53,9 +54,21 @@ data class BlockReferenceEntity(
      * Convert BlockReferenceEntity to BlockReference model, given the associated entity
      * of type T has been fetched, and matches the associated entity type declared in entityType.
      */
-    fun <T : Referenceable<E>, E : Any> toModel(entity: T?): BlockReference<*> {
-        requireNotNull(entity) { "Associated entity cannot be null when converting to model" }
+    fun <T : Referenceable<E>, E : Any?> toModel(entity: T?): BlockReference<*> {
         val id = requireNotNull(this.id) { "BlockReferenceEntity ID cannot be null when converting to model" }
+        val blockId = requireNotNull(this.block.id) { "Block ID cannot be null when converting to model" }
+
+        if (entity == null) {
+            return BlockReference(
+                id = id,
+                entityType = this.entityType,
+                blockId = blockId,
+                entityId = this.entityId,
+                ownership = this.ownership,
+                path = this.path,
+                entity = null
+            )
+        }
 
         when (this.entityType) {
             EntityType.BLOCK -> {
@@ -65,24 +78,30 @@ data class BlockReferenceEntity(
                 // Convert to model
                 return BlockReference(
                     id = id,
-                    block = this.block.toModel(),
                     entityType = this.entityType,
                     entityId = this.entityId,
-                    entity = entity.toReference()
+                    entity = entity.toReference(),
+                    ownership = this.ownership,
+                    path = this.path,
+                    orderIndex = this.orderIndex,
+                    blockId = blockId
                 )
             }
 
             EntityType.CLIENT -> {
-                if (entity !is okuri.core.entity.client.ClientEntity) {
+                if (entity !is ClientEntity) {
                     throw IllegalArgumentException("Expected entity of type ClientEntity for EntityType.CLIENT")
                 }
                 // Convert to model
                 return BlockReference(
                     id = id,
-                    block = this.block.toModel(),
                     entityType = this.entityType,
                     entityId = this.entityId,
-                    entity = entity.toReference()
+                    entity = entity.toReference(),
+                    ownership = this.ownership,
+                    path = this.path,
+                    orderIndex = this.orderIndex,
+                    blockId = blockId
                 )
             }
 

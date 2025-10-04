@@ -10,5 +10,7 @@ data class BlockReference<E>(
     val entityId: UUID,
     val entity: E?,
     val ownership: BlockOwnership,
+    val blockId: UUID,
+    val orderIndex: Int? = null,
     val path: String,
 )

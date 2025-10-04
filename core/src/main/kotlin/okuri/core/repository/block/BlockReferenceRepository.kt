@@ -13,4 +13,6 @@ interface BlockReferenceRepository : JpaRepository<BlockReferenceEntity, UUID> {
         ownership: BlockOwnership,
         entityType: EntityType = EntityType.BLOCK
     ): List<BlockReferenceEntity>
+
+    fun findByBlockIdOrderByPathAscOrderIndexAsc(blockId: UUID): List<BlockReferenceEntity>
 }

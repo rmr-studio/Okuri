@@ -190,7 +190,7 @@ class BlockService(
                 return BlockNode(block = block, warnings = listOf("Cycle detected at ${block.id}"))
             }
 
-            val edges = blockReferenceService.findEdgesForBlock(id)
+            val edges = blockReferenceService.findOwnedBlocks(id)
             val children: Map<String, List<BlockNode>> =
                 edges.mapValues { (_, refs) ->
                     refs.mapNotNull { ref ->
@@ -198,6 +198,8 @@ class BlockService(
                         buildNode(child, depth - 1, visited)
                     }
                 }
+
+            val links = blockReferenceService.findLinkedBlocks(id)
 
             visited.remove(id)
             return BlockNode(block = block, children = children)
