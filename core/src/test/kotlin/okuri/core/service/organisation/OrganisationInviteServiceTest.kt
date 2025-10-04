@@ -1,15 +1,7 @@
 package okuri.core.service.organisation
 
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.security.access.AccessDeniedException
-import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.bean.override.mockito.MockitoBean
+import io.github.oshai.kotlinlogging.KLogger
+import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.OrganisationInviteEntity
 import okuri.core.entity.organisation.OrganisationMemberEntity
@@ -19,17 +11,40 @@ import okuri.core.enums.organisation.OrganisationRoles
 import okuri.core.exceptions.ConflictException
 import okuri.core.repository.organisation.OrganisationInviteRepository
 import okuri.core.repository.organisation.OrganisationMemberRepository
-import okuri.core.repository.organisation.OrganisationRepository
+import okuri.core.service.activity.ActivityService
+import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.util.OrganisationRole
 import okuri.core.service.util.WithUserPersona
 import okuri.core.service.util.factory.MockOrganisationEntityFactory
 import okuri.core.service.util.factory.MockUserEntityFactory
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.Mockito
+import org.mockito.junit.jupiter.MockitoExtension
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 
-@SpringBootTest
-@ExtendWith(MockitoExtension::class)
-@ActiveProfiles("test")
+@SpringBootTest(
+    classes = [
+        OrganisationSecurity::class,
+        AuthTokenService::class,
+        OrganisationInviteServiceTest.TestConfig::class,
+        OrganisationInviteService::class,
+    ]
+)
 class OrganisationInviteServiceTest {
+
+    @Configuration
+    @EnableMethodSecurity(prePostEnabled = true)
+    @Import(OrganisationSecurity::class)
+    class TestConfig
 
     private val userId: UUID = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
 
@@ -41,13 +56,19 @@ class OrganisationInviteServiceTest {
     private lateinit var organisationInviteService: OrganisationInviteService
 
     @MockitoBean
-    private lateinit var organisationRepository: OrganisationRepository
-
-    @MockitoBean
     private lateinit var organisationMemberRepository: OrganisationMemberRepository
 
     @MockitoBean
     private lateinit var organisationInviteRepository: OrganisationInviteRepository
+
+    @MockitoBean
+    private lateinit var organisationService: OrganisationService
+
+    @MockitoBean
+    private lateinit var activityService: ActivityService
+
+    @MockitoBean
+    private lateinit var logger: KLogger
 
     @Test
     @WithUserPersona(
@@ -112,8 +133,6 @@ class OrganisationInviteServiceTest {
             invitedBy = userId,
         )
 
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
-        Mockito.`when`(organisationRepository.findById(organisationId2)).thenReturn(Optional.of(organisation2))
         Mockito.`when`(organisationMemberRepository.findByIdOrganisationId(organisationId1))
             .thenReturn(organisation1.members.toList())
         Mockito.`when`(organisationInviteRepository.save(Mockito.any<OrganisationInviteEntity>()))
@@ -181,8 +200,6 @@ class OrganisationInviteServiceTest {
             members = mutableSetOf(member)
         )
 
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
-
         Mockito.`when`(organisationMemberRepository.findByIdOrganisationId(organisationId1))
             .thenReturn(organisation1.members.toList())
 
@@ -247,7 +264,6 @@ class OrganisationInviteServiceTest {
             token = token,
         )
 
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
         Mockito.`when`(organisationInviteRepository.findByToken(token)).thenReturn(Optional.of(inviteEntity))
         Mockito.`when`(organisationInviteRepository.save(Mockito.any<OrganisationInviteEntity>()))
             .thenReturn(inviteEntity.let {
@@ -270,7 +286,11 @@ class OrganisationInviteServiceTest {
 
         organisationInviteService.handleInvitationResponse(token, accepted = true)
         Mockito.verify(organisationInviteRepository).save(Mockito.any<OrganisationInviteEntity>())
-        Mockito.verify(organisationMemberRepository).save(Mockito.any<OrganisationMemberEntity>())
+        Mockito.verify(organisationService).addMemberToOrganisation(
+            organisationId = organisationId1,
+            userId = userId,
+            role = OrganisationRoles.MEMBER
+        )
     }
 
     @Test
@@ -303,7 +323,6 @@ class OrganisationInviteServiceTest {
             token = token,
         )
 
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
         Mockito.`when`(organisationInviteRepository.findByToken(token)).thenReturn(Optional.of(inviteEntity))
         Mockito.`when`(organisationInviteRepository.save(Mockito.any<OrganisationInviteEntity>()))
             .thenReturn(inviteEntity.let {

@@ -69,84 +69,90 @@ class SchemaService(
         scope: BlockValidationScope,
         acc: MutableList<String> = mutableListOf()
     ): List<String> {
-        val errors = acc
 
         fun maybeStop() {
-            if (errors.size >= MAX_ERRORS) return
+            if (acc.size >= MAX_ERRORS) return
         }
 
         if (payload == null) {
-            if (schema.required) errors += "Missing required value at $path"
-            return errors
+            if (schema.type != DataType.NULL)
+                acc += "Invalid type at $path: expected ${schema.type.name.lowercase()}, got null"
+
+            if (schema.required) acc += "Missing required value at $path"
+            return acc
+        } else {
+            if (schema.type == DataType.NULL) {
+                acc += "Invalid type at $path: expected null, got ${payload::class.simpleName}"
+                return acc
+            }
         }
 
         when (schema.type) {
             DataType.OBJECT -> {
                 val mapPayload = payload as? Map<*, *>
                 if (mapPayload == null) {
-                    errors += "Invalid type at $path: expected object, got ${payload::class.simpleName}"
+                    acc += "Invalid type at $path: expected object, got ${payload::class.simpleName}"
                     // Helpful but non-noisy: surface required keys, don’t recurse formats
-                    schema.properties?.forEach { (k, v) -> if (v.required) errors += "Missing required value at $path/$k" }
-                    return errors
+                    schema.properties?.forEach { (k, v) -> if (v.required) acc += "Missing required value at $path/$k" }
+                    return acc
                 }
                 schema.properties?.forEach { (key, childSchema) ->
                     maybeStop()
                     val value = mapPayload[key]
-                    validateRecursive(childSchema, value, "$path/$key", scope, errors)
+                    validateRecursive(childSchema, value, "$path/$key", scope, acc)
                 }
             }
 
             DataType.ARRAY -> {
                 val listPayload = payload as? List<*>
                 if (listPayload == null) {
-                    errors += "Invalid type at $path: expected array, got ${payload::class.simpleName}"
+                    acc += "Invalid type at $path: expected array, got ${payload::class.simpleName}"
                     // SOFT guardrail: if this *looks like* a single item of the array, validate it once
                     if (scope == BlockValidationScope.SOFT && schema.items != null &&
                         looksLikeSingleItem(schema.items, payload)
                     ) {
-                        validateRecursive(schema.items, payload, "$path[0?] (soft single-item check)", scope, errors)
+                        validateRecursive(schema.items, payload, "$path[0?] (soft single-item check)", scope, acc)
                     }
-                    return errors
+                    return acc
                 }
                 val itemSchema = schema.items
                 if (itemSchema != null) {
                     listPayload.forEachIndexed { idx, item ->
                         maybeStop()
-                        validateRecursive(itemSchema, item, "$path[$idx]", scope, errors)
+                        validateRecursive(itemSchema, item, "$path[$idx]", scope, acc)
                     }
                 }
             }
 
             DataType.STRING -> {
                 if (payload !is String) {
-                    errors += "Invalid type at $path: expected string, got ${payload::class.simpleName}"
-                    return errors
+                    acc += "Invalid type at $path: expected string, got ${payload::class.simpleName}"
+                    return acc
                 }
-                validateStringFormat(schema, payload, path)?.let { errors += it }
+                validateStringFormat(schema, payload, path)?.let { acc += it }
             }
 
             DataType.NUMBER -> {
                 if (payload !is Number) {
-                    errors += "Invalid type at $path: expected number, got ${payload::class.simpleName}"
-                    return errors
+                    acc += "Invalid type at $path: expected number, got ${payload::class.simpleName}"
+                    return acc
                 }
-                validateNumberFormat(schema, payload.toDouble(), path)?.let { errors += it }
+                validateNumberFormat(schema, payload.toDouble(), path)?.let { acc += it }
             }
 
             DataType.BOOLEAN -> {
                 if (payload !is Boolean) {
-                    errors += "Invalid type at $path: expected boolean, got ${payload::class.simpleName}"
+                    acc += "Invalid type at $path: expected boolean, got ${payload::class.simpleName}"
                 }
             }
 
-            DataType.NULL -> {
-                if (payload != null) {
-                    errors += "Invalid type at $path: expected null, got ${payload::class.simpleName}"
-                }
+            else -> {
+                // NULL type already handled above
+
             }
         }
 
-        return errors
+        return acc
     }
 
     private fun looksLikeSingleItem(itemSchema: BlockSchema, payload: Any?): Boolean {

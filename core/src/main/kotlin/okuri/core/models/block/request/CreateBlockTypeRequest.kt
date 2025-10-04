@@ -15,8 +15,6 @@ data class CreateBlockTypeRequest(
     val name: String,
     // An optional description of the block type.
     val description: String?,
-    // The scope of the block type, determining its availability.
-    val scope: BlockTypeScope = BlockTypeScope.ORGANISATION,
     // The validation mode for the block type.
     val mode: BlockValidationScope = BlockValidationScope.SOFT,
     // The schema defining the structure of the block's data.

@@ -141,7 +141,7 @@ fun JsonNode.toBlockSchema(): BlockSchema {
         DataFormat.entries.find { f -> f.jsonValue == it }
     }
 
-    val props = this["properties"]?.fields()?.asSequence()?.map { (k, v) ->
+    val props = this["properties"]?.properties()?.asSequence()?.map { (k, v) ->
         k to v.toBlockSchema()
     }?.toMap()
 

@@ -1,5 +1,7 @@
 package okuri.core.service.organisation
 
+import io.github.oshai.kotlinlogging.KLogger
+import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.OrganisationMemberEntity
 import okuri.core.entity.organisation.toModel
@@ -9,6 +11,9 @@ import okuri.core.models.organisation.Organisation
 import okuri.core.models.organisation.OrganisationMember
 import okuri.core.repository.organisation.OrganisationMemberRepository
 import okuri.core.repository.organisation.OrganisationRepository
+import okuri.core.service.activity.ActivityService
+import okuri.core.service.auth.AuthTokenService
+import okuri.core.service.user.UserService
 import okuri.core.service.util.OrganisationRole
 import okuri.core.service.util.WithUserPersona
 import okuri.core.service.util.factory.MockOrganisationEntityFactory
@@ -20,14 +25,14 @@ import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
 import org.springframework.security.access.AccessDeniedException
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 
-@SpringBootTest
-@ExtendWith(MockitoExtension::class)
-@ActiveProfiles("test")
+@SpringBootTest(classes = [OrganisationSecurity::class, OrganisationServiceTest.TestConfig::class, OrganisationService::class])
 @WithUserPersona(
     userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
     email = "email@email.com",
@@ -45,6 +50,12 @@ import java.util.*
 )
 class OrganisationServiceTest {
 
+    @Configuration
+    @EnableMethodSecurity(prePostEnabled = true)
+    @Import(OrganisationSecurity::class)
+    class TestConfig
+
+
     private val userId: UUID = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
 
     // Two Organisation Ids that belong to the user
@@ -59,6 +70,18 @@ class OrganisationServiceTest {
 
     @MockitoBean
     private lateinit var organisationMemberRepository: OrganisationMemberRepository
+
+    @MockitoBean
+    private lateinit var userService: UserService
+
+    @MockitoBean
+    private lateinit var logger: KLogger
+
+    @MockitoBean
+    private lateinit var activityService: ActivityService
+
+    @MockitoBean
+    private lateinit var authTokenService: AuthTokenService
 
     @Autowired
     private lateinit var organisationService: OrganisationService
