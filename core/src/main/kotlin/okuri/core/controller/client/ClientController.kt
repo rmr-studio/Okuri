@@ -32,6 +32,12 @@ class ClientController(private val clientService: ClientService) {
         return ResponseEntity.ok(clients)
     }
 
+    /**
+     * Retrieves the client identified by the provided ID.
+     *
+     * @param includeMetadata If true, include audit metadata with the returned client.
+     * @return The Client corresponding to the given ID.
+     */
     @GetMapping("/{clientId}")
     @Operation(
         summary = "Get a client by ID",
@@ -85,6 +91,14 @@ class ClientController(private val clientService: ClientService) {
         return ResponseEntity.ok(updatedClient)
     }
 
+    /**
+     * Deletes the client identified by the given UUID.
+     *
+     * Removes the client if the requester is authorized and owns the client.
+     *
+     * @param clientId UUID of the client to delete.
+     * @return Response with HTTP 204 No Content on successful deletion.
+     */
     @DeleteMapping("/{clientId}")
     @Operation(
         summary = "Delete a client by ID",
@@ -103,6 +117,13 @@ class ClientController(private val clientService: ClientService) {
         }
     }
 
+    /**
+     * Updates a client's archived status for the given client ID.
+     *
+     * @param clientId The ID of the client to update.
+     * @param status `true` to mark the client as archived, `false` to mark it as not archived.
+     * @return HTTP 204 No Content when the archival status is updated.
+     */
     @PutMapping("/{clientId}/archive/{status}")
     @Operation(
         summary = "Updates the archival status of a client",

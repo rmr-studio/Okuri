@@ -44,7 +44,12 @@ data class BlockEntity(
     val rowVersion: Long? = null
 ) : AuditableEntity(), Referenceable<Block> {
 
-    override fun toReference() = this.toModel(audit = false)
+    /**
+ * Convert this entity into a lightweight Block reference that omits audit information.
+ *
+ * @return A Block representing this entity with id, organisationId, type, name, payload, and archived populated; audit fields (createdAt, updatedAt, createdBy, updatedBy) are omitted.
+ */
+override fun toReference() = this.toModel(audit = false)
 
     fun toModel(audit: Boolean = false): Block {
         val id = requireNotNull(this.id) { "BlockEntity ID cannot be null when converting to model" }
@@ -64,4 +69,3 @@ data class BlockEntity(
 
 
 }
-

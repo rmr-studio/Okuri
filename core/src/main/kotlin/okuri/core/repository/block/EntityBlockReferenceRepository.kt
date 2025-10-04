@@ -6,5 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.*
 
 interface EntityBlockReferenceRepository : JpaRepository<EntityBlocksReferenceEntity, UUID> {
-    fun findByEntityIdAndEntityType(entityId: UUID, entityType: EntityType): List<EntityBlocksReferenceEntity>
+    /**
+ * Finds all block reference entities for a given entity identifier and type.
+ *
+ * @param entityId The UUID of the entity to filter by.
+ * @param entityType The type of the entity to filter by.
+ * @return A list of EntityBlocksReferenceEntity instances that match the provided `entityId` and `entityType`.
+ */
+fun findByEntityIdAndEntityType(entityId: UUID, entityType: EntityType): List<EntityBlocksReferenceEntity>
 }

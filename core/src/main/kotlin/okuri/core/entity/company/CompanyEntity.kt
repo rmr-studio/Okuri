@@ -51,12 +51,10 @@ data class CompanyEntity(
 ) : AuditableEntity() {
 
     /**
-     * Converts this persistent CompanyEntity to a semi-structured Company model.
+     * Create a Company domain model from this entity.
      *
-     * This would require additional service layer logic to reconstruct a more detailed model
-     * with all metadata and attributes fully populated.
-     *
-     * @return a Company domain model with values copied from this entity.
+     * @param audit If true, include audit metadata (`createdAt`, `updatedAt`, `createdBy`, `updatedBy`); otherwise those fields are null.
+     * @return The Company populated with values copied from this entity.
      * @throws IllegalStateException if `id` is null.
      */
     fun toModel(audit: Boolean = false): Company {

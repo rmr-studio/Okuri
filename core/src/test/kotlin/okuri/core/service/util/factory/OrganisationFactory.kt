@@ -10,6 +10,14 @@ import java.util.*
 
 object OrganisationFactory {
 
+    /**
+     * Creates an OrganisationEntity with the given id, name, and member set.
+     *
+     * @param id The organisation UUID. Defaults to a newly generated UUID.
+     * @param name The organisation name. Defaults to "Test Organisation".
+     * @param members The mutable set of OrganisationMemberEntity to associate with the organisation. Defaults to an empty set.
+     * @return An OrganisationEntity configured with the provided id, name, and members.
+     */
     fun createOrganisation(
         id: UUID = UUID.randomUUID(),
         name: String = "Test Organisation",

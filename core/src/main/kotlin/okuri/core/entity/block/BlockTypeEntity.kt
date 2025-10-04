@@ -72,6 +72,12 @@ data class BlockTypeEntity(
     @Type(JsonBinaryType::class)
     val displayStructure: BlockDisplay,
 ) : AuditableEntity() {
+    /**
+     * Convert this entity into a domain BlockType model.
+     *
+     * @return A BlockType populated with the entity's identifier, metadata, schema, display structure, audit fields, and related properties.
+     * @throws IllegalArgumentException if the entity's `id` is null.
+     */
     fun toModel(): BlockType {
         val id = requireNotNull(this.id) { "BlockTypeEntity ID cannot be null when converting to model" }
 
@@ -96,6 +102,14 @@ data class BlockTypeEntity(
     }
 
     companion object {
+        /**
+         * Creates a BlockTypeEntity from a CreateBlockTypeRequest.
+         *
+         * Populates the entity's key, displayName, description, organisationId, strictness, schema, and displayStructure from the request and ensures `system` is set to `false` (system block types cannot be created via this method).
+         *
+         * @param request The create request whose fields are used to populate the entity.
+         * @return A BlockTypeEntity populated from the request with `system` set to `false`.
+         */
         fun fromRequest(request: CreateBlockTypeRequest): BlockTypeEntity {
             return BlockTypeEntity(
                 key = request.key,
@@ -112,5 +126,4 @@ data class BlockTypeEntity(
         }
     }
 }
-
 

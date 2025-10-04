@@ -49,15 +49,20 @@ data class ClientEntity(
     var type: ClientType? = null,
 
     ) : AuditableEntity(), Referenceable<Client> {
-    override fun toReference() = this.toModel()
+    /**
+ * Creates a Client domain reference from this entity.
+ *
+ * @return A Client model representing this entity's reference data.
+ */
+override fun toReference() = this.toModel()
 
     /**
-     * Converts this persistent ClientEntity to a semi-structured Client model.
+     * Converts this persistent ClientEntity into a Client domain model.
      *
-     * This would require additional service layer logic to reconstruct a more detailed model
-     * with all metadata and attributes fully populated.
+     * When `audit` is true, audit fields (`createdAt`, `updatedAt`, `createdBy`, `updatedBy`) are populated; otherwise they are null.
      *
-     * @return a Client domain model with values copied from this entity.
+     * @param audit Whether to include audit fields in the resulting model.
+     * @return A Client model populated from this entity.
      * @throws IllegalStateException if `id` is null.
      */
     fun toModel(audit: Boolean = false): Client {
@@ -77,4 +82,3 @@ data class ClientEntity(
     }
 
 }
-

@@ -51,8 +51,15 @@ data class BlockReferenceEntity(
     val orderIndex: Int? = null
 ) {
     /**
-     * Convert BlockReferenceEntity to BlockReference model, given the associated entity
-     * of type T has been fetched, and matches the associated entity type declared in entityType.
+     * Convert this persistence entity into a BlockReference model instance.
+     *
+     * When `entity` is null the resulting BlockReference contains no resolved `entity` reference;
+     * when `entity` is provided it must match `entityType` (currently supports `EntityType.BLOCK` and `EntityType.CLIENT`)
+     * and will be included as a reference in the resulting model.
+     *
+     * @param entity The resolved referenced entity (may be null). Must implement `Referenceable` and match `entityType` when non-null.
+     * @return A BlockReference populated from this entity, including `ownership`, `path`, and `orderIndex` when available.
+     * @throws IllegalArgumentException if this entity's `id` or associated `block.id` is null, if a non-null `entity` does not match the declared `entityType`, or if `entityType` is unsupported.
      */
     fun <T : Referenceable<E>, E : Any?> toModel(entity: T?): BlockReference<*> {
         val id = requireNotNull(this.id) { "BlockReferenceEntity ID cannot be null when converting to model" }
@@ -117,5 +124,4 @@ data class BlockReferenceEntity(
     }
 
 }
-
 

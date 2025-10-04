@@ -39,14 +39,28 @@ data class BlockSchema(
 )
 
 /**
- * Convert internal BlockSchema to a JSON Schema 2019-09 Map.
- * - `allowAdditionalProperties` controls object additionalProperties.
- * - Lifts per-field `required=true` into parent "required".
- * - Emits unions (e.g., PERCENTAGE accepts number [0..1] OR string "..%").
+ * Produce a JSON Schema (Draft 2019-09) representation of this BlockSchema as a Map.
+ *
+ * Lifts per-field `required = true` into parent `required` arrays and emits a union schema for percentage-formatted fields
+ * (accepting either a number in [0, 1] or a percent string).
+ *
+ * @param allowAdditionalProperties When true, object schemas will include `additionalProperties: true`; when false, they will include `additionalProperties: false`.
+ * @return A Map<String, Any> representing the equivalent JSON Schema fragment for this BlockSchema.
  */
 fun BlockSchema.toJsonSchema(
     allowAdditionalProperties: Boolean
 ): Map<String, Any> {
+    /**
+     * Convert a BlockSchema into a JSON Schema (draft 2019-09) fragment represented as a map.
+     *
+     * Handles object, array, string, number, boolean, and null types and applies format-specific
+     * constraints (for example, email, date, uri). For the PERCENTAGE format, emits a union that
+     * accepts either a numeric value in the range 0..1 or a percentage string (e.g., "12.5%").
+     *
+     * @param schema The BlockSchema to convert.
+     * @param allowAP When true, object schemas will permit additional properties (`additionalProperties: true`); when false, additional properties are disallowed.
+     * @return A map suitable for serialization as a JSON Schema fragment corresponding to the provided schema.
+     */
     fun toJs(schema: BlockSchema, allowAP: Boolean): Map<String, Any> {
         return when (schema.type) {
             DataType.OBJECT -> {
@@ -132,8 +146,11 @@ fun BlockSchema.toJsonSchema(
 }
 
 /**
- * Convert a JsonNode representing a JSON Schema into a BlockSchema.
- * This is so we can easily import JSON Schemas from external sources.
+ * Produce a BlockSchema that represents the JSON Schema contained in this JsonNode.
+ *
+ * The returned BlockSchema uses "title" or "Unnamed" for the name, maps "type" and "format" when present, converts "properties" and "items" recursively, and sets each property's `required` flag if its name appears in the schema's "required" array; the top-level BlockSchema `required` is always false.
+ *
+ * @return A BlockSchema equivalent of this JSON Schema node.
  */
 fun JsonNode.toBlockSchema(): BlockSchema {
     val type = this["type"]?.asText()?.let { DataType.valueOf(it.uppercase()) } ?: DataType.OBJECT
@@ -159,4 +176,3 @@ fun JsonNode.toBlockSchema(): BlockSchema {
         items = this["items"]?.toBlockSchema()
     )
 }
-

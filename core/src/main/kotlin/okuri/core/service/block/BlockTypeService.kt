@@ -24,8 +24,10 @@ class BlockTypeService(
     private val activityService: ActivityService
 ) {
     /**
-     * This function creates and publishes a new block type based on the provided request data.
-     * It logs the creation activity for auditing purposes.
+     * Creates and publishes a new block type from the provided request and records an audit activity.
+     *
+     * @param request Data for the new block type.
+     * @return The saved BlockType model representing the published block type.
      */
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun publishBlockType(request: CreateBlockTypeRequest): BlockType {
@@ -47,8 +49,11 @@ class BlockTypeService(
     }
 
     /**
-     * Append-only: create a new versioned row derived from `type`.
-     * Assumes a unique constraint on (organisation_id, key, version).
+     * Create a new versioned BlockType row derived from the provided BlockType and record a creation activity.
+     *
+     * This performs append-only versioning: a new entity is saved with an incremented version, sourceId set to the original entity's id, and archived set to false. Assumes a unique constraint on (organisation_id, key, version).
+     *
+     * @param type The BlockType containing the new values and the id of the existing version to fork from.
      */
     fun updateBlockType(type: BlockType) {
         val userId = authTokenService.getUserId()
@@ -85,6 +90,16 @@ class BlockTypeService(
         }
     }
 
+    /**
+     * Archives or restores a block type and records the change as an activity.
+     *
+     * Updates the archived flag of the block type identified by [id] to [status], persists the change,
+     * and logs an ARCHIVE (when `status` is true) or RESTORE (when `status` is false) activity. If the
+     * block type already has the requested archived state, no changes or activity are made.
+     *
+     * @param id The UUID of the block type to update.
+     * @param status `true` to archive the block type, `false` to restore it.
+     */
     fun archiveBlockType(id: UUID, status: Boolean) {
         val userId = authTokenService.getUserId()
         val existing = findOrThrow { blockTypeRepository.findById(id) }
@@ -103,20 +118,22 @@ class BlockTypeService(
     }
 
     /**
-     * This function retrieves a block type based on its unique key.
-     * @param key The unique key of the block type to retrieve.
-     * @return The block type associated with the given key, or null if not found.
+     * Retrieves the block type entity with the specified unique key.
+     *
+     * Throws if no block type with the given key exists.
+     *
+     * @param key The unique key identifying the block type.
+     * @return The matching BlockTypeEntity.
      */
     fun getEntityByKey(key: String): BlockTypeEntity {
         return findOrThrow { blockTypeRepository.findByKey(key) }
     }
 
     /**
-     * This function retrieves block types associated with a specific organisation.
-     * It will also return all available pre-generated system block types.
+     * Fetches block types for the given organisation, optionally including system block types.
      *
-     * @param organisationId The ID of the organisation to filter block types by.
-     * @return A list of block types associated with the given organisation ID.
+     * @param includeSystemResults When `true`, include pre-defined system block types in the result.
+     * @return A list of block types for the organisation; includes system block types when `includeSystemResults` is `true`.
      */
     fun getBlockTypes(organisationId: UUID, includeSystemResults: Boolean = true): List<BlockType> {
         return findManyResults {
@@ -128,7 +145,13 @@ class BlockTypeService(
     }
 
     /**
-     * Fetch latest version of a key within an org, with optional system fallback.
+     * Retrieve a block type entity by key, preferring an organisation-scoped version and falling back to a system-scoped version.
+     *
+     * @param key The unique key of the block type.
+     * @param organisationId The organisation UUID to prefer when searching; if null or no organisation-scoped match is found, a system-scoped block type is used.
+     * @param version Optional specific version to fetch; when null the latest version is returned.
+     * @return The matching BlockTypeEntity.
+     * @throws NoSuchElementException If no matching block type is found for the given parameters.
      */
     fun getByKey(key: String, organisationId: UUID?, version: Int?): BlockTypeEntity {
         // Find from Organisation
@@ -162,6 +185,12 @@ class BlockTypeService(
         }
     }
 
+    /**
+     * Retrieve a block type entity by its id.
+     *
+     * @param id The UUID of the block type to retrieve.
+     * @return The `BlockTypeEntity` matching the given id.
+     */
     fun getById(id: UUID): BlockTypeEntity {
         return findOrThrow { blockTypeRepository.findById(id) }
     }
