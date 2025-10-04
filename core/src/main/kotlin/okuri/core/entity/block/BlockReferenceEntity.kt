@@ -72,6 +72,7 @@ data class BlockReferenceEntity(
                 blockId = blockId,
                 entityId = this.entityId,
                 ownership = this.ownership,
+                orderIndex = this.orderIndex,
                 path = this.path,
                 entity = null
             )

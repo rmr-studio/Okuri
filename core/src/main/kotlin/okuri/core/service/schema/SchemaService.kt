@@ -127,6 +127,10 @@ class SchemaService(
                 }
                 schema.properties?.forEach { (key, childSchema) ->
                     if (hasReachedLimit()) return acc
+                    if (!mapPayload.containsKey(key)) {
+                        if (childSchema.required) acc += "Missing required value at $path/$key"
+                        return@forEach
+                    }
                     val value = mapPayload[key]
                     validateRecursive(childSchema, value, "$path/$key", scope, acc)
                 }
@@ -211,7 +215,7 @@ class SchemaService(
      * @param schema The BlockSchema whose `format` determines which validation to apply.
      * @param value The string value to validate.
      * @param path The JSON path used in returned error messages when validation fails.
-     * @return An error message describing the format violation (including `path`), or `null` if the value is valid. 
+     * @return An error message describing the format violation (including `path`), or `null` if the value is valid.
      */
     private fun validateStringFormat(schema: BlockSchema, value: String, path: String): String? {
         return when (schema.format) {

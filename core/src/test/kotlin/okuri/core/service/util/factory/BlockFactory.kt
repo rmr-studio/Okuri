@@ -52,6 +52,7 @@ object BlockFactory {
      * @param data Initial payload data for the block; stored in the block's metadata.
      * @param parent Optional parent block to establish hierarchy.
      * @return The constructed BlockEntity whose payload contains the provided `data`, an empty `refs` list, and a default `BlockMeta`.
+     */
     fun generateBlock(
         id: UUID = UUID.randomUUID(),
         orgId: UUID,
@@ -70,11 +71,12 @@ object BlockFactory {
     )
 
     /**
- * Creates a default root schema for a block.
- *
- * @return A BlockSchema whose name is "root".
- */
-fun generateSchema(): BlockSchema = BlockSchema(name = "root")
+     * Creates a default root schema for a block.
+     *
+     * @return A BlockSchema whose name is "root".
+     */
+    fun generateSchema(): BlockSchema = BlockSchema(name = "root")
+
     /**
      * Creates a default BlockDisplay with an empty form structure and a text render.
      *

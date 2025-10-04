@@ -269,6 +269,10 @@ class BlockService(
      *
      * @param block The root block to delete.
      * @return The total number of blocks removed.
+     * @throws IllegalArgumentException if the block does not belong to the caller's organisation.
+     */
+    
+    @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
     fun deleteBlock(block: Block): Int {
         TODO()
     }

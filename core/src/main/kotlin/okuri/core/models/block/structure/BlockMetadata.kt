@@ -14,6 +14,7 @@ data class BlockMetadata(
     val refs: List<BlockReference<*>> = emptyList(),
     val meta: BlockMeta
 ) : Serializable {
+
     companion object RefJson {
         // Inline reference markers allowed inside `data` at the exact slot of a nested block / entity
         const val REF_TYPE = "_refType"      // e.g., "BLOCK", "CLIENT" (must match EntityType.name)
@@ -46,26 +47,26 @@ data class BlockMetadata(
         }
 
         /**
-             * Builds an inline reference JsonObject for an owned block.
-             *
-             * @param id UUID of the referenced block.
-             * @param summary Optional snapshot JsonObject for quick rendering; included under the `_summary` key when provided.
-             * @return A JsonObject containing `_refType` set to the block type, `_refId` set to the block UUID, `_ownership` set to `"OWNED"`, and `_summary` when `summary` is provided.
-             */
-            fun ownedBlockRefNode(id: UUID, summary: JsonObject? = null): JsonObject =
+         * Builds an inline reference JsonObject for an owned block.
+         *
+         * @param id UUID of the referenced block.
+         * @param summary Optional snapshot JsonObject for quick rendering; included under the `_summary` key when provided.
+         * @return A JsonObject containing `_refType` set to the block type, `_refId` set to the block UUID, `_ownership` set to `"OWNED"`, and `_summary` when `summary` is provided.
+         */
+        fun ownedBlockRefNode(id: UUID, summary: JsonObject? = null): JsonObject =
             refNode(EntityType.BLOCK, id, BlockOwnership.OWNED, summary)
 
         /**
-             * Creates a JSON reference node for a linked block.
-             *
-             * The produced object contains the reference type, reference id, and ownership marker,
-             * and includes an optional summary snapshot when provided.
-             *
-             * @param id The UUID of the referenced block.
-             * @param summary Optional JSON snapshot of the referenced block for quick rendering.
-             * @return A JsonObject representing the inline reference node (contains REF_TYPE, REF_ID, OWNERSHIP, and optionally SUMMARY).
-             */
-            fun linkedBlockRefNode(id: UUID, summary: JsonObject? = null): JsonObject =
+         * Creates a JSON reference node for a linked block.
+         *
+         * The produced object contains the reference type, reference id, and ownership marker,
+         * and includes an optional summary snapshot when provided.
+         *
+         * @param id The UUID of the referenced block.
+         * @param summary Optional JSON snapshot of the referenced block for quick rendering.
+         * @return A JsonObject representing the inline reference node (contains REF_TYPE, REF_ID, OWNERSHIP, and optionally SUMMARY).
+         */
+        fun linkedBlockRefNode(id: UUID, summary: JsonObject? = null): JsonObject =
             refNode(EntityType.BLOCK, id, BlockOwnership.LINKED, summary)
     }
 }

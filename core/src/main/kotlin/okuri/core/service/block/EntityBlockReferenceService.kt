@@ -13,7 +13,8 @@ import java.util.*
  */
 @Service
 class EntityBlockReferenceService(
-    private val entityBlockReferenceRepository: EntityBlockReferenceRepository
+    private val entityBlockReferenceRepository: EntityBlockReferenceRepository,
+    private val blockService: BlockService
 ) {
 
     /**
