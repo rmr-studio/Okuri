@@ -81,7 +81,11 @@ class ClientService(
     fun createClient(client: ClientCreationRequest): Client {
         // Fetch associated company if companyId is provided, throw error if not found
         val company: CompanyEntity? = client.companyId?.let {
-            companyService.getCompanyById(it)
+            companyService.getCompanyById(it).also { companyEntity ->
+                require(companyEntity.organisationId == client.organisationId) {
+                    "Company must belong to the same organisation as the client"
+                }
+            }
         }
 
         ClientEntity(

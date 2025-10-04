@@ -101,9 +101,7 @@ class SchemaService(
         acc: MutableList<String> = mutableListOf()
     ): List<String> {
 
-        fun maybeStop() {
-            if (acc.size >= MAX_ERRORS) return
-        }
+        fun hasReachedLimit() = acc.size >= MAX_ERRORS
 
         if (payload == null) {
             if (schema.type != DataType.NULL)
@@ -128,7 +126,7 @@ class SchemaService(
                     return acc
                 }
                 schema.properties?.forEach { (key, childSchema) ->
-                    maybeStop()
+                    if (hasReachedLimit()) return acc
                     val value = mapPayload[key]
                     validateRecursive(childSchema, value, "$path/$key", scope, acc)
                 }
@@ -149,7 +147,7 @@ class SchemaService(
                 val itemSchema = schema.items
                 if (itemSchema != null) {
                     listPayload.forEachIndexed { idx, item ->
-                        maybeStop()
+                        if (hasReachedLimit()) return acc
                         validateRecursive(itemSchema, item, "$path[$idx]", scope, acc)
                     }
                 }
