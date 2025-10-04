@@ -1,15 +1,7 @@
 package okuri.core.service.organisation
 
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.security.access.AccessDeniedException
-import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.bean.override.mockito.MockitoBean
+import io.github.oshai.kotlinlogging.KLogger
+import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.OrganisationInviteEntity
 import okuri.core.entity.organisation.OrganisationMemberEntity
@@ -19,17 +11,38 @@ import okuri.core.enums.organisation.OrganisationRoles
 import okuri.core.exceptions.ConflictException
 import okuri.core.repository.organisation.OrganisationInviteRepository
 import okuri.core.repository.organisation.OrganisationMemberRepository
-import okuri.core.repository.organisation.OrganisationRepository
+import okuri.core.service.activity.ActivityService
+import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.util.OrganisationRole
 import okuri.core.service.util.WithUserPersona
-import okuri.core.service.util.factory.MockOrganisationEntityFactory
-import okuri.core.service.util.factory.MockUserEntityFactory
+import okuri.core.service.util.factory.OrganisationFactory
+import okuri.core.service.util.factory.UserFactory
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 
-@SpringBootTest
-@ExtendWith(MockitoExtension::class)
-@ActiveProfiles("test")
+@SpringBootTest(
+    classes = [
+        OrganisationSecurity::class,
+        AuthTokenService::class,
+        OrganisationInviteServiceTest.TestConfig::class,
+        OrganisationInviteService::class,
+    ]
+)
 class OrganisationInviteServiceTest {
+
+    @Configuration
+    @EnableMethodSecurity(prePostEnabled = true)
+    @Import(OrganisationSecurity::class)
+    class TestConfig
 
     private val userId: UUID = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
 
@@ -41,13 +54,19 @@ class OrganisationInviteServiceTest {
     private lateinit var organisationInviteService: OrganisationInviteService
 
     @MockitoBean
-    private lateinit var organisationRepository: OrganisationRepository
-
-    @MockitoBean
     private lateinit var organisationMemberRepository: OrganisationMemberRepository
 
     @MockitoBean
     private lateinit var organisationInviteRepository: OrganisationInviteRepository
+
+    @MockitoBean
+    private lateinit var organisationService: OrganisationService
+
+    @MockitoBean
+    private lateinit var activityService: ActivityService
+
+    @MockitoBean
+    private lateinit var logger: KLogger
 
     @Test
     @WithUserPersona(
@@ -69,7 +88,7 @@ class OrganisationInviteServiceTest {
 
         val targetEmail: String = "email2@email.com"
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = "email@email.com"
@@ -81,7 +100,7 @@ class OrganisationInviteServiceTest {
         )
 
 
-        val member: OrganisationMemberEntity = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMemberEntity = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.ADMIN
@@ -93,27 +112,25 @@ class OrganisationInviteServiceTest {
         }
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
             members = mutableSetOf(member)
         )
 
         // Organisation that the user is a developer of, so should not have any permissions to invite users to
-        val organisation2: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation2: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId2,
             name = "Test Organisation 2"
         )
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = targetEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
             invitedBy = userId,
         )
 
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
-        Mockito.`when`(organisationRepository.findById(organisationId2)).thenReturn(Optional.of(organisation2))
         Mockito.`when`(organisationMemberRepository.findByIdOrganisationId(organisationId1))
             .thenReturn(organisation1.members.toList())
         Mockito.`when`(organisationInviteRepository.save(Mockito.any<OrganisationInviteEntity>()))
@@ -152,7 +169,7 @@ class OrganisationInviteServiceTest {
         // Test setup for a user trying to create an invitation for an email that is already a member of the organisation
         val targetEmail: String = "email@email.com"
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = "email@email.com"
@@ -163,7 +180,7 @@ class OrganisationInviteServiceTest {
             userId = userId
         )
 
-        val member: OrganisationMemberEntity = MockOrganisationEntityFactory.createOrganisationMember(
+        val member: OrganisationMemberEntity = OrganisationFactory.createOrganisationMember(
             organisationId = organisationId1,
             user = user,
             role = OrganisationRoles.ADMIN
@@ -175,13 +192,11 @@ class OrganisationInviteServiceTest {
         }
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
             members = mutableSetOf(member)
         )
-
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
 
         Mockito.`when`(organisationMemberRepository.findByIdOrganisationId(organisationId1))
             .thenReturn(organisation1.members.toList())
@@ -229,25 +244,24 @@ class OrganisationInviteServiceTest {
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
         )
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = userEmail
         )
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
             token = token,
         )
 
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
         Mockito.`when`(organisationInviteRepository.findByToken(token)).thenReturn(Optional.of(inviteEntity))
         Mockito.`when`(organisationInviteRepository.save(Mockito.any<OrganisationInviteEntity>()))
             .thenReturn(inviteEntity.let {
@@ -270,7 +284,11 @@ class OrganisationInviteServiceTest {
 
         organisationInviteService.handleInvitationResponse(token, accepted = true)
         Mockito.verify(organisationInviteRepository).save(Mockito.any<OrganisationInviteEntity>())
-        Mockito.verify(organisationMemberRepository).save(Mockito.any<OrganisationMemberEntity>())
+        Mockito.verify(organisationService).addMemberToOrganisation(
+            organisationId = organisationId1,
+            userId = userId,
+            role = OrganisationRoles.MEMBER
+        )
     }
 
     @Test
@@ -285,25 +303,24 @@ class OrganisationInviteServiceTest {
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
         // Organisation that the user is an owner of, so has permissions to invite users to
-        val organisation1: OrganisationEntity = MockOrganisationEntityFactory.createOrganisation(
+        val organisation1: OrganisationEntity = OrganisationFactory.createOrganisation(
             id = organisationId1,
             name = "Test Organisation 1",
         )
 
-        val user: UserEntity = MockUserEntityFactory.createUser(
+        val user: UserEntity = UserFactory.createUser(
             // Different user ID to test member removal
             id = userId,
             email = userEmail
         )
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
             token = token,
         )
 
-        Mockito.`when`(organisationRepository.findById(organisationId1)).thenReturn(Optional.of(organisation1))
         Mockito.`when`(organisationInviteRepository.findByToken(token)).thenReturn(Optional.of(inviteEntity))
         Mockito.`when`(organisationInviteRepository.save(Mockito.any<OrganisationInviteEntity>()))
             .thenReturn(inviteEntity.let {
@@ -341,7 +358,7 @@ class OrganisationInviteServiceTest {
         val userEmail = "email2@email.com"
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -367,7 +384,7 @@ class OrganisationInviteServiceTest {
         val userEmail = "email@email.com"
         val token: String = OrganisationInviteEntity.generateSecureToken()
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -397,7 +414,7 @@ class OrganisationInviteServiceTest {
     fun `handle rejection if trying to revoke an invitation that is not pending`() {
         val userEmail = "email@email.com"
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,
@@ -430,7 +447,7 @@ class OrganisationInviteServiceTest {
     fun `handle rejection if trying to revoke an invitation with invalid permissions`() {
         val userEmail = "email@email.com"
 
-        val inviteEntity: OrganisationInviteEntity = MockOrganisationEntityFactory.createOrganisationInvite(
+        val inviteEntity: OrganisationInviteEntity = OrganisationFactory.createOrganisationInvite(
             email = userEmail,
             organisationId = organisationId1,
             role = OrganisationRoles.MEMBER,

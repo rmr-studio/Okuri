@@ -26,22 +26,30 @@ data class BlockEntity(
     val type: BlockTypeEntity,
 
     @Column(name = "name", nullable = true)
-    val name: String? = null,
+    var name: String? = null,
 
     @Type(JsonBinaryType::class)
     @Column(name = "payload", columnDefinition = "jsonb", nullable = false)
-    val payload: BlockMetadata,
+    var payload: BlockMetadata,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     val parent: BlockEntity? = null,
 
     @Column(name = "archived", columnDefinition = "boolean default false")
-    val archived: Boolean = false,
+    var archived: Boolean = false,
+
+    @Version
+    @Column(name = "row_version")
+    val rowVersion: Long? = null
 ) : AuditableEntity(), Referenceable<Block> {
 
-
-    override fun toReference() = this.toModel(audit = false)
+    /**
+ * Convert this entity into a lightweight Block reference that omits audit information.
+ *
+ * @return A Block representing this entity with id, organisationId, type, name, payload, and archived populated; audit fields (createdAt, updatedAt, createdBy, updatedBy) are omitted.
+ */
+override fun toReference() = this.toModel(audit = false)
 
     fun toModel(audit: Boolean = false): Block {
         val id = requireNotNull(this.id) { "BlockEntity ID cannot be null when converting to model" }
@@ -61,4 +69,3 @@ data class BlockEntity(
 
 
 }
-

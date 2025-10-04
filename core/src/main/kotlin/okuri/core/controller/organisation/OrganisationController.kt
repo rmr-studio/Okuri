@@ -19,12 +19,19 @@ class OrganisationController(
 ) {
 
 
+    /**
+     * Retrieves an organisation by its identifier.
+     *
+     * @param organisationId The UUID of the organisation to retrieve.
+     * @param includeMetadata If `true`, include additional organisation metadata in the response.
+     * @return The requested Organisation contained in the response body (HTTP 200).
+     */
     @GetMapping("/{organisationId}")
     fun getOrganisation(
         @PathVariable organisationId: UUID,
         @RequestParam includeMetadata: Boolean = false
     ): ResponseEntity<Organisation> {
-        val organisation: Organisation = this.organisationService.getOrganisation(
+        val organisation: Organisation = this.organisationService.getOrganisationById(
             organisationId = organisationId,
             includeMetadata = includeMetadata
         )

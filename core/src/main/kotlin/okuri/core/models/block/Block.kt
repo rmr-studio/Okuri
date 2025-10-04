@@ -1,5 +1,6 @@
 package okuri.core.models.block
 
+import okuri.core.entity.util.AuditableModel
 import okuri.core.models.block.structure.BlockMetadata
 import java.io.Serializable
 import java.time.ZonedDateTime
@@ -18,10 +19,12 @@ data class Block(
     val type: BlockType,
     val payload: BlockMetadata,
     val archived: Boolean,
+    // If there are any validation errors with this block's payload
+    val validationErrors: List<String>? = null,
     // Keep these hidden unless within an internal organisation context
-    val createdAt: ZonedDateTime? = null,
-    val updatedAt: ZonedDateTime? = null,
-    val createdBy: UUID? = null,
-    val updatedBy: UUID? = null,
-) : Serializable
+    override val createdAt: ZonedDateTime? = null,
+    override val updatedAt: ZonedDateTime? = null,
+    override val createdBy: UUID? = null,
+    override val updatedBy: UUID? = null,
+) : Serializable, AuditableModel()
 

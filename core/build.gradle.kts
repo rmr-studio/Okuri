@@ -62,9 +62,13 @@ dependencies {
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.9.2")
     runtimeOnly("org.postgresql:postgresql")
 
+    // Schema Validation
+    implementation("com.networknt:json-schema-validator:1.0.83")
 
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     // Testing
+    testImplementation("org.mockito:mockito-core:5.20.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:3.2.0")
     testImplementation("com.nimbusds:nimbus-jose-jwt:9.37.2")
     testImplementation("com.h2database:h2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

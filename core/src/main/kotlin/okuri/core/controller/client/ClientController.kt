@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import okuri.core.entity.client.toModel
 import okuri.core.models.client.Client
 import okuri.core.models.client.request.ClientCreationRequest
 import okuri.core.service.client.ClientService
@@ -33,6 +32,12 @@ class ClientController(private val clientService: ClientService) {
         return ResponseEntity.ok(clients)
     }
 
+    /**
+     * Retrieves the client identified by the provided ID.
+     *
+     * @param includeMetadata If true, include audit metadata with the returned client.
+     * @return The Client corresponding to the given ID.
+     */
     @GetMapping("/{clientId}")
     @Operation(
         summary = "Get a client by ID",
@@ -43,8 +48,11 @@ class ClientController(private val clientService: ClientService) {
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
         ApiResponse(responseCode = "404", description = "Client not found")
     )
-    fun getClientById(@PathVariable clientId: UUID): ResponseEntity<Client> {
-        val client: Client = clientService.getClientById(clientId).toModel()
+    fun getClientById(
+        @PathVariable clientId: UUID,
+        @RequestParam includeMetadata: Boolean = false
+    ): ResponseEntity<Client> {
+        val client: Client = clientService.getClientById(clientId, audit = includeMetadata)
         return ResponseEntity.ok(client)
     }
 
@@ -83,6 +91,14 @@ class ClientController(private val clientService: ClientService) {
         return ResponseEntity.ok(updatedClient)
     }
 
+    /**
+     * Deletes the client identified by the given UUID.
+     *
+     * Removes the client if the requester is authorized and owns the client.
+     *
+     * @param clientId UUID of the client to delete.
+     * @return Response with HTTP 204 No Content on successful deletion.
+     */
     @DeleteMapping("/{clientId}")
     @Operation(
         summary = "Delete a client by ID",
@@ -95,12 +111,19 @@ class ClientController(private val clientService: ClientService) {
         ApiResponse(responseCode = "404", description = "Client not found")
     )
     fun deleteClientById(@PathVariable clientId: UUID): ResponseEntity<Unit> {
-        // Check ownership of client
-        val client = clientService.getClientById(clientId).toModel()
-        clientService.deleteClient(client)
-        return ResponseEntity.noContent().build()
+        clientService.getClientById(clientId).run {
+            clientService.deleteClient(this)
+            return ResponseEntity.noContent().build()
+        }
     }
 
+    /**
+     * Updates a client's archived status for the given client ID.
+     *
+     * @param clientId The ID of the client to update.
+     * @param status `true` to mark the client as archived, `false` to mark it as not archived.
+     * @return HTTP 204 No Content when the archival status is updated.
+     */
     @PutMapping("/{clientId}/archive/{status}")
     @Operation(
         summary = "Updates the archival status of a client",
@@ -117,8 +140,9 @@ class ClientController(private val clientService: ClientService) {
         @PathVariable status: Boolean
     ): ResponseEntity<Unit> {
         // Check ownership of client
-        val client = clientService.getClientById(clientId).toModel()
-        clientService.archiveClient(client, status)
-        return ResponseEntity.noContent().build()
+        clientService.getClientById(clientId).run {
+            clientService.archiveClient(this, status)
+            return ResponseEntity.noContent().build()
+        }
     }
 }
