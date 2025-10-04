@@ -7,6 +7,10 @@ enum class Activity {
     ORGANISATION_MEMBER_INVITE,
     ORGANISATION_MEMBER,
     INVOICE,
+    BLOCK,
+    BLOCK_TYPE,
+    BLOCK_LINK,
+    COMPANY,
     REPORT,
     TEMPLATE
 }

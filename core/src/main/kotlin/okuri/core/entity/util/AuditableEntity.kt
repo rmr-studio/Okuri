@@ -32,9 +32,21 @@ abstract class AuditableEntity {
     @Column(name = "updated_by", columnDefinition = "uuid")
     var updatedBy: UUID? = null
 
+    /**
+     * Populates `createdAt` with the current `ZonedDateTime` before the entity is persisted when it is not already set.
+     *
+     * Leaves an existing `createdAt` value unchanged.
+     */
     @PrePersist
     fun prePersist() {
         if (createdAt != null) return
         createdAt = ZonedDateTime.now()
     }
+}
+
+abstract class AuditableModel {
+    abstract val createdAt: ZonedDateTime?
+    abstract val updatedAt: ZonedDateTime?
+    abstract val createdBy: UUID?
+    abstract val updatedBy: UUID?
 }

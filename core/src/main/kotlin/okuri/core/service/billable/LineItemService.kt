@@ -1,4 +1,4 @@
-package okuri.core.service.client
+package okuri.core.service.billable
 
 import io.ktor.server.plugins.*
 import okuri.core.entity.invoice.LineItemEntity
@@ -7,7 +7,7 @@ import okuri.core.enums.activity.Activity
 import okuri.core.enums.util.OperationType
 import okuri.core.models.client.request.LineItemCreationRequest
 import okuri.core.models.invoice.LineItem
-import okuri.core.repository.client.LineItemRepository
+import okuri.core.repository.billable.LineItemRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.util.ServiceUtil.findManyResults
@@ -24,18 +24,41 @@ class LineItemService(
     private val activityService: ActivityService
 ) {
 
+    /**
+     * Retrieves all line items for the specified organisation.
+     *
+     * @param organisationId The UUID of the organisation whose line items should be fetched.
+     * @return A list of LineItemEntity that belong to the organisation; an empty list if none exist.
+     * @throws NotFoundException If the organisation does not exist or cannot be accessed.
+     * @throws IllegalArgumentException If the provided organisationId is invalid.
+     */
     @Throws(NotFoundException::class, IllegalArgumentException::class)
     @PreAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun getOrganisationLineItem(organisationId: UUID): List<LineItemEntity> {
-        return findManyResults(organisationId, repository::findByOrganisationId)
+        return findManyResults { repository.findByOrganisationId(organisationId) }
     }
 
+    /**
+     * Retrieve a line item entity by its UUID.
+     *
+     * @param id The UUID of the line item to retrieve.
+     * @return The line item entity for the given id.
+     * @throws NotFoundException if no line item exists with the given id.
+     */
     @Throws(NotFoundException::class)
     @PostAuthorize("@organisationSecurity.hasOrg(returnObject.organisationId)")
     fun getLineItemById(id: UUID): LineItemEntity {
-        return findOrThrow(id, repository::findById)
+        return findOrThrow { repository.findById(id) }
     }
 
+    /**
+     * Create a new line item for the given organisation.
+     *
+     * Persists a line item using the provided creation request and records a creation activity for auditing.
+     *
+     * @param request The creation request containing `organisationId`, `name`, `description`, and `chargeRate`.
+     * @return The persisted `LineItem` model representing the newly created line item.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun createLineItem(request: LineItemCreationRequest): LineItem {
         LineItemEntity(
@@ -58,10 +81,19 @@ class LineItemService(
 
     }
 
+    /**
+     * Update an existing line item and persist the changes.
+     *
+     * Updates the stored entity identified by the provided lineItem.id with the supplied
+     * name, description, and chargeRate, persists the updated entity, and records an update activity.
+     *
+     * @param lineItem The line item data to apply; its `id` identifies which entity to update.
+     * @return The updated `LineItem` model reflecting persisted changes.
+     */
     @PreAuthorize("@organisationSecurity.hasOrg(#lineItem.organisationId)")
     fun updateLineItem(lineItem: LineItem): LineItem {
 
-        findOrThrow(lineItem.id, repository::findById).apply {
+        findOrThrow { repository.findById(lineItem.id) }.apply {
             name = lineItem.name
             description = lineItem.description
             chargeRate = lineItem.chargeRate

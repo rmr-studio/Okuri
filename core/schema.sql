@@ -85,15 +85,15 @@ CREATE POLICY "Users can view their own organisations" on organisations
 
 CREATE TABLE IF NOT EXISTS "organisation_invites"
 (
-    "id"              UUID PRIMARY KEY           NOT NULL DEFAULT uuid_generate_v4(),
-    "organisation_id" UUID                       NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
-    "email"           VARCHAR(100)               NOT NULL,
-    "status"          ORGANISATION_INVITE_STATUS NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED')),
-    "invite_code"     VARCHAR(12)                NOT NULL CHECK (LENGTH(invite_code) = 12),
-    "role"            VARCHAR                    NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
-    "invited_by"      UUID                       NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
-    "created_at"      TIMESTAMP WITH TIME ZONE            DEFAULT CURRENT_TIMESTAMP,
-    "expires_at"      TIMESTAMP WITH TIME ZONE            DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 days'
+    "id"              UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
+    "organisation_id" UUID             NOT NULL REFERENCES organisations (id) ON DELETE CASCADE,
+    "email"           VARCHAR(100)     NOT NULL,
+    "status"          VARCHAR(100)     NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED')),
+    "invite_code"     VARCHAR(12)      NOT NULL CHECK (LENGTH(invite_code) = 12),
+    "role"            VARCHAR          NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
+    "invited_by"      UUID             NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    "created_at"      TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
+    "expires_at"      TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 days'
 );
 
 CREATE INDEX idx_invite_organisation_id ON public.organisation_invites (organisation_id);
@@ -158,30 +158,41 @@ end;
 $$;
 
 -- Content Blocks
-
 CREATE TABLE if not exists public.block_types
 (
-    "id"                uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "key"               text NOT NULL,                                         -- machine key e.g. "contact_card"
-    "display_name"      text NOT NULL,
+    "id"                uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
+    "key"               text  NOT NULL,                                                                             -- machine key e.g. "contact_card"
+    "display_name"      text  NOT NULL,
+    "source_id"         uuid  references block_types (id) ON DELETE SET NULL,                                       -- if copied from another block type
     "description"       text,
-    "organisation_id"   uuid REFERENCES organisations (id) ON DELETE SET NULL, -- null for global
-    "scope"             text NOT NULL    DEFAULT 'organisation',
-    check ( scope in ('organisation', 'global') ),
-    "system"            boolean          DEFAULT FALSE,                        -- system types you control
-    "schema"            jsonb,                                                 -- JSON Schema for validation (optional)
-    "display_structure" jsonb,                                                 -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
-    "created_at"        timestamptz      DEFAULT now(),
-    "updated_at"        timestamptz      DEFAULT now(),
-    "created_by"        uuid,                                                  -- optional user id
-    "updated_by"        uuid,                                                  -- optional user id
-    unique (organisation_id, key)
+    "organisation_id"   uuid  REFERENCES organisations (id) ON DELETE SET NULL,                                     -- null for global
+    "system"            boolean                  DEFAULT FALSE,                                                     -- system types you control
+    "schema"            jsonb NOT NULL,                                                                             -- JSON Schema for validation
+    "display_structure" jsonb not NULL,                                                                             -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
+    "strictness"        text  NOT NULL           default 'soft' check ( strictness in ('none', 'soft', 'strict') ), -- how strictly to enforce schema (none, soft (warn), strict (reject))
+    "version"           integer                  DEFAULT 1,                                                         -- To handle updates to schema/display_structure over time to ensure that existing blocks are not broken,
+    "archived"          boolean                  DEFAULT FALSE,                                                     -- soft delete
+    "created_at"        timestamp with time zone default current_timestamp,
+    "updated_at"        timestamp with time zone default current_timestamp,
+    "created_by"        uuid,                                                                                       -- optional user id
+    "updated_by"        uuid,                                                                                       -- optional user id
+    UNIQUE (organisation_id, key, version)
 );
 
+-- System types (your pre-generated defaults) are the ONLY rows without an org_id
+ALTER TABLE block_types
+    ADD CONSTRAINT chk_system_org
+        CHECK (
+            (system = true AND organisation_id IS NULL) OR
+            (system = false AND organisation_id IS NOT NULL)
+            );
+
 create index idx_block_types_organisation_id on block_types (organisation_id);
--- Ensure a single global definition per key
-CREATE UNIQUE INDEX IF NOT EXISTS uq_block_types_key_global
-    ON public.block_types (key) WHERE organisation_id IS NULL;
+create index idx_block_types_key on block_types (key);
+
+ALTER TABLE block_types
+    ADD CONSTRAINT chk_key_slug
+        CHECK (key ~ '^[a-z0-9][a-z0-9._-]{1,62}$');
 
 -- Tenant isolation (Supabase RLS)
 ALTER TABLE public.block_types
@@ -238,16 +249,58 @@ CREATE POLICY "blocks_write_by_org" ON public.blocks
                                     FROM public.organisation_members
                                     WHERE user_id = auth.uid()));
 
+-- Mapping a block to other blocks or entities (client, line item, etc)
 CREATE TABLE public.block_references
 (
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "block_id"    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
-    "entity_type" text NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
-    "entity_id"   uuid NOT NULL, -- id of the referenced entity
-    UNIQUE (block_id, entity_type, entity_id)
+    "block_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    "entity_type" text    NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
+    "entity_id"   uuid    NOT NULL, -- id of the referenced entity
+    "path"        text    NOT NULL, -- JSON path within the entity (e.g. "$.data.contact_details.address")
+    "relation"    text    NOT NULL,
+    check ( relation in ('OWNED', 'LINKED') ),
+    "order_index" integer NOT NULL DEFAULT 0,
+    UNIQUE (block_id, entity_type, entity_id, path)
 );
-CREATE INDEX idx_blocks_references_block ON block_references (block_id);
-CREATE INDEX idx_block_references_entity ON block_references (entity_type, entity_id);
+
+
+-- Mapping an entity (client, line item, etc) to the parent level blocks it should display
+CREATE TABLE entity_blocks
+(
+    id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    entity_id   uuid NOT NULL, -- id of client, line item, etc
+    entity_type text NOT NULL, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
+    block_id    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    key         text NOT NULL,
+    UNIQUE (entity_id, entity_type, key)
+);
+
+-- RLS scoped by parent block's organisation
+ALTER TABLE public.entity_blocks
+    ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "entity_blocks_select_by_org" ON public.entity_blocks
+    FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1
+                   FROM public.blocks b
+                   WHERE b.id = block_id
+                     AND b.organisation_id IN
+                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
+CREATE POLICY "entity_blocks_write_by_org" ON public.entity_blocks
+    FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1
+                   FROM public.blocks b
+                   WHERE b.id = block_id
+                     AND b.organisation_id IN
+                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1
+                        FROM public.blocks b
+                        WHERE b.id = block_id
+                          AND b.organisation_id IN
+                              (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
+
+CREATE INDEX IF NOT EXISTS idx_blocks_references_block ON block_references (block_id);
+CREATE INDEX IF NOT EXISTS idx_block_references_entity ON block_references (entity_type, entity_id);;
+CREATE INDEX IF NOT EXISTS idx_block_references_path_order ON block_references (path, order_index);
 
 -- RLS scoped by parent block's organisation
 ALTER TABLE public.block_references
@@ -293,23 +346,47 @@ CREATE TABLE IF NOT EXISTS template
 
 CREATE INDEX idx_template_organisation_id ON template (organisation_id);
 
--- Clients
-drop table if exists "clients" cascade;
-create table if not exists "clients"
+drop table if exists public.companies cascade;
+create table if not exists public.companies
 (
     "id"              uuid primary key not null default uuid_generate_v4(),
     "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
-    "name"            varchar(50)      not null,
+    "name"            varchar(100)     not null,
+    "address"         jsonb,
+    "phone"           varchar(15),
+    "email"           varchar(100),
+    "website"         varchar(100),
+    "business_number" varchar(50),
+    "logo_url"        text,
     "archived"        boolean          not null default false,
-    "contact_details" jsonb            not null,
-    "template_id"     uuid             null references public.template (id) on delete cascade,
-    "attributes"      jsonb,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp,
     "created_by"      uuid,
     "updated_by"      uuid
 );
 
+-- Clients
+drop table if exists public.clients cascade;
+create table if not exists public.clients
+(
+    "id"              uuid primary key not null default uuid_generate_v4(),
+    "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
+    "name"            varchar(50)      not null,
+    "archived"        boolean          not null default false,
+    "contact_details" jsonb            not null default '{}'::jsonb,
+    "company_id"      uuid             references public.companies (id) on delete set null,
+    "company_role"    varchar(50),
+    "type"            varchar(50),
+    "created_at"      timestamp with time zone  default current_timestamp,
+    "updated_at"      timestamp with time zone  default current_timestamp,
+    "created_by"      uuid,
+    "updated_by"      uuid
+);
+
+
+
+create index if not exists idx_company_organisation_id
+    on public.companies (organisation_id);
 
 ALTER TABLE public.clients
     ADD CONSTRAINT uq_client_name_organisation UNIQUE (organisation_id, name);
@@ -318,15 +395,13 @@ create index if not exists idx_client_organisation_id
     on public.clients (organisation_id);
 
 -- Line Items
-
-create table if not exists "line_item"
+drop table if exists line_item;
+create table if not exists public.line_item
 (
     "id"              uuid primary key not null default uuid_generate_v4(),
     "organisation_id" uuid             not null references public.organisations (id) on delete cascade,
     "name"            varchar(50)      not null,
-    "type"            VARCHAR          not null default 'SERVICE' CHECK (type IN ('SERVICE', 'PRODUCT', 'FEE', 'DISCOUNT')),
     "description"     text             not null,
-    "charge_rate"     DECIMAL(19, 4)   not null,
     "created_at"      timestamp with time zone  default current_timestamp,
     "updated_at"      timestamp with time zone  default current_timestamp
 );
@@ -348,7 +423,7 @@ create table if not exists "invoice"
     "invoice_number"     TEXT                     not null,
     "billable_work"      jsonb                    not null,
     "amount"             DECIMAL(19, 4)           not null default 0.00,
-    "custom_fields"      jsonb                    not null default '{}',
+    "custom_fields"      jsonb                    not null default '{}'::jsonb,
     "currency"           varchar(3)               not null default 'AUD',
     "status"             varchar(25)              not null default 'PENDING' CHECK (status IN ('DRAFT', 'PENDING', 'SENT', 'PAID', 'OVERDUE', 'VOID')),
     "invoice_start_date" timestamp with time zone null,
