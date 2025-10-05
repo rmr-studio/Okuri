@@ -2,7 +2,7 @@ package okuri.core.service.block
 
 import okuri.core.enums.common.IssueLevel
 import okuri.core.models.block.structure.BindingSource
-import okuri.core.models.block.structure.BlockRenderStructure
+import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.RefPresentation
 import okuri.core.models.common.LintIssue
 import org.springframework.stereotype.Service
@@ -10,12 +10,13 @@ import org.springframework.stereotype.Service
 @Service
 class BlockDisplayLinterService {
 
-    fun lint(display: BlockRenderStructure): List<LintIssue> {
+    fun lint(display: BlockDisplay): List<LintIssue> {
+        val (_, render) = display
         val issues = mutableListOf<LintIssue>()
-        val ids = display.components.keys
+        val ids = render.components.keys
 
         // 1) Layout IDs exist
-        display.layoutGrid.items.forEachIndexed { i, it ->
+        render.layoutGrid.items.forEachIndexed { i, it ->
             if (!ids.contains(it.id)) {
                 issues += LintIssue(
                     path = "layout.items[$i].id",
@@ -33,7 +34,7 @@ class BlockDisplayLinterService {
         }
 
         // 2) Component slot children exist
-        display.components.forEach { (cid, node) ->
+        render.components.forEach { (cid, node) ->
             node.slots.forEach { (slot, children) ->
                 children.forEachIndexed { idx, childId ->
                     if (!ids.contains(childId)) {
@@ -48,7 +49,7 @@ class BlockDisplayLinterService {
         }
 
         // 3) Binding sanity (basic check)
-        display.components.forEach { (cid, node) ->
+        render.components.forEach { (cid, node) ->
             node.bindings.forEachIndexed { bi, b ->
                 when (b.source) {
                     is BindingSource.DataPath -> {

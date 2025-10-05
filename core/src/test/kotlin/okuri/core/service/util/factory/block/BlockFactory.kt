@@ -1,10 +1,12 @@
-package okuri.core.service.util.factory
+package okuri.core.service.util.factory.block
 
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.BlockValidationScope
-import okuri.core.enums.core.ComponentType
-import okuri.core.models.block.structure.*
+import okuri.core.models.block.structure.BlockDisplay
+import okuri.core.models.block.structure.BlockMeta
+import okuri.core.models.block.structure.BlockMetadata
+import okuri.core.models.block.structure.BlockSchema
 import java.util.*
 
 object BlockFactory {
@@ -36,10 +38,7 @@ object BlockFactory {
         strictness = scope,
         schema = BlockSchema(name = "root"),
         archived = archived,
-        displayStructure = BlockDisplay(
-            form = BlockFormStructure(emptyMap()),
-            render = BlockRenderStructure(ComponentType.TEXT, emptyMap())
-        )
+        displayStructure = generateDisplay()
     )
 
     /**
@@ -82,8 +81,7 @@ object BlockFactory {
      *
      * @return A BlockDisplay whose form is an empty BlockFormStructure and whose render is a BlockRenderStructure using `ComponentType.TEXT` with no properties.
      */
-    fun generateDisplay(): BlockDisplay = BlockDisplay(
-        form = BlockFormStructure(emptyMap()),
-        render = BlockRenderStructure(ComponentType.TEXT, emptyMap())
+    fun generateDisplay(): BlockDisplay = BlockDisplayFactory.display(
+        render = BlockDisplayFactory.contactWithAccountSummary()
     )
 }

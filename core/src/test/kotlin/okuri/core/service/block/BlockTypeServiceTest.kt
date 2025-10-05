@@ -11,7 +11,7 @@ import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.util.OrganisationRole
 import okuri.core.service.util.WithUserPersona
-import okuri.core.service.util.factory.BlockFactory
+import okuri.core.service.util.factory.block.BlockFactory
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -51,6 +51,9 @@ class BlockTypeServiceTest {
 
     @MockitoBean
     private lateinit var logger: KLogger
+
+    @MockitoBean
+    private lateinit var linterService: BlockDisplayLinterService
 
     @Autowired
     private lateinit var blockTypeService: BlockTypeService
