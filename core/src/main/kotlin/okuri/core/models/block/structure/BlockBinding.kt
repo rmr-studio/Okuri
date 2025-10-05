@@ -1,13 +1,23 @@
 package okuri.core.models.block.structure
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import java.io.Serializable
+
 /** Map a data source to a component prop */
 data class BlockBinding(
     val prop: String,      // e.g. "title.text", "rows" (dot-path into props)
     val source: BindingSource
-)
+) : Serializable
 
 /** Data sources: raw block data, references by slot, or computed expr (reserved) */
-sealed class BindingSource {
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(BindingSource.DataPath::class, name = "DataPath"),
+    JsonSubTypes.Type(BindingSource.RefSlot::class, name = "RefSlot"),
+    JsonSubTypes.Type(BindingSource.Computed::class, name = "Computed")
+)
+sealed class BindingSource : Serializable {
     data class DataPath(val path: String) : BindingSource()   // $.data/name, $.data/contacts[0]/email
     data class RefSlot(
         val slot: String,                                     // e.g. "contacts" (server groups refs by slotKey)

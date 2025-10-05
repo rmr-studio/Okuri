@@ -26,7 +26,6 @@ data class BlockComponentNode(
     val slots: Map<String, List<String>> = emptyMap(), // slotKey -> [childComponentId,...]
     val visible: Condition? = null, // visibility condition
     val fetchPolicy: BlockFetchPolicy = BlockFetchPolicy.LAZY // data fetching policy (for refs)
-
 )
 
 
