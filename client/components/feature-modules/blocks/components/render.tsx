@@ -44,7 +44,7 @@ const RenderNode: React.FC<{
     ctx: TreeCtx;
 }> = ({ node, display, ctx }) => {
     if (!evalVisible(node.visible as any, ctx)) return null;
-    const boundProps = applyBindings(node.props, node.bindings, ctx);
+    const boundProps = applyBindings(node, ctx);
 
     const slots: Record<string, React.ReactNode> = {};
     for (const [slotName, ids] of Object.entries(node.slots ?? {})) {

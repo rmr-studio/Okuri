@@ -5,11 +5,11 @@ import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-gro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useOrganisation } from "@/hooks/useOrganisation";
 import { isResponseError } from "@/lib/util/error/error.util";
 import { ArchiveRestore, Edit, Mail, MapPin, Phone, Trash2, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useOrganisation } from "../../organisation/hooks/useOrganisation";
 import DeleteClient from "./delete-client";
 
 export const ClientOverview = () => {

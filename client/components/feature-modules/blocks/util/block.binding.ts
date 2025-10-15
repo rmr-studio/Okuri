@@ -9,13 +9,29 @@ import jp from "jsonpointer"; // tiny util; or write your own
 
 export function getByPath(obj: unknown, pointer: string): any {
     if (!pointer) return undefined;
-    // allow shorthand "name" -> "$.data/name"
-    const p = pointer.startsWith("$.") ? pointer.replace("$", "") : `/data/${pointer}`;
+    // allow shorthand "name" -> "/data/name", while persisted values stay JSONPath-like "$.data/name"
+    const p = normalisePointer(pointer);
     try {
         return jp.get(obj as any, p);
     } catch {
         return undefined;
     }
+}
+
+function normalisePointer(pointer: string): string {
+    if (!pointer) return "";
+
+    // Already a JSON pointer
+    if (pointer.startsWith("/")) return pointer;
+
+    // JSONPath-style persisted values e.g. "$.data/name"
+    if (pointer.startsWith("$.")) return pointer.replace("$.", "/");
+
+    // Bare key or nested path "foo" | "foo.bar"
+    if (!pointer.startsWith("$")) return `/data/${pointer.replace(/\./g, "/")}`;
+
+    // Fallback: strip leading "$" and ensure slash
+    return `/${pointer.replace(/^\$+/, "")}`;
 }
 
 export function applyBindings(node: BlockComponentNode, ctx: TreeCtx): object {

@@ -3,7 +3,7 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Propless } from "@/lib/interfaces/interface";
 import { FC } from "react";
-import { OnboardForm } from "../OnboardForm";
+import { OnboardForm } from "./OnboardForm";
 
 export const Onboard: FC<Propless> = () => {
     return (

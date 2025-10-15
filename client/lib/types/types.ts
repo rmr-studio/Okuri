@@ -795,7 +795,7 @@ export interface components {
             /** @enum {string} */
             type: "CONTACT_CARD" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT";
             props: {
-                [key: string]: Record<string, never>;
+                [key: string]: unknown;
             };
             bindings: components["schemas"]["BlockBinding"][];
             slots: {
@@ -817,14 +817,14 @@ export interface components {
         BlockMeta: {
             validationErrors: string[];
             computedFields?: {
-                [key: string]: Record<string, never>;
+                [key: string]: unknown;
             };
             /** Format: int32 */
             lastValidatedVersion?: number;
         };
         BlockMetadata: {
             data: {
-                [key: string]: Record<string, never>;
+                [key: string]: unknown;
             };
             refs: components["schemas"]["BlockReferenceObject"][];
             meta: components["schemas"]["BlockMeta"];
