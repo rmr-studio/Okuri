@@ -1,7 +1,7 @@
 "use client";
 
-import { useProfile } from "@/hooks/useProfile";
-import { User } from "@/lib/interfaces/user.interface";
+import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
+import { User } from "@/components/feature-modules/user/interface/user.interface";
 import {
     createOrganisationStore,
     type OrganisationStore,

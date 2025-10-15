@@ -1,4 +1,4 @@
-import { GridStackDemo } from "@/components/feature-modules/template/demo/grid-demo";
+import { GridStackDemo } from "@/components/feature-modules/grid/demo/grid-demo";
 
 const Page = () => {
     return <GridStackDemo />;

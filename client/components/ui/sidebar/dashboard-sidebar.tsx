@@ -1,8 +1,8 @@
 "use client";
+import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
+import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
 import { useOrganisationStore } from "@/components/provider/OrganisationContext";
-import { useProfile } from "@/hooks/useProfile";
 import { SidebarGroupProps } from "@/lib/interfaces/interface";
-import { Organisation } from "@/lib/interfaces/organisation.interface";
 import {
     BanknoteArrowUp,
     BookTextIcon,

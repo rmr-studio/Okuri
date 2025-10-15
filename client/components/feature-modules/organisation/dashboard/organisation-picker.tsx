@@ -1,13 +1,13 @@
 "use client";
 
+import { MembershipDetails } from "@/components/feature-modules/organisation/interface/organisation.interface";
+import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useProfile } from "@/hooks/useProfile";
-import { MembershipDetails } from "@/lib/interfaces/organisation.interface";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { OrganisationTile } from "../organisation-card";
+import { OrganisationTile } from "../components/organisation-card";
 
 export const OrganisationPicker = () => {
     const { data: user, isPending } = useProfile();

@@ -1,7 +1,7 @@
 "use client";
+import { useClient } from "@/components/feature-modules/client/hooks/useClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useClient } from "@/hooks/useClient";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -26,13 +26,7 @@ const mockInvoices = [
     },
 ];
 
-const INVOICE_STATUSES = [
-    "PENDING",
-    "PAID",
-    "OVERDUE",
-    "OUTDATED",
-    "CANCELLED",
-];
+const INVOICE_STATUSES = ["PENDING", "PAID", "OVERDUE", "OUTDATED", "CANCELLED"];
 
 const InvoiceListPage = () => {
     const router = useRouter();
@@ -43,9 +37,7 @@ const InvoiceListPage = () => {
 
     // Filter logic
     const filteredInvoices = invoices.filter((inv) => {
-        const clientMatch = clientFilter
-            ? inv.clientName === clientFilter
-            : true;
+        const clientMatch = clientFilter ? inv.clientName === clientFilter : true;
         const statusMatch = statusFilter ? inv.status === statusFilter : true;
         return clientMatch && statusMatch;
     });
@@ -53,9 +45,7 @@ const InvoiceListPage = () => {
     return (
         <div className="w-full h-[calc(100vh-4rem)] flex flex-col bg-background">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-6 pt-8 pb-4">
-                <h1 className="text-2xl font-bold text-foreground">
-                    Your Invoices
-                </h1>
+                <h1 className="text-2xl font-bold text-foreground">Your Invoices</h1>
                 <div className="flex flex-wrap gap-4 items-center">
                     <div>
                         <label className="block text-sm font-medium mb-1 text-foreground">
@@ -92,9 +82,7 @@ const InvoiceListPage = () => {
                         </select>
                     </div>
                     <Button asChild>
-                        <Link href="/dashboard/invoice/new">
-                            Add New Invoice
-                        </Link>
+                        <Link href="/dashboard/invoice/new">Add New Invoice</Link>
                     </Button>
                 </div>
             </div>
@@ -102,30 +90,17 @@ const InvoiceListPage = () => {
                 <table className="min-w-full border rounded-lg bg-background border-border shadow">
                     <thead>
                         <tr className="bg-muted">
-                            <th className="px-4 py-2 text-left text-foreground">
-                                Invoice #
-                            </th>
-                            <th className="px-4 py-2 text-left text-foreground">
-                                Client
-                            </th>
-                            <th className="px-4 py-2 text-left text-foreground">
-                                Period
-                            </th>
-                            <th className="px-4 py-2 text-left text-foreground">
-                                Total
-                            </th>
-                            <th className="px-4 py-2 text-left text-foreground">
-                                Status
-                            </th>
+                            <th className="px-4 py-2 text-left text-foreground">Invoice #</th>
+                            <th className="px-4 py-2 text-left text-foreground">Client</th>
+                            <th className="px-4 py-2 text-left text-foreground">Period</th>
+                            <th className="px-4 py-2 text-left text-foreground">Total</th>
+                            <th className="px-4 py-2 text-left text-foreground">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredInvoices.length === 0 ? (
                             <tr>
-                                <td
-                                    colSpan={5}
-                                    className="text-center py-8 text-muted-foreground"
-                                >
+                                <td colSpan={5} className="text-center py-8 text-muted-foreground">
                                     No invoices found.
                                 </td>
                             </tr>
@@ -134,21 +109,13 @@ const InvoiceListPage = () => {
                                 <tr
                                     key={inv.id}
                                     className="border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
-                                    onClick={() =>
-                                        router.push(
-                                            `/dashboard/invoice/${inv.id}`
-                                        )
-                                    }
+                                    onClick={() => router.push(`/dashboard/invoice/${inv.id}`)}
                                 >
                                     <td className="px-4 py-2 font-mono text-foreground">
                                         {inv.invoiceNumber}
                                     </td>
-                                    <td className="px-4 py-2 text-foreground">
-                                        {inv.clientName}
-                                    </td>
-                                    <td className="px-4 py-2 text-foreground">
-                                        {inv.period}
-                                    </td>
+                                    <td className="px-4 py-2 text-foreground">{inv.clientName}</td>
+                                    <td className="px-4 py-2 text-foreground">{inv.period}</td>
                                     <td className="px-4 py-2 text-foreground">
                                         ${inv.total.toFixed(2)}
                                     </td>

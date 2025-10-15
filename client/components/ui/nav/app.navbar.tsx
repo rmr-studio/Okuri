@@ -1,11 +1,11 @@
 "use client";
 
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
 import { SidebarTrigger } from "../sidebar";
 import { NavbarLogo, NavbarUserProfile, NavbarWrapper } from "./navbar.content";
 
 export const AppNavbar = () => {
-    const {isLoadingAuth: _, ...query} = useProfile();
+    const { isLoadingAuth: _, ...query } = useProfile();
     return (
         <NavbarWrapper>
             <SidebarTrigger className="mr-4 cursor-pointer" />

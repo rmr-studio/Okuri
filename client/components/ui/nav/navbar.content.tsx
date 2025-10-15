@@ -1,12 +1,12 @@
 "use client";
 
+import { User } from "@/components/feature-modules/user/interface/user.interface";
 import { useAuth } from "@/components/provider/auth-context";
 import { FCWC, Propless } from "@/lib/interfaces/interface";
-import { User } from "@/lib/interfaces/user.interface";
 import { UseQueryResult } from "@tanstack/react-query";
 import Link from "next/link";
 import { FC } from "react";
-import { UserProfileDropdown } from "../avatar-dropdown";
+import { UserProfileDropdown } from "../../feature-modules/user/components/avatar-dropdown";
 import { Button } from "../button";
 import { Skeleton } from "../skeleton";
 import { ModeToggle } from "../themeToggle";

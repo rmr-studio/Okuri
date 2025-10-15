@@ -1,4 +1,4 @@
-import NewOrganisation from "@/components/feature-modules/organisation/new-organisation";
+import NewOrganisation from "@/components/feature-modules/organisation/components/new-organisation";
 
 const NewOrganisationPage = () => {
     return <NewOrganisation />;

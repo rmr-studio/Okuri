@@ -1,4 +1,4 @@
-import { Organisation } from "@/lib/interfaces/organisation.interface";
+import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
 import { createStore } from "zustand";
 
 type OrganisationState = {

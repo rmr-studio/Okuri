@@ -1,5 +1,5 @@
-import { AuthFormWrapper } from "@/components/feature-modules/authentication/AuthFormWrapper";
-import LoginForm from "@/components/feature-modules/authentication/Login";
+import { AuthFormWrapper } from "@/components/feature-modules/authentication/components/AuthFormWrapper";
+import LoginForm from "@/components/feature-modules/authentication/components/Login";
 
 const Login = () => {
     return (
