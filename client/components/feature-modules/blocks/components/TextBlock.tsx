@@ -1,5 +1,5 @@
 import { cn } from "@/lib/util/utils";
-import { FC } from "react";
+import { FC, JSX } from "react";
 
 interface Props {
     text?: string;
@@ -21,12 +21,17 @@ const alignClasses: Record<NonNullable<Props["align"]>, string> = {
     right: "text-right",
 };
 
-export const TextBlock: FC<Props> = ({
-    text,
-    variant = "body",
-    align = "left",
-    className,
-}) => {
+const tagMap: Record<NonNullable<Props["variant"]>, string> = {
+    title: "h1",
+    subtitle: "h2",
+    body: "p",
+    muted: "p",
+};
+
+export const TextBlock: FC<Props> = ({ text, variant = "body", align = "left", className }) => {
     if (!text) return null;
-    return <p className={cn(variantClasses[variant], alignClasses[align], className)}>{text}</p>;
+    const Tag = tagMap[variant] as keyof JSX.IntrinsicElements;
+    return (
+        <Tag className={cn(variantClasses[variant], alignClasses[align], className)}>{text}</Tag>
+    );
 };

@@ -846,11 +846,11 @@ export interface components {
             entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
             /** Format: uuid */
             entityId: string;
-            entity?: Record<string, never>;
+            entity?: {
+                [key: string]: unknown;
+            };
             /** @enum {string} */
             ownership: "OWNED" | "LINKED";
-            /** Format: uuid */
-            blockId: string;
             /** Format: int32 */
             orderIndex?: number;
             path: string;
@@ -1237,7 +1237,7 @@ export interface components {
             typeVersion?: number;
             name?: string;
             payload: {
-                [key: string]: Record<string, never>;
+                [key: string]: unknown;
             };
         };
     };

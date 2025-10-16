@@ -60,8 +60,7 @@ export function applyBindings(node: BlockComponentNode, ctx: TreeCtx): object {
             // SUMMARY/LINKED: project summary/entity
             const rows = list.map((ref) => {
                 const entity = ref.entity ?? {};
-                if (!fields || fields.length === 0)
-                    return { ...(entity as any), entityId: ref.entityId };
+                if (!fields || fields.length === 0) return { entityId: ref.entityId };
 
                 const pick: Record<string, unknown> = {};
                 for (const f of fields) pick[f] = (entity as any)?.[f];
@@ -90,6 +89,11 @@ function setDeep(obj: any, path: string, value: any) {
     let cur = obj;
     for (let i = 0; i < parts.length - 1; i++) {
         const k = parts[i];
+        // Ensure we don't overwrite primitives
+        if (cur[k] !== undefined && (typeof cur[k] !== "object" || cur[k] === null)) {
+            console.warn(`setDeep: Cannot traverse through non-object at path segment "${k}"`);
+            return;
+        }
         cur[k] = cur[k] ?? {};
         cur = cur[k];
     }

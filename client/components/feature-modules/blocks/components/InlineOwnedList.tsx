@@ -1,10 +1,4 @@
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
 import { AddressCard } from "./AddressCard";
 import { InvoiceLineItemCard } from "./InvoiceLineItemCard";
@@ -47,7 +41,7 @@ export const InlineOwnedList: React.FC<Props> = ({
     currency,
 }) => {
     const rows = items ?? [];
-    const Renderer =
+    const ItemRenderer =
         (itemComponent && componentMap[itemComponent]) ??
         (({ data }: { data: any; context: Omit<Props, "items" | "itemComponent"> }) => (
             <pre className="text-xs bg-muted/40 p-3 rounded border border-border/50 overflow-auto">
@@ -63,7 +57,13 @@ export const InlineOwnedList: React.FC<Props> = ({
                 {rows.map((ref: any, index: number) => {
                     const data = ref?.entity?.payload?.data ?? ref;
                     const key = ref?.entityId ?? index;
-                    return <Renderer key={key} data={data} context={{ title, description, currency }} />;
+                    return (
+                        <ItemRenderer
+                            key={key}
+                            data={data}
+                            context={{ title, description, currency }}
+                        />
+                    );
                 })}
             </div>
         );
@@ -72,7 +72,9 @@ export const InlineOwnedList: React.FC<Props> = ({
         return (
             <Card className="transition-shadow duration-150 hover:shadow-lg">
                 <CardHeader>
-                    {title ? <CardTitle className="text-base font-semibold">{title}</CardTitle> : null}
+                    {title ? (
+                        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+                    ) : null}
                     {description ? <CardDescription>{description}</CardDescription> : null}
                 </CardHeader>
                 <CardContent>{content}</CardContent>

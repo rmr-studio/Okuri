@@ -28,6 +28,13 @@ export const RenderBlock: React.FC<{ tree: BlockTree; display: BlockRenderStruct
         <div className="grid grid-cols-12 gap-4">
             {display.layoutGrid.items.map((item) => {
                 const node = display.components[item.id];
+                if (!node) {
+                    return (
+                        <div key={item.id} className="col-span-12 md:col-span-6">
+                            <FallbackComponent reason={`Component "${item.id}" not found`} />
+                        </div>
+                    );
+                }
                 return (
                     <div key={item.id} className="col-span-12 md:col-span-6">
                         <RenderNode node={node} display={display} ctx={ctx} />
@@ -50,6 +57,9 @@ const RenderNode: React.FC<{
     for (const [slotName, ids] of Object.entries(node.slots ?? {})) {
         slots[slotName] = ids.map((id) => {
             const child = display.components[id];
+            if (!child) {
+                return <FallbackComponent key={id} reason={`Component "${id}" not found`} />;
+            }
             return <RenderNode key={id} node={child} display={display} ctx={ctx} />;
         });
     }

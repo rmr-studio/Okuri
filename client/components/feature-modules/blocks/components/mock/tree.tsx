@@ -44,6 +44,7 @@ export const contactTree: BlockTree = {
             // LINKED external entity (CLIENT) with a tiny summary we can render
             account: [
                 {
+                    id: "ref-acc-01",
                     entityType: "CLIENT",
                     entityId: "aaaa-bbbb-cccc",
                     ownership: "LINKED",
@@ -54,6 +55,7 @@ export const contactTree: BlockTree = {
             // OWNED child blocks (addresses) with embedded entity payload for inline render
             addresses: [
                 {
+                    id: "ref-acc-02",
                     entityType: "BLOCK",
                     entityId: "addr-01",
                     ownership: "OWNED",
@@ -124,6 +126,7 @@ export const projectTree: BlockTree = {
         references: {
             owner: [
                 {
+                    id: "ref-acc-03",
                     entityType: "CLIENT",
                     entityId: "owner-001",
                     ownership: "LINKED",
@@ -133,6 +136,7 @@ export const projectTree: BlockTree = {
             ],
             tasks: [
                 {
+                    id: "ref-acc-01",
                     entityType: "BLOCK",
                     entityId: "task-001",
                     ownership: "OWNED",
@@ -150,6 +154,7 @@ export const projectTree: BlockTree = {
                     },
                 },
                 {
+                    id: "ref-acc-02",
                     entityType: "BLOCK",
                     entityId: "task-002",
                     ownership: "OWNED",
@@ -167,6 +172,7 @@ export const projectTree: BlockTree = {
                     },
                 },
                 {
+                    id: "ref-acc-03",
                     entityType: "BLOCK",
                     entityId: "task-003",
                     ownership: "OWNED",

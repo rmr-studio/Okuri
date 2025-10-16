@@ -1,10 +1,4 @@
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/util/utils";
 import { FC } from "react";
 
@@ -72,7 +66,9 @@ export const DataSummaryTable: FC<Props> = ({ title, description, data, classNam
         <Card className={cn("transition-shadow duration-150 hover:shadow-lg", className)}>
             {(title || description) && (
                 <CardHeader>
-                    {title ? <CardTitle className="text-base font-semibold">{title}</CardTitle> : null}
+                    {title ? (
+                        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+                    ) : null}
                     {description ? <CardDescription>{description}</CardDescription> : null}
                 </CardHeader>
             )}
@@ -81,9 +77,9 @@ export const DataSummaryTable: FC<Props> = ({ title, description, data, classNam
                     <p className="text-muted-foreground">No data</p>
                 ) : (
                     <dl className="grid grid-cols-1 gap-2">
-                        {rows.map((row) => (
+                        {rows.map((row, idx) => (
                             <div
-                                key={`${row.key}-${row.value}`}
+                                key={`${row.key}-${idx}`}
                                 className="flex items-start justify-between gap-4"
                             >
                                 <dt className="text-xs uppercase tracking-wide text-muted-foreground">

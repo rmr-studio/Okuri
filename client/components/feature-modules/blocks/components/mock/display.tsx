@@ -115,12 +115,14 @@ export const projectDisplay: BlockRenderStructure = {
             id: "proj_header",
             type: "TEXT",
             props: { text: "", variant: "title" },
+            slots: {},
             bindings: [{ prop: "text", source: { type: "DataPath", path: "$.data/project/name" } }],
             fetchPolicy: "LAZY",
         },
         proj_summary: {
             id: "proj_summary",
             type: "TEXT",
+            slots: {},
             props: { text: "", variant: "body" },
             bindings: [
                 { prop: "text", source: { type: "DataPath", path: "$.data/summary/description" } },
@@ -135,20 +137,27 @@ export const projectDisplay: BlockRenderStructure = {
             id: "proj_status",
             type: "TEXT",
             props: { text: "", variant: "muted" },
-            bindings: [{ prop: "text", source: { type: "DataPath", path: "$.data/project/status" } }],
+            slots: {},
+            bindings: [
+                { prop: "text", source: { type: "DataPath", path: "$.data/project/status" } },
+            ],
             visible: { op: "EXISTS", left: { kind: "Path", path: "$.data/project/status" } },
             fetchPolicy: "LAZY",
         },
         proj_metrics: {
             id: "proj_metrics",
             type: "TABLE",
+            slots: {},
             props: { title: "Key metrics", description: "Progress snapshot" },
-            bindings: [{ prop: "data", source: { type: "DataPath", path: "$.data/project/metrics" } }],
+            bindings: [
+                { prop: "data", source: { type: "DataPath", path: "$.data/project/metrics" } },
+            ],
             fetchPolicy: "LAZY",
         },
         proj_owner: {
             id: "proj_owner",
             type: "TABLE",
+            slots: {},
             props: { title: "Project owner", description: "Primary contact" },
             bindings: [
                 {
@@ -166,6 +175,7 @@ export const projectDisplay: BlockRenderStructure = {
         proj_tasks: {
             id: "proj_tasks",
             type: "LINE_ITEM",
+            slots: {},
             props: { title: "Tasks", itemComponent: "PROJECT_TASK", emptyMessage: "No tasks yet" },
             bindings: [
                 {
@@ -181,6 +191,7 @@ export const projectDisplay: BlockRenderStructure = {
             fetchPolicy: "LAZY",
         },
         proj_action: {
+            slots: {},
             id: "proj_action",
             type: "BUTTON",
             props: {
@@ -244,6 +255,7 @@ export const invoiceDisplay: BlockRenderStructure = {
         invoice_header: {
             id: "invoice_header",
             type: "TEXT",
+            slots: {},
             props: { text: "", variant: "title" },
             bindings: [
                 { prop: "text", source: { type: "DataPath", path: "$.data/invoice/number" } },
@@ -253,6 +265,7 @@ export const invoiceDisplay: BlockRenderStructure = {
         invoice_amount: {
             id: "invoice_amount",
             type: "TABLE",
+            slots: {},
             props: { title: "Totals", description: "Breakdown of invoice totals" },
             bindings: [{ prop: "data", source: { type: "DataPath", path: "$.data/totals" } }],
             fetchPolicy: "LAZY",
@@ -260,6 +273,7 @@ export const invoiceDisplay: BlockRenderStructure = {
         invoice_client: {
             id: "invoice_client",
             type: "TABLE",
+            slots: {},
             props: { title: "Client", description: "Billed organisation" },
             bindings: [
                 {
@@ -277,6 +291,7 @@ export const invoiceDisplay: BlockRenderStructure = {
         invoice_items: {
             id: "invoice_items",
             type: "LINE_ITEM",
+            slots: {},
             props: { title: "Line items", itemComponent: "INVOICE_LINE_ITEM" },
             bindings: [
                 {
@@ -298,6 +313,7 @@ export const invoiceDisplay: BlockRenderStructure = {
         invoice_action: {
             id: "invoice_action",
             type: "BUTTON",
+            slots: {},
             props: {
                 className: "px-4 py-2 bg-primary text-primary-foreground",
                 variant: "default",
@@ -312,8 +328,11 @@ export const invoiceDisplay: BlockRenderStructure = {
         invoice_notes: {
             id: "invoice_notes",
             type: "TEXT",
+            slots: {},
             props: { text: "", variant: "muted" },
-            bindings: [{ prop: "text", source: { type: "DataPath", path: "$.data/invoice/notes" } }],
+            bindings: [
+                { prop: "text", source: { type: "DataPath", path: "$.data/invoice/notes" } },
+            ],
             fetchPolicy: "LAZY",
             visible: { op: "EXISTS", left: { kind: "Path", path: "$.data/invoice/notes" } },
         },
