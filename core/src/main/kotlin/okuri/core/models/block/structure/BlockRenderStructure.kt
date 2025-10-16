@@ -1,5 +1,6 @@
 package okuri.core.models.block.structure
 
+import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.BlockFetchPolicy
 import okuri.core.enums.core.ComponentType
 import okuri.core.models.common.Condition
@@ -21,6 +22,7 @@ data class BlockRenderStructure(
 data class BlockComponentNode(
     val id: String,
     val type: ComponentType,
+    @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     val props: JsonObject = mapOf(),
     val bindings: List<BlockBinding> = emptyList(),
     val slots: Map<String, List<String>> = emptyMap(), // slotKey -> [childComponentId,...]
