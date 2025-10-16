@@ -1,6 +1,7 @@
 package okuri.core.models.block.structure
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.BlockReference
@@ -10,6 +11,7 @@ import java.io.Serializable
 import java.util.*
 
 data class BlockMetadata(
+    @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     val data: JsonObject = emptyMap(),
     val refs: List<BlockReference<*>> = emptyList(),
     val meta: BlockMeta
@@ -76,6 +78,7 @@ data class BlockMetadata(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class BlockMeta(
     val validationErrors: List<String> = emptyList(),
+    @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     val computedFields: JsonObject? = null,    // optional server-computed values for UI summaries
     val lastValidatedVersion: Int? = null      // BlockType.version used for last validation
 )

@@ -1,8 +1,8 @@
+import { OnboardWrapper } from "@/components/feature-modules/onboarding/context/onboard.wrapper";
 import { BGPattern } from "@/components/ui/background/grids";
 import { AppNavbar } from "@/components/ui/nav/app.navbar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/ui/sidebar/dashboard-sidebar";
-import { OnboardWrapper } from "@/components/util/onboard.wrapper";
 import { ChildNodeProps } from "@/lib/interfaces/interface";
 import { FC } from "react";
 

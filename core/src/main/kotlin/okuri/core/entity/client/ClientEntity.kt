@@ -4,7 +4,7 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.company.CompanyEntity
 import okuri.core.entity.util.AuditableEntity
-import okuri.core.enums.block.client.ClientType
+import okuri.core.enums.client.ClientType
 import okuri.core.models.block.Referenceable
 import okuri.core.models.client.Client
 import okuri.core.models.common.Contact

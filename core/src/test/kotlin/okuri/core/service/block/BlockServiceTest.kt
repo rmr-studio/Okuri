@@ -17,7 +17,7 @@ import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.schema.SchemaService
 import okuri.core.service.schema.SchemaValidationException
 import okuri.core.service.util.WithUserPersona
-import okuri.core.service.util.factory.BlockFactory
+import okuri.core.service.util.factory.block.BlockFactory
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

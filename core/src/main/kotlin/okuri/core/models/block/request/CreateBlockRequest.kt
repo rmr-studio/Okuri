@@ -1,7 +1,9 @@
 package okuri.core.models.block.request
 
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
+import okuri.core.models.common.json.JsonObject
 import java.util.*
 
 /**
@@ -15,8 +17,9 @@ data class CreateBlockRequest(
     val organisationId: UUID,
     val typeVersion: Int? = null,
     val name: String?,
+    @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     @field:NotEmpty
-    val payload: Map<String, Any>
+    val payload: JsonObject
 ) {
     init {
         require(typeId != null || typeKey != null) { "Either typeId or typeKey must be provided" }

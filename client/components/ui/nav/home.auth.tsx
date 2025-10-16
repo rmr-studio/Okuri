@@ -1,9 +1,9 @@
 "use client";
 
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
+import { UserProfileDropdown } from "../../feature-modules/user/components/avatar-dropdown";
 import AuthenticateButton from "../AuthenticateButton";
-import { UserProfileDropdown } from "../avatar-dropdown";
 
 const LoadingSkeleton = () => (
     <motion.div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
 import { useReportTemplates } from "@/hooks/useReportTemplates";
 import { useEffect, useState } from "react";
 import TemplateActions from "./TemplateActions";
@@ -10,16 +10,12 @@ import TemplatePreview from "./TemplatePreview";
 const templateType = "invoice";
 
 const TemplateList = () => {
-    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
-        null
-    );
+    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [formInitialData, setFormInitialData] = useState<any>(null);
-    const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
-        null
-    );
+    const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 
     const { data: user, isLoadingAuth } = useProfile();
     const {
@@ -52,11 +48,7 @@ const TemplateList = () => {
         setShowForm(true);
     };
 
-    const handleFormSubmit = async (data: {
-        name: string;
-        type: string;
-        templateData: string;
-    }) => {
+    const handleFormSubmit = async (data: { name: string; type: string; templateData: string }) => {
         if (editingTemplateId) {
             // Update existing
             await fetch(`/api/report-templates/${editingTemplateId}`, {
@@ -117,10 +109,7 @@ const TemplateList = () => {
         // Set all user's templates of this type to isDefault: false, then set this one to true
         await Promise.all(
             templates
-                .filter(
-                    (t: Template) =>
-                        t.ownerId === user?.id && t.type === template.type
-                )
+                .filter((t: Template) => t.ownerId === user?.id && t.type === template.type)
                 .map((t: Template) =>
                     fetch(`/api/report-templates/${t.id}`, {
                         method: "PUT",
@@ -195,26 +184,16 @@ const TemplateList = () => {
                                     </span>
                                 )}
                                 {template.isBuiltIn && (
-                                    <span
-                                        style={{ marginLeft: 8, color: "gray" }}
-                                    >
-                                        (Built-in)
-                                    </span>
+                                    <span style={{ marginLeft: 8, color: "gray" }}>(Built-in)</span>
                                 )}
                             </div>
                             <div style={{ display: "flex", gap: 8 }}>
-                                <button onClick={() => handlePreview(template)}>
-                                    Preview
-                                </button>
+                                <button onClick={() => handlePreview(template)}>Preview</button>
                                 <TemplateActions
                                     onEdit={() => handleEdit(template)}
                                     onDelete={() => handleDelete(template)}
-                                    onDuplicate={() =>
-                                        handleDuplicate(template)
-                                    }
-                                    onSetDefault={() =>
-                                        handleSetDefault(template)
-                                    }
+                                    onDuplicate={() => handleDuplicate(template)}
+                                    onSetDefault={() => handleSetDefault(template)}
                                 />
                             </div>
                         </div>
@@ -230,15 +209,10 @@ const TemplateList = () => {
                         background: "#fafafa",
                     }}
                 >
-                    <button
-                        onClick={handleClosePreview}
-                        style={{ float: "right" }}
-                    >
+                    <button onClick={handleClosePreview} style={{ float: "right" }}>
                         Close
                     </button>
-                    <TemplatePreview
-                        templateData={selectedTemplate.templateData}
-                    />
+                    <TemplatePreview templateData={selectedTemplate.templateData} />
                 </div>
             )}
         </div>

@@ -164,6 +164,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/block/{blockId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a block tree
+         * @description Retrieves a block with optional expansion of references and a maximum depth for child blocks.
+         */
+        get: operations["getBlock"];
+        /**
+         * Update an existing block
+         * @description Updates a block by ID. Validates and merges payload according to the block type's validation settings.
+         */
+        put: operations["updateBlock"];
+        post?: never;
+        /**
+         * Delete a block
+         * @description Deletes a block by ID. The request must include the full block payload to ensure authorisation and cascading rules are applied correctly.
+         */
+        delete: operations["deleteBlockById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/{blockId}/archive/{status}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update archival status of a block
+         * @description Archives or unarchives a block. The request must include the full block payload to ensure authorisation and validation are correctly scoped.
+         */
+        put: operations["updateArchiveStatusByBlockId"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/schema/{blockTypeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update an existing block type
+         * @description Updates a block type with the specified ID. Does not allow changing the scope of the block type.
+         */
+        put: operations["updateBlockType"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/schema/{blockTypeId}/archive/{status}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Archive a block type
+         * @description Archives a block type by its ID. The block type will still be visible to users currently using it but cannot be used in new blocks.
+         */
+        put: operations["updateArchiveStatusByBlockTypeId"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organisation/invite/reject/{inviteToken}": {
         parameters: {
             query?: never;
@@ -290,6 +378,46 @@ export interface paths {
          * @description Creates a new client based on the provided request data.
          */
         post: operations["createClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/schema/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new block type
+         * @description Creates and publishes a new block type based on the provided request data.
+         */
+        post: operations["publishBlockType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new block
+         * @description Creates a new block using the provided request details and validates payload when required.
+         */
+        post: operations["createBlock"];
         delete?: never;
         options?: never;
         head?: never;
@@ -448,6 +576,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/block/schema/organisation/{organisationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get block types for organisation
+         * @description Retrieves all block types associated with a specific organisation.
+         */
+        get: operations["getBlockTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/schema/key/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get block type by key
+         * @description Retrieves a block type by its unique key.
+         */
+        get: operations["getBlockTypeByKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organisation/{organisationId}/member": {
         parameters: {
             query?: never;
@@ -528,7 +696,7 @@ export interface components {
             /** Format: int32 */
             memberCount: number;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string;
             members: components["schemas"]["OrganisationMember"][];
             invites: components["schemas"]["OrganisationInvite"][];
         };
@@ -596,42 +764,256 @@ export interface components {
             billableType: "HOURS" | "DISTANCE" | "QUANTITY" | "FIXED";
             quantity: number;
         };
+        BindingSource: {
+            type: string;
+        };
+        Block: {
+            /** Format: uuid */
+            id: string;
+            name?: string;
+            /** Format: uuid */
+            organisationId: string;
+            type: components["schemas"]["BlockType"];
+            payload: components["schemas"]["BlockMetadata"];
+            archived: boolean;
+            validationErrors?: string[];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            updatedBy?: string;
+        };
+        BlockBinding: {
+            prop: string;
+            source: components["schemas"]["Computed"] | components["schemas"]["DataPath"] | components["schemas"]["RefSlot"];
+        };
+        BlockComponentNode: {
+            id: string;
+            /** @enum {string} */
+            type: "CONTACT_CARD" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT";
+            props: {
+                [key: string]: unknown;
+            };
+            bindings: components["schemas"]["BlockBinding"][];
+            slots: {
+                [key: string]: string[];
+            };
+            visible?: components["schemas"]["Condition"];
+            /** @enum {string} */
+            fetchPolicy: "INHERIT" | "LAZY" | "EAGER";
+        };
+        BlockDisplay: {
+            form: components["schemas"]["BlockFormStructure"];
+            render: components["schemas"]["BlockRenderStructure"];
+        };
+        BlockFormStructure: {
+            fields: {
+                [key: string]: components["schemas"]["FormWidgetConfig"];
+            };
+        };
+        BlockMeta: {
+            validationErrors: string[];
+            computedFields?: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            lastValidatedVersion?: number;
+        };
+        BlockMetadata: {
+            data: {
+                [key: string]: unknown;
+            };
+            refs: components["schemas"]["BlockReferenceObject"][];
+            meta: components["schemas"]["BlockMeta"];
+        };
+        BlockNode: {
+            block: components["schemas"]["Block"];
+            children: {
+                [key: string]: components["schemas"]["BlockNode"][];
+            };
+            references: {
+                [key: string]: components["schemas"]["BlockReferenceObject"][];
+            };
+            warnings: string[];
+        };
+        BlockReferenceObject: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+            /** Format: uuid */
+            entityId: string;
+            entity?: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            ownership: "OWNED" | "LINKED";
+            /** Format: int32 */
+            orderIndex?: number;
+            path: string;
+        };
+        BlockRenderStructure: {
+            /** Format: int32 */
+            version: number;
+            layoutGrid: components["schemas"]["LayoutGrid"];
+            components: {
+                [key: string]: components["schemas"]["BlockComponentNode"];
+            };
+            theme?: components["schemas"]["ThemeTokens"];
+        };
+        BlockSchema: {
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            type: "STRING" | "NUMBER" | "BOOLEAN" | "OBJECT" | "ARRAY" | "NULL";
+            /** @enum {string} */
+            format?: "DATE" | "DATETIME" | "EMAIL" | "PHONE" | "CURRENCY" | "URL" | "PERCENTAGE";
+            required: boolean;
+            properties?: {
+                [key: string]: components["schemas"]["BlockSchema"];
+            };
+            items?: components["schemas"]["BlockSchema"];
+        };
+        BlockTree: {
+            /** Format: int32 */
+            maxDepth: number;
+            expandRefs: boolean;
+            root: components["schemas"]["BlockNode"];
+        };
+        BlockType: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            /** Format: int32 */
+            version: number;
+            name: string;
+            /** Format: uuid */
+            sourceId?: string;
+            description?: string;
+            /** Format: uuid */
+            organisationId?: string;
+            archived: boolean;
+            /** @enum {string} */
+            strictness: "SOFT" | "STRICT" | "NONE";
+            system: boolean;
+            schema: components["schemas"]["BlockSchema"];
+            display: components["schemas"]["BlockDisplay"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            updatedBy?: string;
+        };
         Client: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             organisationId: string;
             name: string;
+            contact: components["schemas"]["Contact"];
+            /** @enum {string} */
+            type?: "PROSPECT" | "CUSTOMER" | "SUBSCRIBER" | "SERVICE" | "ENTERPRISE" | "PARTNER" | "VENDOR" | "DORMANT" | "TRIAL" | "CHURNED" | "INFLUENCER" | "OTHER";
+            company?: components["schemas"]["Company"];
+            role?: string;
             archived: boolean;
-            contactDetails?: components["schemas"]["ContactDetails"];
-            template?: components["schemas"]["TemplateClientTemplateFieldStructure"];
+            metadata?: components["schemas"]["ClientTypeMetadata"];
             attributes?: {
-                [key: string]: Record<string, never>;
+                [key: string]: components["schemas"]["BlockTree"];
+            };
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            updatedBy?: string;
+        };
+        ClientTypeMetadata: {
+            /** @enum {string} */
+            type: "PROSPECT" | "CUSTOMER" | "SUBSCRIBER" | "SERVICE" | "ENTERPRISE" | "PARTNER" | "VENDOR" | "DORMANT" | "TRIAL" | "CHURNED" | "INFLUENCER" | "OTHER";
+            metadata: {
+                [key: string]: components["schemas"]["Block"];
             };
         };
-        ClientTemplateFieldStructure: {
+        Company: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            organisationId: string;
             name: string;
-            description?: string;
-            /** @enum {string} */
-            type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "SELECT" | "MULTISELECT" | "OBJECT";
-            required: boolean;
-            children: components["schemas"]["ClientTemplateFieldStructure"][];
-            constraints?: components["schemas"]["Constraint"][];
-            options?: string[];
-            defaultValue?: Record<string, never>;
-        };
-        Constraint: {
-            /** @enum {string} */
-            type: "MIN_LENGTH" | "MAX_LENGTH" | "PATTERN" | "REQUIRED" | "UNIQUE" | "CUSTOM" | "TYPE";
-            value?: string;
-        };
-        ContactDetails: {
+            address?: components["schemas"]["Address"];
+            phone?: string;
             email?: string;
+            website?: string;
+            businessNumber?: string;
+            logoUrl?: string;
+            archived: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            updatedBy?: string;
+        };
+        Computed: {
+            type: "Computed";
+        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
+            expr: string;
+            engine: string;
+        });
+        Condition: {
+            /** @enum {string} */
+            op: "EXISTS" | "EQUALS" | "NOT_EQUALS" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "EMPTY" | "NOT_EMPTY";
+            left: components["schemas"]["Path"] | components["schemas"]["Value"];
+            right?: components["schemas"]["Path"] | components["schemas"]["Value"];
+        };
+        Contact: {
+            email: string;
             phone?: string;
             address?: components["schemas"]["Address"];
             additionalContacts?: {
                 [key: string]: string;
             };
+        };
+        DataPath: {
+            type: "DataPath";
+        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
+            path: string;
+        });
+        FormWidgetConfig: {
+            /** @enum {string} */
+            type: "TEXT_INPUT" | "NUMBER_INPUT" | "CHECKBOX" | "RADIO_BUTTON" | "DROPDOWN" | "DATE_PICKER" | "EMAIL_INPUT" | "PHONE_INPUT" | "CURRENCY_INPUT" | "TEXT_AREA" | "FILE_UPLOAD" | "SLIDER" | "TOGGLE_SWITCH";
+            label: string;
+            description?: string;
+            tooltip?: string;
+            placeholder?: string;
+            options?: components["schemas"]["Option"][];
+        };
+        GridItem: {
+            id: string;
+            sm?: components["schemas"]["GridRect"];
+            md?: components["schemas"]["GridRect"];
+            lg: components["schemas"]["GridRect"];
+        };
+        GridRect: {
+            /** Format: int32 */
+            x: number;
+            /** Format: int32 */
+            y: number;
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+            locked: boolean;
         };
         Invoice: {
             /** Format: uuid */
@@ -670,9 +1052,9 @@ export interface components {
             /** Format: date-time */
             dueDate?: string;
             /** Format: date-time */
-            invoiceCreatedAt: string;
+            invoiceCreatedAt?: string;
             /** Format: date-time */
-            invoiceUpdatedAt: string;
+            invoiceUpdatedAt?: string;
         };
         InvoiceTemplateFieldStructure: {
             name: string;
@@ -681,31 +1063,45 @@ export interface components {
             required: boolean;
             children: components["schemas"]["InvoiceTemplateFieldStructure"][];
         };
+        LayoutGrid: {
+            /** Format: int32 */
+            cols?: number;
+            /** Format: int32 */
+            rowHeight?: number;
+            /** Format: int32 */
+            width?: number;
+            /** Format: int32 */
+            height?: number;
+            items: components["schemas"]["GridItem"][];
+        };
+        Operand: {
+            kind: string;
+        };
+        Option: {
+            label: string;
+            value: string;
+        };
+        Path: {
+            kind: "Path";
+        } & (Omit<components["schemas"]["Operand"], "kind"> & {
+            path: string;
+        });
+        RefSlot: {
+            type: "RefSlot";
+        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
+            slot: string;
+            /** @enum {string} */
+            presentation: "SUMMARY" | "INLINE";
+            fields?: string[];
+            /** Format: int32 */
+            expandDepth?: number;
+        });
         ReportTemplateFieldStructure: {
             name: string;
             description?: string;
             type: string;
             required: boolean;
             children: components["schemas"]["ReportTemplateFieldStructure"][];
-        };
-        TemplateClientTemplateFieldStructure: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            userId?: string;
-            name: string;
-            description?: string;
-            /** @enum {string} */
-            type: "CLIENT" | "INVOICE" | "REPORT";
-            structure: {
-                [key: string]: components["schemas"]["ClientTemplateFieldStructure"];
-            };
-            isDefault: boolean;
-            isPremade: boolean;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
         };
         TemplateInvoiceTemplateFieldStructure: {
             /** Format: uuid */
@@ -722,9 +1118,9 @@ export interface components {
             isDefault: boolean;
             isPremade: boolean;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string;
             /** Format: date-time */
-            updatedAt: string;
+            updatedAt?: string;
         };
         TemplateReportTemplateFieldStructure: {
             /** Format: uuid */
@@ -741,10 +1137,20 @@ export interface components {
             isDefault: boolean;
             isPremade: boolean;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string;
             /** Format: date-time */
-            updatedAt: string;
+            updatedAt?: string;
         };
+        ThemeTokens: {
+            variant?: string;
+            colorRole?: string;
+            tone?: string;
+        };
+        Value: {
+            kind: "Value";
+        } & (Omit<components["schemas"]["Operand"], "kind"> & {
+            value?: Record<string, never>;
+        });
         OrganisationCreationRequest: {
             name: string;
             avatarUrl?: string;
@@ -805,11 +1211,34 @@ export interface components {
             name: string;
             /** Format: uuid */
             organisationId: string;
-            contact?: components["schemas"]["ContactDetails"];
-            attributes: {
-                [key: string]: Record<string, never>;
+            /** Format: uuid */
+            companyId?: string;
+            companyRole?: string;
+            contact: components["schemas"]["Contact"];
+        };
+        CreateBlockTypeRequest: {
+            key: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            mode: "SOFT" | "STRICT" | "NONE";
+            schema: components["schemas"]["BlockSchema"];
+            display: components["schemas"]["BlockDisplay"];
+            /** Format: uuid */
+            organisationId: string;
+        };
+        CreateBlockRequest: {
+            /** Format: uuid */
+            typeId?: string;
+            typeKey?: string;
+            /** Format: uuid */
+            organisationId: string;
+            /** Format: int32 */
+            typeVersion?: number;
+            name?: string;
+            payload: {
+                [key: string]: unknown;
             };
-            template?: components["schemas"]["TemplateClientTemplateFieldStructure"];
         };
     };
     responses: never;
@@ -1301,7 +1730,9 @@ export interface operations {
     };
     getClientById: {
         parameters: {
-            query?: never;
+            query?: {
+                includeMetadata?: boolean;
+            };
             header?: never;
             path: {
                 clientId: string;
@@ -1476,6 +1907,273 @@ export interface operations {
                 content?: never;
             };
             /** @description Client not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getBlock: {
+        parameters: {
+            query?: {
+                expandRefs?: boolean;
+                maxDepth?: number;
+            };
+            header?: never;
+            path: {
+                blockId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Block tree retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockTree"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockTree"];
+                };
+            };
+            /** @description Block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockTree"];
+                };
+            };
+        };
+    };
+    updateBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                blockId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Block"];
+            };
+        };
+        responses: {
+            /** @description Block updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Block"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Block"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Block"];
+                };
+            };
+            /** @description Block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Block"];
+                };
+            };
+        };
+    };
+    deleteBlockById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                blockId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Block"];
+            };
+        };
+        responses: {
+            /** @description Block deleted successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateArchiveStatusByBlockId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                blockId: string;
+                status: boolean;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Block"];
+            };
+        };
+        responses: {
+            /** @description Block archival status updated successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateBlockType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                blockTypeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockType"];
+            };
+        };
+        responses: {
+            /** @description Block type updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block type not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateArchiveStatusByBlockTypeId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                blockTypeId: string;
+                status: boolean;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Block type archived successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block type not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1763,6 +2461,90 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Client"];
+                };
+            };
+        };
+    };
+    publishBlockType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBlockTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description Block type created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"];
+                };
+            };
+        };
+    };
+    createBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBlockRequest"];
+            };
+        };
+        responses: {
+            /** @description Block created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Block"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Block"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Block"];
                 };
             };
         };
@@ -2101,6 +2883,86 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Client"][];
+                };
+            };
+        };
+    };
+    getBlockTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organisationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Block types retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"][];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"][];
+                };
+            };
+            /** @description No block types found for the organisation */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"][];
+                };
+            };
+        };
+    };
+    getBlockTypeByKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Block type retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"];
+                };
+            };
+            /** @description Block type not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockType"];
                 };
             };
         };

@@ -8,7 +8,7 @@ import okuri.core.models.block.Referenceable
 import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.block.resolvers.ReferenceResolver
-import okuri.core.service.util.factory.BlockFactory
+import okuri.core.service.util.factory.block.BlockFactory
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

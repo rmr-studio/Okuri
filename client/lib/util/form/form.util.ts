@@ -1,4 +1,4 @@
-import { ClientFieldType } from "@/lib/interfaces/client.interface";
+import { ClientFieldType } from "@/components/feature-modules/client/interface/client.interface";
 import { z } from "zod";
 
 export const MIN_DATE = new Date("1900-01-01");

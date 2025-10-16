@@ -1,10 +1,10 @@
 "use client";
 
+import { Client } from "@/components/feature-modules/client/interface/client.interface";
 import { useAuth } from "@/components/provider/auth-context";
 import { Form } from "@/components/ui/form";
 import { AddressFormSchema } from "@/components/ui/forms/bespoke/AddressFormSection";
 import { FormStepper } from "@/components/ui/forms/form-stepper";
-import { Client } from "@/lib/interfaces/client.interface";
 import { ClassNameProps } from "@/lib/interfaces/interface";
 import type { TemplateClientTemplateFieldStructure } from "@/lib/interfaces/template.interface";
 import { Step } from "@/lib/util/form/form.util";

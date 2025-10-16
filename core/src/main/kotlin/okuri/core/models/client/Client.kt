@@ -1,7 +1,7 @@
 package okuri.core.models.client
 
 import okuri.core.entity.util.AuditableModel
-import okuri.core.enums.block.client.ClientType
+import okuri.core.enums.client.ClientType
 import okuri.core.models.block.request.BlockTree
 import okuri.core.models.common.Contact
 import okuri.core.models.company.Company
