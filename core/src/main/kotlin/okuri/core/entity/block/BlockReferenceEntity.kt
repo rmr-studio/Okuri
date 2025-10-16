@@ -41,7 +41,7 @@ data class BlockReferenceEntity(
     val entityId: UUID,
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ownership", nullable = false)
+    @Column(name = "relation", nullable = false)
     val ownership: BlockOwnership = BlockOwnership.LINKED,
 
     @Column(name = "path", nullable = false)
@@ -63,13 +63,12 @@ data class BlockReferenceEntity(
      */
     fun <T : Referenceable<E>, E : Any?> toModel(entity: T?): BlockReference<*> {
         val id = requireNotNull(this.id) { "BlockReferenceEntity ID cannot be null when converting to model" }
-        val blockId = requireNotNull(this.block.id) { "Block ID cannot be null when converting to model" }
+        requireNotNull(this.block.id) { "Block ID cannot be null when converting to model" }
 
         if (entity == null) {
             return BlockReference(
                 id = id,
                 entityType = this.entityType,
-                blockId = blockId,
                 entityId = this.entityId,
                 ownership = this.ownership,
                 orderIndex = this.orderIndex,
@@ -92,7 +91,6 @@ data class BlockReferenceEntity(
                     ownership = this.ownership,
                     path = this.path,
                     orderIndex = this.orderIndex,
-                    blockId = blockId
                 )
             }
 
@@ -109,7 +107,6 @@ data class BlockReferenceEntity(
                     ownership = this.ownership,
                     path = this.path,
                     orderIndex = this.orderIndex,
-                    blockId = blockId
                 )
             }
 
