@@ -99,11 +99,6 @@ export const projectDisplay: BlockRenderStructure = {
                 lg: { x: 8, y: 4, width: 4, height: 4, locked: false },
             },
             {
-                id: "proj_tasks",
-                sm: { x: 0, y: 23, width: 12, height: 10, locked: false },
-                lg: { x: 0, y: 16, width: 12, height: 10, locked: false },
-            },
-            {
                 id: "proj_action",
                 sm: { x: 0, y: 33, width: 12, height: 3, locked: false },
                 lg: { x: 8, y: 12, width: 4, height: 4, locked: false },
@@ -149,7 +144,12 @@ export const projectDisplay: BlockRenderStructure = {
             type: "LAYOUT_CONTAINER" as any,
             props: { title: "Key metrics", description: "Progress snapshot" },
             slots: {
-                main: ["proj_metric_progress", "proj_metric_budget", "proj_metric_risks"],
+                main: [
+                    "proj_metric_progress",
+                    "proj_metric_budget",
+                    "proj_metric_risks",
+                    "proj_tasks",
+                ],
             },
             slotLayout: {
                 main: {
@@ -169,6 +169,11 @@ export const projectDisplay: BlockRenderStructure = {
                             id: "proj_metric_risks",
                             sm: { x: 0, y: 8, width: 12, height: 4, locked: false },
                             lg: { x: 0, y: 4, width: 12, height: 4, locked: false },
+                        },
+                        {
+                            id: "proj_tasks",
+                            sm: { x: 0, y: 12, width: 12, height: 10, locked: false },
+                            lg: { x: 0, y: 8, width: 12, height: 10, locked: false },
                         },
                     ],
                 },
