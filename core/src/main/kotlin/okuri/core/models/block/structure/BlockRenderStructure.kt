@@ -25,7 +25,9 @@ data class BlockComponentNode(
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     val props: JsonObject = mapOf(),
     val bindings: List<BlockBinding> = emptyList(),
-    val slots: Map<String, List<String>> = emptyMap(), // slotKey -> [childComponentId,...]
+    val slots: Map<String, List<String>>? = null, // slotKey -> [childComponentId,...]
+    val slotLayout: Map<String, LayoutGrid>? = null, // slotKey -> LayoutGrid
+    val widgetMeta: JsonObject? = null,
     val visible: Condition? = null, // visibility condition
     val fetchPolicy: BlockFetchPolicy = BlockFetchPolicy.LAZY // data fetching policy (for refs)
 )

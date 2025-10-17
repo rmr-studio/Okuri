@@ -262,7 +262,6 @@ class BlockReferenceServiceTest {
             entityId = UUID.randomUUID(),
             entity = null,
             ownership = BlockOwnership.OWNED,
-            blockId = blockId,
             orderIndex = 0,
             path = "\$.data/contacts[0]"
         )

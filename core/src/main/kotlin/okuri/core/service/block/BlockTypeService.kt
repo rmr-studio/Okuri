@@ -94,7 +94,7 @@ class BlockTypeService(
         blockTypeRepository.save(newRow).run {
             activityService.logActivity(
                 activity = Activity.BLOCK_TYPE,
-                operation = okuri.core.enums.util.OperationType.CREATE,
+                operation = OperationType.CREATE,
                 userId = userId,
                 organisationId = this.organisationId,
                 targetId = this.id,
@@ -121,8 +121,8 @@ class BlockTypeService(
         blockTypeRepository.save(updated)
         activityService.logActivity(
             activity = Activity.BLOCK_TYPE,
-            operation = if (status) okuri.core.enums.util.OperationType.ARCHIVE
-            else okuri.core.enums.util.OperationType.RESTORE,
+            operation = if (status) OperationType.ARCHIVE
+            else OperationType.RESTORE,
             userId = userId,
             organisationId = existing.organisationId,
             targetId = existing.id,
@@ -207,4 +207,12 @@ class BlockTypeService(
     fun getById(id: UUID): BlockTypeEntity {
         return findOrThrow { blockTypeRepository.findById(id) }
     }
+
+    /**
+     * Lints the display structure of a block type and returns any issues found.
+     *
+     * @param type The BlockType whose display structure should be linted.
+     * @return A list of linting issues found in the display structure.
+     */
+    fun lintBlockTypeDisplay(type: BlockType) = displayLinterService.lint(type.display)
 }
