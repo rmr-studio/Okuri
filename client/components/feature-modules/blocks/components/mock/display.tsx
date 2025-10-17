@@ -141,7 +141,7 @@ export const projectDisplay: BlockRenderStructure = {
         },
         proj_metrics_grid: {
             id: "proj_metrics_grid",
-            type: "LAYOUT_CONTAINER" as any,
+            type: "LAYOUT_CONTAINER",
             props: { title: "Key metrics", description: "Progress snapshot" },
             slots: {
                 main: [
@@ -153,7 +153,9 @@ export const projectDisplay: BlockRenderStructure = {
             },
             slotLayout: {
                 main: {
-                    grid: { cols: 12, rowHeight: 40, margin: 8 },
+                    cols: 12,
+                    rowHeight: 40,
+                    margin: 8,
                     items: [
                         {
                             id: "proj_metric_progress",
@@ -177,7 +179,7 @@ export const projectDisplay: BlockRenderStructure = {
                         },
                     ],
                 },
-            } as any,
+            },
             bindings: [],
             fetchPolicy: "LAZY",
         },
@@ -187,7 +189,10 @@ export const projectDisplay: BlockRenderStructure = {
             props: { text: "", variant: "subtitle" },
             slots: {},
             bindings: [
-                { prop: "text", source: { type: "DataPath", path: "$.data/project/metricsDisplay/progress" } },
+                {
+                    prop: "text",
+                    source: { type: "DataPath", path: "$.data/project/metricsDisplay/progress" },
+                },
             ],
             fetchPolicy: "LAZY",
         },
@@ -197,7 +202,10 @@ export const projectDisplay: BlockRenderStructure = {
             props: { text: "", variant: "subtitle" },
             slots: {},
             bindings: [
-                { prop: "text", source: { type: "DataPath", path: "$.data/project/metricsDisplay/budget" } },
+                {
+                    prop: "text",
+                    source: { type: "DataPath", path: "$.data/project/metricsDisplay/budget" },
+                },
             ],
             fetchPolicy: "LAZY",
         },
@@ -207,7 +215,10 @@ export const projectDisplay: BlockRenderStructure = {
             props: { text: "", variant: "subtitle" },
             slots: {},
             bindings: [
-                { prop: "text", source: { type: "DataPath", path: "$.data/project/metricsDisplay/risks" } },
+                {
+                    prop: "text",
+                    source: { type: "DataPath", path: "$.data/project/metricsDisplay/risks" },
+                },
             ],
             fetchPolicy: "LAZY",
         },

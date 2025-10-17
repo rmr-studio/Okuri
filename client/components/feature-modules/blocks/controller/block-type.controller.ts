@@ -3,9 +3,9 @@ import {
     CreateBlockTypeRequest,
     GetBlockTypesResponse,
 } from "@/components/feature-modules/blocks/interface/block.interface";
-import { validateSession } from "@/lib/util/controller/controller.util";
+import { handleError, validateSession, validateUuid } from "@/lib/util/controller/controller.util";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
-import { api, isUUID } from "@/lib/util/utils";
+import { api } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
 
 /**
@@ -16,14 +16,7 @@ export const publishBlockType = async (
     request: CreateBlockTypeRequest
 ): Promise<BlockType> => {
     try {
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
-
+        validateSession(session);
         const url = api();
 
         const response = await fetch(`${url}/v1/block/schema/`, {
@@ -36,18 +29,10 @@ export const publishBlockType = async (
         });
 
         if (response.ok) return await response.json();
-
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to publish block type: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to publish block type: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
         throw fromError(error);
@@ -63,21 +48,8 @@ export const updateBlockType = async (
     request: BlockType
 ): Promise<BlockType> => {
     try {
-        if (!isUUID(blockTypeId)) {
-            throw fromError({
-                message: "Invalid block type ID format. Expected a UUID.",
-                status: 400,
-                error: "INVALID_ID",
-            });
-        }
-
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
+        validateSession(session);
+        validateUuid(blockTypeId);
 
         const url = api();
 
@@ -92,17 +64,10 @@ export const updateBlockType = async (
 
         if (response.ok) return await response.json();
 
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to update block type: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to update block type: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
         throw fromError(error);
@@ -119,21 +84,8 @@ export const updateArchiveStatusByBlockTypeId = async (
     requestBody: BlockType
 ): Promise<BlockType> => {
     try {
-        if (!isUUID(blockTypeId)) {
-            throw fromError({
-                message: "Invalid block type ID format. Expected a UUID.",
-                status: 400,
-                error: "INVALID_ID",
-            });
-        }
-
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
+        validateSession(session);
+        validateUuid(blockTypeId);
 
         const url = api();
 
@@ -151,17 +103,10 @@ export const updateArchiveStatusByBlockTypeId = async (
 
         if (response.ok) return await response.json();
 
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to update block type archive status: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to update block type archive status: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
         throw fromError(error);
@@ -176,21 +121,8 @@ export const getBlockTypes = async (
     organisationId: string
 ): Promise<GetBlockTypesResponse> => {
     try {
-        if (!isUUID(organisationId)) {
-            throw fromError({
-                message: "Invalid organisation ID format. Expected a UUID.",
-                status: 400,
-                error: "INVALID_ID",
-            });
-        }
-
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
+        validateUuid(organisationId);
+        validateSession(session);
 
         const url = api();
 
@@ -204,17 +136,10 @@ export const getBlockTypes = async (
 
         if (response.ok) return await response.json();
 
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to fetch block types: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to fetch block types: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
         throw fromError(error);
@@ -243,17 +168,10 @@ export const getBlockTypeByKey = async (
 
         if (response.ok) return await response.json();
 
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to fetch block type by key: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to fetch block type by key: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
         throw fromError(error);
@@ -263,5 +181,25 @@ export const getBlockTypeByKey = async (
 export const lintBlockType = async (session: Session | null, blockType: BlockType) => {
     try {
         validateSession(session);
-    } catch (error) {}
+        const url = api();
+        
+        const response = await fetch(`${url}/v1/block/schema/lint/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify(blockType),
+        });
+
+        if (response.ok) return await response.json();
+
+        throw await handleError(
+            response,
+            (res) => `Failed to lint block type: ${res.status} ${res.statusText}`
+        );
+    } catch (error) {
+        if (isResponseError(error)) throw error;
+        throw fromError(error);
+    }
 };

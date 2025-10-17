@@ -6,16 +6,15 @@ import {
     BlockTree,
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import { applyBindings } from "@/components/feature-modules/blocks/util/block.binding";
+import { buildDisplayFromGridState } from "@/components/feature-modules/blocks/util/block.layout";
 import { blockRenderRegistry } from "@/components/feature-modules/blocks/util/block.registry";
 import { evalVisible } from "@/components/feature-modules/blocks/util/block.visibility";
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
-import { GridProvider } from "@/components/feature-modules/grid/provider/grid-provider";
+import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
 import type { GridStackOptions, GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import React, { useEffect, useMemo } from "react";
-import { useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
-import { buildDisplayFromGridState } from "@/components/feature-modules/blocks/util/block.layout";
 
 export interface TreeCtx {
     payload: object;
@@ -92,7 +91,6 @@ function buildGridOptions(display: BlockRenderStructure, ctx: TreeCtx): GridStac
         subGridOpts: {
             acceptWidgets: true,
             animate: true,
-            dragOut: true,
         },
         children,
     };
@@ -128,7 +126,7 @@ function buildWidgetForComponent({
         });
     }
 
-    if (!evalVisible(node.visible as any, ctx)) return null;
+    if (!evalVisible(node.visible, ctx)) return null;
 
     const elementMeta = blockRenderRegistry[node.type];
     if (!elementMeta) {
@@ -172,10 +170,9 @@ function buildWidgetForComponent({
 
     const subGrid = buildSubGrid(node, display, ctx, widgetId);
     if (subGrid) {
-        (widget as any).subGridOpts = {
+        widget.subGridOpts = {
             acceptWidgets: true,
             animate: true,
-            dragOut: true,
             class: "grid-stack-subgrid",
             ...subGrid,
         };
@@ -193,8 +190,8 @@ function buildSubGrid(
     const slots: Record<string, string[]> = node.slots ?? {};
     if (Object.keys(slots).length === 0) return null;
 
-    const slotLayout = (node as unknown as { slotLayout?: Record<string, SlotLayoutDefinition> })
-        .slotLayout ?? {};
+    const slotLayout =
+        (node as unknown as { slotLayout?: Record<string, SlotLayoutDefinition> }).slotLayout ?? {};
 
     const children: GridStackWidget[] = [];
     let column: number | undefined;
@@ -327,7 +324,9 @@ const LayoutExporterInitializer: React.FC<{
     return null;
 };
 
-function pickRect(item: { sm?: LayoutRect; md?: LayoutRect; lg?: LayoutRect } | undefined): LayoutRect {
+function pickRect(
+    item: { sm?: LayoutRect; md?: LayoutRect; lg?: LayoutRect } | undefined
+): LayoutRect {
     return item?.lg ?? item?.md ?? item?.sm ?? createDefaultRect(0);
 }
 

@@ -1,21 +1,22 @@
 "use client";
 
-import { FC } from "react";
-import { WidgetRegistry } from "../util/widget.registry";
 import {
     RenderElementProvider,
     useRenderElement,
 } from "@/components/feature-modules/render/provider/render-element-provider";
+import { FC } from "react";
+import { RenderElementRegistry } from "../../render/util/render-element.registry";
+import { renderElements } from "../../render/util/render-elements.index";
 
 interface Props {
-    map: WidgetRegistry;
+    registry?: RenderElementRegistry;
     onDelete: (id: string) => void;
 }
 
-export const WidgetRenderProvider: FC<Props> = ({ map, onDelete }) => {
+export const WidgetRenderProvider: FC<Props> = ({ registry = renderElements, onDelete }) => {
     return (
         <RenderElementProvider
-            registry={map}
+            registry={registry}
             transformProps={({ id, element, parsedProps }) => ({
                 ...(parsedProps as Record<string, unknown>),
                 onDelete: () => onDelete(id),

@@ -126,6 +126,8 @@ export const projectTree: BlockTree = {
                     },
                     primaryAction: { label: "Open project" },
                 },
+                refs: [],
+                meta: {validationErrors: []}
             },
         },
         references: {

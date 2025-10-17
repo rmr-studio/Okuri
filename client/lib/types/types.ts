@@ -384,7 +384,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/block/schema/{blockTypeId}/lint": {
+    "/api/v1/block/schema/lint": {
         parameters: {
             query?: never;
             header?: never;
@@ -813,13 +813,19 @@ export interface components {
         BlockComponentNode: {
             id: string;
             /** @enum {string} */
-            type: "CONTACT_CARD" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT";
+            type: "CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT";
             props: {
                 [key: string]: unknown;
             };
             bindings: components["schemas"]["BlockBinding"][];
-            slots: {
+            slots?: {
                 [key: string]: string[];
+            };
+            slotLayout?: {
+                [key: string]: components["schemas"]["LayoutGrid"];
+            };
+            widgetMeta?: {
+                [key: string]: Record<string, never>;
             };
             visible?: components["schemas"]["Condition"];
             /** @enum {string} */
@@ -1090,6 +1096,8 @@ export interface components {
             rowHeight?: number;
             /** Format: int32 */
             width?: number;
+            /** Format: int32 */
+            margin?: number;
             /** Format: int32 */
             height?: number;
             items: components["schemas"]["GridItem"][];
@@ -2495,12 +2503,14 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                blockTypeId: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockType"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
