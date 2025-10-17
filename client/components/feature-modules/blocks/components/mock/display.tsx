@@ -89,7 +89,7 @@ export const projectDisplay: BlockRenderStructure = {
                 lg: { x: 8, y: 0, width: 4, height: 4, locked: false },
             },
             {
-                id: "proj_metrics",
+                id: "proj_metrics_grid",
                 sm: { x: 0, y: 11, width: 12, height: 8, locked: false },
                 lg: { x: 0, y: 8, width: 8, height: 8, locked: false },
             },
@@ -144,13 +144,65 @@ export const projectDisplay: BlockRenderStructure = {
             visible: { op: "EXISTS", left: { kind: "Path", path: "$.data/project/status" } },
             fetchPolicy: "LAZY",
         },
-        proj_metrics: {
-            id: "proj_metrics",
-            type: "TABLE",
-            slots: {},
+        proj_metrics_grid: {
+            id: "proj_metrics_grid",
+            type: "LAYOUT_CONTAINER" as any,
             props: { title: "Key metrics", description: "Progress snapshot" },
+            slots: {
+                main: ["proj_metric_progress", "proj_metric_budget", "proj_metric_risks"],
+            },
+            slotLayout: {
+                main: {
+                    grid: { cols: 12, rowHeight: 40, margin: 8 },
+                    items: [
+                        {
+                            id: "proj_metric_progress",
+                            sm: { x: 0, y: 0, width: 12, height: 4, locked: false },
+                            lg: { x: 0, y: 0, width: 6, height: 4, locked: false },
+                        },
+                        {
+                            id: "proj_metric_budget",
+                            sm: { x: 0, y: 4, width: 12, height: 4, locked: false },
+                            lg: { x: 6, y: 0, width: 6, height: 4, locked: false },
+                        },
+                        {
+                            id: "proj_metric_risks",
+                            sm: { x: 0, y: 8, width: 12, height: 4, locked: false },
+                            lg: { x: 0, y: 4, width: 12, height: 4, locked: false },
+                        },
+                    ],
+                },
+            } as any,
+            bindings: [],
+            fetchPolicy: "LAZY",
+        },
+        proj_metric_progress: {
+            id: "proj_metric_progress",
+            type: "TEXT",
+            props: { text: "", variant: "subtitle" },
+            slots: {},
             bindings: [
-                { prop: "data", source: { type: "DataPath", path: "$.data/project/metrics" } },
+                { prop: "text", source: { type: "DataPath", path: "$.data/project/metricsDisplay/progress" } },
+            ],
+            fetchPolicy: "LAZY",
+        },
+        proj_metric_budget: {
+            id: "proj_metric_budget",
+            type: "TEXT",
+            props: { text: "", variant: "subtitle" },
+            slots: {},
+            bindings: [
+                { prop: "text", source: { type: "DataPath", path: "$.data/project/metricsDisplay/budget" } },
+            ],
+            fetchPolicy: "LAZY",
+        },
+        proj_metric_risks: {
+            id: "proj_metric_risks",
+            type: "TEXT",
+            props: { text: "", variant: "subtitle" },
+            slots: {},
+            bindings: [
+                { prop: "text", source: { type: "DataPath", path: "$.data/project/metricsDisplay/risks" } },
             ],
             fetchPolicy: "LAZY",
         },
