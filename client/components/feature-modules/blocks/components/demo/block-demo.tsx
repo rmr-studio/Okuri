@@ -7,6 +7,7 @@ import {
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import { TypeIcon } from "lucide-react";
 import React, { useCallback, useState } from "react";
+import { cn } from "@/lib/util/utils";
 import {
     BlockInsertHandle,
     BlockSurface,
@@ -23,9 +24,9 @@ type PlaygroundBlock = {
     badge?: string;
     tree: BlockTree;
     display: BlockRenderStructure;
+    colSpan?: number;
+    children?: PlaygroundBlock[];
 };
-
-type SurfaceInsertHandler = (item: SlashMenuItem, position: number) => void;
 
 const uniqueId = (prefix: string) =>
     `${prefix}-${
@@ -205,8 +206,10 @@ const createContactBlock = (): PlaygroundBlock => {
         title: "Contact overview",
         description: "Primary client information and inline addresses.",
         badge: "Default template",
+        colSpan: 12,
         tree,
         display,
+        children: [],
     };
 };
 
@@ -380,8 +383,10 @@ const createProjectMetricsBlock = (): PlaygroundBlock => {
         title: "Project health",
         description: "Live status and owned tasks for the current project.",
         badge: "Nested layout",
+        colSpan: 12,
         tree,
         display,
+        children: [createBlankNoteBlock()],
     };
 };
 
@@ -478,6 +483,7 @@ const createInvoiceSummaryBlock = (): PlaygroundBlock => {
         title: "Billing overview",
         description: "Snapshot of recent invoices with quick access to creation.",
         badge: "Finance",
+        colSpan: 12,
         tree,
         display,
     };
@@ -530,6 +536,7 @@ const createBlankNoteBlock = (): PlaygroundBlock => {
         title: "Untitled note",
         description: "A lightweight freeform note.",
         badge: "Draft",
+        colSpan: 12,
         tree,
         display,
     };
@@ -583,6 +590,7 @@ const createPlaceholderBlock = (type: string, label?: string): PlaygroundBlock =
         title: label ?? type,
         description: "Placeholder block. Replace with real data.",
         badge: "New",
+        colSpan: 12,
         tree,
         display,
     };
@@ -627,7 +635,7 @@ const initialBlocks: PlaygroundBlock[] = [
 export const BlockDemo = () => {
     const [blocks, setBlocks] = useState<PlaygroundBlock[]>(initialBlocks);
 
-    const insertBlock = useCallback((item: SlashMenuItem, position: number) => {
+    const handleInsertTop = useCallback((item: SlashMenuItem, position: number) => {
         const newBlock = createBlockFromSlashItem(item);
         if (!newBlock) return;
         setBlocks((prev) => {
@@ -637,51 +645,92 @@ export const BlockDemo = () => {
         });
     }, []);
 
-    const removeBlock = useCallback((id: string) => {
-        setBlocks((prev) => prev.filter((block) => block.id !== id));
-    }, []);
-
-    const duplicateBlock = useCallback((block: PlaygroundBlock, position: number) => {
-        const cloned: PlaygroundBlock = {
-            ...createPlaceholderBlock(block.title ?? "Clone"),
-            title: `${block.title} (copy)`,
-            description: block.description,
-            badge: block.badge,
-            tree: JSON.parse(JSON.stringify(block.tree)),
-            display: JSON.parse(JSON.stringify(block.display)),
-        };
-        setBlocks((prev) => {
-            const next = [...prev];
-            next.splice(position, 0, cloned);
-            return next;
-        });
-    }, []);
-
-    const handleInsert: SurfaceInsertHandler = useCallback(
-        (item, position) => insertBlock(item, position),
-        [insertBlock]
+    const handleInsertNested = useCallback(
+        (parentId: string, item: SlashMenuItem, position?: number) => {
+            const newBlock = createBlockFromSlashItem(item);
+            if (!newBlock) return;
+            setBlocks((prev) => addChildBlock(prev, parentId, newBlock, position));
+        },
+        []
     );
 
+    const handleRemove = useCallback((id: string) => {
+        setBlocks((prev) => removeBlockById(prev, id));
+    }, []);
+
+    const handleDuplicate = useCallback((id: string) => {
+        setBlocks((prev) => duplicateBlockById(prev, id));
+    }, []);
+
     const quickActionsFor = useCallback(
-        (block: PlaygroundBlock, index: number): QuickActionItem[] => [
+        (blockId: string): QuickActionItem[] => [
             {
                 id: "duplicate",
                 label: "Duplicate block",
                 shortcut: "⌘D",
-                onSelect: () => duplicateBlock(block, index + 1),
+                onSelect: () => handleDuplicate(blockId),
             },
             {
                 id: "delete",
                 label: "Delete block",
                 shortcut: "⌘⌫",
-                onSelect: () => removeBlock(block.id),
+                onSelect: () => handleRemove(blockId),
             },
         ],
-        [duplicateBlock, removeBlock]
+        [handleDuplicate, handleRemove]
     );
 
+    const renderBlock = (block: PlaygroundBlock, depth = 0): React.ReactNode => {
+        const children = block.children ?? [];
+
+        const nestedNodes =
+            children.length > 0
+                ? children.map((child, idx) => (
+                      <div key={child.id} className="pl-6">
+                          <div className="space-y-4 rounded-lg border border-dashed/40 bg-background/60 p-4">
+                              {renderBlock(child, depth + 1)}
+                          </div>
+                          {idx < children.length - 1 ? (
+                              <BlockInsertHandle
+                                  label="Insert nested block"
+                                  slashItems={playgroundSlashItems}
+                                  onInsert={(item) => handleInsertNested(block.id, item, idx + 1)}
+                              />
+                          ) : null}
+                      </div>
+                  ))
+                : undefined;
+
+        const nestedFooter = (
+            <div className="pl-6 pt-2">
+                <BlockInsertHandle
+                    label={children.length ? "Add another nested block" : "Add nested block"}
+                    slashItems={playgroundSlashItems}
+                    onInsert={(item) => handleInsertNested(block.id, item, children.length)}
+                />
+            </div>
+        );
+
+        return (
+            <BlockSurface
+                key={block.id}
+                id={block.id}
+                title={block.title}
+                description={block.description}curre
+                badge={block.badge}
+                slashItems={playgroundSlashItems}
+                quickActions={quickActionsFor(block.id)}
+                onInsert={(item) => handleInsertNested(block.id, item, children.length)}
+                nested={nestedNodes}
+                nestedFooter={nestedFooter}
+            >
+                <RenderBlock tree={block.tree} display={block.display} />
+            </BlockSurface>
+        );
+    };
+
     return (
-        <div className="mx-auto flex max-w-6xl flex-col gap-12 p-6">
+        <div className="mx-auto max-w-6xl space-y-8 p-6">
             <header className="space-y-2">
                 <h1 className="text-2xl font-semibold">Block Playground</h1>
                 <p className="max-w-3xl text-sm text-muted-foreground">
@@ -691,34 +740,128 @@ export const BlockDemo = () => {
                 </p>
             </header>
 
-            {blocks.map((block, index) => (
-                <React.Fragment key={block.id}>
-                    <BlockSurface
-                        id={block.id}
-                        title={block.title}
-                        description={block.description}
-                        badge={block.badge}
-                        slashItems={playgroundSlashItems}
-                        quickActions={quickActionsFor(block, index)}
-                        onInsert={(item) => handleInsert(item, index + 1)}
-                    >
-                        <RenderBlock tree={block.tree} display={block.display} />
-                    </BlockSurface>
-                    {index < blocks.length - 1 ? (
-                        <BlockInsertHandle
-                            label="Insert block"
-                            slashItems={playgroundSlashItems}
-                            onInsert={(item) => handleInsert(item, index + 1)}
-                        />
-                    ) : null}
-                </React.Fragment>
-            ))}
+            <div className="grid grid-cols-12 gap-6">
+                {blocks.map((block, index) => (
+                    <React.Fragment key={block.id}>
+                        <div className={cn("col-span-12", getColSpanClass(block.colSpan))}>
+                            {renderBlock(block)}
+                        </div>
+                        {index < blocks.length - 1 ? (
+                            <div className="col-span-12">
+                                <BlockInsertHandle
+                                    label="Insert panel"
+                                    slashItems={playgroundSlashItems}
+                                    onInsert={(item) => handleInsertTop(item, index + 1)}
+                                />
+                            </div>
+                        ) : null}
+                    </React.Fragment>
+                ))}
 
-            <BlockInsertHandle
-                label="Add block"
-                slashItems={playgroundSlashItems}
-                onInsert={(item) => handleInsert(item, blocks.length)}
-            />
+                <div className="col-span-12">
+                    <BlockInsertHandle
+                        label="Add panel"
+                        slashItems={playgroundSlashItems}
+                        onInsert={(item) => handleInsertTop(item, blocks.length)}
+                    />
+                </div>
+            </div>
         </div>
     );
 };
+
+function getColSpanClass(span?: number): string {
+    switch (span) {
+        default:
+            return "lg:col-span-12";
+    }
+}
+
+function addChildBlock(
+    blocks: PlaygroundBlock[],
+    parentId: string,
+    child: PlaygroundBlock,
+    position?: number
+): PlaygroundBlock[] {
+    let changed = false;
+    const updated = blocks.map((block) => {
+        if (block.id === parentId) {
+            const children = [...(block.children ?? [])];
+            const insertAt = position === undefined ? children.length : position;
+            children.splice(insertAt, 0, child);
+            changed = true;
+            return { ...block, children };
+        }
+        if (block.children) {
+            const nested = addChildBlock(block.children, parentId, child, position);
+            if (nested !== block.children) {
+                changed = true;
+                return { ...block, children: nested };
+            }
+        }
+        return block;
+    });
+
+    return changed ? updated : blocks;
+}
+
+function removeBlockById(blocks: PlaygroundBlock[], targetId: string): PlaygroundBlock[] {
+    let changed = false;
+    const filtered: PlaygroundBlock[] = [];
+
+    for (const block of blocks) {
+        if (block.id === targetId) {
+            changed = true;
+            continue;
+        }
+
+        let current = block;
+        if (block.children) {
+            const nested = removeBlockById(block.children, targetId);
+            if (nested !== block.children) {
+                current = { ...block, children: nested };
+                changed = true;
+            }
+        }
+
+        filtered.push(current);
+    }
+
+    return changed ? filtered : blocks;
+}
+
+function duplicateBlockById(blocks: PlaygroundBlock[], targetId: string): PlaygroundBlock[] {
+    let changed = false;
+    const result: PlaygroundBlock[] = [];
+
+    for (const block of blocks) {
+        let current = block;
+        if (block.children) {
+            const nested = duplicateBlockById(block.children, targetId);
+            if (nested !== block.children) {
+                current = { ...block, children: nested };
+                changed = true;
+            }
+        }
+
+        result.push(current);
+
+        if (block.id === targetId) {
+            const clone = cloneBlock(block);
+            result.push(clone);
+            changed = true;
+        }
+    }
+
+    return changed ? result : blocks;
+}
+
+function cloneBlock(block: PlaygroundBlock): PlaygroundBlock {
+    return {
+        ...block,
+        id: uniqueId("surface"),
+        tree: JSON.parse(JSON.stringify(block.tree)),
+        display: JSON.parse(JSON.stringify(block.display)),
+        children: block.children ? block.children.map(cloneBlock) : undefined,
+    };
+}

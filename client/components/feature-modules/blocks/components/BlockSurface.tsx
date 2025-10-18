@@ -109,7 +109,10 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     onTitleChange,
     onModeChange,
     onInsert,
+    onInsertSibling,
     className,
+    nested,
+    nestedFooter,
 }) => {
     const generatedId = useId();
     const surfaceId = id ?? generatedId;
@@ -118,6 +121,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     const [isSlashOpen, setSlashOpen] = useState(false);
     const [isQuickOpen, setQuickOpen] = useState(false);
     const [draftTitle, setDraftTitle] = useState(title ?? "");
+    const [insertContext, setInsertContext] = useState<"nested" | "sibling">("nested");
 
     const content = mode === "form" ? form : display ?? children;
 
@@ -149,6 +153,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
             if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
                 if (isInput) return;
                 event.preventDefault();
+                setInsertContext("nested");
                 setSlashOpen(true);
             }
 
@@ -160,6 +165,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
                 event.preventDefault();
                 if (actions.length === 0) {
+                    setInsertContext("nested");
                     setSlashOpen(true);
                 } else {
                     setQuickOpen(true);
@@ -181,9 +187,21 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
         (item: SlashMenuItem) => {
             setSlashOpen(false);
             item.onSelect?.();
-            onInsert?.(item);
+            if (insertContext === "nested" && onInsert) {
+                onInsert(item);
+                return;
+            }
+            if (insertContext === "sibling" && onInsertSibling) {
+                onInsertSibling(item);
+                return;
+            }
+            if (onInsert) {
+                onInsert(item);
+            } else if (onInsertSibling) {
+                onInsertSibling(item);
+            }
         },
-        [onInsert]
+        [insertContext, onInsert, onInsertSibling]
     );
 
     const handleQuickSelect = useCallback((item: QuickActionItem) => {
@@ -233,9 +251,14 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         variant="ghost"
                         size="sm"
                         className={cn("gap-1", actions.length === 0 && "opacity-70")}
-                        onClick={() =>
-                            actions.length === 0 ? setSlashOpen(true) : setQuickOpen(true)
-                        }
+                        onClick={() => {
+                            if (actions.length === 0) {
+                                setInsertContext("nested");
+                                setSlashOpen(true);
+                            } else {
+                                setQuickOpen(true);
+                            }
+                        }}
                     >
                         <CommandIcon className="size-4" />
                         Cmd+K
@@ -244,7 +267,10 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         variant="ghost"
                         size="sm"
                         className="gap-1"
-                        onClick={() => setSlashOpen(true)}
+                        onClick={() => {
+                            setInsertContext("nested");
+                            setSlashOpen(true);
+                        }}
                     >
                         <PlusIcon className="size-4" />
                         Insert
@@ -270,17 +296,8 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         </div>
                     )}
                 </div>
-                <div className="mt-4 flex justify-center">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1"
-                        onClick={() => setSlashOpen(true)}
-                    >
-                        <PlusIcon className="size-4" />
-                        Add below
-                    </Button>
-                </div>
+                {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
+                {nestedFooter}
             </section>
 
             <CommandDialog open={isSlashOpen} onOpenChange={setSlashOpen}>
