@@ -19,7 +19,7 @@ export const WidgetRenderProvider: FC<Props> = ({ registry = renderElements, onD
             registry={registry}
             transformProps={({ id, element, parsedProps }) => ({
                 ...(parsedProps as Record<string, unknown>),
-                onDelete: () => onDelete(id),
+                _onDelete: () => onDelete(id),
             })}
             onUnknownType={({ id, raw }) => {
                 if (process.env.NODE_ENV !== "production") {

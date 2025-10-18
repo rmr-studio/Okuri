@@ -63,7 +63,7 @@ export const TextWidgetSchema = WidgetSchema.extend({
 
 type Props = z.infer<typeof TextWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { content, style, validation, variant }, onDelete }) => {
+const Widget: FC<Props> = ({ id, data: { content, style, validation, variant }, _onDelete }) => {
     const css: CSSProperties = {
         fontSize: style.size,
         fontWeight: style.weight,
@@ -110,7 +110,7 @@ const Widget: FC<Props> = ({ id, data: { content, style, validation, variant }, 
     );
 
     return (
-        <BaseWidget id={id} onDelete={onDelete} style={css}>
+        <BaseWidget id={id} _onDelete={_onDelete} style={css}>
             {contentElement}
         </BaseWidget>
     );

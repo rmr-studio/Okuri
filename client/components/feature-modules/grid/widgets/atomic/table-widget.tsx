@@ -20,9 +20,9 @@ const TableWidgetSchema = WidgetSchema.extend({
 
 type Props = z.infer<typeof TableWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { columns, rows }, onDelete, style }) => {
+const Widget: FC<Props> = ({ id, data: { columns, rows }, _onDelete, style }) => {
     return (
-        <BaseWidget id={id} onDelete={onDelete} style={style}>
+        <BaseWidget id={id} _onDelete={_onDelete} style={style}>
             Table Widget
         </BaseWidget>
     );

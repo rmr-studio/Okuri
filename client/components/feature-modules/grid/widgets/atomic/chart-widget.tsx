@@ -46,9 +46,9 @@ const ChartWidgetSchema = WidgetSchema.extend({
 
 type Props = z.infer<typeof ChartWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { title, data }, onDelete, style }) => {
+const Widget: FC<Props> = ({ id, data: { title, data }, _onDelete, style }) => {
     return (
-        <BaseWidget id={id} onDelete={onDelete} style={style}>
+        <BaseWidget id={id} _onDelete={_onDelete} style={style}>
             Chart Widget
         </BaseWidget>
     );

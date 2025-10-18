@@ -15,9 +15,9 @@ const DateWidgetSchema = WidgetSchema.extend({
 
 type Props = z.infer<typeof DateWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { value, format, mode }, onDelete, style }) => {
+const Widget: FC<Props> = ({ id, data: { value, format, mode }, _onDelete, style }) => {
     return (
-        <BaseWidget id={id} onDelete={onDelete} style={style}>
+        <BaseWidget id={id} _onDelete={_onDelete} style={style}>
             Date Widget
         </BaseWidget>
     );

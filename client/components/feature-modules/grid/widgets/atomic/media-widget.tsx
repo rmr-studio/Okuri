@@ -17,9 +17,9 @@ const MediaWidgetSchema = WidgetSchema.extend({
 
 type Props = z.infer<typeof MediaWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { src, alt, fit, width, height }, onDelete, style }) => {
+const Widget: FC<Props> = ({ id, data: { src, alt, fit, width, height }, _onDelete, style }) => {
     return (
-        <BaseWidget id={id} onDelete={onDelete} style={style}>
+        <BaseWidget id={id} _onDelete={_onDelete} style={style}>
             Media Widget
         </BaseWidget>
     );
