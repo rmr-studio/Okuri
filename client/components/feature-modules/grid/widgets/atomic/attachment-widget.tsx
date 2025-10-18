@@ -18,7 +18,7 @@ type Props = z.infer<typeof AttachmentWidgetSchema> & BaseWidgetProps;
 const Widget: React.FC<Props> = ({
     id,
     data: { fileName, fileSize, fileType, url },
-    onDelete,
+    _onDelete,
     style,
 }) => {
     const formatFileSize = (size: number) => {
@@ -29,7 +29,7 @@ const Widget: React.FC<Props> = ({
     };
 
     return (
-        <BaseWidget id={id} onDelete={onDelete} style={style}>
+        <BaseWidget id={id} _onDelete={_onDelete} style={style}>
             <div className="flex flex-col items-start p-4 border rounded-md shadow-sm bg-white h-full">
                 <div className="mb-2 text-sm font-medium text-gray-700">{fileName}</div>
                 <div className="mb-4 text-xs text-gray-500">

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
+import okuri.core.models.common.LintIssue
 import okuri.core.service.block.BlockTypeService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -141,6 +142,18 @@ class BlockTypeController(
     ): ResponseEntity<List<BlockType>> {
         val blockTypes = blockTypeService.getBlockTypes(organisationId)
         return ResponseEntity.ok(blockTypes)
+    }
+
+    @PostMapping("/lint")
+    @Operation(
+        summary = "Lint a block type",
+        description = "Validates the schema and configuration of a block type to ensure it adheres to defined standards."
+    )
+    fun lintBlockType(
+        @RequestBody blockType: BlockType,
+    ): ResponseEntity<List<LintIssue>> {
+        val issues = blockTypeService.lintBlockTypeDisplay(blockType)
+        return ResponseEntity.ok().body(issues)
     }
 
 }

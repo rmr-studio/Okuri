@@ -22,11 +22,11 @@ export type BaseWidget = z.infer<typeof WidgetSchema>;
 
 export interface BaseWidgetProps {
     id: string;
-    onDelete?: (id: string) => void;
+    _onDelete?: (id: string) => void;
     style?: React.CSSProperties;
 }
 
-export const BaseWidget: FCWC<BaseWidgetProps> = ({ onDelete, children, style }) => {
+export const BaseWidget: FCWC<BaseWidgetProps> = ({ _onDelete, children, style }) => {
     return (
         <div style={style} className="relative h-full w-full">
             {children}

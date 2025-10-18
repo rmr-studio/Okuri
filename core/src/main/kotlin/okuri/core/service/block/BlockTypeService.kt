@@ -1,5 +1,6 @@
 package okuri.core.service.block
 
+import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.activity.Activity
 import okuri.core.enums.util.OperationType
@@ -10,6 +11,7 @@ import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.util.ServiceUtil.findManyResults
 import okuri.core.util.ServiceUtil.findOrThrow
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
 import java.util.*
@@ -22,7 +24,8 @@ class BlockTypeService(
     private val blockTypeRepository: BlockTypeRepository,
     private val authTokenService: AuthTokenService,
     private val displayLinterService: BlockDisplayLinterService,
-    private val activityService: ActivityService
+    private val activityService: ActivityService,
+    private val organisationSecurity: OrganisationSecurity
 ) {
     /**
      * Creates and publishes a new block type from the provided request and records an audit activity.
@@ -62,9 +65,10 @@ class BlockTypeService(
      *
      * @param type The BlockType containing the new values and the id of the existing version to fork from.
      */
+    @PreAuthorize("@organisationSecurity.hasOrg(#type.organisationId)")
     fun updateBlockType(type: BlockType) {
         val userId = authTokenService.getUserId()
-        displayLinterService.lint(type.display).let { issues ->
+        this.lintBlockTypeDisplay(type).let { issues ->
             if (issues.any { it.level.name == "ERROR" }) {
                 throw IllegalArgumentException("BlockType display structure has errors: $issues")
             }
@@ -94,7 +98,7 @@ class BlockTypeService(
         blockTypeRepository.save(newRow).run {
             activityService.logActivity(
                 activity = Activity.BLOCK_TYPE,
-                operation = okuri.core.enums.util.OperationType.CREATE,
+                operation = OperationType.CREATE,
                 userId = userId,
                 organisationId = this.organisationId,
                 targetId = this.id,
@@ -116,13 +120,22 @@ class BlockTypeService(
     fun archiveBlockType(id: UUID, status: Boolean) {
         val userId = authTokenService.getUserId()
         val existing = findOrThrow { blockTypeRepository.findById(id) }
+        existing.organisationId.let {
+            require(it != null) { "Cannot archive system block types" }
+            organisationSecurity.hasOrg(it).run {
+                if (!this) {
+                    throw AccessDeniedException("Unauthorized to archive block type for organisation $it")
+                }
+            }
+        }
+
         if (existing.archived == status) return
         val updated = existing.copy(archived = status)
         blockTypeRepository.save(updated)
         activityService.logActivity(
             activity = Activity.BLOCK_TYPE,
-            operation = if (status) okuri.core.enums.util.OperationType.ARCHIVE
-            else okuri.core.enums.util.OperationType.RESTORE,
+            operation = if (status) OperationType.ARCHIVE
+            else OperationType.RESTORE,
             userId = userId,
             organisationId = existing.organisationId,
             targetId = existing.id,
@@ -207,4 +220,13 @@ class BlockTypeService(
     fun getById(id: UUID): BlockTypeEntity {
         return findOrThrow { blockTypeRepository.findById(id) }
     }
+
+    /**
+     * Lints the display structure of a block type and returns any issues found.
+     *
+     * @param type The BlockType whose display structure should be linted.
+     * @return A list of linting issues found in the display structure.
+     */
+    @PreAuthorize("@organisationSecurity.hasOrg(#type.organisationId)")
+    fun lintBlockTypeDisplay(type: BlockType) = displayLinterService.lint(type.display)
 }

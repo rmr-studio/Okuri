@@ -38,8 +38,8 @@ class AuthTokenService(private val logger: KLogger) {
                 UUID.fromString(it.toString())
             }
         }
-
     }
+
 
     fun getUserEmail(): String {
         return getJwt().claims["email"].let {

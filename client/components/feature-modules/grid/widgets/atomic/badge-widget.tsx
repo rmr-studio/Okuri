@@ -16,9 +16,9 @@ const BadgeWidgetSchema = WidgetSchema.extend({
 
 type Props = z.infer<typeof BadgeWidgetSchema> & BaseWidgetProps;
 
-const Widget: FC<Props> = ({ id, data: { label, variant, size }, onDelete, style }) => {
+const Widget: FC<Props> = ({ id, data: { label, variant, size }, _onDelete, style }) => {
     return (
-        <BaseWidget id={id} onDelete={onDelete} style={style}>
+        <BaseWidget id={id} _onDelete={_onDelete} style={style}>
             <Badge variant={variant}>{label}</Badge>
         </BaseWidget>
     );

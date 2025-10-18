@@ -33,9 +33,8 @@ class BlockDisplayLinterService {
             }
         }
 
-        // 2) Component slot children exist
         render.components.forEach { (cid, node) ->
-            node.slots.forEach { (slot, children) ->
+            node.slots?.forEach { (slot, children) ->
                 children.forEachIndexed { idx, childId ->
                     if (!ids.contains(childId)) {
                         issues += LintIssue(
@@ -46,10 +45,7 @@ class BlockDisplayLinterService {
                     }
                 }
             }
-        }
 
-        // 3) Binding sanity (basic check)
-        render.components.forEach { (cid, node) ->
             node.bindings.forEachIndexed { bi, b ->
                 when (b.source) {
                     is BindingSource.DataPath -> {
@@ -78,7 +74,7 @@ class BlockDisplayLinterService {
                 }
             }
         }
-
+        
         return issues
     }
 }

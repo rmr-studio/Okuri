@@ -8,8 +8,9 @@ import {
     UpdateClientResponse,
 } from "@/components/feature-modules/client/interface/client.interface";
 import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
+import { handleError, validateSession, validateUuid } from "@/lib/util/controller/controller.util";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
-import { api, isUUID } from "@/lib/util/utils";
+import { api } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
 
 export const fetchOrganisationClients = async (
@@ -39,18 +40,11 @@ export const fetchOrganisationClients = async (
         if (response.ok) {
             return await response.json();
         }
-        // Parse server error response
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to fetch clients: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+
+        throw await handleError(
+            response,
+            (res) => `Failed to fetch clients: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
 
@@ -65,13 +59,7 @@ export const updateClient = async (
 ): Promise<UpdateClientResponse> => {
     try {
         // Validate session and access token
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
+        validateSession(session);
 
         const url = api();
 
@@ -88,17 +76,10 @@ export const updateClient = async (
             return await response.json();
         }
         // Parse server error response
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to update client: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to update client: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
 
@@ -113,23 +94,9 @@ export const getClient = async (
 ): Promise<GetClientByIdResponse> => {
     const { clientId } = params;
     try {
-        // Validate id is a UUID
-        if (!isUUID(clientId)) {
-            throw fromError({
-                message: "Invalid organization ID format. Expected a UUID.",
-                status: 400,
-                error: "INVALID_ID",
-            });
-        }
-
+        validateUuid(clientId);
         // Validate session and access token
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
+        validateSession(session);
 
         const url = api();
         const response = await fetch(`${url}/v1/client/${clientId}`, {
@@ -145,18 +112,10 @@ export const getClient = async (
         }
 
         // Parse server error response
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to fetch client: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to fetch client: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         // Convert any caught error to ResponseError
         throw fromError(error);
@@ -169,14 +128,7 @@ export const createClient = async (
 ): Promise<CreateClientResponse> => {
     try {
         // Validate session and access token
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
-
+        validateSession(session);
         const url = api();
 
         const response = await fetch(`${url}/v1/client/`, {
@@ -192,17 +144,10 @@ export const createClient = async (
             return await response.json();
         }
         // Parse server error response
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch {
-            errorData = {
-                message: `Failed to create client: ${response.status} ${response.statusText}`,
-                status: response.status,
-                error: "SERVER_ERROR",
-            };
-        }
-        throw fromError(errorData);
+        throw await handleError(
+            response,
+            (res) => `Failed to create client: ${res.status} ${res.statusText}`
+        );
     } catch (error) {
         if (isResponseError(error)) throw error;
 

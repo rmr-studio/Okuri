@@ -4,12 +4,12 @@ import { updateOrganisation } from "@/components/feature-modules/organisation/co
 import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
 import { useAuth } from "@/components/provider/auth-context";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
-import { useOrganisation } from "@/hooks/useOrganisation";
-import { useOrganisationRole } from "@/hooks/useOrganisationRole";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { useOrganisation } from "../hooks/useOrganisation";
+import { useOrganisationRole } from "../hooks/useOrganisationRole";
 import { OrganisationForm, OrganisationFormDetails } from "./form/organisation-form";
 
 const EditOrganisation = () => {

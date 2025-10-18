@@ -112,6 +112,11 @@ export const projectTree: BlockTree = {
                             completedTasks: 42,
                             totalTasks: 61,
                         },
+                        metricsDisplay: {
+                            progress: "Progress: 68%",
+                            budget: "Budget used: 45%",
+                            risks: "Open risks: 2",
+                        },
                     },
                     summary: {
                         description:
@@ -121,6 +126,8 @@ export const projectTree: BlockTree = {
                     },
                     primaryAction: { label: "Open project" },
                 },
+                refs: [],
+                meta: {validationErrors: []}
             },
         },
         references: {

@@ -1,5 +1,6 @@
 import { PencilIcon } from "lucide-react";
 import { z, ZodTypeAny } from "zod";
+import { createRenderElement, RenderElementMetadata } from "@/components/feature-modules/render/util/render-element.registry";
 import { AttachmentWidget } from "../widgets/atomic/attachment-widget";
 import { BadgeWidget } from "../widgets/atomic/badge-widget";
 import { ChartWidget } from "../widgets/atomic/chart-widget";
@@ -11,18 +12,18 @@ import { TextWidget } from "../widgets/atomic/text-widget";
 const WIDGET_TYPE = ["TEXT", "MEDIA", "CHART", "BADGE", "TABLE", "DATE", "ATTACHMENT"] as const;
 export type WidgetType = (typeof WIDGET_TYPE)[number];
 
-export interface WidgetMetadata<T extends ZodTypeAny> {
+export interface WidgetMetadata<T extends ZodTypeAny> extends RenderElementMetadata<T> {
     type: WidgetType;
-    name: string;
-    description: string;
     icon: typeof PencilIcon;
-    schema: T;
-    component: React.FC<z.infer<T>>; // enforce schema ↔ props
 }
 
-// factory for type inference
-export function createWidget<T extends ZodTypeAny>(meta: WidgetMetadata<T>): WidgetMetadata<T> {
-    return meta;
+export function createWidget<T extends ZodTypeAny>(
+    meta: WidgetMetadata<T>
+): WidgetMetadata<T> {
+    return createRenderElement({
+        category: meta.category ?? "GRID_WIDGET",
+        ...meta,
+    }) as WidgetMetadata<T>;
 }
 
 export const WIDGETS = {
