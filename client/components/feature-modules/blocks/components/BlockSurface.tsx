@@ -51,16 +51,16 @@ export interface BlockSurfaceProps {
     defaultMode?: Mode;
     display?: React.ReactNode;
     form?: React.ReactNode;
-    /**
-     * Optional children are rendered in the content area when `display` is not provided.
-     */
     children?: React.ReactNode;
     slashItems?: SlashMenuItem[];
     quickActions?: QuickActionItem[];
     onTitleChange?: (value: string) => void;
     onModeChange?: (mode: Mode) => void;
     onInsert?: (item: SlashMenuItem) => void;
+    onInsertSibling?: (item: SlashMenuItem) => void;
     className?: string;
+    nested?: React.ReactNode;
+    nestedFooter?: React.ReactNode;
 }
 
 export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).map((meta) => ({

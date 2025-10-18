@@ -25,7 +25,8 @@ export const RenderBlock: React.FC<{
     tree: BlockTree;
     display: BlockRenderStructure;
     onLayoutExporter?: (exporter: () => BlockRenderStructure) => void;
-}> = ({ tree, display, onLayoutExporter }) => {
+    gridOverrides?: Partial<GridStackOptions>;
+}> = ({ tree, display, onLayoutExporter, gridOverrides }) => {
     const ctx = useMemo<TreeCtx>(
         () => ({
             payload: tree.root.block.payload.data,
@@ -34,7 +35,7 @@ export const RenderBlock: React.FC<{
         [tree]
     );
 
-    const gridOptions = useMemo(() => buildGridOptions(display, ctx), [display, ctx]);
+    const gridOptions = useMemo(() => buildGridOptions(display, ctx, gridOverrides), [display, ctx, gridOverrides]);
 
     return (
         <GridProvider initialOptions={gridOptions}>
@@ -68,7 +69,11 @@ interface SlotLayoutDefinition {
     }>;
 }
 
-function buildGridOptions(display: BlockRenderStructure, ctx: TreeCtx): GridStackOptions {
+function buildGridOptions(
+    display: BlockRenderStructure,
+    ctx: TreeCtx,
+    overrides?: Partial<GridStackOptions>
+): GridStackOptions {
     const children: GridStackWidget[] = [];
 
     for (const item of display.layoutGrid.items ?? []) {
@@ -88,10 +93,9 @@ function buildGridOptions(display: BlockRenderStructure, ctx: TreeCtx): GridStac
         cellHeight: display.layoutGrid.rowHeight ?? 40,
         margin: 8,
         acceptWidgets: true,
-        subGridOpts: {
-            acceptWidgets: true,
-            animate: true,
-        },
+        animate: true,
+        dragOut: true,
+        ...overrides,
         children,
     };
 }
@@ -173,6 +177,7 @@ function buildWidgetForComponent({
         widget.subGridOpts = {
             acceptWidgets: true,
             animate: true,
+            dragOut: true,
             class: "grid-stack-subgrid",
             ...subGrid,
         };
@@ -247,6 +252,9 @@ function buildSubGrid(
         column: column ?? 12,
         cellHeight: cellHeight ?? 40,
         margin: margin ?? 8,
+        acceptWidgets: true,
+        animate: true,
+        dragOut: true,
         children,
     };
 }
