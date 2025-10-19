@@ -2,12 +2,14 @@
 
 import {
     BlockComponentNode,
+    BlockReference,
     BlockRenderStructure,
     BlockTree,
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
+import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { Button } from "@/components/ui/button";
 import {
     CommandDialog,
@@ -21,8 +23,9 @@ import type { GridStackOptions } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { PlusIcon, TypeIcon } from "lucide-react";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { defaultSlashItems, QuickActionItem, SlashMenuItem } from "../BlockSurface";
-import { panelRegistry } from "../PanelWidget";
+import { z } from "zod";
+import { BlockSurface, defaultSlashItems, QuickActionItem, SlashMenuItem } from "../BlockSurface";
+import { RenderBlock } from "../render";
 
 type LayoutRect = { x: number; y: number; w: number; h: number };
 
@@ -64,6 +67,71 @@ const playgroundSlashItems: SlashMenuItem[] = [
         icon: <TypeIcon className="size-4" />,
     },
 ];
+
+const PanelWidgetSchema = z.object({
+    panelId: z.string(),
+    parentPath: z.array(z.string()).optional(),
+});
+
+const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, parentPath }) => {
+    const playground = usePlayground();
+    const block = playground.getBlock(panelId, parentPath);
+    if (!block) return null;
+
+    const children = block.children ?? [];
+    const isTopLevel = !parentPath || parentPath.length === 0;
+
+    return (
+        <BlockSurface
+            id={block.id}
+            title={block.title}
+            description={block.description}
+            badge={block.badge}
+            slashItems={playground.slashItems}
+            quickActions={playground.quickActionsFor(block.id)}
+            onInsert={(item) => playground.insertNested(block.id, item, children.length)}
+            onInsertSibling={(item) => {
+                if (!isTopLevel) return;
+                const topLevelIndex = playground.blocks.findIndex((b) => b.id === block.id);
+                const insertAt = topLevelIndex >= 0 ? topLevelIndex + 1 : playground.blocks.length;
+                playground.insertPanel(item, insertAt);
+            }}
+            nested={
+                children.length > 0 ? (
+                    <div className="rounded-lg border border-dashed/60 bg-background/40 p-4">
+                        <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                            Nested blocks
+                        </h3>
+                        <PanelGridWorkspace parentPath={[...(parentPath ?? []), block.id]} />
+                    </div>
+                ) : null
+            }
+            nestedFooter={
+                <div className="pt-3">
+                    <InlineInsertHandle
+                        label="Add nested block"
+                        onSelect={(item) =>
+                            playground.insertNested(block.id, item, children.length)
+                        }
+                    />
+                </div>
+            }
+        >
+            <RenderBlock tree={block.tree} display={block.display} />
+        </BlockSurface>
+    );
+};
+
+const panelRegistry = {
+    BLOCK_PANEL: createRenderElement({
+        type: "BLOCK_PANEL",
+        name: "Block panel",
+        description: "Editable block surface for the playground",
+        category: "BLOCK",
+        schema: PanelWidgetSchema,
+        component: PanelWidget,
+    }),
+};
 
 const PlaygroundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [blocks, setBlocks] = useState<PlaygroundBlock[]>(() => initialBlocks());
@@ -192,19 +260,8 @@ export const PanelGridWorkspace: React.FC<{ parentPath?: string[] }> = ({ parent
         [panels, parentPath]
     );
 
-    const key = useMemo(
-        () =>
-            panels
-                .map(
-                    (panel) =>
-                        `${panel.id}:${panel.layout.x}:${panel.layout.y}:${panel.layout.w}:${panel.layout.h}`
-                )
-                .join("|"),
-        [panels]
-    );
-
     return (
-        <GridProvider key={key} initialOptions={gridOptions}>
+        <GridProvider initialOptions={gridOptions}>
             <PanelLayoutSync parentPath={parentPath ?? null} />
             <GridContainerProvider>
                 <RenderElementProvider registry={panelRegistry} />
@@ -237,9 +294,7 @@ const PanelLayoutSync: React.FC<{ parentPath: string[] | null }> = ({ parentPath
         gridStack.on("resizestop", handler);
 
         return () => {
-            gridStack.off("change");
-            gridStack.off("dragstop");
-            gridStack.off("resizestop");
+            gridStack.offAll();
         };
     }, [gridStack, playground, parentPath]);
 
@@ -250,7 +305,7 @@ const PanelLayoutSync: React.FC<{ parentPath: string[] | null }> = ({ parentPath
 /* Handles & Menus                                                            */
 /* -------------------------------------------------------------------------- */
 
-export const InlineInsertHandle: React.FC<{
+const InlineInsertHandle: React.FC<{
     label: string;
     onSelect: (item: SlashMenuItem) => void;
 }> = ({ label, onSelect }) => {
@@ -356,7 +411,6 @@ function buildPanelGridOptions(blocks: PlaygroundBlock[], parentPath?: string[])
         margin: BASE_GRID.margin,
         animate: true,
         acceptWidgets: true,
-        dragOut: true,
         children: blocks.map((block) => ({
             id: block.id,
             x: block.layout.x,
@@ -389,8 +443,9 @@ const uniqueId = (prefix: string) =>
 function createContactBlock(): PlaygroundBlock {
     const contactId = uniqueId("contact");
     const blockId = uniqueId("block");
-    const addresses = [
+    const addresses: BlockReference[] = [
         {
+            id: uniqueId("addr"),
             entityType: "BLOCK",
             entityId: uniqueId("addr"),
             ownership: "OWNED",
@@ -409,6 +464,7 @@ function createContactBlock(): PlaygroundBlock {
             },
         },
         {
+            id: uniqueId("addr"),
             entityType: "BLOCK",
             entityId: uniqueId("addr"),
             ownership: "OWNED",
@@ -470,6 +526,7 @@ function createContactBlock(): PlaygroundBlock {
             references: {
                 account: [
                     {
+                        id: "aaaa-bbbb-cccc",
                         entityType: "CLIENT",
                         entityId: "aaaa-bbbb-cccc",
                         ownership: "LINKED",
@@ -563,6 +620,7 @@ function createContactBlock(): PlaygroundBlock {
 function createProjectMetricsBlock(): PlaygroundBlock {
     const blockId = uniqueId("project");
     const taskRefs = Array.from({ length: 3 }).map((_, index) => ({
+        id: uniqueId("task"),
         entityType: "BLOCK",
         entityId: uniqueId("task"),
         ownership: "OWNED",

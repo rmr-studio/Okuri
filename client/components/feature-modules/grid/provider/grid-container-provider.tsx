@@ -80,43 +80,67 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     }, [renderCBFn]);
 
     useLayoutEffect(() => {
-        if (!isEqual(initialOptions, optionsRef.current) && gridStack) {
-            try {
-                gridStack.removeAll(false);
-                gridStack.destroy(false);
-                widgetContainersRef.current.clear();
-                // Clean up the WeakMap entry for this grid instance
-                gridWidgetContainersMap.delete(gridStack);
-                optionsRef.current = initialOptions;
-                setGridStack(initGrid());
-            } catch (e) {
-                console.error("Error reinitializing gridstack", e);
+        if (!gridStack) return;
+        if (isEqual(initialOptions, optionsRef.current)) return;
+
+        try {
+            optionsRef.current = initialOptions;
+
+            gridStack.batchUpdate();
+
+            if (typeof initialOptions.margin === "number") {
+                gridStack.margin(initialOptions.margin);
             }
+
+            if (typeof initialOptions.column === "number") {
+                gridStack.column(initialOptions.column);
+            }
+
+            if (initialOptions.cellHeight !== undefined) {
+                gridStack.cellHeight(initialOptions.cellHeight as any);
+            }
+
+            if (Array.isArray(initialOptions.children)) {
+                gridStack.removeAll(false);
+                widgetContainersRef.current.clear();
+                gridWidgetContainersMap.set(gridStack, new Map());
+                gridStack.load(initialOptions.children);
+            }
+
+            gridStack.commit();
+        } catch (e) {
+            console.error("Error updating gridstack options", e);
         }
-    }, [initialOptions, gridStack, initGrid, setGridStack]);
+    }, [initialOptions, gridStack]);
+
+    const hasInitialisedRef = useRef(false);
 
     useLayoutEffect(() => {
-        if (!gridStack) {
-            try {
+        if (hasInitialisedRef.current) return;
+
+        try {
+            if (!gridStack) {
                 setGridStack(initGrid());
-            } catch (e) {
-                console.error("Error initializing gridstack", e);
             }
+            if (!GridStack.renderCB) {
+                GridStack.renderCB = renderCBFn;
+            }
+            hasInitialisedRef.current = true;
+        } catch (e) {
+            console.error("Error initializing gridstack", e);
         }
-        if (!GridStack.renderCB) {
-            console.log("Setting GridStack.renderCB");
-            GridStack.renderCB = renderCBFn;
-            setGridStack(initGrid());
-        }
-    }, [gridStack, initGrid, setGridStack, renderCBFn]);
+    }, [gridStack, initGrid, renderCBFn, setGridStack]);
 
     useLayoutEffect(() => {
         return () => {
             try {
                 if (gridStack) {
-                    gridStack.destroy(false);
+                    if (gridStack.opts) {
+                        gridStack.destroy(false);
+                    }
                     gridWidgetContainersMap.delete(gridStack);
                 }
+                hasInitialisedRef.current = false;
                 if (GridStack.renderCB === renderCBFn) {
                     // best-effort restore
                     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
