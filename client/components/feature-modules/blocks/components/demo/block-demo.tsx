@@ -294,7 +294,9 @@ const PanelLayoutSync: React.FC<{ parentPath: string[] | null }> = ({ parentPath
         gridStack.on("resizestop", handler);
 
         return () => {
-            gridStack.offAll();
+            gridStack.off("change");
+            gridStack.off("dragstop");
+            gridStack.off("resizestop");
         };
     }, [gridStack, playground, parentPath]);
 

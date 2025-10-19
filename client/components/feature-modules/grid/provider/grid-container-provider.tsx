@@ -88,8 +88,8 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
             gridStack.batchUpdate();
 
-            if (typeof initialOptions.margin === "number") {
-                gridStack.margin(initialOptions.margin);
+            if (initialOptions.margin !== undefined) {
+                gridStack.margin(initialOptions.margin as number | string);
             }
 
             if (typeof initialOptions.column === "number") {
@@ -100,12 +100,12 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 gridStack.cellHeight(initialOptions.cellHeight as any);
             }
 
-            if (Array.isArray(initialOptions.children)) {
-                gridStack.removeAll(false);
-                widgetContainersRef.current.clear();
-                gridWidgetContainersMap.set(gridStack, new Map());
-                gridStack.load(initialOptions.children);
-            }
+            // if (Array.isArray(initialOptions.children)) {
+            //     gridStack.removeAll(false);
+            //     widgetContainersRef.current.clear();
+            //     gridWidgetContainersMap.set(gridStack, new Map());
+            //     gridStack.load(initialOptions.children);
+            // }
 
             gridStack.commit();
         } catch (e) {

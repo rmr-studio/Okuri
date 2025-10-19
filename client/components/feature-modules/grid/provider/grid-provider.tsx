@@ -6,6 +6,8 @@ import {
     SetStateAction,
     useCallback,
     useContext,
+    useEffect,
+    useMemo,
     useState,
 } from "react";
 
@@ -59,7 +61,7 @@ export function GridProvider({
     initialOptions,
 }: PropsWithChildren<{ initialOptions: GridStackOptions }>) {
     const [gridStack, setGridStack] = useState<GridStack | null>(null);
-    const [rawWidgetMetaMap, setRawWidgetMetaMap] = useState(() => {
+    const buildRawWidgetMetaMap = useCallback(() => {
         const map = new Map<string, GridStackWidget>();
         const deepFindNodeWithContent = (obj: GridStackWidget) => {
             if (obj.id && obj.content) {
@@ -75,7 +77,14 @@ export function GridProvider({
             deepFindNodeWithContent(child);
         });
         return map;
-    });
+    }, [initialOptions]);
+
+    const [rawWidgetMetaMap, setRawWidgetMetaMap] = useState<Map<string, GridStackWidget>>(() =>
+        buildRawWidgetMetaMap()
+    );
+    useEffect(() => {
+        setRawWidgetMetaMap(buildRawWidgetMetaMap());
+    }, [buildRawWidgetMetaMap]);
 
     const addWidget = useCallback(
         (fn: (id: string) => Omit<GridStackWidget, "id">) => {
@@ -144,24 +153,33 @@ export function GridProvider({
 
     return (
         <GridStackContext.Provider
-            value={{
-                initialOptions,
-                gridStack,
-
-                addWidget,
-                removeWidget,
-                addSubGrid,
-                saveOptions,
-
-                _gridStack: {
-                    value: gridStack,
-                    set: setGridStack,
-                },
-                _rawWidgetMetaMap: {
-                    value: rawWidgetMetaMap,
-                    set: setRawWidgetMetaMap,
-                },
-            }}
+            value={useMemo(
+                () => ({
+                    initialOptions,
+                    gridStack,
+                    addWidget,
+                    removeWidget,
+                    addSubGrid,
+                    saveOptions,
+                    _gridStack: {
+                        value: gridStack,
+                        set: setGridStack,
+                    },
+                    _rawWidgetMetaMap: {
+                        value: rawWidgetMetaMap,
+                        set: setRawWidgetMetaMap,
+                    },
+                }),
+                [
+                    initialOptions,
+                    gridStack,
+                    addWidget,
+                    removeWidget,
+                    addSubGrid,
+                    saveOptions,
+                    rawWidgetMetaMap,
+                ]
+            )}
         >
             {children}
         </GridStackContext.Provider>
