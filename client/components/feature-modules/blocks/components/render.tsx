@@ -12,9 +12,15 @@ import { evalVisible } from "@/components/feature-modules/blocks/util/block.visi
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { GridStackOptions, GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface TreeCtx {
     payload: object;
@@ -27,6 +33,7 @@ export const RenderBlock: React.FC<{
     onLayoutExporter?: (exporter: () => BlockRenderStructure) => void;
     gridOverrides?: Partial<GridStackOptions>;
 }> = ({ tree, display, onLayoutExporter, gridOverrides }) => {
+    const [currentDisplay, setCurrentDisplay] = useState<BlockRenderStructure>(display);
     const ctx = useMemo<TreeCtx>(
         () => ({
             payload: tree.root.block.payload.data,
@@ -35,19 +42,58 @@ export const RenderBlock: React.FC<{
         [tree]
     );
 
+    useEffect(() => {
+        setCurrentDisplay(display);
+    }, [display]);
+
     const gridOptions = useMemo(
-        () => buildGridOptions(display, ctx, gridOverrides),
-        [display, ctx, gridOverrides]
+        () => buildGridOptions(currentDisplay, ctx, gridOverrides),
+        [currentDisplay, ctx, gridOverrides]
     );
+
+    const handleComponentDelete = useCallback((componentId: string) => {
+        setCurrentDisplay((prev) => removeComponentFromDisplay(prev, componentId));
+    }, []);
 
     return (
         <GridProvider initialOptions={gridOptions}>
-            <LayoutExporterInitializer display={display} onReady={onLayoutExporter} />
+            <LayoutExporterInitializer display={currentDisplay} onReady={onLayoutExporter} />
             <GridContainerProvider>
-                <RenderElementProvider registry={blockRenderRegistry} />
+                <BlockElementsRenderer onDeleteComponent={handleComponentDelete} />
             </GridContainerProvider>
         </GridProvider>
     );
+};
+
+const BlockElementsRenderer: React.FC<{
+    onDeleteComponent: (componentId: string) => void;
+}> = ({ onDeleteComponent }) => {
+    const { removeWidget } = useGrid();
+
+    const wrapElement = useCallback(
+        ({ id, raw, element }: { id: string; raw: any; element: React.ReactNode }) => {
+            const componentId = raw?.componentId ?? id;
+            const handleDelete = () => {
+                removeWidget(id);
+                onDeleteComponent(componentId);
+            };
+            return (
+                <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                        <div className="h-full w-full">{element}</div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="min-w-[10rem]">
+                        <ContextMenuItem variant="destructive" onSelect={handleDelete}>
+                            Delete block
+                        </ContextMenuItem>
+                    </ContextMenuContent>
+                </ContextMenu>
+            );
+        },
+        [removeWidget, onDeleteComponent]
+    );
+
+    return <RenderElementProvider registry={blockRenderRegistry} wrapElement={wrapElement} />;
 };
 
 interface LayoutRect {
@@ -87,7 +133,6 @@ function buildGridOptions(
             display,
             ctx,
             path: item.id,
-            ...overrides,
         });
         if (widget) children.push(widget);
     }
@@ -111,7 +156,6 @@ function buildWidgetForComponent({
     path,
     slot,
     parentId,
-    overrides,
 }: {
     componentId: string;
     rect: LayoutRect;
@@ -120,7 +164,6 @@ function buildWidgetForComponent({
     path: string;
     slot?: string;
     parentId?: string;
-    overrides?: Partial<GridStackOptions>;
 }): GridStackWidget | null {
     const node = display.components[componentId];
     const widgetId = path;
@@ -177,7 +220,7 @@ function buildWidgetForComponent({
         parentId,
     });
 
-    const subGrid = buildSubGrid(node, display, ctx, widgetId, overrides);
+    const subGrid = buildSubGrid(node, display, ctx, widgetId);
     if (subGrid) {
         widget.subGridOpts = {
             acceptWidgets: true,
@@ -194,8 +237,7 @@ function buildSubGrid(
     node: BlockRenderStructure["components"][string],
     display: BlockRenderStructure,
     ctx: TreeCtx,
-    parentPath: string,
-    overrides?: Partial<GridStackOptions>
+    parentPath: string
 ): GridStackOptions | null {
     const slots: Record<string, string[]> = node.slots ?? {};
     if (Object.keys(slots).length === 0) return null;
@@ -260,8 +302,71 @@ function buildSubGrid(
         acceptWidgets: true,
         animate: true,
         children,
-        ...overrides,
     };
+}
+
+function cloneDisplay(display: BlockRenderStructure): BlockRenderStructure {
+    return JSON.parse(JSON.stringify(display)) as BlockRenderStructure;
+}
+
+function collectDescendants(
+    components: Record<string, BlockRenderStructure["components"][string]>,
+    componentId: string,
+    acc: Set<string>
+) {
+    if (acc.has(componentId)) return;
+    acc.add(componentId);
+    const node = components[componentId];
+    if (!node || !node.slots) return;
+    for (const ids of Object.values(node.slots)) {
+        ids.forEach((id) => collectDescendants(components, id, acc));
+    }
+}
+
+function removeComponentFromDisplay(
+    display: BlockRenderStructure,
+    componentId: string
+): BlockRenderStructure {
+    if (!display.components?.[componentId]) return display;
+    const clone = cloneDisplay(display);
+
+    const idsToRemove = new Set<string>();
+    collectDescendants(clone.components, componentId, idsToRemove);
+
+    for (const id of idsToRemove) {
+        delete clone.components[id];
+    }
+
+    clone.layoutGrid = {
+        ...clone.layoutGrid,
+        items: (clone.layoutGrid.items ?? []).filter((item) => !idsToRemove.has(item.id)),
+    };
+
+    for (const node of Object.values(clone.components)) {
+        if (!node?.slots) continue;
+        let updated = false;
+        const nextSlots: Record<string, string[]> = {};
+        for (const [slotName, ids] of Object.entries(node.slots)) {
+            const filtered = ids.filter((id) => !idsToRemove.has(id));
+            nextSlots[slotName] = filtered;
+            if (filtered.length !== ids.length) {
+                updated = true;
+            }
+            const slotLayout = (
+                node as unknown as { slotLayout?: Record<string, SlotLayoutDefinition> }
+            ).slotLayout;
+            if (slotLayout?.[slotName]) {
+                slotLayout[slotName].items = slotLayout[slotName].items.filter(
+                    (item) => !idsToRemove.has(item.id)
+                );
+            }
+        }
+        if (updated) {
+            node.slots = nextSlots;
+        }
+    }
+
+    return clone;
 }
 
 function normaliseSlotLayout(

@@ -3,10 +3,10 @@ import React, { ComponentType as Component } from "react";
 import { z } from "zod";
 import { AddressCard } from "../components/bespoke/AddressCard";
 import { ContactCard } from "../components/bespoke/ContactCard";
+import { ButtonBlock } from "../components/primitive/block.button";
 import { DataSummaryTable } from "../components/primitive/DataSummaryTable";
-import { LayoutContainer } from "../components/primitive/LayoutContainer";
-import { BlockButton } from "../components/primitive/BlockButton";
 import { InlineOwnedList } from "../components/primitive/InlineOwnedList";
+import { LayoutContainer } from "../components/primitive/LayoutContainer";
 import { TextBlock } from "../components/primitive/TextBlock";
 
 const ContactCardSchema = z
@@ -65,17 +65,6 @@ const DataSummaryTableSchema = z
         description: z.string().optional(),
         data: z.any().optional(),
         className: z.string().optional(),
-    })
-    .passthrough();
-
-const BlockButtonSchema = z
-    .object({
-        label: z.string().optional(),
-        href: z.string().optional(),
-        className: z.string().optional(),
-        variant: z.string().optional(),
-        size: z.string().optional(),
-        icon: z.any().optional(),
     })
     .passthrough();
 
@@ -168,14 +157,7 @@ const baseBlockElements = {
             />
         ),
     }),
-    BUTTON: createRenderElement({
-        type: "BUTTON",
-        name: "Button",
-        description: "Action button that can link to another view.",
-        category: "BLOCK",
-        schema: BlockButtonSchema,
-        component: BlockButton,
-    }),
+    BUTTON: ButtonBlock,
     ATTACHMENT: createRenderElement({
         type: "ATTACHMENT",
         name: "Attachment placeholder",
