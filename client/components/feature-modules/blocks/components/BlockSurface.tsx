@@ -12,6 +12,19 @@ import {
     CommandList,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/util/utils";
 import {
     CommandIcon,
@@ -58,6 +71,7 @@ export interface BlockSurfaceProps {
     onModeChange?: (mode: Mode) => void;
     onInsert?: (item: SlashMenuItem) => void;
     onInsertSibling?: (item: SlashMenuItem) => void;
+    onDelete?: () => void;
     className?: string;
     nested?: React.ReactNode;
     nestedFooter?: React.ReactNode;
@@ -110,6 +124,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     onModeChange,
     onInsert,
     onInsertSibling,
+    onDelete,
     className,
     nested,
     nestedFooter,
@@ -127,6 +142,20 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
 
     const items = slashItems ?? defaultSlashItems;
     const actions = quickActions ?? [];
+    const menuActions = useMemo(() => {
+        if (onDelete && !actions.some((action) => action.id === "delete")) {
+            return [
+                ...actions,
+                {
+                    id: "__delete",
+                    label: "Delete block",
+                    onSelect: onDelete,
+                },
+            ];
+        }
+        return actions;
+    }, [actions, onDelete]);
+    const hasMenuActions = menuActions.length > 0;
 
     useEffect(() => {
         setDraftTitle(title ?? "");
@@ -209,147 +238,210 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
         item.onSelect?.();
     }, []);
 
+    const handleMenuAction = useCallback((item: QuickActionItem) => {
+        item.onSelect?.();
+    }, []);
+
     const modeLabel = useMemo(() => (mode === "display" ? "Display" : "Form"), [mode]);
 
     return (
-        <div
-            className={cn(
-                "bg-card text-card-foreground rounded-xl border shadow-sm transition-colors",
-                className
-            )}
-            tabIndex={-1}
-            onMouseDown={() => setActiveSurface(surfaceId)}
-            onFocusCapture={() => setActiveSurface(surfaceId)}
-        >
-            <header className="flex flex-col gap-2 border-b p-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex flex-1 items-center gap-3">
-                    <Input
-                        aria-label="Block title"
-                        value={draftTitle}
-                        placeholder={titlePlaceholder}
-                        onChange={(event) => setDraftTitle(event.target.value)}
-                        onBlur={handleTitleBlur}
-                        className="h-9 flex-1 border-none px-0 text-lg font-semibold focus-visible:ring-0"
-                    />
-                    {badge ? <Badge variant="secondary">{badge}</Badge> : null}
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="gap-1" onClick={toggleMode}>
-                        {mode === "display" ? (
-                            <>
-                                <LayoutDashboardIcon className="size-4" />
-                                Display
-                            </>
-                        ) : (
-                            <>
-                                <ListIcon className="size-4" />
-                                Form
-                            </>
-                        )}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn("gap-1", actions.length === 0 && "opacity-70")}
-                        onClick={() => {
-                            if (actions.length === 0) {
-                                setInsertContext("nested");
-                                setSlashOpen(true);
-                            } else {
-                                setQuickOpen(true);
-                            }
-                        }}
-                    >
-                        <CommandIcon className="size-4" />
-                        Cmd+K
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1"
-                        onClick={() => {
-                            setInsertContext("nested");
-                            setSlashOpen(true);
-                        }}
-                    >
-                        <PlusIcon className="size-4" />
-                        Insert
-                    </Button>
-                    <Button variant="ghost" size="icon" className="size-8">
-                        <MoreHorizontalIcon className="size-4" />
-                    </Button>
-                </div>
-            </header>
-            {description ? (
-                <div className="px-4 pb-2 text-sm text-muted-foreground">{description}</div>
-            ) : null}
-            <section className="px-4 pb-4">
-                <div className="rounded-lg border bg-background/40 p-4">
-                    <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {modeLabel}
-                    </div>
-                    {content ?? (
-                        <div className="text-sm text-muted-foreground">
-                            {mode === "form"
-                                ? "This block does not have a form configuration yet."
-                                : "This block has no display content yet."}
-                        </div>
+        <ContextMenu>
+            <ContextMenuTrigger asChild>
+                <div
+                    className={cn(
+                        "group relative flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm transition-colors",
+                        className
                     )}
-                </div>
-                {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
-                {nestedFooter}
-            </section>
-
-            <CommandDialog open={isSlashOpen} onOpenChange={setSlashOpen}>
-                <CommandInput placeholder="Search components or templates..." />
-                <CommandList>
-                    <CommandEmpty>No matches found.</CommandEmpty>
-                    <CommandGroup heading="Insert block">
-                        {items.map((item) => (
-                            <CommandItem
-                                key={item.id}
-                                onSelect={() => handleSelect(item)}
-                                className="gap-2"
+                    data-surface-id={surfaceId}
+                    tabIndex={-1}
+                    onMouseDown={() => setActiveSurface(surfaceId)}
+                    onFocusCapture={() => setActiveSurface(surfaceId)}
+                >
+                    <header className="flex flex-col gap-2 border-b p-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-1 items-center gap-3">
+                            <Input
+                                aria-label="Block title"
+                                value={draftTitle}
+                                placeholder={titlePlaceholder}
+                                onChange={(event) => setDraftTitle(event.target.value)}
+                                onBlur={handleTitleBlur}
+                                className="h-9 flex-1 border-none px-0 text-lg font-semibold focus-visible:ring-0"
+                            />
+                            {badge ? <Badge variant="secondary">{badge}</Badge> : null}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" className="gap-1" onClick={toggleMode}>
+                                {mode === "display" ? (
+                                    <>
+                                        <LayoutDashboardIcon className="size-4" />
+                                        Display
+                                    </>
+                                ) : (
+                                    <>
+                                        <ListIcon className="size-4" />
+                                        Form
+                                    </>
+                                )}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn("gap-1", actions.length === 0 && "opacity-70")}
+                                onClick={() => {
+                                    if (actions.length === 0) {
+                                        setInsertContext("nested");
+                                        setSlashOpen(true);
+                                    } else {
+                                        setQuickOpen(true);
+                                    }
+                                }}
                             >
-                                {item.icon ?? <SearchIcon className="size-4" />}
-                                <div className="flex flex-col items-start">
-                                    <span>{item.label}</span>
-                                    {item.description ? (
-                                        <span className="text-xs text-muted-foreground">
-                                            {item.description}
-                                        </span>
-                                    ) : null}
+                                <CommandIcon className="size-4" />
+                                Cmd+K
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => {
+                                    setInsertContext("nested");
+                                    setSlashOpen(true);
+                                }}
+                            >
+                                <PlusIcon className="size-4" />
+                                Insert
+                            </Button>
+                            {hasMenuActions ? (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="size-8">
+                                            <MoreHorizontalIcon className="size-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="min-w-[10rem]">
+                                        {menuActions.map((action) => (
+                                            <DropdownMenuItem
+                                                key={action.id}
+                                                variant={
+                                                    action.id === "delete" ||
+                                                    action.id === "__delete"
+                                                        ? "destructive"
+                                                        : "default"
+                                                }
+                                                onSelect={(event) => {
+                                                    event.preventDefault();
+                                                    handleMenuAction(action);
+                                                }}
+                                            >
+                                                <span>{action.label}</span>
+                                                {action.shortcut ? (
+                                                    <span className="ml-auto text-xs uppercase tracking-wide text-muted-foreground">
+                                                        {action.shortcut}
+                                                    </span>
+                                                ) : null}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            ) : null}
+                        </div>
+                    </header>
+                    {description ? (
+                        <div className="px-4 pb-2 text-sm text-muted-foreground">{description}</div>
+                    ) : null}
+                    <section className="px-4 pb-4">
+                        <div className="rounded-lg border bg-background/40 p-4">
+                            <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                {modeLabel}
+                            </div>
+                            {content ?? (
+                                <div className="text-sm text-muted-foreground">
+                                    {mode === "form"
+                                        ? "This block does not have a form configuration yet."
+                                        : "This block has no display content yet."}
                                 </div>
-                            </CommandItem>
-                        ))}
-                    </CommandGroup>
-                </CommandList>
-            </CommandDialog>
+                            )}
+                        </div>
+                        {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
+                        {nestedFooter}
+                    </section>
 
-            <CommandDialog open={isQuickOpen} onOpenChange={setQuickOpen} title="Quick actions">
-                <CommandInput placeholder="Quick actions…" />
-                <CommandList>
-                    <CommandEmpty>No actions available.</CommandEmpty>
-                    <CommandGroup heading="Actions">
-                        {actions.map((action) => (
-                            <CommandItem
-                                key={action.id}
-                                onSelect={() => handleQuickSelect(action)}
-                                className="gap-2"
+                    <CommandDialog open={isSlashOpen} onOpenChange={setSlashOpen}>
+                        <CommandInput placeholder="Search components or templates..." />
+                        <CommandList>
+                            <CommandEmpty>No matches found.</CommandEmpty>
+                            <CommandGroup heading="Insert block">
+                                {items.map((item) => (
+                                    <CommandItem
+                                        key={item.id}
+                                        onSelect={() => handleSelect(item)}
+                                        className="gap-2"
+                                    >
+                                        {item.icon ?? <SearchIcon className="size-4" />}
+                                        <div className="flex flex-col items-start">
+                                            <span>{item.label}</span>
+                                            {item.description ? (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {item.description}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </CommandDialog>
+
+                    <CommandDialog open={isQuickOpen} onOpenChange={setQuickOpen} title="Quick actions">
+                        <CommandInput placeholder="Quick actions…" />
+                        <CommandList>
+                            <CommandEmpty>No actions available.</CommandEmpty>
+                            <CommandGroup heading="Actions">
+                                {actions.map((action) => (
+                                    <CommandItem
+                                        key={action.id}
+                                        onSelect={() => handleQuickSelect(action)}
+                                        className="gap-2"
+                                    >
+                                        <CommandIcon className="size-4 opacity-60" />
+                                        <span>{action.label}</span>
+                                        {action.shortcut ? (
+                                            <span className="ml-auto text-xs uppercase tracking-wide text-muted-foreground">
+                                                {action.shortcut}
+                                            </span>
+                                        ) : null}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </CommandDialog>
+                </div>
+            </ContextMenuTrigger>
+            {hasMenuActions ? (
+                <ContextMenuContent className="min-w-[10rem]">
+                    {menuActions.map((action, index) => (
+                        <React.Fragment key={action.id}>
+                            <ContextMenuItem
+                                variant={
+                                    action.id === "delete" || action.id === "__delete"
+                                        ? "destructive"
+                                        : "default"
+                                }
+                                onSelect={() => handleMenuAction(action)}
                             >
-                                <CommandIcon className="size-4 opacity-60" />
                                 <span>{action.label}</span>
                                 {action.shortcut ? (
                                     <span className="ml-auto text-xs uppercase tracking-wide text-muted-foreground">
                                         {action.shortcut}
                                     </span>
                                 ) : null}
-                            </CommandItem>
-                        ))}
-                    </CommandGroup>
-                </CommandList>
-            </CommandDialog>
-        </div>
+                            </ContextMenuItem>
+                            {index !== menuActions.length - 1 ? <ContextMenuSeparator /> : null}
+                        </React.Fragment>
+                    ))}
+                </ContextMenuContent>
+            ) : null}
+        </ContextMenu>
     );
 };
 

@@ -1,8 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
-import { AddressCard } from "./AddressCard";
-import { InvoiceLineItemCard } from "./InvoiceLineItemCard";
-import { TaskCard } from "./TaskCard";
+import { AddressCard } from "../bespoke/AddressCard";
+import { InvoiceLineItemCard } from "../bespoke/InvoiceLineItemCard";
+import { TaskCard } from "../bespoke/TaskCard";
 
 type ItemComponentKey = "ADDRESS_CARD" | "PROJECT_TASK" | "INVOICE_LINE_ITEM" | string;
 
@@ -28,26 +28,25 @@ const componentMap: Record<string, Renderer> = {
     ),
 };
 
+const FALLBACK_RENDERER: Renderer = ({ data }) => (
+    <pre className="text-xs bg-muted/40 p-3 rounded border border-border/50 overflow-auto">
+        {JSON.stringify(data, null, 2)}
+    </pre>
+);
+
 /**
  * Renders OWNED child block refs inline.
  * Expects props.items = RefRow[] where each row.entity.payload.data is the child block's data.
  */
 export const InlineOwnedList: React.FC<Props> = ({
-    items,
+    items: rows = [],
     itemComponent,
     title,
     description,
     emptyMessage = "No items",
     currency,
 }) => {
-    const rows = items ?? [];
-    const ItemRenderer =
-        (itemComponent && componentMap[itemComponent]) ??
-        (({ data }: { data: any; context: Omit<Props, "items" | "itemComponent"> }) => (
-            <pre className="text-xs bg-muted/40 p-3 rounded border border-border/50 overflow-auto">
-                {JSON.stringify(data, null, 2)}
-            </pre>
-        ));
+    const Comp = (itemComponent ? componentMap[itemComponent] : undefined) ?? FALLBACK_RENDERER;
 
     const content =
         rows.length === 0 ? (
@@ -58,11 +57,7 @@ export const InlineOwnedList: React.FC<Props> = ({
                     const data = ref?.entity?.payload?.data ?? ref;
                     const key = ref?.entityId ?? index;
                     return (
-                        <ItemRenderer
-                            key={key}
-                            data={data}
-                            context={{ title, description, currency }}
-                        />
+                        <Comp key={key} data={data} context={{ title, description, currency }} />
                     );
                 })}
             </div>

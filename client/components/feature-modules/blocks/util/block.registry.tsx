@@ -1,14 +1,13 @@
-import { ComponentType } from "@/components/feature-modules/blocks/interface/block.interface";
 import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import React, { ComponentType as Component } from "react";
 import { z } from "zod";
-import { AddressCard } from "../components/AddressCard";
-import { BlockButton } from "../components/BlockButton";
-import { ContactCard } from "../components/ContactCard";
-import { DataSummaryTable } from "../components/DataSummaryTable";
-import { InlineOwnedList } from "../components/InlineOwnedList";
-import { LayoutContainer } from "../components/LayoutContainer";
-import { TextBlock } from "../components/TextBlock";
+import { AddressCard } from "../components/bespoke/AddressCard";
+import { ContactCard } from "../components/bespoke/ContactCard";
+import { DataSummaryTable } from "../components/primitive/DataSummaryTable";
+import { LayoutContainer } from "../components/primitive/LayoutContainer";
+import { BlockButton } from "../components/primitive/BlockButton";
+import { InlineOwnedList } from "../components/primitive/InlineOwnedList";
+import { TextBlock } from "../components/primitive/TextBlock";
 
 const ContactCardSchema = z
     .object({
@@ -28,7 +27,7 @@ const AddressCardSchema = z
                 street: z.string().optional(),
                 city: z.string().optional(),
                 state: z.string().optional(),
-            postalCode: z.string().optional(),
+                postalCode: z.string().optional(),
                 country: z.string().optional(),
             })
             .partial()
@@ -213,12 +212,9 @@ export const blockElements = {
 
 const componentKeys = Object.keys(baseBlockElements);
 
-export const registry: Record<string, Component<any>> = componentKeys.reduce(
-    (acc, key) => {
-        acc[key] = baseBlockElements[key as keyof typeof baseBlockElements].component;
-        return acc;
-    },
-    {} as Record<string, Component<any>>
-);
+export const registry: Record<string, Component<any>> = componentKeys.reduce((acc, key) => {
+    acc[key] = baseBlockElements[key as keyof typeof baseBlockElements].component;
+    return acc;
+}, {} as Record<string, Component<any>>);
 
 export const blockRenderRegistry = blockElements;

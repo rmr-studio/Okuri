@@ -35,7 +35,10 @@ export const RenderBlock: React.FC<{
         [tree]
     );
 
-    const gridOptions = useMemo(() => buildGridOptions(display, ctx, gridOverrides), [display, ctx, gridOverrides]);
+    const gridOptions = useMemo(
+        () => buildGridOptions(display, ctx, gridOverrides),
+        [display, ctx, gridOverrides]
+    );
 
     return (
         <GridProvider initialOptions={gridOptions}>
@@ -84,6 +87,7 @@ function buildGridOptions(
             display,
             ctx,
             path: item.id,
+            ...overrides,
         });
         if (widget) children.push(widget);
     }
@@ -94,7 +98,6 @@ function buildGridOptions(
         margin: 8,
         acceptWidgets: true,
         animate: true,
-        dragOut: true,
         ...overrides,
         children,
     };
@@ -108,6 +111,7 @@ function buildWidgetForComponent({
     path,
     slot,
     parentId,
+    overrides,
 }: {
     componentId: string;
     rect: LayoutRect;
@@ -116,6 +120,7 @@ function buildWidgetForComponent({
     path: string;
     slot?: string;
     parentId?: string;
+    overrides?: Partial<GridStackOptions>;
 }): GridStackWidget | null {
     const node = display.components[componentId];
     const widgetId = path;
@@ -172,12 +177,11 @@ function buildWidgetForComponent({
         parentId,
     });
 
-    const subGrid = buildSubGrid(node, display, ctx, widgetId);
+    const subGrid = buildSubGrid(node, display, ctx, widgetId, overrides);
     if (subGrid) {
         widget.subGridOpts = {
             acceptWidgets: true,
             animate: true,
-            dragOut: true,
             class: "grid-stack-subgrid",
             ...subGrid,
         };
@@ -190,7 +194,8 @@ function buildSubGrid(
     node: BlockRenderStructure["components"][string],
     display: BlockRenderStructure,
     ctx: TreeCtx,
-    parentPath: string
+    parentPath: string,
+    overrides?: Partial<GridStackOptions>
 ): GridStackOptions | null {
     const slots: Record<string, string[]> = node.slots ?? {};
     if (Object.keys(slots).length === 0) return null;
@@ -254,8 +259,8 @@ function buildSubGrid(
         margin: margin ?? 8,
         acceptWidgets: true,
         animate: true,
-        dragOut: true,
         children,
+        ...overrides,
     };
 }
 

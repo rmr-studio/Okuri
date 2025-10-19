@@ -75,11 +75,28 @@ const PanelWidgetSchema = z.object({
 
 const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, parentPath }) => {
     const playground = usePlayground();
+    const { removeWidget } = useGrid();
     const block = playground.getBlock(panelId, parentPath);
     if (!block) return null;
 
     const children = block.children ?? [];
     const isTopLevel = !parentPath || parentPath.length === 0;
+    const handleDelete = useCallback(() => {
+        removeWidget(panelId);
+        playground.removePanel(panelId);
+    }, [panelId, playground, removeWidget]);
+    const panelActions = useMemo(
+        () =>
+            playground.quickActionsFor(block.id).map((action) =>
+                action.id === "delete"
+                    ? {
+                          ...action,
+                          onSelect: () => handleDelete(),
+                      }
+                    : action
+            ),
+        [block.id, handleDelete, playground]
+    );
 
     return (
         <BlockSurface
@@ -88,7 +105,7 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
             description={block.description}
             badge={block.badge}
             slashItems={playground.slashItems}
-            quickActions={playground.quickActionsFor(block.id)}
+            quickActions={panelActions}
             onInsert={(item) => playground.insertNested(block.id, item, children.length)}
             onInsertSibling={(item) => {
                 if (!isTopLevel) return;
@@ -96,6 +113,7 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
                 const insertAt = topLevelIndex >= 0 ? topLevelIndex + 1 : playground.blocks.length;
                 playground.insertPanel(item, insertAt);
             }}
+            onDelete={handleDelete}
             nested={
                 children.length > 0 ? (
                     <div className="rounded-lg border border-dashed/60 bg-background/40 p-4">
@@ -1123,10 +1141,8 @@ function duplicateBlockById(blocks: PlaygroundBlock[], targetId: string): Playgr
 function cloneBlock(block: PlaygroundBlock): PlaygroundBlock {
     return {
         ...block,
-        id: uniqueId("panel"),
-        layout: { ...block.layout, y: block.layout.y + block.layout.h + 2 },
-        tree: JSON.parse(JSON.stringify(block.tree)),
-        display: JSON.parse(JSON.stringify(block.display)),
+        tree: structuredClone(block.tree),
+        display: structuredClone(block.display),
         children: block.children ? block.children.map(cloneBlock) : undefined,
     };
 }

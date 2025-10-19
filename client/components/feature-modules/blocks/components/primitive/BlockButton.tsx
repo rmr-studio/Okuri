@@ -1,4 +1,4 @@
-import { Button, ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util/utils";
 import Link from "next/link";
 import { FC, ReactNode } from "react";
