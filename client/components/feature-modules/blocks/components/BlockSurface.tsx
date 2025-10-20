@@ -164,7 +164,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
         return actions;
     }, [actions, onDelete]);
     const hasMenuActions = menuActions.length > 0;
-    const shouldHighlight = isActive || isInlineMenuOpen || isQuickOpen || isSlashOpen;
+    const [isHovered, setHovered] = useState(false);
+    const shouldHighlight =
+        isActive || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered;
 
     useEffect(() => {
         setDraftTitle(title ?? "");
@@ -214,6 +216,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                 } else {
                     setQuickOpen(true);
                 }
+            }
+
+            if ((event.key === "Delete" || event.key === "Backspace") && onDelete && !isInput) {
+                event.preventDefault();
+                onDelete();
             }
         };
 
@@ -267,12 +274,16 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                     className={cn(
                         "group relative flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm transition-colors",
                         shouldHighlight
-                            ? "border-primary ring-2 ring-primary/40"
-                            : "border-border",
+                            ? "border-primary ring-2 ring-primary/30"
+                            : isHovered
+                                ? "border-primary/50"
+                                : "border-border",
                         className
                     )}
                     data-surface-id={surfaceId}
                     tabIndex={-1}
+                    onPointerEnter={() => setHovered(true)}
+                    onPointerLeave={() => setHovered(false)}
                     onPointerDown={(event) => {
                         // If the pointer interaction is happening inside another block surface,
                         // let the child handle its own activation.

@@ -19,6 +19,7 @@ import { evalVisible } from "@/components/feature-modules/blocks/util/block.visi
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
+import { cn } from "@/lib/util/utils";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -94,27 +95,94 @@ const BlockElementsRenderer: React.FC<{
         ({ id, raw, element }: { id: string; raw: any; element: React.ReactNode }) => {
             const componentId = raw?.componentId ?? id;
             const handleDelete = () => {
-                // Remove the widget from GridStack, then mirror that change in the local display state.
                 removeWidget(id);
                 onDeleteComponent(componentId);
             };
             return (
-                <ContextMenu>
-                    <ContextMenuTrigger asChild>
-                        <div className="h-full w-full">{element}</div>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent className="min-w-[10rem]">
-                        <ContextMenuItem variant="destructive" onSelect={handleDelete}>
-                            Delete block
-                        </ContextMenuItem>
-                    </ContextMenuContent>
-                </ContextMenu>
+                <BlockComponentWrapper
+                    id={id}
+                    componentId={componentId}
+                    onDelete={handleDelete}
+                >
+                    {element}
+                </BlockComponentWrapper>
             );
         },
         [removeWidget, onDeleteComponent]
     );
 
     return <RenderElementProvider registry={blockRenderRegistry} wrapElement={wrapElement} />;
+};
+
+type BlockFocusListener = (id: string | null) => void;
+const blockFocusListeners = new Set<BlockFocusListener>();
+let activeBlockId: string | null = null;
+
+function setActiveBlock(id: string | null) {
+    activeBlockId = id;
+    blockFocusListeners.forEach((listener) => listener(activeBlockId));
+}
+
+function useIsBlockActive(id: string) {
+    const [isActive, setIsActive] = useState(activeBlockId === id);
+
+    useEffect(() => {
+        const listener: BlockFocusListener = (current) => setIsActive(current === id);
+        blockFocusListeners.add(listener);
+        return () => blockFocusListeners.delete(listener);
+    }, [id]);
+
+    return isActive;
+}
+
+const BlockComponentWrapper: React.FC<{
+    id: string;
+    componentId: string;
+    onDelete: () => void;
+    children: React.ReactNode;
+}> = ({ componentId, onDelete, children }) => {
+    const isActive = useIsBlockActive(componentId);
+    const [isHovered, setHovered] = useState(false);
+
+    return (
+        <ContextMenu>
+            <ContextMenuTrigger asChild>
+                <div
+                    data-block-id={componentId}
+                    className={cn(
+                        "h-full w-full rounded-lg border bg-card/80 transition-colors",
+                        isActive
+                            ? "border-primary ring-2 ring-primary/40"
+                            : isHovered
+                              ? "border-primary/40"
+                              : "border-border/60"
+                    )}
+                    onPointerEnter={() => setHovered(true)}
+                    onPointerLeave={() => setHovered(false)}
+                    onPointerDown={(event) => {
+                        const targetBlock = (event.target as HTMLElement | null)?.closest(
+                            "[data-block-id]"
+                        );
+                        if (
+                            targetBlock &&
+                            targetBlock !== event.currentTarget &&
+                            targetBlock.getAttribute("data-block-id") !== componentId
+                        ) {
+                            return;
+                        }
+                        setActiveBlock(componentId);
+                    }}
+                >
+                    {children}
+                </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="min-w-[10rem]">
+                <ContextMenuItem variant="destructive" onSelect={onDelete}>
+                    Delete block
+                </ContextMenuItem>
+            </ContextMenuContent>
+        </ContextMenu>
+    );
 };
 
 interface LayoutRect {
