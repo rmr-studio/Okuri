@@ -14,6 +14,12 @@ import {
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import { applyBindings } from "@/components/feature-modules/blocks/util/block.binding";
 import { buildDisplayFromGridState } from "@/components/feature-modules/blocks/util/block.layout";
+import {
+    pushSelection,
+    removeSelection,
+    subscribe as focusSubscribe,
+    updateSelection,
+} from "@/components/feature-modules/blocks/util/block.focus-manager";
 import { blockRenderRegistry } from "@/components/feature-modules/blocks/util/block.registry";
 import { evalVisible } from "@/components/feature-modules/blocks/util/block.visibility";
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
@@ -114,56 +120,36 @@ const BlockElementsRenderer: React.FC<{
     return <RenderElementProvider registry={blockRenderRegistry} wrapElement={wrapElement} />;
 };
 
-type BlockFocusListener = (id: string | null) => void;
-const blockFocusListeners = new Set<BlockFocusListener>();
-let activeBlockId: string | null = null;
-
-function setActiveBlock(id: string | null) {
-    activeBlockId = id;
-    blockFocusListeners.forEach((listener) => listener(activeBlockId));
-}
-
-function useIsBlockActive(id: string) {
-    const [isActive, setIsActive] = useState(activeBlockId === id);
-
-    useEffect(() => {
-        const listener: BlockFocusListener = (current) => setIsActive(current === id);
-        blockFocusListeners.add(listener);
-        return () => blockFocusListeners.delete(listener);
-    }, [id]);
-
-    return isActive;
-}
-
 const BlockComponentWrapper: React.FC<{
     id: string;
     componentId: string;
     onDelete: () => void;
     children: React.ReactNode;
 }> = ({ componentId, onDelete, children }) => {
-    const isActive = useIsBlockActive(componentId);
+    const [isSelected, setIsSelected] = useState(false);
     const [isHovered, setHovered] = useState(false);
 
+    const handleDelete = useCallback(() => {
+        removeSelection("block", componentId);
+        onDelete();
+    }, [componentId, onDelete]);
+
     useEffect(() => {
-        if (!isActive) return;
+        return focusSubscribe((selection) => {
+            setIsSelected(selection?.type === "block" && selection.id === componentId);
+        });
+    }, [componentId]);
 
-        const handler = (event: KeyboardEvent) => {
-            if (event.key !== "Delete" && event.key !== "Backspace") return;
-            const activeElement = document.activeElement as HTMLElement | null;
-            if (activeElement) {
-                const tag = activeElement.tagName;
-                const isFormElement =
-                    tag === "INPUT" || tag === "TEXTAREA" || activeElement.isContentEditable;
-                if (isFormElement) return;
-            }
-            (event as KeyboardEvent & { __handledByBlock?: boolean }).__handledByBlock = true;
-            event.preventDefault();
-            onDelete();
+    useEffect(() => {
+        if (!isSelected) return;
+        updateSelection({ type: "block", id: componentId, onDelete: handleDelete });
+    }, [isSelected, handleDelete, componentId]);
+
+    useEffect(() => {
+        return () => {
+            removeSelection("block", componentId);
         };
-
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [isActive, onDelete]);
+    }, [componentId]);
 
     return (
         <ContextMenu>
@@ -172,7 +158,7 @@ const BlockComponentWrapper: React.FC<{
                     data-block-id={componentId}
                     className={cn(
                         "h-full w-full rounded-lg border bg-card/80 transition-colors",
-                        isActive
+                        isSelected
                             ? "border-primary ring-2 ring-primary/40"
                             : isHovered
                               ? "border-primary/40"
@@ -191,14 +177,14 @@ const BlockComponentWrapper: React.FC<{
                         ) {
                             return;
                         }
-                        setActiveBlock(componentId);
+                        pushSelection({ type: "block", id: componentId, onDelete: handleDelete });
                     }}
                 >
                     {children}
                 </div>
             </ContextMenuTrigger>
             <ContextMenuContent className="min-w-[10rem]">
-                <ContextMenuItem variant="destructive" onSelect={onDelete}>
+                <ContextMenuItem variant="destructive" onSelect={handleDelete}>
                     Delete block
                 </ContextMenuItem>
             </ContextMenuContent>

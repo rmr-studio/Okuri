@@ -1,6 +1,12 @@
 "use client";
 
 import { blockElements } from "@/components/feature-modules/blocks/util/block.registry";
+import {
+    pushSelection,
+    removeSelection,
+    updateSelection,
+    subscribe as focusSubscribe,
+} from "@/components/feature-modules/blocks/util/block.focus-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -138,6 +144,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     const generatedId = useId();
     const surfaceId = id ?? generatedId;
     const isActive = useIsSurfaceActive(surfaceId);
+    const [isSelected, setIsSelected] = useState(false);
     const [mode, setMode] = useState<Mode>(defaultMode);
     const [isSlashOpen, setSlashOpen] = useState(false);
     const [isQuickOpen, setQuickOpen] = useState(false);
@@ -166,7 +173,30 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     const hasMenuActions = menuActions.length > 0;
     const [isHovered, setHovered] = useState(false);
     const shouldHighlight =
-        isActive || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered;
+        isSelected || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered;
+
+    useEffect(() => {
+        return focusSubscribe((selection) => {
+            setIsSelected(selection?.type === "panel" && selection.id === surfaceId);
+        });
+    }, [surfaceId]);
+
+    useEffect(() => {
+        if (isActive && !isSelected) {
+            pushSelection({ type: "panel", id: surfaceId, onDelete });
+        }
+    }, [isActive, isSelected, surfaceId, onDelete]);
+
+    useEffect(() => {
+        if (!isSelected) return;
+        updateSelection({ type: "panel", id: surfaceId, onDelete });
+    }, [isSelected, onDelete, surfaceId]);
+
+    useEffect(() => {
+        return () => {
+            removeSelection("panel", surfaceId);
+        };
+    }, [surfaceId]);
 
     useEffect(() => {
         setDraftTitle(title ?? "");
@@ -200,6 +230,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                 if (isInput) return;
                 event.preventDefault();
                 setInsertContext("nested");
+                pushSelection({ type: "panel", id: surfaceId, onDelete });
                 setInlineMenuOpen(true);
             }
 
@@ -212,19 +243,14 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                 event.preventDefault();
                 if (actions.length === 0) {
                     setInsertContext("nested");
+                    pushSelection({ type: "panel", id: surfaceId, onDelete });
                     setInlineMenuOpen(true);
                 } else {
                     setQuickOpen(true);
+                    pushSelection({ type: "panel", id: surfaceId, onDelete });
                 }
             }
 
-            if ((event.key === "Delete" || event.key === "Backspace") && onDelete && !isInput) {
-                if ((event as KeyboardEvent & { __handledByBlock?: boolean }).__handledByBlock) {
-                    return;
-                }
-                event.preventDefault();
-                onDelete();
-            }
         };
 
         if (!isActive) return;
@@ -286,9 +312,16 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                     data-surface-id={surfaceId}
                     tabIndex={-1}
                     onPointerOver={(event) => {
+                        const targetBlock = (event.target as HTMLElement | null)?.closest(
+                            "[data-block-id]"
+                        );
+                        if (targetBlock) {
+                            setHovered(false);
+                            return;
+                        }
                         const targetSurface = (event.target as HTMLElement | null)?.closest(
                             "[data-surface-id]"
-                        ) as HTMLElement | null;
+                        );
                         if (!targetSurface || targetSurface === event.currentTarget) {
                             setHovered(true);
                         } else {
@@ -299,13 +332,21 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                     onPointerDown={(event) => {
                         // If the pointer interaction is happening inside another block surface,
                         // let the child handle its own activation.
+                        const targetBlock = (event.target as HTMLElement | null)?.closest(
+                            "[data-block-id]"
+                        );
+                        if (targetBlock) return;
                         const targetSurface = (event.target as HTMLElement | null)?.closest(
                             "[data-surface-id]"
                         ) as HTMLElement | null;
                         if (targetSurface && targetSurface !== event.currentTarget) return;
+                        pushSelection({ type: "panel", id: surfaceId, onDelete });
                         setActiveSurface(surfaceId);
                     }}
-                    onFocusCapture={() => setActiveSurface(surfaceId)}
+                    onFocusCapture={() => {
+                        pushSelection({ type: "panel", id: surfaceId, onDelete });
+                        setActiveSurface(surfaceId);
+                    }}
                 >
                     <header className="flex flex-col gap-2 border-b p-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex flex-1 items-center gap-3">
@@ -377,6 +418,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                                     onSelect={() => {
                                                         setInlineMenuOpen(false);
                                                         setSlashOpen(true);
+                                                        pushSelection({
+                                                            type: "panel",
+                                                            id: surfaceId,
+                                                            onDelete,
+                                                        });
                                                     }}
                                                 >
                                                     See all options…
@@ -385,6 +431,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                                     onSelect={() => {
                                                         setInlineMenuOpen(false);
                                                         setQuickOpen(true);
+                                                        pushSelection({
+                                                            type: "panel",
+                                                            id: surfaceId,
+                                                            onDelete,
+                                                        });
                                                     }}
                                                 >
                                                     Open quick actions
@@ -504,6 +555,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                         setQuickOpen(false);
                                         setInsertContext("nested");
                                         setInlineMenuOpen(true);
+                                        pushSelection({
+                                            type: "panel",
+                                            id: surfaceId,
+                                            onDelete,
+                                        });
                                     }}
                                 >
                                     Insert block…
