@@ -10,10 +10,10 @@ import { z } from "zod";
 import { AddressCard } from "../components/bespoke/AddressCard";
 import { ContactCard } from "../components/bespoke/ContactCard";
 import { ButtonBlock } from "../components/primitive/block.button";
-import { DataSummaryTable } from "../components/primitive/DataSummaryTable";
-import { InlineOwnedList } from "../components/primitive/InlineOwnedList";
-import { LayoutContainer } from "../components/primitive/LayoutContainer";
-import { TextBlock } from "../components/primitive/TextBlock";
+import { LayoutContainerBlock } from "../components/primitive/block.container.tsx";
+import { ListBlock } from "../components/primitive/block.list.tsx";
+import { DataSummaryTable } from "../components/primitive/block.table.tsx";
+import { TextBlock } from "../components/primitive/block.text.tsx";
 
 const ContactCardSchema = z
     .object({
@@ -45,26 +45,6 @@ const AddressCardSchema = z
     })
     .passthrough();
 
-const InlineOwnedListSchema = z
-    .object({
-        items: z.array(z.any()).optional(),
-        itemComponent: z.string().optional(),
-        title: z.string().optional(),
-        description: z.string().optional(),
-        emptyMessage: z.string().optional(),
-        currency: z.string().optional(),
-    })
-    .passthrough();
-
-const TextBlockSchema = z
-    .object({
-        text: z.string().optional(),
-        variant: z.enum(["title", "subtitle", "body", "muted"]).optional(),
-        align: z.enum(["left", "center", "right"]).optional(),
-        className: z.string().optional(),
-    })
-    .passthrough();
-
 const DataSummaryTableSchema = z
     .object({
         title: z.string().optional(),
@@ -85,16 +65,6 @@ const ImageBlockSchema = z
 const AttachmentSchema = z
     .object({
         children: z.any().optional(),
-    })
-    .passthrough();
-
-const LayoutContainerSchema = z
-    .object({
-        title: z.string().optional(),
-        description: z.string().optional(),
-        variant: z.enum(["card", "plain"]).optional(),
-        padded: z.boolean().optional(),
-        className: z.string().optional(),
     })
     .passthrough();
 
@@ -125,14 +95,7 @@ const baseBlockElements = {
         schema: AddressCardSchema,
         component: AddressCard,
     }),
-    LINE_ITEM: createRenderElement({
-        type: "LINE_ITEM",
-        name: "Inline owned list",
-        description: "Renders owned child block references inline.",
-        category: "BLOCK",
-        schema: InlineOwnedListSchema,
-        component: InlineOwnedList,
-    }),
+    LINE_ITEM: ListBlock,
     TABLE: createRenderElement({
         type: "TABLE",
         name: "Summary table",
@@ -141,14 +104,7 @@ const baseBlockElements = {
         schema: DataSummaryTableSchema,
         component: DataSummaryTable,
     }),
-    TEXT: createRenderElement({
-        type: "TEXT",
-        name: "Text block",
-        description: "Simple text display with styling options.",
-        category: "BLOCK",
-        schema: TextBlockSchema,
-        component: TextBlock,
-    }),
+    TEXT: TextBlock,
     IMAGE: createRenderElement({
         type: "IMAGE",
         name: "Image",
@@ -176,14 +132,7 @@ const baseBlockElements = {
             </div>
         ),
     }),
-    LAYOUT_CONTAINER: createRenderElement({
-        type: "LAYOUT_CONTAINER",
-        name: "Layout container",
-        description: "Wrapper component that hosts a nested grid layout.",
-        category: "BLOCK",
-        schema: LayoutContainerSchema,
-        component: LayoutContainer,
-    }),
+    LAYOUT_CONTAINER: LayoutContainerBlock,
 } as const;
 
 export const blockElements = {

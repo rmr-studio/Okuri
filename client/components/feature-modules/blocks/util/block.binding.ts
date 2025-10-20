@@ -25,21 +25,27 @@ export function getByPath(obj: unknown, pointer: string): any {
     }
 }
 
-/** Convert shorthand pointer formats into the JSON pointer format. */
 function normalisePointer(pointer: string): string {
     if (!pointer) return "";
+    if (pointer.startsWith("#/")) return pointer.slice(1); // fragment form
+    if (pointer.startsWith("/")) return pointer; // already a JSON Pointer
 
-    // Already a JSON pointer
-    if (pointer.startsWith("/")) return pointer;
+    // Accept JSONPath-ish inputs
+    if (pointer.startsWith("$")) {
+        // Support both "$.a.b" and "$.a/b" styles
+        const tail = pointer.replace(/^\$\.*/, ""); // drop "$" and optional "."
+        const parts = tail.includes(".") ? tail.split(".") : tail.split("/");
+        return "/" + parts.filter(Boolean).map(escapePointerSegment).join("/");
+    }
 
-    // JSONPath-style persisted values e.g. "$.data/name"
-    if (pointer.startsWith("$.")) return pointer.replace("$.", "/");
+    // Bare key or dotted path -> assume under /data
+    const parts = pointer.split(".").filter(Boolean).map(escapePointerSegment);
+    return "/data/" + parts.join("/");
+}
 
-    // Bare key or nested path "foo" | "foo.bar"
-    if (!pointer.startsWith("$")) return `/data/${pointer.replace(/\./g, "/")}`;
-
-    // Fallback: strip leading "$" and ensure slash
-    return `/${pointer.replace(/^\$+/, "")}`;
+function escapePointerSegment(seg: string): string {
+    // RFC 6901: "~" -> "~0", "/" -> "~1"
+    return seg.replace(/~/g, "~0").replace(/\//g, "~1");
 }
 
 /**

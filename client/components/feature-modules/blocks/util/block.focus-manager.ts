@@ -50,6 +50,8 @@ export function subscribe(listener: Listener) {
 }
 
 if (typeof window !== "undefined") {
+    const controller = new AbortController();
+    const { signal } = controller;
     window.addEventListener("keydown", (event) => {
         if (event.key !== "Delete" && event.key !== "Backspace") return;
         const activeElement = document.activeElement as HTMLElement | null;
@@ -63,7 +65,7 @@ if (typeof window !== "undefined") {
         if (!current?.onDelete) return;
         event.preventDefault();
         current.onDelete();
-    });
+    }, {signal});
 
     window.addEventListener("pointerdown", (event) => {
         const target = event.target as HTMLElement | null;

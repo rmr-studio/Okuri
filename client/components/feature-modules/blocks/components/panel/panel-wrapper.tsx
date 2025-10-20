@@ -1,12 +1,12 @@
 "use client";
 
-import { blockElements } from "@/components/feature-modules/blocks/util/block.registry";
 import {
+    subscribe as focusSubscribe,
     pushSelection,
     removeSelection,
     updateSelection,
-    subscribe as focusSubscribe,
 } from "@/components/feature-modules/blocks/util/block.focus-manager";
+import { blockElements } from "@/components/feature-modules/blocks/util/block.registry";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,6 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -32,11 +31,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/util/utils";
 import {
     CommandIcon,
@@ -69,7 +65,7 @@ export interface QuickActionItem {
     onSelect?: () => void;
 }
 
-export interface BlockSurfaceProps {
+export interface Props {
     id?: string;
     title?: string;
     titlePlaceholder?: string;
@@ -96,10 +92,9 @@ export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).m
     label: meta.name ?? meta.type,
     description: meta.description,
     icon: <TypeIcon className="size-4" />,
-    onSelect: meta.component ? undefined : undefined,
 }));
 
-export const BlockSurface: React.FC<BlockSurfaceProps> = ({
+export const PanelWrapper: React.FC<Props> = ({
     id,
     title,
     titlePlaceholder = "Untitled block",
@@ -120,8 +115,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     nested,
     nestedFooter,
 }) => {
-    const generatedId = useId();
-    const surfaceId = id ?? generatedId;
+    const surfaceId = id ?? useId();
     const [isSelected, setIsSelected] = useState(false);
     const [mode, setMode] = useState<Mode>(defaultMode);
     const [isSlashOpen, setSlashOpen] = useState(false);
@@ -226,7 +220,6 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                     pushSelection({ type: "panel", id: surfaceId, onDelete });
                 }
             }
-
         };
 
         window.addEventListener("keydown", handler);
@@ -279,8 +272,8 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         shouldHighlight
                             ? "border-primary ring-2 ring-primary/30"
                             : isHovered
-                                ? "border-primary/50"
-                                : "border-border",
+                            ? "border-primary/50"
+                            : "border-border",
                         className
                     )}
                     data-surface-id={surfaceId}
@@ -323,7 +316,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                     <div
                         className={cn(
                             "absolute left-3 top-3 z-30 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity",
-                            toolbarVisible ? "opacity-100 pointer-events-auto" : "pointer-events-none opacity-0"
+                            toolbarVisible
+                                ? "opacity-100 pointer-events-auto"
+                                : "pointer-events-none opacity-0"
                         )}
                     >
                         <Button
@@ -380,7 +375,10 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                             </PopoverTrigger>
                             <PopoverContent className="w-80 p-0" align="start">
                                 <Command>
-                                    <CommandInput ref={inlineSearchRef} placeholder="Search blocks..." />
+                                    <CommandInput
+                                        ref={inlineSearchRef}
+                                        placeholder="Search blocks..."
+                                    />
                                     <CommandList>
                                         <CommandEmpty>No matches found.</CommandEmpty>
                                         <CommandGroup heading="Shortcuts">
@@ -388,7 +386,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                                 onSelect={() => {
                                                     setInlineMenuOpen(false);
                                                     setSlashOpen(true);
-                                                    pushSelection({ type: "panel", id: surfaceId, onDelete });
+                                                    pushSelection({
+                                                        type: "panel",
+                                                        id: surfaceId,
+                                                        onDelete,
+                                                    });
                                                 }}
                                             >
                                                 See all options…
@@ -397,7 +399,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                                 onSelect={() => {
                                                     setInlineMenuOpen(false);
                                                     setQuickOpen(true);
-                                                    pushSelection({ type: "panel", id: surfaceId, onDelete });
+                                                    pushSelection({
+                                                        type: "panel",
+                                                        id: surfaceId,
+                                                        onDelete,
+                                                    });
                                                 }}
                                             >
                                                 Open quick actions
@@ -544,7 +550,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         </CommandList>
                     </CommandDialog>
 
-                    <CommandDialog open={isQuickOpen} onOpenChange={setQuickOpen} title="Quick actions">
+                    <CommandDialog
+                        open={isQuickOpen}
+                        onOpenChange={setQuickOpen}
+                        title="Quick actions"
+                    >
                         <CommandInput placeholder="Quick actions…" />
                         <CommandList>
                             <CommandEmpty>No actions available.</CommandEmpty>
@@ -613,70 +623,4 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     );
 };
 
-BlockSurface.displayName = "BlockSurface";
-
-interface BlockInsertHandleProps {
-    slashItems?: SlashMenuItem[];
-    onInsert?: (item: SlashMenuItem) => void;
-    label?: string;
-}
-
-export const BlockInsertHandle: React.FC<BlockInsertHandleProps> = ({
-    slashItems,
-    onInsert,
-    label = "Add block",
-}) => {
-    const [open, setOpen] = useState(false);
-    const items = slashItems ?? defaultSlashItems;
-
-    const handleSelect = useCallback(
-        (item: SlashMenuItem) => {
-            setOpen(false);
-            item.onSelect?.();
-            onInsert?.(item);
-        },
-        [onInsert]
-    );
-
-    return (
-        <div className="group relative my-8 flex items-center justify-center">
-            <div className="h-px flex-1 bg-border transition-colors duration-150 group-hover:bg-primary/40" />
-            <Button
-                variant="outline"
-                size="sm"
-                className="mx-3 gap-1"
-                onClick={() => setOpen(true)}
-            >
-                <PlusIcon className="size-4" />
-                {label}
-            </Button>
-            <div className="h-px flex-1 bg-border transition-colors duration-150 group-hover:bg-primary/40" />
-
-            <CommandDialog open={open} onOpenChange={setOpen}>
-                <CommandInput placeholder="Search components or templates..." />
-                <CommandList>
-                    <CommandEmpty>No matches found.</CommandEmpty>
-                    <CommandGroup heading="Insert block">
-                        {items.map((item) => (
-                            <CommandItem
-                                key={item.id}
-                                onSelect={() => handleSelect(item)}
-                                className="gap-2"
-                            >
-                                {item.icon ?? <SearchIcon className="size-4" />}
-                                <div className="flex flex-col items-start">
-                                    <span>{item.label}</span>
-                                    {item.description ? (
-                                        <span className="text-xs text-muted-foreground">
-                                            {item.description}
-                                        </span>
-                                    ) : null}
-                                </div>
-                            </CommandItem>
-                        ))}
-                    </CommandGroup>
-                </CommandList>
-            </CommandDialog>
-        </div>
-    );
-};
+PanelWrapper.displayName = "PanelWrapper";

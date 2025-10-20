@@ -148,7 +148,9 @@ export function GridProvider({
     );
 
     const saveOptions = useCallback(() => {
-        return gridStack?.save(true, true, (_, widget) => widget);
+        return gridStack?.save(true, true, (_, widget) => {
+            widget;
+        });
     }, [gridStack]);
 
     return (

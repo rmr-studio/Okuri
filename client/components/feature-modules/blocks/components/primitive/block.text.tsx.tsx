@@ -1,5 +1,7 @@
+import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { cn } from "@/lib/util/utils";
 import { FC, JSX } from "react";
+import { z } from "zod";
 
 interface Props {
     text?: string;
@@ -7,6 +9,15 @@ interface Props {
     align?: "left" | "center" | "right";
     className?: string;
 }
+
+const Schema = z
+    .object({
+        text: z.string().optional(),
+        variant: z.enum(["title", "subtitle", "body", "muted"]).optional(),
+        align: z.enum(["left", "center", "right"]).optional(),
+        className: z.string().optional(),
+    })
+    .passthrough();
 
 const variantClasses: Record<NonNullable<Props["variant"]>, string> = {
     title: "text-2xl font-semibold text-foreground",
@@ -28,10 +39,19 @@ const tagMap: Record<NonNullable<Props["variant"]>, string> = {
     muted: "p",
 };
 
-export const TextBlock: FC<Props> = ({ text, variant = "body", align = "left", className }) => {
+const Block: FC<Props> = ({ text, variant = "body", align = "left", className }) => {
     if (!text) return null;
     const Tag = tagMap[variant] as keyof JSX.IntrinsicElements;
     return (
         <Tag className={cn(variantClasses[variant], alignClasses[align], className)}>{text}</Tag>
     );
 };
+
+export const TextBlock = createRenderElement({
+    type: "TEXT",
+    name: "Text block",
+    description: "Simple text display with styling options.",
+    category: "BLOCK",
+    schema: Schema,
+    component: Block,
+});

@@ -1,10 +1,23 @@
+import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
+import { z } from "zod";
 import { AddressCard } from "../bespoke/AddressCard";
 import { InvoiceLineItemCard } from "../bespoke/InvoiceLineItemCard";
 import { TaskCard } from "../bespoke/TaskCard";
 
 type ItemComponentKey = "ADDRESS_CARD" | "PROJECT_TASK" | "INVOICE_LINE_ITEM" | string;
+
+const Schema = z
+    .object({
+        items: z.array(z.any()).optional(),
+        itemComponent: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        emptyMessage: z.string().optional(),
+        currency: z.string().optional(),
+    })
+    .passthrough();
 
 interface Props {
     items?: any[];
@@ -38,7 +51,7 @@ const FALLBACK_RENDERER: Renderer = ({ data }) => (
  * Renders OWNED child block refs inline.
  * Expects props.items = RefRow[] where each row.entity.payload.data is the child block's data.
  */
-export const InlineOwnedList: React.FC<Props> = ({
+export const Block: React.FC<Props> = ({
     items: rows = [],
     itemComponent,
     title,
@@ -79,3 +92,12 @@ export const InlineOwnedList: React.FC<Props> = ({
 
     return content;
 };
+
+export const ListBlock = createRenderElement({
+    type: "LINE_ITEM",
+    name: "Inline owned list",
+    description: "Renders owned child block references inline.",
+    category: "BLOCK",
+    schema: Schema,
+    component: Block,
+});

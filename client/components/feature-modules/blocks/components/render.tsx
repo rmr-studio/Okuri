@@ -13,25 +13,25 @@ import {
     BlockTree,
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import { applyBindings } from "@/components/feature-modules/blocks/util/block.binding";
-import { buildDisplayFromGridState } from "@/components/feature-modules/blocks/util/block.layout";
 import {
+    subscribe as focusSubscribe,
     pushSelection,
     removeSelection,
-    subscribe as focusSubscribe,
     updateSelection,
 } from "@/components/feature-modules/blocks/util/block.focus-manager";
+import { buildDisplayFromGridState } from "@/components/feature-modules/blocks/util/block.layout";
 import { blockRenderRegistry } from "@/components/feature-modules/blocks/util/block.registry";
 import { evalVisible } from "@/components/feature-modules/blocks/util/block.visibility";
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
-import { cn } from "@/lib/util/utils";
 import {
     ContextMenu,
     ContextMenuContent,
     ContextMenuItem,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { cn } from "@/lib/util/utils";
 import type { GridStackOptions, GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -105,11 +105,7 @@ const BlockElementsRenderer: React.FC<{
                 onDeleteComponent(componentId);
             };
             return (
-                <BlockComponentWrapper
-                    id={id}
-                    componentId={componentId}
-                    onDelete={handleDelete}
-                >
+                <BlockComponentWrapper id={id} componentId={componentId} onDelete={handleDelete}>
                     {element}
                 </BlockComponentWrapper>
             );
@@ -161,8 +157,8 @@ const BlockComponentWrapper: React.FC<{
                         isSelected
                             ? "border-primary ring-2 ring-primary/40"
                             : isHovered
-                              ? "border-primary/40"
-                              : "border-border/60"
+                            ? "border-primary/40"
+                            : "border-border/60"
                     )}
                     onPointerEnter={() => setHovered(true)}
                     onPointerLeave={() => setHovered(false)}
@@ -243,7 +239,8 @@ function buildGridOptions(
     return {
         column: display.layoutGrid.cols ?? 12,
         cellHeight: display.layoutGrid.rowHeight ?? 40,
-        margin: 8,
+        margin: display.layoutGrid.margin ?? 8,
+        sizeToContent: true,
         acceptWidgets: true,
         animate: true,
         ...overrides,
@@ -413,7 +410,8 @@ function buildSubGrid(
 
     return {
         column: column ?? 12,
-        cellHeight: cellHeight ?? 40,
+        // cellHeight: cellHeight ?? 40,
+        sizeToContent: true,
         margin: margin ?? 8,
         acceptWidgets: true,
         animate: true,

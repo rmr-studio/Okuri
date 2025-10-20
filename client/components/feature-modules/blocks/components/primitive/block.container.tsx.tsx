@@ -1,12 +1,8 @@
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/util/utils";
 import { FC, ReactNode, useEffect, useRef } from "react";
+import { z } from "zod";
 
 interface Props {
     title?: string;
@@ -17,7 +13,17 @@ interface Props {
     children?: ReactNode;
 }
 
-export const LayoutContainer: FC<Props> = ({
+const Schema = z
+    .object({
+        title: z.string().optional(),
+        description: z.string().optional(),
+        variant: z.enum(["card", "plain"]).optional(),
+        padded: z.boolean().optional(),
+        className: z.string().optional(),
+    })
+    .passthrough();
+
+export const Block: FC<Props> = ({
     title,
     description,
     variant = "card",
@@ -68,10 +74,17 @@ export const LayoutContainer: FC<Props> = ({
     }
 
     return (
-        <Card className={cn("h-full w-full transition-shadow duration-150 hover:shadow-lg", className)}>
+        <Card
+            className={cn(
+                "h-full w-full transition-shadow duration-150 hover:shadow-lg",
+                className
+            )}
+        >
             {(title || description) && (
                 <CardHeader className={padded ? undefined : "pb-2"}>
-                    {title ? <CardTitle className="text-base font-semibold">{title}</CardTitle> : null}
+                    {title ? (
+                        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+                    ) : null}
                     {description ? <CardDescription>{description}</CardDescription> : null}
                 </CardHeader>
             )}
@@ -81,3 +94,12 @@ export const LayoutContainer: FC<Props> = ({
         </Card>
     );
 };
+
+export const LayoutContainerBlock = createRenderElement({
+    type: "LAYOUT_CONTAINER",
+    name: "Layout container",
+    description: "Wrapper component that hosts a nested grid layout.",
+    category: "BLOCK",
+    schema: Schema,
+    component: Block,
+});

@@ -9,7 +9,6 @@ import {
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
-import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { Button } from "@/components/ui/button";
 import {
     CommandDialog,
@@ -23,9 +22,8 @@ import type { GridStackOptions } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { PlusIcon, TypeIcon } from "lucide-react";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { z } from "zod";
-import { BlockSurface, defaultSlashItems, QuickActionItem, SlashMenuItem } from "../BlockSurface";
-import { RenderBlock } from "../render";
+import { panelRegistry } from "../panel/panel";
+import { QuickActionItem, SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 
 type LayoutRect = { x: number; y: number; w: number; h: number };
 
@@ -67,89 +65,6 @@ const playgroundSlashItems: SlashMenuItem[] = [
         icon: <TypeIcon className="size-4" />,
     },
 ];
-
-const PanelWidgetSchema = z.object({
-    panelId: z.string(),
-    parentPath: z.array(z.string()).optional(),
-});
-
-const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, parentPath }) => {
-    const playground = usePlayground();
-    const { removeWidget } = useGrid();
-    const block = playground.getBlock(panelId, parentPath);
-    if (!block) return null;
-
-    const children = block.children ?? [];
-    const isTopLevel = !parentPath || parentPath.length === 0;
-    const handleDelete = useCallback(() => {
-        removeWidget(panelId);
-        playground.removePanel(panelId);
-    }, [panelId, playground, removeWidget]);
-    const panelActions = useMemo(
-        () =>
-            playground.quickActionsFor(block.id).map((action) =>
-                action.id === "delete"
-                    ? {
-                          ...action,
-                          onSelect: () => handleDelete(),
-                      }
-                    : action
-            ),
-        [block.id, handleDelete, playground]
-    );
-
-    return (
-        <BlockSurface
-            id={block.id}
-            title={block.title}
-            description={block.description}
-            badge={block.badge}
-            slashItems={playground.slashItems}
-            quickActions={panelActions}
-            onInsert={(item) => playground.insertNested(block.id, item, children.length)}
-            onInsertSibling={(item) => {
-                if (!isTopLevel) return;
-                const topLevelIndex = playground.blocks.findIndex((b) => b.id === block.id);
-                const insertAt = topLevelIndex >= 0 ? topLevelIndex + 1 : playground.blocks.length;
-                playground.insertPanel(item, insertAt);
-            }}
-            onDelete={handleDelete}
-            nested={
-                children.length > 0 ? (
-                    <div className="rounded-lg border border-dashed/60 bg-background/40 p-4">
-                        <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-                            Nested blocks
-                        </h3>
-                        <PanelGridWorkspace parentPath={[...(parentPath ?? []), block.id]} />
-                    </div>
-                ) : null
-            }
-            nestedFooter={
-                <div className="pt-3">
-                    <InlineInsertHandle
-                        label="Add nested block"
-                        onSelect={(item) =>
-                            playground.insertNested(block.id, item, children.length)
-                        }
-                    />
-                </div>
-            }
-        >
-            <RenderBlock tree={block.tree} display={block.display} />
-        </BlockSurface>
-    );
-};
-
-const panelRegistry = {
-    BLOCK_PANEL: createRenderElement({
-        type: "BLOCK_PANEL",
-        name: "Block panel",
-        description: "Editable block surface for the playground",
-        category: "BLOCK",
-        schema: PanelWidgetSchema,
-        component: PanelWidget,
-    }),
-};
 
 const PlaygroundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [blocks, setBlocks] = useState<PlaygroundBlock[]>(() => initialBlocks());
@@ -319,55 +234,6 @@ const PanelLayoutSync: React.FC<{ parentPath: string[] | null }> = ({ parentPath
     }, [gridStack, playground, parentPath]);
 
     return null;
-};
-
-/* -------------------------------------------------------------------------- */
-/* Handles & Menus                                                            */
-/* -------------------------------------------------------------------------- */
-
-const InlineInsertHandle: React.FC<{
-    label: string;
-    onSelect: (item: SlashMenuItem) => void;
-}> = ({ label, onSelect }) => {
-    const [open, setOpen] = useState(false);
-    const playground = usePlayground();
-    const items = playground.slashItems;
-
-    return (
-        <>
-            <Button variant="outline" size="sm" className="gap-1" onClick={() => setOpen(true)}>
-                <PlusIcon className="size-4" />
-                {label}
-            </Button>
-            <CommandDialog open={open} onOpenChange={setOpen}>
-                <CommandInput placeholder="Insert block…" />
-                <CommandList>
-                    <CommandEmpty>No matches found.</CommandEmpty>
-                    <CommandGroup heading="Blocks">
-                        {items.map((item) => (
-                            <CommandItem
-                                key={item.id}
-                                onSelect={() => {
-                                    setOpen(false);
-                                    item.onSelect?.();
-                                    onSelect(item);
-                                }}
-                                className="gap-2"
-                            >
-                                {item.icon ?? <TypeIcon className="size-4" />}
-                                <span>{item.label}</span>
-                                {item.description ? (
-                                    <span className="text-xs text-muted-foreground">
-                                        {item.description}
-                                    </span>
-                                ) : null}
-                            </CommandItem>
-                        ))}
-                    </CommandGroup>
-                </CommandList>
-            </CommandDialog>
-        </>
-    );
 };
 
 const AddPanelHandle: React.FC<{ position: "end" }> = ({ position }) => {
@@ -1139,8 +1005,10 @@ function duplicateBlockById(blocks: PlaygroundBlock[], targetId: string): Playgr
 }
 
 function cloneBlock(block: PlaygroundBlock): PlaygroundBlock {
+    const newId = uniqueId("panel");
     return {
         ...block,
+        id: newId,
         tree: structuredClone(block.tree),
         display: structuredClone(block.display),
         children: block.children ? block.children.map(cloneBlock) : undefined,

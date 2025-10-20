@@ -20,18 +20,24 @@ const BlockButtonSchema = z
     .passthrough();
 
 const Block: FC<Props> = ({ label = "Button", icon, href, className, ...rest }) => {
-    const content = (
-        <Button className={cn("w-full justify-center", className)} {...rest}>
+    const inner = (
+        <>
             {icon ? <span className="mr-2 inline-flex items-center">{icon}</span> : null}
             {label}
+        </>
+    );
+    if (href) {
+        return (
+            <Button className={cn("w-full justify-center", className)} {...rest} asChild>
+                <Link href={href}>{inner}</Link>
+            </Button>
+        );
+    }
+    return (
+        <Button className={cn("w-full justify-center", className)} {...rest}>
+            {inner}
         </Button>
     );
-
-    if (href) {
-        return <Link href={href}>{content}</Link>;
-    }
-
-    return content;
 };
 
 export const ButtonBlock = createRenderElement({
