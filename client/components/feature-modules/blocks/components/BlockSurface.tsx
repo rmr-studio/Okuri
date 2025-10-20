@@ -219,6 +219,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
             }
 
             if ((event.key === "Delete" || event.key === "Backspace") && onDelete && !isInput) {
+                if ((event as KeyboardEvent & { __handledByBlock?: boolean }).__handledByBlock) {
+                    return;
+                }
                 event.preventDefault();
                 onDelete();
             }
@@ -282,7 +285,16 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                     )}
                     data-surface-id={surfaceId}
                     tabIndex={-1}
-                    onPointerEnter={() => setHovered(true)}
+                    onPointerOver={(event) => {
+                        const targetSurface = (event.target as HTMLElement | null)?.closest(
+                            "[data-surface-id]"
+                        ) as HTMLElement | null;
+                        if (!targetSurface || targetSurface === event.currentTarget) {
+                            setHovered(true);
+                        } else {
+                            setHovered(false);
+                        }
+                    }}
                     onPointerLeave={() => setHovered(false)}
                     onPointerDown={(event) => {
                         // If the pointer interaction is happening inside another block surface,

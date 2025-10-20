@@ -144,6 +144,27 @@ const BlockComponentWrapper: React.FC<{
     const isActive = useIsBlockActive(componentId);
     const [isHovered, setHovered] = useState(false);
 
+    useEffect(() => {
+        if (!isActive) return;
+
+        const handler = (event: KeyboardEvent) => {
+            if (event.key !== "Delete" && event.key !== "Backspace") return;
+            const activeElement = document.activeElement as HTMLElement | null;
+            if (activeElement) {
+                const tag = activeElement.tagName;
+                const isFormElement =
+                    tag === "INPUT" || tag === "TEXTAREA" || activeElement.isContentEditable;
+                if (isFormElement) return;
+            }
+            (event as KeyboardEvent & { __handledByBlock?: boolean }).__handledByBlock = true;
+            event.preventDefault();
+            onDelete();
+        };
+
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [isActive, onDelete]);
+
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
