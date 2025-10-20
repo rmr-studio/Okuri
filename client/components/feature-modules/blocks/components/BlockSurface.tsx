@@ -273,7 +273,15 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                     )}
                     data-surface-id={surfaceId}
                     tabIndex={-1}
-                    onMouseDown={() => setActiveSurface(surfaceId)}
+                    onPointerDown={(event) => {
+                        // If the pointer interaction is happening inside another block surface,
+                        // let the child handle its own activation.
+                        const targetSurface = (event.target as HTMLElement | null)?.closest(
+                            "[data-surface-id]"
+                        ) as HTMLElement | null;
+                        if (targetSurface && targetSurface !== event.currentTarget) return;
+                        setActiveSurface(surfaceId);
+                    }}
                     onFocusCapture={() => setActiveSurface(surfaceId)}
                 >
                     <header className="flex flex-col gap-2 border-b p-4 md:flex-row md:items-center md:justify-between">
