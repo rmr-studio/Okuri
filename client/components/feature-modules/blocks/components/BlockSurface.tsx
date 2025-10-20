@@ -97,29 +97,6 @@ export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).m
     onSelect: meta.component ? undefined : undefined,
 }));
 
-type ActiveListener = (id: string | null) => void;
-const activeListeners = new Set<ActiveListener>();
-let activeSurfaceId: string | null = null;
-
-function setActiveSurface(id: string | null) {
-    activeSurfaceId = id;
-    activeListeners.forEach((listener) => listener(activeSurfaceId));
-}
-
-function useIsSurfaceActive(id: string): boolean {
-    const [isActive, setIsActive] = useState(activeSurfaceId === id);
-
-    useEffect(() => {
-        const listener: ActiveListener = (current) => setIsActive(current === id);
-        activeListeners.add(listener);
-        return () => {
-            activeListeners.delete(listener);
-        };
-    }, [id]);
-
-    return isActive;
-}
-
 export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     id,
     title,
@@ -143,7 +120,6 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
 }) => {
     const generatedId = useId();
     const surfaceId = id ?? generatedId;
-    const isActive = useIsSurfaceActive(surfaceId);
     const [isSelected, setIsSelected] = useState(false);
     const [mode, setMode] = useState<Mode>(defaultMode);
     const [isSlashOpen, setSlashOpen] = useState(false);
@@ -182,12 +158,6 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     }, [surfaceId]);
 
     useEffect(() => {
-        if (isActive && !isSelected) {
-            pushSelection({ type: "panel", id: surfaceId, onDelete });
-        }
-    }, [isActive, isSelected, surfaceId, onDelete]);
-
-    useEffect(() => {
         if (!isSelected) return;
         updateSelection({ type: "panel", id: surfaceId, onDelete });
     }, [isSelected, onDelete, surfaceId]);
@@ -217,8 +187,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     }, [onModeChange]);
 
     useEffect(() => {
+        if (!isSelected) return;
+
         const handler = (event: KeyboardEvent) => {
-            if (!isActive) return;
             const active = document.activeElement;
             const isInput =
                 active &&
@@ -253,11 +224,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
 
         };
 
-        if (!isActive) return;
-
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [toggleMode, actions.length, isActive]);
+    }, [toggleMode, actions.length, isSelected, surfaceId, onDelete]);
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
@@ -341,11 +310,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         ) as HTMLElement | null;
                         if (targetSurface && targetSurface !== event.currentTarget) return;
                         pushSelection({ type: "panel", id: surfaceId, onDelete });
-                        setActiveSurface(surfaceId);
                     }}
                     onFocusCapture={() => {
                         pushSelection({ type: "panel", id: surfaceId, onDelete });
-                        setActiveSurface(surfaceId);
                     }}
                 >
                     <header className="flex flex-col gap-2 border-b p-4 md:flex-row md:items-center md:justify-between">

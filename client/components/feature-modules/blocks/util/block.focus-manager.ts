@@ -64,6 +64,14 @@ if (typeof window !== "undefined") {
         event.preventDefault();
         current.onDelete();
     });
+
+    window.addEventListener("pointerdown", (event) => {
+        const target = event.target as HTMLElement | null;
+        if (!target) return;
+        if (target.closest("[data-block-id]")) return;
+        if (target.closest("[data-surface-id]")) return;
+        clearSelection();
+    });
 }
 
 export function getCurrentSelection(): SelectionEntry | null {
