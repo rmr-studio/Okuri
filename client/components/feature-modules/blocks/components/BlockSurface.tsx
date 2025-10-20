@@ -40,6 +40,8 @@ import {
 import { cn } from "@/lib/util/utils";
 import {
     CommandIcon,
+    GripVerticalIcon,
+    InfoIcon,
     LayoutDashboardIcon,
     ListIcon,
     MoreHorizontalIcon,
@@ -150,6 +152,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     const [isHovered, setHovered] = useState(false);
     const shouldHighlight =
         isSelected || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered;
+    const toolbarVisible = shouldHighlight;
+    const toolbarButtonClass =
+        "pointer-events-auto size-7 rounded-md border border-transparent bg-background/90 text-muted-foreground hover:border-border hover:text-foreground transition-colors";
 
     useEffect(() => {
         return focusSubscribe((selection) => {
@@ -315,162 +320,189 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         pushSelection({ type: "panel", id: surfaceId, onDelete });
                     }}
                 >
-                    <header className="flex flex-col gap-2 border-b p-4 md:flex-row md:items-center md:justify-between">
-                        <div className="flex flex-1 items-center gap-3">
-                            <Input
-                                aria-label="Block title"
-                                value={draftTitle}
-                                placeholder={titlePlaceholder}
-                                onChange={(event) => setDraftTitle(event.target.value)}
-                                onBlur={handleTitleBlur}
-                                className="h-9 flex-1 border-none px-0 text-lg font-semibold focus-visible:ring-0"
-                            />
-                            {badge ? <Badge variant="secondary">{badge}</Badge> : null}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" className="gap-1" onClick={toggleMode}>
-                                {mode === "display" ? (
-                                    <>
-                                        <LayoutDashboardIcon className="size-4" />
-                                        Display
-                                    </>
-                                ) : (
-                                    <>
-                                        <ListIcon className="size-4" />
-                                        Form
-                                    </>
-                                )}
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn("gap-1", actions.length === 0 && "opacity-70")}
-                                onClick={() => {
-                                    if (actions.length === 0) {
+                    <div
+                        className={cn(
+                            "absolute left-3 top-3 z-30 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity",
+                            toolbarVisible ? "opacity-100 pointer-events-auto" : "pointer-events-none opacity-0"
+                        )}
+                    >
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Drag block"
+                            className={cn("block-drag-handle cursor-grab", toolbarButtonClass)}
+                        >
+                            <GripVerticalIcon className="size-3.5" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={mode === "display" ? "Switch to form" : "Switch to display"}
+                            className={toolbarButtonClass}
+                            onClick={() => {
+                                toggleMode();
+                                pushSelection({ type: "panel", id: surfaceId, onDelete });
+                            }}
+                        >
+                            {mode === "display" ? (
+                                <LayoutDashboardIcon className="size-3.5" />
+                            ) : (
+                                <ListIcon className="size-3.5" />
+                            )}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Quick actions"
+                            className={toolbarButtonClass}
+                            onClick={() => {
+                                setQuickOpen(true);
+                                pushSelection({ type: "panel", id: surfaceId, onDelete });
+                            }}
+                        >
+                            <CommandIcon className="size-3.5" />
+                        </Button>
+                        <Popover open={isInlineMenuOpen} onOpenChange={setInlineMenuOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Insert block"
+                                    className={toolbarButtonClass}
+                                    onClick={() => {
                                         setInsertContext("nested");
                                         setInlineMenuOpen(true);
-                                    } else {
-                                        setQuickOpen(true);
-                                    }
-                                }}
-                            >
-                                <CommandIcon className="size-4" />
-                                Cmd+K
-                            </Button>
-                            <Popover open={isInlineMenuOpen} onOpenChange={setInlineMenuOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="gap-1"
-                                        onClick={() => {
-                                            setInsertContext("nested");
-                                            setInlineMenuOpen(true);
-                                        }}
-                                    >
-                                        <PlusIcon className="size-4" />
-                                        Insert
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80 p-0" align="end">
-                                    <Command>
-                                        <CommandInput
-                                            ref={inlineSearchRef}
-                                            placeholder="Search blocks..."
-                                        />
-                                        <CommandList>
-                                            <CommandEmpty>No matches found.</CommandEmpty>
-                                            <CommandGroup heading="Shortcuts">
-                                                <CommandItem
-                                                    onSelect={() => {
-                                                        setInlineMenuOpen(false);
-                                                        setSlashOpen(true);
-                                                        pushSelection({
-                                                            type: "panel",
-                                                            id: surfaceId,
-                                                            onDelete,
-                                                        });
-                                                    }}
-                                                >
-                                                    See all options…
-                                                </CommandItem>
-                                                <CommandItem
-                                                    onSelect={() => {
-                                                        setInlineMenuOpen(false);
-                                                        setQuickOpen(true);
-                                                        pushSelection({
-                                                            type: "panel",
-                                                            id: surfaceId,
-                                                            onDelete,
-                                                        });
-                                                    }}
-                                                >
-                                                    Open quick actions
-                                                </CommandItem>
-                                            </CommandGroup>
-                                            <CommandGroup heading="Blocks">
-                                                {items.map((item) => (
-                                                    <CommandItem
-                                                        key={item.id}
-                                                        onSelect={() => handleSelect(item)}
-                                                        className="gap-2"
-                                                    >
-                                                        {item.icon ?? <SearchIcon className="size-4" />}
-                                                        <div className="flex flex-col items-start">
-                                                            <span>{item.label}</span>
-                                                            {item.description ? (
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {item.description}
-                                                                </span>
-                                                            ) : null}
-                                                        </div>
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                            {hasMenuActions ? (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="size-8">
-                                            <MoreHorizontalIcon className="size-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="min-w-[10rem]">
-                                        {menuActions.map((action) => (
-                                            <DropdownMenuItem
-                                                key={action.id}
-                                                variant={
-                                                    action.id === "delete" ||
-                                                    action.id === "__delete"
-                                                        ? "destructive"
-                                                        : "default"
-                                                }
-                                                onSelect={(event) => {
-                                                    event.preventDefault();
-                                                    handleMenuAction(action);
+                                        pushSelection({ type: "panel", id: surfaceId, onDelete });
+                                    }}
+                                >
+                                    <PlusIcon className="size-3.5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-0" align="start">
+                                <Command>
+                                    <CommandInput ref={inlineSearchRef} placeholder="Search blocks..." />
+                                    <CommandList>
+                                        <CommandEmpty>No matches found.</CommandEmpty>
+                                        <CommandGroup heading="Shortcuts">
+                                            <CommandItem
+                                                onSelect={() => {
+                                                    setInlineMenuOpen(false);
+                                                    setSlashOpen(true);
+                                                    pushSelection({ type: "panel", id: surfaceId, onDelete });
                                                 }}
                                             >
-                                                <span>{action.label}</span>
-                                                {action.shortcut ? (
-                                                    <span className="ml-auto text-xs uppercase tracking-wide text-muted-foreground">
-                                                        {action.shortcut}
-                                                    </span>
-                                                ) : null}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            ) : null}
-                        </div>
-            </header>
-            {description ? (
-                <div className="px-4 pb-2 text-sm text-muted-foreground">{description}</div>
-            ) : null}
-            <section className="px-4 pb-4">
-                <div className="rounded-lg border bg-background/40 p-4">
+                                                See all options…
+                                            </CommandItem>
+                                            <CommandItem
+                                                onSelect={() => {
+                                                    setInlineMenuOpen(false);
+                                                    setQuickOpen(true);
+                                                    pushSelection({ type: "panel", id: surfaceId, onDelete });
+                                                }}
+                                            >
+                                                Open quick actions
+                                            </CommandItem>
+                                        </CommandGroup>
+                                        <CommandGroup heading="Blocks">
+                                            {items.map((item) => (
+                                                <CommandItem
+                                                    key={item.id}
+                                                    onSelect={() => handleSelect(item)}
+                                                    className="gap-2"
+                                                >
+                                                    {item.icon ?? <SearchIcon className="size-4" />}
+                                                    <div className="flex flex-col items-start">
+                                                        <span>{item.label}</span>
+                                                        {item.description ? (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {item.description}
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Panel details"
+                                    className={toolbarButtonClass}
+                                >
+                                    <InfoIcon className="size-3.5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-72 space-y-3 p-4" align="start">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                        Title
+                                    </label>
+                                    <Input
+                                        aria-label="Edit title"
+                                        value={draftTitle}
+                                        placeholder={titlePlaceholder}
+                                        onChange={(event) => setDraftTitle(event.target.value)}
+                                        onBlur={handleTitleBlur}
+                                    />
+                                </div>
+                                {description ? (
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            Description
+                                        </span>
+                                        <p className="rounded-md border bg-muted/30 p-2 text-sm text-muted-foreground">
+                                            {description}
+                                        </p>
+                                    </div>
+                                ) : null}
+                                {badge ? <Badge variant="secondary">{badge}</Badge> : null}
+                            </PopoverContent>
+                        </Popover>
+                        {hasMenuActions ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="More actions"
+                                        className={toolbarButtonClass}
+                                    >
+                                        <MoreHorizontalIcon className="size-3.5" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="min-w-[10rem]">
+                                    {menuActions.map((action) => (
+                                        <DropdownMenuItem
+                                            key={action.id}
+                                            variant={
+                                                action.id === "delete" || action.id === "__delete"
+                                                    ? "destructive"
+                                                    : "default"
+                                            }
+                                            onSelect={(event) => {
+                                                event.preventDefault();
+                                                handleMenuAction(action);
+                                            }}
+                                        >
+                                            <span>{action.label}</span>
+                                            {action.shortcut ? (
+                                                <span className="ml-auto text-xs uppercase tracking-wide text-muted-foreground">
+                                                    {action.shortcut}
+                                                </span>
+                                            ) : null}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : null}
+                    </div>
+                    <section className="px-4 pb-4 pt-12">
+                        <div className="rounded-lg border bg-background/40 p-4">
                             <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 {modeLabel}
                             </div>
@@ -480,11 +512,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                         ? "This block does not have a form configuration yet."
                                         : "This block has no display content yet."}
                                 </div>
-                    )}
-                </div>
-                {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
-                {nestedFooter}
-            </section>
+                            )}
+                        </div>
+                        {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
+                        {nestedFooter}
+                    </section>
 
                     <CommandDialog open={isSlashOpen} onOpenChange={setSlashOpen}>
                         <CommandInput placeholder="Search components or templates..." />
