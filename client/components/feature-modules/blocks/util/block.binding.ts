@@ -1,3 +1,9 @@
+/**
+ * Binding utilities.
+ *
+ * These helpers map the persisted binding definitions for a block component to
+ * the actual runtime props consumed by the React components.
+ */
 // binding.ts
 import { TreeCtx } from "@/components/feature-modules/blocks/components/render";
 import {
@@ -7,6 +13,7 @@ import {
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import jp from "jsonpointer"; // tiny util; or write your own
 
+/** Retrieve a value from an object using a binding pointer. */
 export function getByPath(obj: unknown, pointer: string): any {
     if (!pointer) return undefined;
     // allow shorthand "name" -> "/data/name", while persisted values stay JSONPath-like "$.data/name"
@@ -18,6 +25,7 @@ export function getByPath(obj: unknown, pointer: string): any {
     }
 }
 
+/** Convert shorthand pointer formats into the JSON pointer format. */
 function normalisePointer(pointer: string): string {
     if (!pointer) return "";
 
@@ -34,6 +42,10 @@ function normalisePointer(pointer: string): string {
     return `/${pointer.replace(/^\$+/, "")}`;
 }
 
+/**
+ * Apply all bindings described on a `BlockComponentNode` to produce the props
+ * passed to the block component at render time.
+ */
 export function applyBindings(node: BlockComponentNode, ctx: TreeCtx): object {
     const { props, bindings } = node;
     if (bindings.length === 0) return props;
@@ -84,6 +96,7 @@ export function applyBindings(node: BlockComponentNode, ctx: TreeCtx): object {
     return out;
 }
 
+/** Safely set a nested property using dot notation. */
 function setDeep(obj: any, path: string, value: any) {
     const parts = path.split(".");
     let cur = obj;

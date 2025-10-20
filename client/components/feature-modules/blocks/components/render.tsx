@@ -1,3 +1,10 @@
+/**
+ * Block rendering entry point.
+ *
+ * This module wires the declarative block render structure to GridStack and the
+ * React block component registry. It also handles client-side mutations (e.g.
+ * deletion) so the UI can update instantly while edits are being made.
+ */
 "use client";
 
 import {
@@ -22,11 +29,19 @@ import type { GridStackOptions, GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
+/** Lightweight context passed to helpers when binding component props. */
 export interface TreeCtx {
     payload: object;
     references: Record<string, BlockReference[]>;
 }
 
+/**
+ * Renders a `BlockRenderStructure` inside a GridStack instance.
+ *
+ * The component bootstraps GridStack, keeps a mutable copy of the structure so
+ * local edits (deletions) can be reflected immediately, and delegates the
+ * actual component rendering to `RenderElementProvider`.
+ */
 export const RenderBlock: React.FC<{
     tree: BlockTree;
     display: BlockRenderStructure;
@@ -65,6 +80,11 @@ export const RenderBlock: React.FC<{
     );
 };
 
+/**
+ * Renders all GridStack widgets through `RenderElementProvider` with extra
+ * chrome. Right-clicking any rendered block opens a context menu that deletes
+ * only that specific component.
+ */
 const BlockElementsRenderer: React.FC<{
     onDeleteComponent: (componentId: string) => void;
 }> = ({ onDeleteComponent }) => {
@@ -74,6 +94,7 @@ const BlockElementsRenderer: React.FC<{
         ({ id, raw, element }: { id: string; raw: any; element: React.ReactNode }) => {
             const componentId = raw?.componentId ?? id;
             const handleDelete = () => {
+                // Remove the widget from GridStack, then mirror that change in the local display state.
                 removeWidget(id);
                 onDeleteComponent(componentId);
             };
@@ -118,6 +139,10 @@ interface SlotLayoutDefinition {
     }>;
 }
 
+/**
+ * Builds the top-level GridStack options (widget list + grid configuration)
+ * from a `BlockRenderStructure`.
+ */
 function buildGridOptions(
     display: BlockRenderStructure,
     ctx: TreeCtx,
@@ -134,7 +159,10 @@ function buildGridOptions(
             ctx,
             path: item.id,
         });
-        if (widget) children.push(widget);
+        if (widget) {
+            // Widgets that fail validation/visibility return null and are skipped.
+            children.push(widget);
+        }
     }
 
     return {
@@ -148,6 +176,11 @@ function buildGridOptions(
     };
 }
 
+/**
+ * Produces a `GridStackWidget` for a single component id. This involves
+ * resolving bindings, running schema validation, and preparing fallback widgets
+ * for missing/invalid nodes.
+ */
 function buildWidgetForComponent({
     componentId,
     rect,
@@ -191,6 +224,7 @@ function buildWidgetForComponent({
         });
     }
 
+    // Map JSON payload + references into concrete component props.
     const boundProps = applyBindings(node, ctx) as Record<string, unknown>;
 
     let parsedProps: Record<string, unknown>;
@@ -233,6 +267,11 @@ function buildWidgetForComponent({
     return widget;
 }
 
+/**
+ * Builds the GridStack configuration for a component that hosts slots (i.e.
+ * nested blocks). Each slot can optionally describe its own grid overrides and
+ * layout items.
+ */
 function buildSubGrid(
     node: BlockRenderStructure["components"][string],
     display: BlockRenderStructure,
@@ -277,6 +316,8 @@ function buildSubGrid(
             if (childWidget) children.push(childWidget);
         }
 
+        // If the layout definition didn’t mention an id, we still include a
+        // sensible default so nothing disappears on load.
         ids.forEach((id, index) => {
             if (definedIds.has(id)) return;
             const fallbackRect = createDefaultRect(index);
@@ -305,6 +346,7 @@ function buildSubGrid(
     };
 }
 
+/** Deep clone helper so we can safely mutate a structure copy. */
 function cloneDisplay(display: BlockRenderStructure): BlockRenderStructure {
     return JSON.parse(JSON.stringify(display)) as BlockRenderStructure;
 }
@@ -323,6 +365,12 @@ function collectDescendants(
     }
 }
 
+/**
+ * Removes a component (and all descendants) from the render structure.
+ *
+ * This is used for client-side deletes so that the UI reflects the new
+ * structure before the backend issues an updated payload.
+ */
 function removeComponentFromDisplay(
     display: BlockRenderStructure,
     componentId: string

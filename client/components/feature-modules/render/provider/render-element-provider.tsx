@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * Binds GridStack widget metadata to concrete React components.
+ *
+ * The provider iterates over the registered widgets, parses their payloads,
+ * validates props against the schema defined in the render element registry,
+ * and portals the resulting component into the DOM node GridStack owns.
+ */
+
 import type { GridStackWidget } from "gridstack";
 import { ComponentType, createContext, FC, useContext, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -18,6 +26,7 @@ interface ParsedContent {
     parentId?: string;
 }
 
+/** Parse the serialised widget payload back into a typed object. */
 function parseContent(meta: GridStackWidget): ParsedContent | null {
     if (!meta.content) return null;
     try {
@@ -161,6 +170,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({
     );
 };
 
+/** Access the context created by `RenderElementProvider`. */
 export function useRenderElement() {
     const context = useContext(RenderElementContext);
     if (!context) {

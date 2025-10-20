@@ -1,3 +1,9 @@
+/**
+ * Registry describing every block component that can be rendered.
+ *
+ * Each entry defines the runtime component, a Zod schema for validating props,
+ * and metadata used by authoring tools.
+ */
 import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import React, { ComponentType as Component } from "react";
 import { z } from "zod";

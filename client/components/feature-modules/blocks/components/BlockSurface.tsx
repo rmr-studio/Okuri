@@ -4,6 +4,7 @@ import { blockElements } from "@/components/feature-modules/blocks/util/block.re
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+    Command,
     CommandDialog,
     CommandEmpty,
     CommandGroup,
@@ -25,6 +26,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/util/utils";
 import {
     CommandIcon,
@@ -35,7 +41,7 @@ import {
     SearchIcon,
     TypeIcon,
 } from "lucide-react";
-import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 type Mode = "display" | "form";
 
@@ -135,8 +141,10 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
     const [mode, setMode] = useState<Mode>(defaultMode);
     const [isSlashOpen, setSlashOpen] = useState(false);
     const [isQuickOpen, setQuickOpen] = useState(false);
+    const [isInlineMenuOpen, setInlineMenuOpen] = useState(false);
     const [draftTitle, setDraftTitle] = useState(title ?? "");
     const [insertContext, setInsertContext] = useState<"nested" | "sibling">("nested");
+    const inlineSearchRef = useRef<HTMLInputElement>(null);
 
     const content = mode === "form" ? form : display ?? children;
 
@@ -156,10 +164,17 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
         return actions;
     }, [actions, onDelete]);
     const hasMenuActions = menuActions.length > 0;
+    const shouldHighlight = isActive || isInlineMenuOpen || isQuickOpen || isSlashOpen;
 
     useEffect(() => {
         setDraftTitle(title ?? "");
     }, [title]);
+
+    useEffect(() => {
+        if (isInlineMenuOpen) {
+            requestAnimationFrame(() => inlineSearchRef.current?.focus());
+        }
+    }, [isInlineMenuOpen]);
 
     const toggleMode = useCallback(() => {
         setMode((prev) => {
@@ -183,7 +198,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                 if (isInput) return;
                 event.preventDefault();
                 setInsertContext("nested");
-                setSlashOpen(true);
+                setInlineMenuOpen(true);
             }
 
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
@@ -195,7 +210,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                 event.preventDefault();
                 if (actions.length === 0) {
                     setInsertContext("nested");
-                    setSlashOpen(true);
+                    setInlineMenuOpen(true);
                 } else {
                     setQuickOpen(true);
                 }
@@ -214,6 +229,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
 
     const handleSelect = useCallback(
         (item: SlashMenuItem) => {
+            setInlineMenuOpen(false);
             setSlashOpen(false);
             item.onSelect?.();
             if (insertContext === "nested" && onInsert) {
@@ -250,6 +266,9 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                 <div
                     className={cn(
                         "group relative flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm transition-colors",
+                        shouldHighlight
+                            ? "border-primary ring-2 ring-primary/40"
+                            : "border-border",
                         className
                     )}
                     data-surface-id={surfaceId}
@@ -290,7 +309,7 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                 onClick={() => {
                                     if (actions.length === 0) {
                                         setInsertContext("nested");
-                                        setSlashOpen(true);
+                                        setInlineMenuOpen(true);
                                     } else {
                                         setQuickOpen(true);
                                     }
@@ -299,18 +318,70 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                 <CommandIcon className="size-4" />
                                 Cmd+K
                             </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="gap-1"
-                                onClick={() => {
-                                    setInsertContext("nested");
-                                    setSlashOpen(true);
-                                }}
-                            >
-                                <PlusIcon className="size-4" />
-                                Insert
-                            </Button>
+                            <Popover open={isInlineMenuOpen} onOpenChange={setInlineMenuOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="gap-1"
+                                        onClick={() => {
+                                            setInsertContext("nested");
+                                            setInlineMenuOpen(true);
+                                        }}
+                                    >
+                                        <PlusIcon className="size-4" />
+                                        Insert
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 p-0" align="end">
+                                    <Command>
+                                        <CommandInput
+                                            ref={inlineSearchRef}
+                                            placeholder="Search blocks..."
+                                        />
+                                        <CommandList>
+                                            <CommandEmpty>No matches found.</CommandEmpty>
+                                            <CommandGroup heading="Shortcuts">
+                                                <CommandItem
+                                                    onSelect={() => {
+                                                        setInlineMenuOpen(false);
+                                                        setSlashOpen(true);
+                                                    }}
+                                                >
+                                                    See all options…
+                                                </CommandItem>
+                                                <CommandItem
+                                                    onSelect={() => {
+                                                        setInlineMenuOpen(false);
+                                                        setQuickOpen(true);
+                                                    }}
+                                                >
+                                                    Open quick actions
+                                                </CommandItem>
+                                            </CommandGroup>
+                                            <CommandGroup heading="Blocks">
+                                                {items.map((item) => (
+                                                    <CommandItem
+                                                        key={item.id}
+                                                        onSelect={() => handleSelect(item)}
+                                                        className="gap-2"
+                                                    >
+                                                        {item.icon ?? <SearchIcon className="size-4" />}
+                                                        <div className="flex flex-col items-start">
+                                                            <span>{item.label}</span>
+                                                            {item.description ? (
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {item.description}
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                             {hasMenuActions ? (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -345,12 +416,12 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                 </DropdownMenu>
                             ) : null}
                         </div>
-                    </header>
-                    {description ? (
-                        <div className="px-4 pb-2 text-sm text-muted-foreground">{description}</div>
-                    ) : null}
-                    <section className="px-4 pb-4">
-                        <div className="rounded-lg border bg-background/40 p-4">
+            </header>
+            {description ? (
+                <div className="px-4 pb-2 text-sm text-muted-foreground">{description}</div>
+            ) : null}
+            <section className="px-4 pb-4">
+                <div className="rounded-lg border bg-background/40 p-4">
                             <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 {modeLabel}
                             </div>
@@ -360,11 +431,11 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                                         ? "This block does not have a form configuration yet."
                                         : "This block has no display content yet."}
                                 </div>
-                            )}
-                        </div>
-                        {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
-                        {nestedFooter}
-                    </section>
+                    )}
+                </div>
+                {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
+                {nestedFooter}
+            </section>
 
                     <CommandDialog open={isSlashOpen} onOpenChange={setSlashOpen}>
                         <CommandInput placeholder="Search components or templates..." />
@@ -396,6 +467,17 @@ export const BlockSurface: React.FC<BlockSurfaceProps> = ({
                         <CommandInput placeholder="Quick actions…" />
                         <CommandList>
                             <CommandEmpty>No actions available.</CommandEmpty>
+                            <CommandGroup heading="Insert">
+                                <CommandItem
+                                    onSelect={() => {
+                                        setQuickOpen(false);
+                                        setInsertContext("nested");
+                                        setInlineMenuOpen(true);
+                                    }}
+                                >
+                                    Insert block…
+                                </CommandItem>
+                            </CommandGroup>
                             <CommandGroup heading="Actions">
                                 {actions.map((action) => (
                                     <CommandItem
