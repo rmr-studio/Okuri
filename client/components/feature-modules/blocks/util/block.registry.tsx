@@ -1,14 +1,19 @@
-import { ComponentType } from "@/components/feature-modules/blocks/interface/block.interface";
+/**
+ * Registry describing every block component that can be rendered.
+ *
+ * Each entry defines the runtime component, a Zod schema for validating props,
+ * and metadata used by authoring tools.
+ */
 import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import React, { ComponentType as Component } from "react";
 import { z } from "zod";
-import { AddressCard } from "../components/AddressCard";
-import { BlockButton } from "../components/BlockButton";
-import { ContactCard } from "../components/ContactCard";
-import { DataSummaryTable } from "../components/DataSummaryTable";
-import { InlineOwnedList } from "../components/InlineOwnedList";
-import { LayoutContainer } from "../components/LayoutContainer";
-import { TextBlock } from "../components/TextBlock";
+import { AddressCard } from "../components/bespoke/AddressCard";
+import { ContactCard } from "../components/bespoke/ContactCard";
+import { ButtonBlock } from "../components/primitive/block.button";
+import { LayoutContainerBlock } from "../components/primitive/block.container";
+import { ListBlock } from "../components/primitive/block.list";
+import { DataSummaryTable } from "../components/primitive/block.table";
+import { TextBlock } from "../components/primitive/block.text";
 
 const ContactCardSchema = z
     .object({
@@ -28,7 +33,7 @@ const AddressCardSchema = z
                 street: z.string().optional(),
                 city: z.string().optional(),
                 state: z.string().optional(),
-            postalCode: z.string().optional(),
+                postalCode: z.string().optional(),
                 country: z.string().optional(),
             })
             .partial()
@@ -40,43 +45,12 @@ const AddressCardSchema = z
     })
     .passthrough();
 
-const InlineOwnedListSchema = z
-    .object({
-        items: z.array(z.any()).optional(),
-        itemComponent: z.string().optional(),
-        title: z.string().optional(),
-        description: z.string().optional(),
-        emptyMessage: z.string().optional(),
-        currency: z.string().optional(),
-    })
-    .passthrough();
-
-const TextBlockSchema = z
-    .object({
-        text: z.string().optional(),
-        variant: z.enum(["title", "subtitle", "body", "muted"]).optional(),
-        align: z.enum(["left", "center", "right"]).optional(),
-        className: z.string().optional(),
-    })
-    .passthrough();
-
 const DataSummaryTableSchema = z
     .object({
         title: z.string().optional(),
         description: z.string().optional(),
         data: z.any().optional(),
         className: z.string().optional(),
-    })
-    .passthrough();
-
-const BlockButtonSchema = z
-    .object({
-        label: z.string().optional(),
-        href: z.string().optional(),
-        className: z.string().optional(),
-        variant: z.string().optional(),
-        size: z.string().optional(),
-        icon: z.any().optional(),
     })
     .passthrough();
 
@@ -91,16 +65,6 @@ const ImageBlockSchema = z
 const AttachmentSchema = z
     .object({
         children: z.any().optional(),
-    })
-    .passthrough();
-
-const LayoutContainerSchema = z
-    .object({
-        title: z.string().optional(),
-        description: z.string().optional(),
-        variant: z.enum(["card", "plain"]).optional(),
-        padded: z.boolean().optional(),
-        className: z.string().optional(),
     })
     .passthrough();
 
@@ -131,14 +95,7 @@ const baseBlockElements = {
         schema: AddressCardSchema,
         component: AddressCard,
     }),
-    LINE_ITEM: createRenderElement({
-        type: "LINE_ITEM",
-        name: "Inline owned list",
-        description: "Renders owned child block references inline.",
-        category: "BLOCK",
-        schema: InlineOwnedListSchema,
-        component: InlineOwnedList,
-    }),
+    LINE_ITEM: ListBlock,
     TABLE: createRenderElement({
         type: "TABLE",
         name: "Summary table",
@@ -147,14 +104,7 @@ const baseBlockElements = {
         schema: DataSummaryTableSchema,
         component: DataSummaryTable,
     }),
-    TEXT: createRenderElement({
-        type: "TEXT",
-        name: "Text block",
-        description: "Simple text display with styling options.",
-        category: "BLOCK",
-        schema: TextBlockSchema,
-        component: TextBlock,
-    }),
+    TEXT: TextBlock,
     IMAGE: createRenderElement({
         type: "IMAGE",
         name: "Image",
@@ -169,14 +119,7 @@ const baseBlockElements = {
             />
         ),
     }),
-    BUTTON: createRenderElement({
-        type: "BUTTON",
-        name: "Button",
-        description: "Action button that can link to another view.",
-        category: "BLOCK",
-        schema: BlockButtonSchema,
-        component: BlockButton,
-    }),
+    BUTTON: ButtonBlock,
     ATTACHMENT: createRenderElement({
         type: "ATTACHMENT",
         name: "Attachment placeholder",
@@ -189,14 +132,7 @@ const baseBlockElements = {
             </div>
         ),
     }),
-    LAYOUT_CONTAINER: createRenderElement({
-        type: "LAYOUT_CONTAINER",
-        name: "Layout container",
-        description: "Wrapper component that hosts a nested grid layout.",
-        category: "BLOCK",
-        schema: LayoutContainerSchema,
-        component: LayoutContainer,
-    }),
+    LAYOUT_CONTAINER: LayoutContainerBlock,
 } as const;
 
 export const blockElements = {
@@ -213,12 +149,9 @@ export const blockElements = {
 
 const componentKeys = Object.keys(baseBlockElements);
 
-export const registry: Record<string, Component<any>> = componentKeys.reduce(
-    (acc, key) => {
-        acc[key] = baseBlockElements[key as keyof typeof baseBlockElements].component;
-        return acc;
-    },
-    {} as Record<string, Component<any>>
-);
+export const registry: Record<string, Component<any>> = componentKeys.reduce((acc, key) => {
+    acc[key] = baseBlockElements[key as keyof typeof baseBlockElements].component;
+    return acc;
+}, {} as Record<string, Component<any>>);
 
 export const blockRenderRegistry = blockElements;

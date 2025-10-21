@@ -1,3 +1,9 @@
+/**
+ * Binding utilities.
+ *
+ * These helpers map the persisted binding definitions for a block component to
+ * the actual runtime props consumed by the React components.
+ */
 // binding.ts
 import { TreeCtx } from "@/components/feature-modules/blocks/components/render";
 import {
@@ -7,6 +13,7 @@ import {
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import jp from "jsonpointer"; // tiny util; or write your own
 
+/** Retrieve a value from an object using a binding pointer. */
 export function getByPath(obj: unknown, pointer: string): any {
     if (!pointer) return undefined;
     // allow shorthand "name" -> "/data/name", while persisted values stay JSONPath-like "$.data/name"
@@ -20,20 +27,32 @@ export function getByPath(obj: unknown, pointer: string): any {
 
 function normalisePointer(pointer: string): string {
     if (!pointer) return "";
+    if (pointer.startsWith("#/")) return pointer.slice(1); // fragment form
+    if (pointer.startsWith("/")) return pointer; // already a JSON Pointer
 
-    // Already a JSON pointer
-    if (pointer.startsWith("/")) return pointer;
+    // Accept JSONPath-ish inputs
+    if (pointer.startsWith("$")) {
+        // Support "$.a.b", "$.a/b", and "$.a[0].b"
+        const tail = pointer.replace(/^\$\.?/, ""); // drop "$" and optional "."
+        const normalized = tail.replace(/\[(\d+)\]/g, ".$1"); // a[0] => a.0
+        const parts = normalized.split(/[./]/).filter(Boolean);
+        return "/" + parts.map(escapePointerSegment).join("/");
+    }
 
-    // JSONPath-style persisted values e.g. "$.data/name"
-    if (pointer.startsWith("$.")) return pointer.replace("$.", "/");
-
-    // Bare key or nested path "foo" | "foo.bar"
-    if (!pointer.startsWith("$")) return `/data/${pointer.replace(/\./g, "/")}`;
-
-    // Fallback: strip leading "$" and ensure slash
-    return `/${pointer.replace(/^\$+/, "")}`;
+    // Bare key or dotted path -> assume under /data
+    const parts = pointer.split(".").filter(Boolean).map(escapePointerSegment);
+    return "/data/" + parts.join("/");
 }
 
+function escapePointerSegment(seg: string): string {
+    // RFC 6901: "~" -> "~0", "/" -> "~1"
+    return seg.replace(/~/g, "~0").replace(/\//g, "~1");
+}
+
+/**
+ * Apply all bindings described on a `BlockComponentNode` to produce the props
+ * passed to the block component at render time.
+ */
 export function applyBindings(node: BlockComponentNode, ctx: TreeCtx): object {
     const { props, bindings } = node;
     if (bindings.length === 0) return props;
@@ -84,6 +103,7 @@ export function applyBindings(node: BlockComponentNode, ctx: TreeCtx): object {
     return out;
 }
 
+/** Safely set a nested property using dot notation. */
 function setDeep(obj: any, path: string, value: any) {
     const parts = path.split(".");
     let cur = obj;

@@ -1,7 +1,15 @@
 "use client";
 
+/**
+ * Binds GridStack widget metadata to concrete React components.
+ *
+ * The provider iterates over the registered widgets, parses their payloads,
+ * validates props against the schema defined in the render element registry,
+ * and portals the resulting component into the DOM node GridStack owns.
+ */
+
 import type { GridStackWidget } from "gridstack";
-import { ComponentType, createContext, FC, useContext } from "react";
+import { ComponentType, createContext, FC, useContext, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useContainer } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
@@ -13,8 +21,12 @@ import {
 interface ParsedContent {
     type: string;
     props?: unknown;
+    componentId?: string;
+    slot?: string;
+    parentId?: string;
 }
 
+/** Parse the serialised widget payload back into a typed object. */
 function parseContent(meta: GridStackWidget): ParsedContent | null {
     if (!meta.content) return null;
     try {
@@ -42,12 +54,21 @@ interface ProviderProps {
         raw: ParsedContent | null;
     }) => unknown;
     onUnknownType?: (info: { id: string; raw: ParsedContent | null }) => void;
+    wrapElement?: (args: {
+        id: string;
+        meta: GridStackWidget;
+        element: ReactNode;
+        elementMeta: RenderElementMetadata<any>;
+        parsedProps: unknown;
+        raw: ParsedContent | null;
+    }) => ReactNode;
 }
 
 export const RenderElementProvider: FC<ProviderProps> = ({
     registry,
     transformProps,
     onUnknownType,
+    wrapElement,
 }) => {
     const { _rawWidgetMetaMap } = useGrid();
     const { getWidgetContainer } = useContainer();
@@ -127,10 +148,21 @@ export const RenderElementProvider: FC<ProviderProps> = ({
                     }) ?? parsedProps;
 
                 const Component = elementMeta.component as ComponentType<any>;
+                let rendered: React.ReactNode = <Component {...(finalProps as any)} />;
+                if (wrapElement) {
+                    rendered = wrapElement({
+                        id,
+                        meta,
+                        element: rendered,
+                        elementMeta,
+                        parsedProps,
+                        raw: effectiveRaw,
+                    });
+                }
 
                 return (
                     <RenderElementContext.Provider key={id} value={{ widget: { id } }}>
-                        {createPortal(<Component {...(finalProps as any)} />, container)}
+                        {createPortal(rendered, container)}
                     </RenderElementContext.Provider>
                 );
             })}
@@ -138,6 +170,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({
     );
 };
 
+/** Access the context created by `RenderElementProvider`. */
 export function useRenderElement() {
     const context = useContext(RenderElementContext);
     if (!context) {

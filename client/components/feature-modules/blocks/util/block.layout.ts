@@ -1,3 +1,9 @@
+/**
+ * Utilities for translating GridStack state back into a `BlockRenderStructure`.
+ *
+ * When the user drags/resizes blocks, GridStack holds the authoritative layout.
+ * These helpers rebuild the declarative structure so it can be persisted.
+ */
 import {
     BlockRenderStructure,
     BlockComponentNode,
@@ -38,6 +44,11 @@ interface SlotAccumulator {
     >;
 }
 
+/**
+ * Recreates a `BlockRenderStructure` from a GridStack widget tree. The previous
+ * structure is used to clone existing components so only layout/slot metadata
+ * is updated.
+ */
 export function buildDisplayFromGridState(
     widgets: GridStackWidget[],
     previous: BlockRenderStructure
@@ -138,6 +149,7 @@ export function buildDisplayFromGridState(
     };
 }
 
+/** Safely parse the widget payload back into a structured object. */
 function parseContent(content?: string): ParsedContent {
     if (!content) return { type: "UNKNOWN" };
     try {
@@ -148,6 +160,7 @@ function parseContent(content?: string): ParsedContent {
     }
 }
 
+/** Convert GridStack widget coordinates into the shape expected by the schema. */
 function widgetToRect(
     widget: GridStackWidget
 ): BlockRenderStructure["layoutGrid"]["items"][number]["lg"] {
@@ -160,6 +173,10 @@ function widgetToRect(
     };
 }
 
+/**
+ * Prepares an accumulator for a component so nested widgets can populate slot
+ * membership and layout information.
+ */
 function createSlotAccumulator(
     componentId: string,
     components: Record<string, BlockComponentNode>
@@ -179,6 +196,7 @@ function createSlotAccumulator(
     };
 }
 
+/** Ensure the accumulator has entries for the requested slot. */
 function ensureSlot(accumulator: SlotAccumulator, slotKey: string) {
     if (!accumulator.slots[slotKey]) accumulator.slots[slotKey] = [];
     if (!accumulator.slotLayout[slotKey]) {
