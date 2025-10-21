@@ -33,8 +33,8 @@ const alignClasses: Record<NonNullable<Props["align"]>, string> = {
 };
 
 const tagMap: Record<NonNullable<Props["variant"]>, string> = {
-    title: "h1",
-    subtitle: "h2",
+    title: "h3",
+    subtitle: "h4",
     body: "p",
     muted: "p",
 };

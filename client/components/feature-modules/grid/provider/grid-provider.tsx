@@ -6,7 +6,6 @@ import {
     SetStateAction,
     useCallback,
     useContext,
-    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -82,9 +81,6 @@ export function GridProvider({
     const [rawWidgetMetaMap, setRawWidgetMetaMap] = useState<Map<string, GridStackWidget>>(() =>
         buildRawWidgetMetaMap()
     );
-    useEffect(() => {
-        setRawWidgetMetaMap(buildRawWidgetMetaMap());
-    }, [buildRawWidgetMetaMap]);
 
     const addWidget = useCallback(
         (fn: (id: string) => Omit<GridStackWidget, "id">) => {
@@ -121,6 +117,7 @@ export function GridProvider({
 
             setRawWidgetMetaMap((prev) => {
                 const newMap = new Map<string, GridStackWidget>(prev);
+                newMap.set(newId, { ...widget, id: newId });
                 subWidgetIdMap.forEach((meta, id) => {
                     newMap.set(id, meta);
                 });
@@ -136,11 +133,16 @@ export function GridProvider({
             const element: HTMLElement | null = gridStack.el?.querySelector(`[gs-id='${id}']`);
             if (!element) return;
 
+            const descendantIds = Array.from(element.querySelectorAll<HTMLElement>("[gs-id]"))
+                .map((el) => el.getAttribute("gs-id"))
+                .filter(Boolean) as string[];
+
             gridStack.removeWidget(element, true);
 
             setRawWidgetMetaMap((prev) => {
                 const newMap = new Map<string, GridStackWidget>(prev);
                 newMap.delete(id);
+                descendantIds.forEach((did) => newMap.delete(did));
                 return newMap;
             });
         },
@@ -148,9 +150,7 @@ export function GridProvider({
     );
 
     const saveOptions = useCallback(() => {
-        return gridStack?.save(true, true, (_, widget) => {
-            widget;
-        });
+        return gridStack?.save(true, true);
     }, [gridStack]);
 
     return (
@@ -197,7 +197,7 @@ export function GridProvider({
 export function useGrid() {
     const context = useContext(GridStackContext);
     if (!context) {
-        throw new Error("useGrid must be used within a GridStackProvider");
+        throw new Error("useGrid must be used within a GridProvider");
     }
     return context;
 }

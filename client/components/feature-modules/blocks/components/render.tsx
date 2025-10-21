@@ -240,7 +240,7 @@ function buildGridOptions(
         column: display.layoutGrid.cols ?? 12,
         cellHeight: display.layoutGrid.rowHeight ?? 40,
         margin: display.layoutGrid.margin ?? 8,
-        sizeToContent: true,
+        // sizeToContent: true,
         acceptWidgets: true,
         animate: true,
         ...overrides,
@@ -410,8 +410,8 @@ function buildSubGrid(
 
     return {
         column: column ?? 12,
-        // cellHeight: cellHeight ?? 40,
-        sizeToContent: true,
+        cellHeight: cellHeight ?? 40,
+        // sizeToContent: true,
         margin: margin ?? 8,
         acceptWidgets: true,
         animate: true,

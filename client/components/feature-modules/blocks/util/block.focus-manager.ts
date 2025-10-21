@@ -52,28 +52,41 @@ export function subscribe(listener: Listener) {
 if (typeof window !== "undefined") {
     const controller = new AbortController();
     const { signal } = controller;
-    window.addEventListener("keydown", (event) => {
-        if (event.key !== "Delete" && event.key !== "Backspace") return;
-        const activeElement = document.activeElement as HTMLElement | null;
-        if (activeElement) {
-            const tag = activeElement.tagName;
-            const isFormElement =
-                tag === "INPUT" || tag === "TEXTAREA" || activeElement.isContentEditable;
-            if (isFormElement) return;
-        }
-        const current = stack[stack.length - 1];
-        if (!current?.onDelete) return;
-        event.preventDefault();
-        current.onDelete();
-    }, {signal});
+    window.addEventListener(
+        "keydown",
+        (event) => {
+            if (event.key !== "Delete" && event.key !== "Backspace") return;
+            const activeElement = document.activeElement as HTMLElement | null;
+            if (activeElement) {
+                const tag = activeElement.tagName;
+                const isFormElement =
+                    tag === "INPUT" || tag === "TEXTAREA" || activeElement.isContentEditable;
+                if (isFormElement) return;
+            }
+            const current = stack[stack.length - 1];
+            if (!current?.onDelete) return;
+            event.preventDefault();
+            current.onDelete();
+        },
+        { signal }
+    );
 
-    window.addEventListener("pointerdown", (event) => {
-        const target = event.target as HTMLElement | null;
-        if (!target) return;
-        if (target.closest("[data-block-id]")) return;
-        if (target.closest("[data-surface-id]")) return;
-        clearSelection();
-    });
+    window.addEventListener(
+        "pointerdown",
+        (event) => {
+            const target = event.target as HTMLElement | null;
+            if (!target) return;
+            if (target.closest("[data-block-id]")) return;
+            if (target.closest("[data-surface-id]")) return;
+            clearSelection();
+        },
+        { signal }
+    );
+
+    // Cleanup for a dev environment
+    if (import.meta && (import.meta as any).hot) {
+        (import.meta as any).hot.dispose(() => controller.abort());
+    }
 }
 
 export function getCurrentSelection(): SelectionEntry | null {

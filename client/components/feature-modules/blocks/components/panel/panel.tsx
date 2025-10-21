@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import z from "zod";
+import { z } from "zod";
 import { useGrid } from "../../../grid/provider/grid-provider";
 import { createRenderElement } from "../../../render/util/render-element.registry";
 import { PanelGridWorkspace, usePlayground } from "../demo/block-demo";

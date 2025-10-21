@@ -11,7 +11,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import { PlusIcon, TypeIcon } from "lucide-react";
+import { Plus, Type } from "lucide-react";
 import { FC, useCallback, useState } from "react";
 import { SlashMenuItem } from "./panel/panel-wrapper";
 
@@ -36,7 +36,7 @@ export const InsertHandle: FC<Props> = ({ label, onSelect, items }) => {
     return (
         <>
             <Button variant="outline" size="sm" className="gap-1" onClick={() => setOpen(true)}>
-                <PlusIcon className="size-4" />
+                <Plus className="size-4" />
                 {label}
             </Button>
             <CommandDialog open={open} onOpenChange={setOpen}>
@@ -50,7 +50,7 @@ export const InsertHandle: FC<Props> = ({ label, onSelect, items }) => {
                                 onSelect={() => handleSelect(item)}
                                 className="gap-2"
                             >
-                                {item.icon ?? <TypeIcon className="size-4" />}
+                                {item.icon ?? <Type className="size-4" />}
                                 <span>{item.label}</span>
                                 {item.description ? (
                                     <span className="text-xs text-muted-foreground">

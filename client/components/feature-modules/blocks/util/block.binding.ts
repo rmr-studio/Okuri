@@ -32,10 +32,11 @@ function normalisePointer(pointer: string): string {
 
     // Accept JSONPath-ish inputs
     if (pointer.startsWith("$")) {
-        // Support both "$.a.b" and "$.a/b" styles
-        const tail = pointer.replace(/^\$\.*/, ""); // drop "$" and optional "."
-        const parts = tail.includes(".") ? tail.split(".") : tail.split("/");
-        return "/" + parts.filter(Boolean).map(escapePointerSegment).join("/");
+        // Support "$.a.b", "$.a/b", and "$.a[0].b"
+        const tail = pointer.replace(/^\$\.?/, ""); // drop "$" and optional "."
+        const normalized = tail.replace(/\[(\d+)\]/g, ".$1"); // a[0] => a.0
+        const parts = normalized.split(/[./]/).filter(Boolean);
+        return "/" + parts.map(escapePointerSegment).join("/");
     }
 
     // Bare key or dotted path -> assume under /data

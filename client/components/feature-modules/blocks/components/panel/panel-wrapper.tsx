@@ -115,7 +115,8 @@ export const PanelWrapper: React.FC<Props> = ({
     nested,
     nestedFooter,
 }) => {
-    const surfaceId = id ?? useId();
+    const panelId = useId();
+    const surfaceId = id ?? panelId;
     const [isSelected, setIsSelected] = useState(false);
     const [mode, setMode] = useState<Mode>(defaultMode);
     const [isSlashOpen, setSlashOpen] = useState(false);
@@ -151,9 +152,14 @@ export const PanelWrapper: React.FC<Props> = ({
         "pointer-events-auto size-7 rounded-md border border-transparent bg-background/90 text-muted-foreground hover:border-border hover:text-foreground transition-colors";
 
     useEffect(() => {
-        return focusSubscribe((selection) => {
+        const unsubscribe = focusSubscribe((selection) => {
             setIsSelected(selection?.type === "panel" && selection.id === surfaceId);
         });
+        return () => {
+            if (typeof unsubscribe === "function") {
+                unsubscribe();
+            }
+        };
     }, [surfaceId]);
 
     useEffect(() => {

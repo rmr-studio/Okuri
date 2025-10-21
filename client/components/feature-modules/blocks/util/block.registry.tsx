@@ -10,10 +10,10 @@ import { z } from "zod";
 import { AddressCard } from "../components/bespoke/AddressCard";
 import { ContactCard } from "../components/bespoke/ContactCard";
 import { ButtonBlock } from "../components/primitive/block.button";
-import { LayoutContainerBlock } from "../components/primitive/block.container.tsx";
-import { ListBlock } from "../components/primitive/block.list.tsx";
-import { DataSummaryTable } from "../components/primitive/block.table.tsx";
-import { TextBlock } from "../components/primitive/block.text.tsx";
+import { LayoutContainerBlock } from "../components/primitive/block.container";
+import { ListBlock } from "../components/primitive/block.list";
+import { DataSummaryTable } from "../components/primitive/block.table";
+import { TextBlock } from "../components/primitive/block.text";
 
 const ContactCardSchema = z
     .object({

@@ -50,7 +50,7 @@ export const Block: FC<Props> = ({
         moveSubGrid();
 
         const observer = new MutationObserver(moveSubGrid);
-        observer.observe(gridItem, { childList: true, subtree: true });
+        observer.observe(gridItem, { childList: true, subtree: true, attributes: false });
 
         return () => observer.disconnect();
     }, []);
