@@ -7,17 +7,6 @@ import {
     updateSelection,
 } from "@/components/feature-modules/blocks/util/block.focus-manager";
 import { blockElements } from "@/components/feature-modules/blocks/util/block.registry";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-    Command,
-    CommandDialog,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -25,29 +14,14 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/util/utils";
-import {
-    CommandIcon,
-    GripVerticalIcon,
-    InfoIcon,
-    LayoutDashboardIcon,
-    ListIcon,
-    MoreHorizontalIcon,
-    PlusIcon,
-    SearchIcon,
-    TypeIcon,
-} from "lucide-react";
+import { TypeIcon } from "lucide-react";
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import InsertBlockModal from "../modals/insert-block-modal";
+import QuickActionModal from "../modals/quick-action-modal";
+import PanelToolbar from "./toolbar/panel-toolbar";
 
-type Mode = "display" | "form";
+export type Mode = "display" | "form";
 
 export interface SlashMenuItem {
     id: string;
@@ -148,8 +122,6 @@ export const PanelWrapper: React.FC<Props> = ({
     const shouldHighlight =
         isSelected || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered;
     const toolbarVisible = shouldHighlight;
-    const toolbarButtonClass =
-        "pointer-events-auto size-7 rounded-md border border-transparent bg-background/90 text-muted-foreground hover:border-border hover:text-foreground transition-colors";
 
     useEffect(() => {
         const unsubscribe = focusSubscribe((selection) => {
@@ -236,6 +208,12 @@ export const PanelWrapper: React.FC<Props> = ({
         if (draftTitle !== title) onTitleChange?.(draftTitle);
     }, [draftTitle, onTitleChange, title]);
 
+    const handleOpenInsertModal = useCallback(() => {
+        setInlineMenuOpen(false);
+        setSlashOpen(true);
+        pushSelection({ type: "panel", id: surfaceId, onDelete });
+    }, [setInlineMenuOpen, setSlashOpen, surfaceId, onDelete]);
+
     const handleSelect = useCallback(
         (item: SlashMenuItem) => {
             setInlineMenuOpen(false);
@@ -255,19 +233,44 @@ export const PanelWrapper: React.FC<Props> = ({
                 onInsertSibling(item);
             }
         },
-        [insertContext, onInsert, onInsertSibling]
+        [insertContext, onInsert, onInsertSibling, setInlineMenuOpen, setSlashOpen]
     );
 
-    const handleQuickSelect = useCallback((item: QuickActionItem) => {
-        setQuickOpen(false);
-        item.onSelect?.();
-    }, []);
+    const handleQuickSelect = useCallback(
+        (item: QuickActionItem) => {
+            setQuickOpen(false);
+            item.onSelect?.();
+        },
+        [setQuickOpen]
+    );
 
     const handleMenuAction = useCallback((item: QuickActionItem) => {
         item.onSelect?.();
     }, []);
 
     const modeLabel = useMemo(() => (mode === "display" ? "Display" : "Form"), [mode]);
+
+    const handleToggleModeClick = useCallback(() => {
+        toggleMode();
+        pushSelection({ type: "panel", id: surfaceId, onDelete });
+    }, [toggleMode, surfaceId, onDelete]);
+
+    const handleQuickActionsOpen = useCallback(() => {
+        setQuickOpen(true);
+        pushSelection({ type: "panel", id: surfaceId, onDelete });
+    }, [setQuickOpen, surfaceId, onDelete]);
+
+    const handleInlineInsertOpen = useCallback(() => {
+        setInsertContext("nested");
+        setInlineMenuOpen(true);
+        pushSelection({ type: "panel", id: surfaceId, onDelete });
+    }, [setInsertContext, setInlineMenuOpen, surfaceId, onDelete]);
+
+    const handleQuickInsertOpenQuickActions = useCallback(() => {
+        setInlineMenuOpen(false);
+        setQuickOpen(true);
+        pushSelection({ type: "panel", id: surfaceId, onDelete });
+    }, [setInlineMenuOpen, setQuickOpen, surfaceId, onDelete]);
 
     return (
         <ContextMenu>
@@ -319,200 +322,29 @@ export const PanelWrapper: React.FC<Props> = ({
                         pushSelection({ type: "panel", id: surfaceId, onDelete });
                     }}
                 >
-                    <div
-                        className={cn(
-                            "absolute left-3 top-3 z-30 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity",
-                            toolbarVisible
-                                ? "opacity-100 pointer-events-auto"
-                                : "pointer-events-none opacity-0"
-                        )}
-                    >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Drag block"
-                            className={cn("block-drag-handle cursor-grab", toolbarButtonClass)}
-                        >
-                            <GripVerticalIcon className="size-3.5" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={mode === "display" ? "Switch to form" : "Switch to display"}
-                            className={toolbarButtonClass}
-                            onClick={() => {
-                                toggleMode();
-                                pushSelection({ type: "panel", id: surfaceId, onDelete });
-                            }}
-                        >
-                            {mode === "display" ? (
-                                <LayoutDashboardIcon className="size-3.5" />
-                            ) : (
-                                <ListIcon className="size-3.5" />
-                            )}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Quick actions"
-                            className={toolbarButtonClass}
-                            onClick={() => {
-                                setQuickOpen(true);
-                                pushSelection({ type: "panel", id: surfaceId, onDelete });
-                            }}
-                        >
-                            <CommandIcon className="size-3.5" />
-                        </Button>
-                        <Popover open={isInlineMenuOpen} onOpenChange={setInlineMenuOpen}>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-label="Insert block"
-                                    className={toolbarButtonClass}
-                                    onClick={() => {
-                                        setInsertContext("nested");
-                                        setInlineMenuOpen(true);
-                                        pushSelection({ type: "panel", id: surfaceId, onDelete });
-                                    }}
-                                >
-                                    <PlusIcon className="size-3.5" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-0" align="start">
-                                <Command>
-                                    <CommandInput
-                                        ref={inlineSearchRef}
-                                        placeholder="Search blocks..."
-                                    />
-                                    <CommandList>
-                                        <CommandEmpty>No matches found.</CommandEmpty>
-                                        <CommandGroup heading="Shortcuts">
-                                            <CommandItem
-                                                onSelect={() => {
-                                                    setInlineMenuOpen(false);
-                                                    setSlashOpen(true);
-                                                    pushSelection({
-                                                        type: "panel",
-                                                        id: surfaceId,
-                                                        onDelete,
-                                                    });
-                                                }}
-                                            >
-                                                See all options…
-                                            </CommandItem>
-                                            <CommandItem
-                                                onSelect={() => {
-                                                    setInlineMenuOpen(false);
-                                                    setQuickOpen(true);
-                                                    pushSelection({
-                                                        type: "panel",
-                                                        id: surfaceId,
-                                                        onDelete,
-                                                    });
-                                                }}
-                                            >
-                                                Open quick actions
-                                            </CommandItem>
-                                        </CommandGroup>
-                                        <CommandGroup heading="Blocks">
-                                            {items.map((item) => (
-                                                <CommandItem
-                                                    key={item.id}
-                                                    onSelect={() => handleSelect(item)}
-                                                    className="gap-2"
-                                                >
-                                                    {item.icon ?? <SearchIcon className="size-4" />}
-                                                    <div className="flex flex-col items-start">
-                                                        <span>{item.label}</span>
-                                                        {item.description ? (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {item.description}
-                                                            </span>
-                                                        ) : null}
-                                                    </div>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-label="Panel details"
-                                    className={toolbarButtonClass}
-                                >
-                                    <InfoIcon className="size-3.5" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-72 space-y-3 p-4" align="start">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-muted-foreground">
-                                        Title
-                                    </label>
-                                    <Input
-                                        aria-label="Edit title"
-                                        value={draftTitle}
-                                        placeholder={titlePlaceholder}
-                                        onChange={(event) => setDraftTitle(event.target.value)}
-                                        onBlur={handleTitleBlur}
-                                    />
-                                </div>
-                                {description ? (
-                                    <div className="space-y-1">
-                                        <span className="text-xs font-medium text-muted-foreground">
-                                            Description
-                                        </span>
-                                        <p className="rounded-md border bg-muted/30 p-2 text-sm text-muted-foreground">
-                                            {description}
-                                        </p>
-                                    </div>
-                                ) : null}
-                                {badge ? <Badge variant="secondary">{badge}</Badge> : null}
-                            </PopoverContent>
-                        </Popover>
-                        {hasMenuActions ? (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        aria-label="More actions"
-                                        className={toolbarButtonClass}
-                                    >
-                                        <MoreHorizontalIcon className="size-3.5" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="min-w-[10rem]">
-                                    {menuActions.map((action) => (
-                                        <DropdownMenuItem
-                                            key={action.id}
-                                            variant={
-                                                action.id === "delete" || action.id === "__delete"
-                                                    ? "destructive"
-                                                    : "default"
-                                            }
-                                            onSelect={(event) => {
-                                                event.preventDefault();
-                                                handleMenuAction(action);
-                                            }}
-                                        >
-                                            <span>{action.label}</span>
-                                            {action.shortcut ? (
-                                                <span className="ml-auto text-xs uppercase tracking-wide text-muted-foreground">
-                                                    {action.shortcut}
-                                                </span>
-                                            ) : null}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        ) : null}
-                    </div>
+                    <PanelToolbar
+                        visible={toolbarVisible}
+                        mode={mode}
+                        onToggleMode={handleToggleModeClick}
+                        onQuickActionsClick={handleQuickActionsOpen}
+                        onInlineInsertClick={handleInlineInsertOpen}
+                        inlineMenuOpen={isInlineMenuOpen}
+                        onInlineMenuOpenChange={(open) => setInlineMenuOpen(open)}
+                        inlineSearchRef={inlineSearchRef}
+                        items={items}
+                        onSelectItem={handleSelect}
+                        onShowAllOptions={handleOpenInsertModal}
+                        onOpenQuickActionsFromInline={handleQuickInsertOpenQuickActions}
+                        draftTitle={draftTitle}
+                        onDraftTitleChange={(value) => setDraftTitle(value)}
+                        onTitleBlur={handleTitleBlur}
+                        titlePlaceholder={titlePlaceholder}
+                        description={description}
+                        badge={badge}
+                        hasMenuActions={hasMenuActions}
+                        menuActions={menuActions}
+                        onMenuAction={handleMenuAction}
+                    />
                     <section className="px-4 pb-4 pt-12">
                         <div className="rounded-lg border bg-background/40 p-4">
                             <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -530,75 +362,20 @@ export const PanelWrapper: React.FC<Props> = ({
                         {nestedFooter}
                     </section>
 
-                    <CommandDialog open={isSlashOpen} onOpenChange={setSlashOpen}>
-                        <CommandInput placeholder="Search components or templates..." />
-                        <CommandList>
-                            <CommandEmpty>No matches found.</CommandEmpty>
-                            <CommandGroup heading="Insert block">
-                                {items.map((item) => (
-                                    <CommandItem
-                                        key={item.id}
-                                        onSelect={() => handleSelect(item)}
-                                        className="gap-2"
-                                    >
-                                        {item.icon ?? <SearchIcon className="size-4" />}
-                                        <div className="flex flex-col items-start">
-                                            <span>{item.label}</span>
-                                            {item.description ? (
-                                                <span className="text-xs text-muted-foreground">
-                                                    {item.description}
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </CommandDialog>
-
-                    <CommandDialog
+                    <InsertBlockModal
+                        open={isSlashOpen}
+                        onOpenChange={setSlashOpen}
+                        onSelect={handleSelect}
+                        items={items}
+                    />
+                    <QuickActionModal
                         open={isQuickOpen}
-                        onOpenChange={setQuickOpen}
-                        title="Quick actions"
-                    >
-                        <CommandInput placeholder="Quick actions…" />
-                        <CommandList>
-                            <CommandEmpty>No actions available.</CommandEmpty>
-                            <CommandGroup heading="Insert">
-                                <CommandItem
-                                    onSelect={() => {
-                                        setQuickOpen(false);
-                                        setInsertContext("nested");
-                                        setInlineMenuOpen(true);
-                                        pushSelection({
-                                            type: "panel",
-                                            id: surfaceId,
-                                            onDelete,
-                                        });
-                                    }}
-                                >
-                                    Insert block…
-                                </CommandItem>
-                            </CommandGroup>
-                            <CommandGroup heading="Actions">
-                                {actions.map((action) => (
-                                    <CommandItem
-                                        key={action.id}
-                                        onSelect={() => handleQuickSelect(action)}
-                                        className="gap-2"
-                                    >
-                                        <CommandIcon className="size-4 opacity-60" />
-                                        <span>{action.label}</span>
-                                        {action.shortcut ? (
-                                            <span className="ml-auto text-xs uppercase tracking-wide text-muted-foreground">
-                                                {action.shortcut}
-                                            </span>
-                                        ) : null}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </CommandDialog>
+                        setOpen={setQuickOpen}
+                        surfaceId={surfaceId}
+                        onInsert={handleOpenInsertModal}
+                        onActionSelect={handleQuickSelect}
+                        actions={actions}
+                    />
                 </div>
             </ContextMenuTrigger>
             {hasMenuActions ? (
