@@ -89,6 +89,8 @@ export const PanelWrapper: React.FC<Props> = ({
     nested,
     nestedFooter,
 }) => {
+    // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
+
     const panelId = useId();
     const surfaceId = id ?? panelId;
     const [isSelected, setIsSelected] = useState(false);

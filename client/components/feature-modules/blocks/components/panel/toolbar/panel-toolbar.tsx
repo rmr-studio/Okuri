@@ -1,7 +1,6 @@
-import type { QuickActionItem, SlashMenuItem, Mode } from "../panel-wrapper";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/util/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/util/utils";
 import {
     CommandIcon,
     GripVerticalIcon,
@@ -11,6 +10,7 @@ import {
     PlusIcon,
 } from "lucide-react";
 import { FC, RefObject } from "react";
+import type { Mode, QuickActionItem, SlashMenuItem } from "../panel-wrapper";
 import PanelActions from "./panel-actions";
 import PanelDetails from "./panel-details";
 import PanelQuickInsert from "./panel-quick-insert";
@@ -23,7 +23,7 @@ interface PanelToolbarProps {
     onInlineInsertClick: () => void;
     inlineMenuOpen: boolean;
     onInlineMenuOpenChange: (open: boolean) => void;
-    inlineSearchRef: RefObject<HTMLInputElement>;
+    inlineSearchRef: RefObject<HTMLInputElement | null>;
     items: SlashMenuItem[];
     onSelectItem: (item: SlashMenuItem) => void;
     onShowAllOptions: () => void;
@@ -102,6 +102,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
             >
                 <CommandIcon className="size-3.5" />
             </Button>
+
             <Popover open={inlineMenuOpen} onOpenChange={onInlineMenuOpenChange}>
                 <PopoverTrigger asChild>
                     <Button
@@ -124,6 +125,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     />
                 </PopoverContent>
             </Popover>
+
             <Popover>
                 <PopoverTrigger asChild>
                     <Button

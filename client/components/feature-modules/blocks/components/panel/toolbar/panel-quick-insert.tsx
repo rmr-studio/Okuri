@@ -6,12 +6,12 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import type { SlashMenuItem } from "../panel-wrapper";
 import { SearchIcon } from "lucide-react";
 import { FC, RefObject } from "react";
+import type { SlashMenuItem } from "../panel-wrapper";
 
 interface PanelQuickInsertProps {
-    searchRef: RefObject<HTMLInputElement>;
+    searchRef: RefObject<HTMLInputElement | null>;
     items: SlashMenuItem[];
     onSelectItem: (item: SlashMenuItem) => void;
     onShowAllOptions: () => void;
