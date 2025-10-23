@@ -19,9 +19,10 @@ interface Props {
     items: SlashMenuItem[];
     onSelect: (item: SlashMenuItem) => void;
     label: string;
+    compact?: boolean;
 }
 
-export const InsertHandle: FC<Props> = ({ label, onSelect, items }) => {
+export const InsertHandle: FC<Props> = ({ label, onSelect, items, compact }) => {
     const [open, setOpen] = useState(false);
 
     const handleSelect = useCallback(
@@ -35,9 +36,15 @@ export const InsertHandle: FC<Props> = ({ label, onSelect, items }) => {
 
     return (
         <>
-            <Button variant="outline" size="sm" className="gap-1" onClick={() => setOpen(true)}>
+            <Button
+                variant={compact ? "ghost" : "outline"}
+                size={compact ? "icon" : "sm"}
+                className={compact ? "rounded-full" : "gap-1"}
+                onClick={() => setOpen(true)}
+                aria-label={label}
+            >
                 <Plus className="size-4" />
-                {label}
+                {compact ? <span className="sr-only">{label}</span> : label}
             </Button>
             <CommandDialog open={open} onOpenChange={setOpen}>
                 <CommandInput placeholder="Insert block…" />

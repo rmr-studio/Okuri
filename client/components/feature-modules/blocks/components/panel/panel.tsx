@@ -43,6 +43,9 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
 
     const allowInsert = Boolean(block.allowInsert);
     const childrenLen = allowInsert ? block.children?.length ?? 0 : 0;
+    const nestedContent = allowInsert && childrenLen > 0 ? (
+        <PanelGridWorkspace parentPath={[...(parentPath ?? []), block.id]} />
+    ) : null;
 
     return (
         <PanelWrapper
@@ -65,25 +68,15 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
                 playground.insertPanel(item, insertAt);
             }}
             onDelete={handleDelete}
-            nested={
-                allowInsert && childrenLen > 0 ? (
-                    <div className="rounded-lg border border-dashed/60 bg-background/40 p-4">
-                        <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-                            Nested blocks
-                        </h3>
-                        <PanelGridWorkspace parentPath={[...(parentPath ?? []), block.id]} />
-                    </div>
-                ) : null
-            }
+            nested={nestedContent}
             nestedFooter={
                 allowInsert ? (
-                    <div className="pt-3">
-                        <InsertHandle
-                            items={playground.slashItems}
-                            label="Add nested block"
-                            onSelect={(item) => playground.insertNested(block.id, item, childrenLen)}
-                        />
-                    </div>
+                    <InsertHandle
+                        items={playground.slashItems}
+                        label="Add nested block"
+                        compact
+                        onSelect={(item) => playground.insertNested(block.id, item, childrenLen)}
+                    />
                 ) : null
             }
         >

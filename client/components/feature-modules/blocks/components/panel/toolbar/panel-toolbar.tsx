@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
 import {
     CommandIcon,
@@ -74,36 +75,53 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                 visible ? "opacity-100 pointer-events-auto" : "pointer-events-none opacity-0"
             )}
         >
-            <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Drag block"
-                className={cn("block-drag-handle cursor-grab", toolbarButtonClass)}
-            >
-                <GripVerticalIcon className="size-3.5" />
-            </Button>
-            <Button
-                variant="ghost"
-                size="icon"
-                aria-label={mode === "display" ? "Switch to form" : "Switch to display"}
-                className={toolbarButtonClass}
-                onClick={onToggleMode}
-            >
-                {mode === "display" ? (
-                    <LayoutDashboardIcon className="size-3.5" />
-                ) : (
-                    <ListIcon className="size-3.5" />
-                )}
-            </Button>
-            <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Quick actions"
-                className={toolbarButtonClass}
-                onClick={onQuickActionsClick}
-            >
-                <CommandIcon className="size-3.5" />
-            </Button>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Drag block"
+                        className={cn("block-drag-handle cursor-grab", toolbarButtonClass)}
+                    >
+                        <GripVerticalIcon className="size-3.5" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>Drag panel</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={mode === "display" ? "Switch to form" : "Switch to display"}
+                        className={toolbarButtonClass}
+                        onClick={onToggleMode}
+                    >
+                        {mode === "display" ? (
+                            <LayoutDashboardIcon className="size-3.5" />
+                        ) : (
+                            <ListIcon className="size-3.5" />
+                        )}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    {mode === "display" ? "Switch to form view" : "Switch to display view"}
+                </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Quick actions"
+                        className={toolbarButtonClass}
+                        onClick={onQuickActionsClick}
+                    >
+                        <CommandIcon className="size-3.5" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open quick actions</TooltipContent>
+            </Tooltip>
 
             {allowInsert &&
             onInlineInsertClick &&
@@ -114,18 +132,26 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
             onSelectItem &&
             onShowAllOptions &&
             onOpenQuickActionsFromInline ? (
-                <Popover open={inlineMenuOpen} onOpenChange={onInlineMenuOpenChange}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Insert block"
-                            className={toolbarButtonClass}
-                            onClick={onInlineInsertClick}
-                        >
-                            <PlusIcon className="size-3.5" />
-                        </Button>
-                    </PopoverTrigger>
+                <Popover
+                    open={inlineMenuOpen ?? false}
+                    onOpenChange={onInlineMenuOpenChange}
+                >
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Insert block"
+                                    className={toolbarButtonClass}
+                                    onClick={onInlineInsertClick}
+                                >
+                                    <PlusIcon className="size-3.5" />
+                                </Button>
+                            </PopoverTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>Add block</TooltipContent>
+                    </Tooltip>
                     <PopoverContent className="w-80 p-0" align="start">
                         <PanelQuickInsert
                             searchRef={inlineSearchRef}
@@ -137,18 +163,22 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     </PopoverContent>
                 </Popover>
             ) : null}
-
             <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Panel details"
-                        className={toolbarButtonClass}
-                    >
-                        <InfoIcon className="size-3.5" />
-                    </Button>
-                </PopoverTrigger>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Panel details"
+                                className={toolbarButtonClass}
+                            >
+                                <InfoIcon className="size-3.5" />
+                            </Button>
+                        </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>Edit panel details</TooltipContent>
+                </Tooltip>
                 <PopoverContent className="w-72 space-y-3 p-4" align="start">
                     <PanelDetails
                         draftTitle={draftTitle}
