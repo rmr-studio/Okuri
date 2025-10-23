@@ -20,14 +20,15 @@ interface PanelToolbarProps {
     mode: Mode;
     onToggleMode: () => void;
     onQuickActionsClick: () => void;
-    onInlineInsertClick: () => void;
-    inlineMenuOpen: boolean;
-    onInlineMenuOpenChange: (open: boolean) => void;
-    inlineSearchRef: RefObject<HTMLInputElement | null>;
-    items: SlashMenuItem[];
-    onSelectItem: (item: SlashMenuItem) => void;
-    onShowAllOptions: () => void;
-    onOpenQuickActionsFromInline: () => void;
+    allowInsert: boolean;
+    onInlineInsertClick?: () => void;
+    inlineMenuOpen?: boolean;
+    onInlineMenuOpenChange?: (open: boolean) => void;
+    inlineSearchRef?: RefObject<HTMLInputElement | null>;
+    items?: SlashMenuItem[];
+    onSelectItem?: (item: SlashMenuItem) => void;
+    onShowAllOptions?: () => void;
+    onOpenQuickActionsFromInline?: () => void;
     draftTitle: string;
     onDraftTitleChange: (value: string) => void;
     onTitleBlur: () => void;
@@ -47,6 +48,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     mode,
     onToggleMode,
     onQuickActionsClick,
+    allowInsert,
     onInlineInsertClick,
     inlineMenuOpen,
     onInlineMenuOpenChange,
@@ -103,28 +105,38 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                 <CommandIcon className="size-3.5" />
             </Button>
 
-            <Popover open={inlineMenuOpen} onOpenChange={onInlineMenuOpenChange}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Insert block"
-                        className={toolbarButtonClass}
-                        onClick={onInlineInsertClick}
-                    >
-                        <PlusIcon className="size-3.5" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="start">
-                    <PanelQuickInsert
-                        searchRef={inlineSearchRef}
-                        items={items}
-                        onSelectItem={onSelectItem}
-                        onShowAllOptions={onShowAllOptions}
-                        onOpenQuickActions={onOpenQuickActionsFromInline}
-                    />
-                </PopoverContent>
-            </Popover>
+            {allowInsert &&
+            onInlineInsertClick &&
+            onInlineMenuOpenChange &&
+            inlineMenuOpen !== undefined &&
+            inlineSearchRef &&
+            items &&
+            onSelectItem &&
+            onShowAllOptions &&
+            onOpenQuickActionsFromInline ? (
+                <Popover open={inlineMenuOpen} onOpenChange={onInlineMenuOpenChange}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Insert block"
+                            className={toolbarButtonClass}
+                            onClick={onInlineInsertClick}
+                        >
+                            <PlusIcon className="size-3.5" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-0" align="start">
+                        <PanelQuickInsert
+                            searchRef={inlineSearchRef}
+                            items={items}
+                            onSelectItem={onSelectItem}
+                            onShowAllOptions={onShowAllOptions}
+                            onOpenQuickActions={onOpenQuickActionsFromInline}
+                        />
+                    </PopoverContent>
+                </Popover>
+            ) : null}
 
             <Popover>
                 <PopoverTrigger asChild>

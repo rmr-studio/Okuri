@@ -13,25 +13,14 @@ import {
     BlockTree,
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import { applyBindings } from "@/components/feature-modules/blocks/util/block.binding";
-import {
-    subscribe as focusSubscribe,
-    pushSelection,
-    removeSelection,
-    updateSelection,
-} from "@/components/feature-modules/blocks/util/block.focus-manager";
 import { buildDisplayFromGridState } from "@/components/feature-modules/blocks/util/block.layout";
 import { blockRenderRegistry } from "@/components/feature-modules/blocks/util/block.registry";
 import { evalVisible } from "@/components/feature-modules/blocks/util/block.visibility";
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
-import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { cn } from "@/lib/util/utils";
+import { PanelWrapper, QuickActionItem } from "@/components/feature-modules/blocks/components/panel/panel-wrapper";
+import type { RenderElementMetadata } from "@/components/feature-modules/render/util/render-element.registry";
 import type { GridStackOptions, GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -98,94 +87,51 @@ const BlockElementsRenderer: React.FC<{
     const { removeWidget } = useGrid();
 
     const wrapElement = useCallback(
-        ({ id, raw, element }: { id: string; raw: any; element: React.ReactNode }) => {
+        ({
+            id,
+            raw,
+            element,
+            elementMeta,
+        }: {
+            id: string;
+            raw: any;
+            element: React.ReactNode;
+            elementMeta: RenderElementMetadata<any>;
+        }) => {
             const componentId = raw?.componentId ?? id;
             const handleDelete = () => {
                 removeWidget(id);
                 onDeleteComponent(componentId);
             };
+
+            const quickActions: QuickActionItem[] = [
+                {
+                    id: "delete",
+                    label: "Delete block",
+                    shortcut: "⌘⌫",
+                    onSelect: () => handleDelete(),
+                },
+            ];
+
             return (
-                <BlockComponentWrapper id={id} componentId={componentId} onDelete={handleDelete}>
+                <PanelWrapper
+                    id={componentId}
+                    title={elementMeta?.name ?? componentId}
+                    description={elementMeta?.description}
+                    badge={elementMeta?.category === "BLOCK" ? undefined : elementMeta?.category}
+                    slashItems={[]}
+                    quickActions={quickActions}
+                    allowInsert={false}
+                    onDelete={handleDelete}
+                >
                     {element}
-                </BlockComponentWrapper>
+                </PanelWrapper>
             );
         },
         [removeWidget, onDeleteComponent]
     );
 
     return <RenderElementProvider registry={blockRenderRegistry} wrapElement={wrapElement} />;
-};
-
-const BlockComponentWrapper: React.FC<{
-    id: string;
-    componentId: string;
-    onDelete: () => void;
-    children: React.ReactNode;
-}> = ({ componentId, onDelete, children }) => {
-    const [isSelected, setIsSelected] = useState(false);
-    const [isHovered, setHovered] = useState(false);
-
-    const handleDelete = useCallback(() => {
-        removeSelection("block", componentId);
-        onDelete();
-    }, [componentId, onDelete]);
-
-    useEffect(() => {
-        return focusSubscribe((selection) => {
-            setIsSelected(selection?.type === "block" && selection.id === componentId);
-        });
-    }, [componentId]);
-
-    useEffect(() => {
-        if (!isSelected) return;
-        updateSelection({ type: "block", id: componentId, onDelete: handleDelete });
-    }, [isSelected, handleDelete, componentId]);
-
-    useEffect(() => {
-        return () => {
-            removeSelection("block", componentId);
-        };
-    }, [componentId]);
-
-    return (
-        <ContextMenu>
-            <ContextMenuTrigger asChild>
-                <div
-                    data-block-id={componentId}
-                    className={cn(
-                        "h-full w-full rounded-lg border bg-card/80 transition-colors",
-                        isSelected
-                            ? "border-primary ring-2 ring-primary/40"
-                            : isHovered
-                            ? "border-primary/40"
-                            : "border-border/60"
-                    )}
-                    onPointerEnter={() => setHovered(true)}
-                    onPointerLeave={() => setHovered(false)}
-                    onPointerDown={(event) => {
-                        const targetBlock = (event.target as HTMLElement | null)?.closest(
-                            "[data-block-id]"
-                        );
-                        if (
-                            targetBlock &&
-                            targetBlock !== event.currentTarget &&
-                            targetBlock.getAttribute("data-block-id") !== componentId
-                        ) {
-                            return;
-                        }
-                        pushSelection({ type: "block", id: componentId, onDelete: handleDelete });
-                    }}
-                >
-                    {children}
-                </div>
-            </ContextMenuTrigger>
-            <ContextMenuContent className="min-w-[10rem]">
-                <ContextMenuItem variant="destructive" onSelect={handleDelete}>
-                    Delete block
-                </ContextMenuItem>
-            </ContextMenuContent>
-        </ContextMenu>
-    );
 };
 
 interface LayoutRect {

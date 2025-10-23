@@ -5,6 +5,8 @@ import {
     BlockReference,
     BlockRenderStructure,
     BlockTree,
+    BlockType,
+    BlockTypeNesting,
 } from "@/components/feature-modules/blocks/interface/block.interface";
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
@@ -20,14 +22,17 @@ import {
 } from "@/components/ui/command";
 import type { GridStackOptions } from "gridstack";
 import "gridstack/dist/gridstack.css";
-import { PlusIcon, TypeIcon } from "lucide-react";
+import { LayoutDashboardIcon, PlusIcon, TypeIcon } from "lucide-react";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { panelRegistry } from "../panel/panel";
 import { QuickActionItem, SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 
 type LayoutRect = { x: number; y: number; w: number; h: number };
 
+type PlaygroundNodeKind = "panel" | "block";
+
 type PlaygroundBlock = {
+    kind: PlaygroundNodeKind;
     id: string;
     title: string;
     description?: string;
@@ -35,6 +40,7 @@ type PlaygroundBlock = {
     tree: BlockTree;
     display: BlockRenderStructure;
     layout: LayoutRect;
+    allowInsert: boolean;
     children?: PlaygroundBlock[];
 };
 
@@ -56,7 +62,50 @@ const PlaygroundContext = createContext<PlaygroundContextValue | null>(null);
 
 const BASE_GRID = { cols: 12, rowHeight: 60, margin: 12 };
 
+const ALL_BLOCK_COMPONENT_TYPES: BlockTypeNesting["allowedTypes"] = [
+    "CONTACT_CARD",
+    "LAYOUT_CONTAINER",
+    "ADDRESS_CARD",
+    "LINE_ITEM",
+    "TABLE",
+    "TEXT",
+    "IMAGE",
+    "BUTTON",
+    "ATTACHMENT",
+];
+
+type BlockTypeMeta = Pick<BlockType, "key" | "nesting">;
+
+const BLOCK_TYPES: Record<string, BlockTypeMeta> = {
+    panel: {
+        key: "panel",
+        nesting: { allowDuplicates: true, allowedTypes: ALL_BLOCK_COMPONENT_TYPES },
+    },
+    contact: {
+        key: "contact",
+        nesting: { allowDuplicates: true, allowedTypes: ALL_BLOCK_COMPONENT_TYPES },
+    },
+    project: {
+        key: "project",
+        nesting: { allowDuplicates: true, allowedTypes: ALL_BLOCK_COMPONENT_TYPES },
+    },
+    invoice_summary: { key: "invoice_summary" },
+    note: { key: "note" },
+    placeholder: { key: "placeholder" },
+};
+
+function canBlockTypeNest(typeKey?: string | null): boolean {
+    if (!typeKey) return false;
+    return Boolean(BLOCK_TYPES[typeKey]?.nesting);
+}
+
 const playgroundSlashItems: SlashMenuItem[] = [
+    {
+        id: "__NEW_PANEL__",
+        label: "Panel",
+        description: "Create a blank panel for nested layouts",
+        icon: <LayoutDashboardIcon className="size-4" />,
+    },
     ...defaultSlashItems,
     {
         id: "BLANK_NOTE",
@@ -84,7 +133,7 @@ const PlaygroundProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const insertNested = useCallback((parentId: string, item: SlashMenuItem, position?: number) => {
         setBlocks((prev) => {
             const parent = findBlockById(prev, parentId);
-            if (!parent) return prev;
+            if (!parent || !parent.allowInsert) return prev;
             const layout = nextLayout(parent.children ?? [], 6, 6);
             const newBlock = createBlockFromSlashItem(item, layout);
             if (!newBlock) return prev;
@@ -304,7 +353,7 @@ function buildPanelGridOptions(blocks: PlaygroundBlock[], parentPath?: string[])
             w: block.layout.w,
             h: block.layout.h,
             content: JSON.stringify({
-                type: "BLOCK_PANEL",
+                type: block.kind === "panel" ? "PLAYGROUND_PANEL" : "PLAYGROUND_BLOCK",
                 panelId: block.id,
                 parentPath: parentPath ?? [],
             }),
@@ -314,7 +363,23 @@ function buildPanelGridOptions(blocks: PlaygroundBlock[], parentPath?: string[])
 }
 
 function initialBlocks(): PlaygroundBlock[] {
-    return [createContactBlock(), createProjectMetricsBlock(), createInvoiceSummaryBlock()];
+    const clientPanel = createBlankPanel({ x: 0, y: 0, w: 12, h: 20 });
+    clientPanel.title = "Client workspace";
+    clientPanel.description = "Arrange the most important client blocks in one place.";
+    clientPanel.badge = "Panel";
+
+    const contact = createContactBlock();
+    contact.layout = { x: 0, y: 0, w: 12, h: 12 };
+
+    const invoices = createInvoiceSummaryBlock();
+    invoices.layout = { x: 0, y: 12, w: 12, h: 10 };
+
+    clientPanel.children = [contact, invoices];
+
+    const projectMetrics = createProjectMetricsBlock();
+    projectMetrics.layout = { x: 0, y: 22, w: 12, h: 14 };
+
+    return [clientPanel, projectMetrics];
 }
 
 const uniqueId = (prefix: string) =>
@@ -491,14 +556,20 @@ function createContactBlock(): PlaygroundBlock {
         components,
     };
 
+    const typeKey = "contact";
+    const allowInsert = canBlockTypeNest(typeKey);
+    const kind: PlaygroundNodeKind = allowInsert ? "panel" : "block";
+
     return {
-        id: uniqueId("panel"),
+        kind,
+        id: uniqueId(kind),
         title: "Contact overview",
         description: "Primary client information and inline addresses.",
         badge: "Default template",
         tree,
         display,
         layout: { x: 0, y: 0, w: 6, h: 8 },
+        allowInsert,
         children: [],
     };
 }
@@ -669,14 +740,20 @@ function createProjectMetricsBlock(): PlaygroundBlock {
         components,
     };
 
+    const typeKey = "project";
+    const allowInsert = canBlockTypeNest(typeKey);
+    const kind: PlaygroundNodeKind = allowInsert ? "panel" : "block";
+
     return {
-        id: uniqueId("panel"),
+        kind,
+        id: uniqueId(kind),
         title: "Project health",
         description: "Live status and owned tasks for the current project.",
         badge: "Nested layout",
         tree,
         display,
         layout: { x: 6, y: 0, w: 6, h: 10 },
+        allowInsert,
         children: [],
     };
 }
@@ -769,14 +846,20 @@ function createInvoiceSummaryBlock(): PlaygroundBlock {
         components,
     };
 
+    const typeKey = "invoice_summary";
+    const allowInsert = canBlockTypeNest(typeKey);
+    const kind: PlaygroundNodeKind = allowInsert ? "panel" : "block";
+
     return {
-        id: uniqueId("panel"),
+        kind,
+        id: uniqueId(kind),
         title: "Billing overview",
         description: "Snapshot of recent invoices with quick access to creation.",
         badge: "Finance",
         tree,
         display,
         layout: { x: 0, y: 10, w: 12, h: 12 },
+        allowInsert,
         children: [],
     };
 }
@@ -823,14 +906,20 @@ function createBlankNoteBlock(layout: LayoutRect = { x: 0, y: 0, w: 12, h: 6 }):
         components,
     };
 
+    const typeKey = "note";
+    const allowInsert = canBlockTypeNest(typeKey);
+    const kind: PlaygroundNodeKind = allowInsert ? "panel" : "block";
+
     return {
-        id: uniqueId("panel"),
+        kind,
+        id: uniqueId(kind),
         title: "Untitled note",
         description: "A lightweight freeform note.",
         badge: "Draft",
         tree,
         display,
         layout,
+        allowInsert,
         children: [],
     };
 }
@@ -878,14 +967,63 @@ function createPlaceholderBlock(type: string, label?: string): PlaygroundBlock {
         components,
     };
 
+    const typeKey = "placeholder";
+    const allowInsert = canBlockTypeNest(typeKey);
+    const kind: PlaygroundNodeKind = allowInsert ? "panel" : "block";
+
     return {
-        id: uniqueId("panel"),
+        kind,
+        id: uniqueId(kind),
         title: label ?? type,
         description: "Placeholder block. Replace with real data.",
         badge: "New",
         tree,
         display,
         layout: { x: 0, y: 0, w: 12, h: 6 },
+        allowInsert,
+        children: [],
+    };
+}
+
+function createBlankPanel(layout: LayoutRect = { x: 0, y: 0, w: 12, h: 12 }): PlaygroundBlock {
+    const tree: BlockTree = {
+        root: {
+            block: {
+                id: uniqueId("panel-root"),
+                type: { key: "panel", version: 1 },
+                payload: {
+                    data: {},
+                    refs: [],
+                    meta: { validationErrors: [] },
+                },
+            },
+            references: {},
+        },
+    };
+
+    const display: BlockRenderStructure = {
+        version: 1,
+        layoutGrid: {
+            ...BASE_GRID,
+            items: [],
+        },
+        components: {},
+    };
+
+    const typeKey = "panel";
+    const allowInsert = canBlockTypeNest(typeKey);
+    const kind: PlaygroundNodeKind = allowInsert ? "panel" : "block";
+
+    return {
+        kind,
+        id: uniqueId(kind),
+        title: "New panel",
+        description: "Add blocks or sub-panels to build a layout.",
+        badge: "Panel",
+        tree,
+        display,
+        layout,
+        allowInsert,
         children: [],
     };
 }
@@ -895,6 +1033,8 @@ function createBlockFromSlashItem(
     layout: LayoutRect = { x: 0, y: 0, w: 12, h: 8 }
 ): PlaygroundBlock | null {
     switch (item.id) {
+        case "__NEW_PANEL__":
+            return createBlankPanel(layout);
         case "CONTACT_CARD":
             return { ...createContactBlock(), layout };
         case "LAYOUT_CONTAINER":
@@ -963,6 +1103,7 @@ function addChildBlock(
 ): PlaygroundBlock[] {
     return blocks.map((block) => {
         if (block.id === parentId) {
+            if (!block.allowInsert) return block;
             const children = [...(block.children ?? [])];
             const insertAt = position === undefined ? children.length : position;
             children.splice(insertAt, 0, child);
@@ -1005,13 +1146,14 @@ function duplicateBlockById(blocks: PlaygroundBlock[], targetId: string): Playgr
 }
 
 function cloneBlock(block: PlaygroundBlock): PlaygroundBlock {
-    const newId = uniqueId("panel");
+    const kind = block.kind;
+    const newId = uniqueId(kind);
     return {
         ...block,
         id: newId,
         tree: structuredClone(block.tree),
         display: structuredClone(block.display),
-        children: block.children ? block.children.map(cloneBlock) : undefined,
+        children: (block.children ?? []).map(cloneBlock),
     };
 }
 

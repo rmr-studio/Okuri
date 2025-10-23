@@ -918,6 +918,7 @@ export interface components {
             name: string;
             /** Format: uuid */
             sourceId?: string;
+            nesting?: components["schemas"]["BlockTypeNesting"];
             description?: string;
             /** Format: uuid */
             organisationId?: string;
@@ -935,6 +936,12 @@ export interface components {
             createdBy?: string;
             /** Format: uuid */
             updatedBy?: string;
+        };
+        BlockTypeNesting: {
+            /** Format: int32 */
+            max?: number;
+            allowDuplicates: boolean;
+            allowedTypes: ("CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT")[];
         };
         Client: {
             /** Format: uuid */

@@ -13,45 +13,47 @@ import { QuickActionItem } from "../panel/panel-wrapper";
 interface Props {
     open: boolean;
     setOpen: (open: boolean) => void;
-    surfaceId: string;
-    onInsert: () => void;
+    onInsert?: () => void;
     onActionSelect: (action: QuickActionItem) => void;
     actions: QuickActionItem[];
+    allowInsert?: boolean;
 }
 
 const QuickActionModal: FC<Props> = ({
     open,
     setOpen,
-    surfaceId,
     onInsert,
     onActionSelect,
     actions,
+    allowInsert = true,
 }) => {
     return (
         <CommandDialog open={open} onOpenChange={setOpen} title="Quick actions">
             <CommandInput placeholder="Quick actions…" />
             <CommandList>
                 <CommandEmpty>No actions available.</CommandEmpty>
-                <CommandGroup heading="Insert">
-                    <CommandItem onSelect={onInsert}>
-                        <CommandIcon className="size-4 opacity-60" />
-                        <div className="flex flex-col items-start">
-                            <span>Insert Panel</span>
-                            <span className="text-xs text-muted-foreground">
-                                Add a new panel to this workspace
-                            </span>
-                        </div>
-                    </CommandItem>
-                    <CommandItem onSelect={onInsert}>
-                        <CommandIcon className="size-4 opacity-60" />
-                        <div className="flex flex-col items-start">
-                            <span>Insert Block...</span>
-                            <span className="text-xs text-muted-foreground">
-                                Add a new block to this panel
-                            </span>
-                        </div>
-                    </CommandItem>
-                </CommandGroup>
+                {allowInsert && onInsert ? (
+                    <CommandGroup heading="Insert">
+                        <CommandItem onSelect={onInsert}>
+                            <CommandIcon className="size-4 opacity-60" />
+                            <div className="flex flex-col items-start">
+                                <span>Insert Panel</span>
+                                <span className="text-xs text-muted-foreground">
+                                    Add a new panel to this workspace
+                                </span>
+                            </div>
+                        </CommandItem>
+                        <CommandItem onSelect={onInsert}>
+                            <CommandIcon className="size-4 opacity-60" />
+                            <div className="flex flex-col items-start">
+                                <span>Insert Block…</span>
+                                <span className="text-xs text-muted-foreground">
+                                    Add a new block to this panel
+                                </span>
+                            </div>
+                        </CommandItem>
+                    </CommandGroup>
+                ) : null}
                 <CommandGroup heading="Actions">
                     {actions.map((action) => (
                         <CommandItem

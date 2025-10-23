@@ -59,6 +59,7 @@ export interface Props {
     className?: string;
     nested?: React.ReactNode;
     nestedFooter?: React.ReactNode;
+    allowInsert?: boolean;
 }
 
 export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).map((meta) => ({
@@ -88,6 +89,7 @@ export const PanelWrapper: React.FC<Props> = ({
     className,
     nested,
     nestedFooter,
+    allowInsert = false,
 }) => {
     // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
 
@@ -100,7 +102,7 @@ export const PanelWrapper: React.FC<Props> = ({
     const [isInlineMenuOpen, setInlineMenuOpen] = useState(false);
     const [draftTitle, setDraftTitle] = useState(title ?? "");
     const [insertContext, setInsertContext] = useState<"nested" | "sibling">("nested");
-    const inlineSearchRef = useRef<HTMLInputElement>(null);
+    const inlineSearchRef = useRef<HTMLInputElement | null>(null);
 
     const content = mode === "form" ? form : display ?? children;
 
@@ -176,7 +178,13 @@ export const PanelWrapper: React.FC<Props> = ({
                     active.tagName === "TEXTAREA" ||
                     active.getAttribute("contenteditable") === "true");
 
-            if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            if (
+                allowInsert &&
+                event.key === "/" &&
+                !event.metaKey &&
+                !event.ctrlKey &&
+                !event.altKey
+            ) {
                 if (isInput) return;
                 event.preventDefault();
                 setInsertContext("nested");
@@ -191,7 +199,7 @@ export const PanelWrapper: React.FC<Props> = ({
 
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
                 event.preventDefault();
-                if (actions.length === 0) {
+                if (allowInsert && actions.length === 0) {
                     setInsertContext("nested");
                     pushSelection({ type: "panel", id: surfaceId, onDelete });
                     setInlineMenuOpen(true);
@@ -204,20 +212,22 @@ export const PanelWrapper: React.FC<Props> = ({
 
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [toggleMode, actions.length, isSelected, surfaceId, onDelete]);
+    }, [allowInsert, toggleMode, actions.length, isSelected, surfaceId, onDelete]);
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
     }, [draftTitle, onTitleChange, title]);
 
     const handleOpenInsertModal = useCallback(() => {
+        if (!allowInsert) return;
         setInlineMenuOpen(false);
         setSlashOpen(true);
         pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [setInlineMenuOpen, setSlashOpen, surfaceId, onDelete]);
+    }, [allowInsert, setInlineMenuOpen, setSlashOpen, surfaceId, onDelete]);
 
     const handleSelect = useCallback(
         (item: SlashMenuItem) => {
+            if (!allowInsert) return;
             setInlineMenuOpen(false);
             setSlashOpen(false);
             item.onSelect?.();
@@ -235,7 +245,7 @@ export const PanelWrapper: React.FC<Props> = ({
                 onInsertSibling(item);
             }
         },
-        [insertContext, onInsert, onInsertSibling, setInlineMenuOpen, setSlashOpen]
+        [allowInsert, insertContext, onInsert, onInsertSibling, setInlineMenuOpen, setSlashOpen]
     );
 
     const handleQuickSelect = useCallback(
@@ -263,16 +273,18 @@ export const PanelWrapper: React.FC<Props> = ({
     }, [setQuickOpen, surfaceId, onDelete]);
 
     const handleInlineInsertOpen = useCallback(() => {
+        if (!allowInsert) return;
         setInsertContext("nested");
         setInlineMenuOpen(true);
         pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [setInsertContext, setInlineMenuOpen, surfaceId, onDelete]);
+    }, [allowInsert, setInsertContext, setInlineMenuOpen, surfaceId, onDelete]);
 
     const handleQuickInsertOpenQuickActions = useCallback(() => {
+        if (!allowInsert) return;
         setInlineMenuOpen(false);
         setQuickOpen(true);
         pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [setInlineMenuOpen, setQuickOpen, surfaceId, onDelete]);
+    }, [allowInsert, setInlineMenuOpen, setQuickOpen, surfaceId, onDelete]);
 
     return (
         <ContextMenu>
@@ -329,14 +341,19 @@ export const PanelWrapper: React.FC<Props> = ({
                         mode={mode}
                         onToggleMode={handleToggleModeClick}
                         onQuickActionsClick={handleQuickActionsOpen}
-                        onInlineInsertClick={handleInlineInsertOpen}
-                        inlineMenuOpen={isInlineMenuOpen}
-                        onInlineMenuOpenChange={(open) => setInlineMenuOpen(open)}
-                        inlineSearchRef={inlineSearchRef}
-                        items={items}
-                        onSelectItem={handleSelect}
-                        onShowAllOptions={handleOpenInsertModal}
-                        onOpenQuickActionsFromInline={handleQuickInsertOpenQuickActions}
+                        allowInsert={allowInsert}
+                        onInlineInsertClick={allowInsert ? handleInlineInsertOpen : undefined}
+                        inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
+                        onInlineMenuOpenChange={
+                            allowInsert ? (open) => setInlineMenuOpen(open) : undefined
+                        }
+                        inlineSearchRef={allowInsert ? inlineSearchRef : undefined}
+                        items={allowInsert ? items : undefined}
+                        onSelectItem={allowInsert ? handleSelect : undefined}
+                        onShowAllOptions={allowInsert ? handleOpenInsertModal : undefined}
+                        onOpenQuickActionsFromInline={
+                            allowInsert ? handleQuickInsertOpenQuickActions : undefined
+                        }
                         draftTitle={draftTitle}
                         onDraftTitleChange={(value) => setDraftTitle(value)}
                         onTitleBlur={handleTitleBlur}
@@ -364,19 +381,21 @@ export const PanelWrapper: React.FC<Props> = ({
                         {nestedFooter}
                     </section>
 
-                    <InsertBlockModal
-                        open={isSlashOpen}
-                        onOpenChange={setSlashOpen}
-                        onSelect={handleSelect}
-                        items={items}
-                    />
+                    {allowInsert ? (
+                        <InsertBlockModal
+                            open={isSlashOpen}
+                            onOpenChange={setSlashOpen}
+                            onSelect={handleSelect}
+                            items={items}
+                        />
+                    ) : null}
                     <QuickActionModal
                         open={isQuickOpen}
                         setOpen={setQuickOpen}
-                        surfaceId={surfaceId}
-                        onInsert={handleOpenInsertModal}
+                        onInsert={allowInsert ? handleOpenInsertModal : undefined}
                         onActionSelect={handleQuickSelect}
                         actions={actions}
+                        allowInsert={allowInsert}
                     />
                 </div>
             </ContextMenuTrigger>
