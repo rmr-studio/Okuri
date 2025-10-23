@@ -163,9 +163,10 @@ CREATE TABLE if not exists public.block_types
     "id"                uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
     "key"               text  NOT NULL,                                                                             -- machine key e.g. "contact_card"
     "display_name"      text  NOT NULL,
-    "source_id"         uuid  references block_types (id) ON DELETE SET NULL,                                       -- if copied from another block type
+    "source_id"         uuid  references block_types (id) ON DELETE SET NULL,                                       -- refers to the original block type if this is a copy/updated version
     "description"       text,
     "organisation_id"   uuid  REFERENCES organisations (id) ON DELETE SET NULL,                                     -- null for global
+    "nesting"           jsonb,                                                                                      -- options for storing blocks within this block. Null indicates no children allowed
     "system"            boolean                  DEFAULT FALSE,                                                     -- system types you control
     "schema"            jsonb NOT NULL,                                                                             -- JSON Schema for validation
     "display_structure" jsonb not NULL,                                                                             -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)

@@ -8,6 +8,7 @@ import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.models.block.structure.BlockDisplay
 import okuri.core.models.block.structure.BlockSchema
+import okuri.core.models.block.structure.BlockTypeNesting
 import org.hibernate.annotations.Type
 import java.util.*
 
@@ -38,6 +39,9 @@ data class BlockTypeEntity(
     @Column(name = "key", nullable = false)
     val key: String,
 
+    @Column(name = "source_id", columnDefinition = "uuid", nullable = true)
+    val sourceId: UUID? = null,
+
     @Column(name = "display_name", nullable = false)
     val displayName: String,
 
@@ -46,10 +50,6 @@ data class BlockTypeEntity(
 
     @Column(name = "organisation_id", columnDefinition = "uuid")
     val organisationId: UUID? = null,
-
-
-    @Column(name = "source_id", columnDefinition = "uuid")
-    val sourceId: UUID? = null,
 
     @Column(name = "system", nullable = false)
     val system: Boolean = false,
@@ -67,6 +67,10 @@ data class BlockTypeEntity(
 
     @Column(name = "archived", nullable = false, columnDefinition = "boolean default false")
     var archived: Boolean = false,
+
+    @Column(name = "nesting", columnDefinition = "jsonb", nullable = true)
+    @Type(JsonBinaryType::class)
+    val nesting: BlockTypeNesting? = null,
 
     @Column(name = "display_structure", columnDefinition = "jsonb", nullable = false)
     @Type(JsonBinaryType::class)
@@ -92,6 +96,7 @@ data class BlockTypeEntity(
             schema = this.schema,
             archived = this.archived,
             strictness = this.strictness,
+            nesting = this.nesting,
             display = this.displayStructure,
             createdAt = this.createdAt,
             updatedAt = this.updatedAt,
