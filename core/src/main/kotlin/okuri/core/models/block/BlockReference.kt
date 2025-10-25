@@ -1,17 +1,17 @@
 package okuri.core.models.block
 
 import io.swagger.v3.oas.annotations.media.Schema
-import okuri.core.enums.block.BlockOwnership
+import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
 import java.util.*
 
 data class BlockReference<E>(
-    val id: UUID,
+    // We can build references without IDs for Lazy Loaded references. We will replace it when objects are loaded post tree build
+    val id: UUID? = null,
     val entityType: EntityType,
     val entityId: UUID,
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
-    val entity: E?,
-    val ownership: BlockOwnership,
     val orderIndex: Int? = null,
-    val path: String,
+    val entity: E? = null,
+    val warning: BlockReferenceWarning? = null,
 )

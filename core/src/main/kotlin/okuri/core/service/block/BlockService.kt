@@ -5,11 +5,10 @@ import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.isStrict
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.Block
-import okuri.core.models.block.request.BlockNode
-import okuri.core.models.block.request.BlockTree
-import okuri.core.models.block.request.CreateBlockRequest
+import okuri.core.models.block.request.*
+import okuri.core.models.block.structure.BlockContentMetadata
 import okuri.core.models.block.structure.BlockMeta
-import okuri.core.models.block.structure.BlockMetadata
+import okuri.core.models.block.structure.ReferenceMetadata
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -27,7 +26,7 @@ import java.util.*
 class BlockService(
     private val blockRepository: BlockRepository,
     private val blockTypeService: BlockTypeService,
-    private val blockReferenceService: BlockReferenceService,
+    private val blockLinkService: BlockLinkService,
     private val schemaService: SchemaService,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService
@@ -66,30 +65,38 @@ class BlockService(
 
         if (type.archived) throw IllegalStateException("BlockType '${type.key}' is archived")
 
-        val data: Map<String, Any?> =
-            (request.payload["data"] as? Map<*, *>)?.mapKeys { it.key as String } ?: emptyMap()
+        // Validation only occurs on direct children ContentNodes. Never validate a ReferenceNode
+        val savedMeta = request.payload.let { payload ->
+            when (payload) {
+                is BlockContentMetadata -> {
+                    val errors = schemaService.validate(type.schema, payload, type.strictness).let { errors ->
+                        if (type.strictness.isStrict() && errors.isNotEmpty()) {
+                            throw SchemaValidationException(errors)
+                        }
+                        errors
+                    }
 
-        // Validate payload data against schema
-        val validationErrors: List<String> = schemaService.validate(type.schema, data, type.strictness).let { errors ->
-            if (type.strictness.isStrict() && errors.isNotEmpty()) {
-                throw SchemaValidationException(errors)
+                    return@let payload.copy(
+                        meta = BlockMeta(
+                            validationErrors = errors,
+                            lastValidatedVersion = type.version
+                        )
+                    )
+                }
+
+                is ReferenceMetadata -> {
+                    return@let payload
+                }
             }
-            errors
         }
+
 
         val entity = BlockEntity(
             organisationId = request.organisationId,
             type = type,
             name = request.name,
-            payload = BlockMetadata(
-                data = data,
-                refs = emptyList(), // we rebuild from data below
-                meta = BlockMeta(
-                    validationErrors = validationErrors,
-                    lastValidatedVersion = type.version
-                )
-            ),
-            parent = null,
+            payload = savedMeta,
+            parentId = request.parentId,
             archived = false
         )
 
@@ -104,9 +111,7 @@ class BlockService(
                 targetId = id,
                 additionalDetails = "Created Block '${id}' of type '${type.key}'"
             )
-            return this.toModel().copy(
-                validationErrors = validationErrors.ifEmpty { null }
-            )
+            return this.toModel()
         }
 
 
@@ -167,16 +172,16 @@ class BlockService(
      * Builds a BlockTree for the block with the given id, optionally expanding referenced blocks up to a depth.
      *
      * @param blockId UUID of the root block.
-     * @param expandRefs Whether referenced blocks should be expanded; when true, references are expanded up to maxDepth.
-     * @param maxDepth Maximum depth to traverse for child and (if enabled) referenced blocks; 1 includes only the root's immediate children.
      * @return A BlockTree containing the root node and metadata (`maxDepth` and `expandRefs`).
      */
-    fun getBlock(blockId: UUID, expandRefs: Boolean = false, maxDepth: Int = 1): BlockTree {
+    fun getBlock(blockId: UUID): BlockTree {
         val rootEntity = blockRepository.findById(blockId).orElseThrow()
-        val visited = mutableSetOf<UUID>()
-        val node =
-            buildNode(rootEntity, depth = if (expandRefs) maxDepth else 1, visited = visited, expand = expandRefs)
-        return BlockTree(maxDepth = if (expandRefs) maxDepth else 1, expandRefs = expandRefs, root = node)
+        buildNode(rootEntity, visited = mutableSetOf<UUID>()).let { rootNode ->
+            return BlockTree(
+                root = rootNode,
+            )
+        }
+
     }
 
     /**
@@ -185,44 +190,53 @@ class BlockService(
      * The function detects cycles and records a warning when a previously visited block is encountered.
      *
      * @param entity The root BlockEntity to convert into a BlockNode.
-     * @param depth Maximum recursion depth for including child nodes; when less than or equal to 1 only references are included.
      * @param visited Mutable set of visited block IDs used for cycle detection; callers should provide and maintain this set across recursion.
-     * @param expand If true, include expanded data for linked references; otherwise include only reference metadata.
      * @return A BlockNode representing the entity with its children (up to `depth`) and linked references; may contain warnings if a cycle was detected. */
     private fun buildNode(
         entity: BlockEntity,
-        depth: Int,
-        visited: MutableSet<UUID>,
-        expand: Boolean = false
-    ): BlockNode {
+        visited: MutableSet<UUID>
+    ): Node {
         val id = requireNotNull(entity.id) { "Block ID cannot be null" }
         entity.toModel().let { block ->
-            if (depth <= 1) {
-                val links = blockReferenceService.findLinkedBlocks(id, expand)
-                return BlockNode(block = block, references = links)
-            }
-
+            // Base case: if already visited, return with warning
             if (!visited.add(id)) {
-                return BlockNode(block = block, warnings = listOf("Cycle detected at ${block.id}"))
+                // Referenced blocks cannot be children. So it must always be a ContentNode.
+                return ContentNode(block = block, warnings = listOf("Cycle detected at ${block.id}"))
             }
 
-            val edges = blockReferenceService.findOwnedBlocks(id)
-            // Build children nodes
-            val children: Map<String, List<BlockNode>> =
-                edges.mapValues { (_, refs) ->
-                    val ids = refs.map { it.entityId }.toSet()
-                    // Bulk fetch all children to avoid N+1
-                    val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
-                    refs.mapNotNull { ref ->
-                        val child = childrenById[ref.entityId] ?: return@mapNotNull null
-                        buildNode(child, depth - 1, visited)
+            entity.payload.let { metadata ->
+                when (metadata) {
+                    is ReferenceMetadata -> {
+                        blockLinkService.findBlockReferences(block.id, metadata).let { references ->
+                            return ReferenceNode(
+                                block = block,
+                                reference = references
+                            )
+                        }
+                    }
+
+                    is BlockContentMetadata -> {
+                        if (entity.type.nesting == null) {
+                            return ContentNode(block = block)
+                        }
+
+                        val edges = blockLinkService.findOwnedBlocks(id)
+                        // Build children nodes
+                        val children: Map<String, List<Node>> =
+                            edges.mapValues { (_, refs) ->
+                                val ids = refs.map { it.entityId }.toSet()
+                                // Bulk fetch all children to avoid N+1
+                                val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
+                                refs.mapNotNull { ref ->
+                                    val child = childrenById[ref.entityId] ?: return@mapNotNull null
+                                    buildNode(child, visited)
+                                }
+                            }
+
+                        return ContentNode(block = block, children = children)
                     }
                 }
-
-            val links = blockReferenceService.findLinkedBlocks(id, expand = expand)
-
-            visited.remove(id)
-            return BlockNode(block = block, children = children, references = links)
+            }
         }
     }
 
@@ -271,7 +285,7 @@ class BlockService(
      * @return The total number of blocks removed.
      * @throws IllegalArgumentException if the block does not belong to the caller's organisation.
      */
-    
+
     @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
     fun deleteBlock(block: Block): Int {
         TODO()
@@ -302,4 +316,5 @@ class BlockService(
         }
         return result
     }
+
 }

@@ -5,7 +5,7 @@ import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.block.Block
 import okuri.core.models.block.Referenceable
-import okuri.core.models.block.structure.BlockMetadata
+import okuri.core.models.block.structure.Metadata
 import org.hibernate.annotations.Type
 import java.util.*
 
@@ -30,26 +30,21 @@ data class BlockEntity(
 
     @Type(JsonBinaryType::class)
     @Column(name = "payload", columnDefinition = "jsonb", nullable = false)
-    var payload: BlockMetadata,
+    var payload: Metadata,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    val parent: BlockEntity? = null,
+    @Column(name = "parent_id", columnDefinition = "uuid", nullable = true)
+    var parentId: UUID? = null,
 
     @Column(name = "archived", columnDefinition = "boolean default false")
     var archived: Boolean = false,
-
-    @Version
-    @Column(name = "row_version")
-    val rowVersion: Long? = null
 ) : AuditableEntity(), Referenceable<Block> {
 
     /**
- * Convert this entity into a lightweight Block reference that omits audit information.
- *
- * @return A Block representing this entity with id, organisationId, type, name, payload, and archived populated; audit fields (createdAt, updatedAt, createdBy, updatedBy) are omitted.
- */
-override fun toReference() = this.toModel(audit = false)
+     * Convert this entity into a lightweight Block reference that omits audit information.
+     *
+     * @return A Block representing this entity with id, organisationId, type, name, payload, and archived populated; audit fields (createdAt, updatedAt, createdBy, updatedBy) are omitted.
+     */
+    override fun toReference() = this.toModel(audit = false)
 
     fun toModel(audit: Boolean = false): Block {
         val id = requireNotNull(this.id) { "BlockEntity ID cannot be null when converting to model" }
@@ -60,6 +55,7 @@ override fun toReference() = this.toModel(audit = false)
             name = this.name,
             payload = this.payload,
             archived = this.archived,
+            validationErrors = this.payload.meta.validationErrors.ifEmpty { null },
             createdAt = if (audit) this.createdAt else null,
             updatedAt = if (audit) this.updatedAt else null,
             createdBy = if (audit) this.createdBy else null,

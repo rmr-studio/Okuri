@@ -70,17 +70,15 @@ class BlockController(
     }
 
     /**
-     * Retrieve a block tree with optional expansion of referenced blocks and a depth limit.
+     * Retrieve a block tree
      *
      * @param blockId The UUID of the root block to retrieve.
-     * @param expandRefs If `true`, referenced blocks will be expanded into the returned tree.
-     * @param maxDepth The maximum depth of child blocks to include when expanding references (default 1).
-     * @return The requested BlockTree representing the block and its children according to the expansion and depth settings.
+     * @return The requested BlockTree representing the block and its children
      */
     @GetMapping("/{blockId}")
     @Operation(
         summary = "Get a block tree",
-        description = "Retrieves a block with optional expansion of references and a maximum depth for child blocks."
+        description = "Retrieves a block tree by its ID, fetching all associated children"
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Block tree retrieved successfully"),
@@ -89,10 +87,8 @@ class BlockController(
     )
     fun getBlock(
         @PathVariable blockId: UUID,
-        @RequestParam(required = false, defaultValue = "false") expandRefs: Boolean,
-        @RequestParam(required = false, defaultValue = "1") maxDepth: Int
     ): ResponseEntity<BlockTree> {
-        val tree = blockService.getBlock(blockId, expandRefs, maxDepth)
+        val tree = blockService.getBlock(blockId)
         return ResponseEntity.ok(tree)
     }
 
@@ -134,7 +130,6 @@ class BlockController(
      * The request must include the full block payload and the payload's `id` must equal `blockId`; otherwise the request is rejected.
      *
      * @param blockId The UUID of the block to delete (from the request path).
-     * @param block The full block payload (from the request body) used for authorization and cascading rules; its `id` must match `blockId`.
      * @return No content; indicates the block was deleted successfully.
      */
     @DeleteMapping("/{blockId}")
@@ -150,10 +145,8 @@ class BlockController(
     )
     fun deleteBlockById(
         @PathVariable blockId: UUID,
-        @RequestBody block: Block
     ): ResponseEntity<Unit> {
-        if (block.id != blockId) return ResponseEntity.badRequest().build()
-        blockService.deleteBlock(block)
+        TODO()
         return ResponseEntity.noContent().build()
     }
 }

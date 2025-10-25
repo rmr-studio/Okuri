@@ -2,21 +2,36 @@ package okuri.core.models.block.request
 
 import okuri.core.models.block.Block
 import okuri.core.models.block.BlockReference
+import okuri.core.models.block.Referenceable
 
 data class BlockTree(
-    val maxDepth: Int = 1,
-    val expandRefs: Boolean = false,
-    val root: BlockNode,
-)
+    val root: Node,
+) : Referenceable<BlockTree> {
+    // NO-OP for BlockTree
+    override fun toReference(): BlockTree {
+        return this
+    }
+}
 
-data class BlockNode(
-    val block: Block,
-    /** key = logical edge (e.g., "contacts", "lineItems") -> many children */
-    val children: Map<String, List<BlockNode>> = emptyMap(),
-    val references: Map<String, List<BlockReference<*>>> = emptyMap(),
-    /** warnings such as missing targets, cycle stubs, etc. */
-    val warnings: List<String> = emptyList()
-)
+sealed interface Node {
+    val block: Block
+    val warnings: List<String>
+}
+
+data class ContentNode(
+    override val block: Block,
+    override val warnings: List<String> = emptyList(),
+    // All child blocks, given a block and its associated block type supports nesting
+    val children: Map<String, List<Node>>? = null,
+) : Node
+
+data class ReferenceNode(
+    override val block: Block,
+    override val warnings: List<String> = emptyList(),
+    // Allow for lists of entities. But never a list of referenced blocks
+    val reference: List<BlockReference<*>>,
+) : Node
+
 
 /**
  * Example Payload
@@ -47,11 +62,6 @@ data class BlockNode(
  *       ],
  *       "contacts": [
  *         { "block": { "...": "..." }, "children": {}, "references": {} }
- *       ]
- *     },
- *     "references": {
- *       "primaryAddress": [
- *         { "entityType": "CLIENT", "entityId":"e1a2...", "entity": { "id":"e1a2...", "name":"Acme Pty Ltd"} }
  *       ]
  *     }
  *   }

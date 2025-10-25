@@ -37,7 +37,7 @@ class BlockReferenceServiceTest {
                     organisationId = orgId,
                     type = type,
                     name = "child-$id",
-                    payload = okuri.core.models.block.structure.BlockMetadata(
+                    payload = BlockMetadata(
                         data = emptyMap(), refs = emptyList(), meta = okuri.core.models.block.structure.BlockMeta()
                     ),
                     parent = null,
