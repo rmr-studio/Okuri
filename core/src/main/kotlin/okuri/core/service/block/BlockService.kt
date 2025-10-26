@@ -6,9 +6,7 @@ import okuri.core.enums.block.isStrict
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.*
 import okuri.core.models.block.request.*
-import okuri.core.models.block.structure.BlockContentMetadata
-import okuri.core.models.block.structure.Metadata
-import okuri.core.models.block.structure.ReferenceMetadata
+import okuri.core.models.block.structure.*
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -78,14 +76,26 @@ class BlockService(
         )
         val saved = blockRepository.save(entity)
 
-        // 3) Create link rows ONLY for reference blocks
-        if (payloadMeta is ReferenceMetadata) {
-            dispatchReferenceUpsert(saved, payloadMeta)
+        // Attach to parent if this is a child block
+        request.parentId?.let {
+            requireNotNull(request.slot) { "Slot must be provided when parentId is supplied" }
+
         }
 
-        // 4) (Optional) attach as child when parentId + slot are supplied by API that manages children
-        // You can delegate to BlockChildrenService here if your CreateBlockRequest carries slot/order.
-        // e.g. request.slot?.let { blockChildrenService.attachChild(request.parentId!!, saved.id!!, it, request.orderIndex) }
+        // Extract and store references for Reference Blocks
+        when (validatedMetadata) {
+            //
+            is BlockReferenceMetadata -> {
+
+            }
+
+            is EntityReferenceMetadata -> {
+
+            }
+
+            else -> null
+        }
+
 
         // 5) Activity
         activityService.logActivity(

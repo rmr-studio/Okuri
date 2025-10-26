@@ -283,6 +283,8 @@ other blocks within them.
 Section (2-column)
 ├─ slot "contact":  Contact Card
 └─ slot "address": Address List
+
+// If another block gets dragged in. It would create a new slot automatically.
 ```
 
 **Schema Definition**
@@ -296,11 +298,7 @@ Section (2-column)
       "sm": 1,
       "md": 2
     }
-  },
-  "exposedSlots": [
-    "contact",
-    "address"
-  ]
+  }
 }
 ```
 
