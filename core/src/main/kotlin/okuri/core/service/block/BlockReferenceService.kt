@@ -6,7 +6,10 @@ import okuri.core.entity.block.BlockReferenceEntity
 import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
+import okuri.core.models.block.Block
+import okuri.core.models.block.BlockTree
 import okuri.core.models.block.Reference
+import okuri.core.models.block.Referenceable
 import okuri.core.models.block.structure.BlockReferenceMetadata
 import okuri.core.models.block.structure.EntityReferenceMetadata
 import okuri.core.repository.block.BlockReferenceRepository
@@ -139,7 +142,7 @@ class BlockReferenceService(
         }
     }
 
-    fun findBlockLink(blockId: UUID, meta: BlockReferenceMetadata): Reference<*> {
+    fun findBlockLink(blockId: UUID, meta: BlockReferenceMetadata): Reference<Block> {
         val rows = blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, meta.path)
         val row = rows.firstOrNull()
             ?: return Reference(
@@ -171,12 +174,18 @@ class BlockReferenceService(
                 warning = BlockReferenceWarning.MISSING
             )
 
-        return Reference(
-            id = row.id,
-            entityType = row.entityType,
-            entityId = row.entityId,
-            entity = child.toReference(),
-            warning = null
-        )
+        child.toReference().run {
+            if (this is Block) {
+                return Reference(
+                    id = row.id,
+                    entityType = row.entityType,
+                    entityId = row.entityId,
+                    entity = this,
+                    warning = null
+                )
+            }
+
+            throw IllegalStateException("Resolved entity is not of type Block")
+        }
     }
 }

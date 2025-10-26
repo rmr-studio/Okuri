@@ -22,7 +22,7 @@ sealed interface Metadata {
 
 data class BlockContentMetadata(
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
-    val data: JsonObject = emptyMap(),
+    var data: JsonObject = emptyMap(),
     override val kind: BlockMetadataType = BlockMetadataType.CONTENT,
     override val meta: BlockMeta = BlockMeta()
 ) : Metadata

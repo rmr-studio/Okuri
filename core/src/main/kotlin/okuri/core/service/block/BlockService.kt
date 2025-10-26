@@ -1,12 +1,14 @@
 package okuri.core.service.block
 
+import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.isStrict
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.*
-import okuri.core.models.block.request.*
+import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.structure.*
+import okuri.core.models.common.json.JsonObject
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -119,46 +121,58 @@ class BlockService(
             "Block does not belong to the specified organisation"
         }
 
-        // Enforce same kind (MVP)
         require(existing.payload::class == block.payload::class) {
             "Cannot switch payload kind (content <-> reference) on update. Create a new block instead."
         }
 
-        val (newPayload, errors) = when (val incoming = block.payload) {
-            is BlockContentMetadata -> {
-                val old = (existing.payload as BlockContentMetadata)
-                val merged = deepMergeJson(old.data, incoming.data)
-                val errs = schemaService.validate(existing.type.schema, merged, existing.type.strictness)
-                if (existing.type.strictness.isStrict() && errs.isNotEmpty()) {
-                    throw SchemaValidationException(errs)
-                }
-                BlockContentMetadata(
-                    data = merged,
-                    meta = old.meta.copy(
-                        validationErrors = errs,
-                        lastValidatedVersion = existing.type.version
-                    )
-                ) to errs
-            }
+        val updatedMetadata: Metadata = block.payload.let {
+            when (it) {
+                is BlockContentMetadata -> {
+                    existing.payload.run {
+                        require(this is BlockContentMetadata) {
+                            "Existing block payload is not BlockContentMetadata"
+                        }
+                        val updated: JsonObject = deepMergeJson(this.data, it.data)
+                        it.apply {
+                            this.data = updated
+                        }
 
-            is ReferenceMetadata -> {
-                // We accept the incoming list as the new desired state
-                val norm = incoming.copy(
-                    meta = incoming.meta.copy(lastValidatedVersion = existing.type.version)
-                )
-                norm to emptyList()
+                        val errs = schemaService.validate(block.type.schema, it, existing.type.strictness)
+
+                        if (existing.type.strictness.isStrict() && errs.isNotEmpty()) {
+                            throw SchemaValidationException(errs)
+                        }
+
+                        it.meta.apply {
+                            this.lastValidatedVersion = block.type.version
+                            this.validationErrors = errs
+                        }
+
+                        it
+                    }
+
+
+                }
+
+                is ReferenceMetadata -> {
+                    it.meta.apply {
+                        this.lastValidatedVersion = block.type.version
+                    }
+                    it
+                }
             }
         }
 
         val updated = existing.apply {
             name = block.name ?: existing.name
-            payload = newPayload
+            payload = updatedMetadata
         }
+
         val saved = blockRepository.save(updated)
 
         // Upsert links if reference block
-        if (newPayload is ReferenceMetadata) {
-            dispatchReferenceUpsert(saved, newPayload)
+        if (updatedMetadata is ReferenceMetadata) {
+            dispatchReferenceUpsert(saved, updatedMetadata)
         }
 
         activityService.logActivity(
@@ -170,48 +184,87 @@ class BlockService(
             additionalDetails = "Updated Block '${saved.id}' of type '${saved.type.key}'"
         )
 
-        return saved.toModel().copy(
-            validationErrors = errors.ifEmpty { null }
-        )
+        return saved.toModel()
     }
 
     // ---------- READ (tree) ----------
     fun getBlock(blockId: UUID): BlockTree {
         val root = blockRepository.findById(blockId).orElseThrow()
-        val node = buildNode(root, visited = mutableSetOf())
+        val node = buildNode(root.toModel(), visited = mutableSetOf())
         return BlockTree(root = node)
     }
 
-    private fun buildNode(entity: BlockEntity, visited: MutableSet<UUID>): Node {
-        val id = requireNotNull(entity.id)
-        val model = entity.toModel()
-
-        if (!visited.add(id)) {
+    private fun buildNode(block: Block, visited: MutableSet<UUID>): Node {
+        if (!visited.add(block.id)) {
             // Cycles only possible for content nodes (ownership graph)
-            return ContentNode(block = model, warnings = listOf("Cycle detected at ${model.id}"))
+            return ContentNode(block = block, warnings = listOf("Cycle detected at ${block.id}"))
         }
 
-        return when (val meta = entity.payload) {
-            is ReferenceMetadata -> {
-                // Resolve/link list for reference blocks
-                val refs: List<Reference<*>> = blockReferenceService.findBlockReferences(id, meta)
-                ReferenceNode(block = model, warnings = emptyList(), reference = refs)
+        return when (val meta = block.payload) {
+            is BlockReferenceMetadata -> {
+                val refs: Reference<BlockTree> = blockReferenceService.findBlockLink(block.id, meta).let {
+                    it.entity.let { ref ->
+                        if (ref == null) {
+                            return@let Reference(
+                                id = it.id,
+                                entityType = it.entityType,
+                                entityId = it.entityId,
+                                entity = null,
+                                warning = it.warning
+                            )
+                        }
+
+                        // Build BlockTree for referenced block
+                        buildNode(ref, mutableSetOf<UUID>()).run {
+                            Reference(
+                                id = it.id,
+                                entityType = it.entityType,
+                                entityId = it.entityId,
+                                entity = BlockTree(
+                                    root = this
+                                ),
+                                warning = it.warning
+                            )
+                        }
+                    }
+                }
+
+
+                visited.remove(block.id)
+                ReferenceNode(
+                    block = block,
+                    reference = BlockTreeReference(
+                        reference = refs
+                    )
+                )
+            }
+
+            is EntityReferenceMetadata -> {
+                val entities = blockReferenceService.findListReferences(block.id, meta)
+                visited.remove(block.id)
+                ReferenceNode(
+                    block = block,
+                    reference = EntityReference(
+                        reference = entities
+                    )
+                )
             }
 
             is BlockContentMetadata -> {
                 // Pull owned children via BlockChildrenService
-                val edgesBySlot = blockChildrenService.findChildren(id) // Map<String, List<ChildLink>>
+                val edgesBySlot: Map<String, List<BlockChildEntity>> =
+                    blockChildrenService.listChildrenGrouped(block.id)
                 val childNodes: Map<String, List<Node>> = edgesBySlot.mapValues { (_, links) ->
                     // batch fetch children
                     val ids = links.map { it.childId }.toSet()
                     val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
                     links.sortedBy { it.orderIndex }.mapNotNull { link ->
                         val child = childrenById[link.childId] ?: return@mapNotNull null
-                        buildNode(child, visited)
+                        buildNode(child.toModel(), visited)
                     }
                 }
-                visited.remove(id)
-                ContentNode(block = model, children = childNodes)
+                visited.remove(block.id)
+                ContentNode(block = block, children = childNodes)
             }
         }
     }
@@ -230,17 +283,16 @@ class BlockService(
         }
 
     private fun dispatchReferenceUpsert(saved: BlockEntity, meta: ReferenceMetadata) {
-        // Heuristic: single BLOCK item ⇒ single linked block; otherwise ⇒ list of entities
-        val items = meta.items
-        val isSingleBlock = items.size == 1 && items.first().type == EntityType.BLOCK
-        if (isSingleBlock) {
-            val item: ReferenceItem = items.first()
-            blockReferenceService.upsertReferenceFor(saved, item)
-        } else {
-            require(items.none { it.type == EntityType.BLOCK }) {
-                "Reference list cannot contain BLOCK items. Use a single BLOCK Reference block."
+        meta.let {
+            when (it) {
+                is BlockReferenceMetadata -> {
+                    blockReferenceService.upsertBlockLinkFor(saved, it)
+                }
+
+                is EntityReferenceMetadata -> {
+                    blockReferenceService.upsertLinksFor(saved, it)
+                }
             }
-            blockReferenceService.upsertLinksFor(saved, items) // uses default "$.items" prefix
         }
     }
 
