@@ -217,11 +217,10 @@ create table if not exists public.blocks
 (
     "id"              uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
     "organisation_id" uuid REFERENCES organisations (id) NOT NULL,
-    "type_id"         uuid REFERENCES block_types (id)   NOT NULL,                                  -- true if payload contains references to another block/entities
-    "name"            text,                                                                         -- human-friendly title
-    "payload"         jsonb                    DEFAULT '{}',                                        -- flexible content
-    "parent_id"       uuid                               REFERENCES blocks (id) ON DELETE SET NULL, -- optional single-parent
-    "archived"        boolean                  DEFAULT false,                                       -- archives
+    "type_id"         uuid REFERENCES block_types (id)   NOT NULL, -- true if payload contains references to another block/entities
+    "name"            text,                                        -- human-friendly title
+    "payload"         jsonb                    DEFAULT '{}',       -- flexible content
+    "archived"        boolean                  DEFAULT false,      -- archives
     "created_by"      uuid                               references public.users (id) ON DELETE SET NULL,
     "updated_by"      uuid                               references public.users (id) ON DELETE SET NULL,
     "created_at"      TIMESTAMP WITH TIME ZONE DEFAULT now(),
