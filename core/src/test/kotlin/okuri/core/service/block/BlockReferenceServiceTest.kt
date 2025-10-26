@@ -2,10 +2,13 @@ package okuri.core.service.block
 
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockReferenceEntity
+import okuri.core.enums.block.BlockReferenceFetchPolicy
+import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
+import okuri.core.models.block.Block
 import okuri.core.models.block.Referenceable
+import okuri.core.models.block.structure.*
 import okuri.core.repository.block.BlockReferenceRepository
-import okuri.core.repository.block.BlockRepository
 import okuri.core.service.block.resolvers.ReferenceResolver
 import okuri.core.service.util.factory.block.BlockFactory
 import org.junit.jupiter.api.Assertions.*
@@ -16,263 +19,599 @@ import org.mockito.kotlin.*
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.util.*
 
+/**
+ * Comprehensive test suite for BlockReferenceService.
+ * Tests external entity reference management with the new architecture.
+ */
 @ExtendWith(SpringExtension::class)
 class BlockReferenceServiceTest {
 
     private val blockReferenceRepository: BlockReferenceRepository = mock()
-    private val blockRepository: BlockRepository = mock()
 
-    // For loadReferences tests: register only BLOCK resolver to prove expansion; others remain unresolved (entity=null)
+    // Mock resolver for BLOCK type
     private val blockResolver = object : ReferenceResolver {
         override val type = EntityType.BLOCK
         override fun fetch(ids: Set<UUID>): Map<UUID, Referenceable<*>> {
-            // Return BlockEntity (implements Referenceable<Block>)
             val orgId = UUID.randomUUID()
-            val type = BlockFactory.generateBlockType(orgId = orgId)
-            val map = mutableMapOf<UUID, Referenceable<*>>()
-            ids.forEach { id ->
-                map[id] = BlockEntity(
+            val typeEntity = BlockFactory.createType(orgId)
+            return ids.associateWith { id ->
+                BlockEntity(
                     id = id,
                     organisationId = orgId,
-                    type = type,
-                    name = "child-$id",
-                    payload = BlockMetadata(
-                        data = emptyMap(), refs = emptyList(), meta = okuri.core.models.block.structure.BlockMeta()
-                    ),
-                    parent = null,
+                    type = typeEntity,
+                    name = "Block-$id",
+                    payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+                    parentId = null,
                     archived = false
                 )
             }
-            return map
         }
     }
 
-    private fun serviceWithResolvers(resolvers: List<ReferenceResolver> = listOf(blockResolver)) =
-        BlockReferenceService(blockReferenceRepository, blockRepository, resolvers)
-
-    // -----------------------------------------------------------
-    // upsertReferencesFor: sets parent for OWNED block refs
-    // -----------------------------------------------------------
-    @Test
-    fun `upsertReferencesFor sets parent for OWNED block refs and writes rows`() {
-        val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = BlockFactory.generateBlockType(orgId = orgId)
-        val parent = BlockFactory.generateBlock(orgId = orgId, type = type)
-        val childId = UUID.randomUUID()
-        val child = BlockFactory.generateBlock(orgId = orgId, type = type).copy(id = childId)
-
-        // previous owned: none
-        whenever(
-            blockReferenceRepository.findByBlockIdAndOwnershipAndEntityTypeOrderByPathAscOrderIndexAsc(
-                eq(parent.id!!), eq(BlockOwnership.OWNED), eq(EntityType.BLOCK)
-            )
-        ).thenReturn(emptyList())
-
-        whenever(blockReferenceRepository.deleteByBlockId(parent.id!!)).then { }
-        whenever(blockReferenceRepository.saveAll(any<List<BlockReferenceEntity>>())).thenAnswer { it.arguments[0] }
-
-        whenever(blockRepository.findById(childId)).thenReturn(Optional.of(child))
-        whenever(blockRepository.save(any<BlockEntity>())).thenAnswer { it.arguments[0] }
-
-        val payloadData = mapOf(
-            // $.data/addresses[0]
-            "addresses" to listOf(
-                mapOf("_refType" to "BLOCK", "_refId" to childId.toString(), "_ownership" to "OWNED")
-            )
-        )
-
-        serviceWithResolvers().upsertReferencesFor(parent, payloadData)
-
-        // verify one row saved and parent set
-        verify(blockReferenceRepository).saveAll(check { rows: List<BlockReferenceEntity> ->
-            assertEquals(1, rows.size)
-            assertEquals(childId, rows[0].entityId)
-            assertEquals("\$.data/addresses[0]", rows[0].path)
-            assertEquals(BlockOwnership.OWNED, rows[0].ownership)
-        })
-
-        verify(blockRepository).save(check { updated ->
-            assertEquals(parent.id, updated.parent?.id) // child.parent == parent
-        })
-    }
-
-    // ------------------------------------------------------------------
-    // upsertReferencesFor: delta unparent when a child is removed/linked
-    // ------------------------------------------------------------------
-    @Test
-    fun `upsertReferencesFor unparents children no longer owned`() {
-        val orgId = UUID.fromString("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = BlockFactory.generateBlockType(orgId = orgId)
-        val parent = BlockFactory.generateBlock(orgId = orgId, type = type)
-        val formerlyOwnedChildId = UUID.randomUUID()
-        val formerlyOwnedChild =
-            BlockFactory.generateBlock(orgId = orgId, type = type).copy(id = formerlyOwnedChildId, parent = parent)
-
-        // PREVIOUS owned edges (before delete)
-        whenever(
-            blockReferenceRepository.findByBlockIdAndOwnershipAndEntityTypeOrderByPathAscOrderIndexAsc(
-                eq(parent.id!!), eq(BlockOwnership.OWNED), eq(EntityType.BLOCK)
-            )
-        ).thenReturn(
-            listOf(
-                BlockReferenceEntity(
-                    id = UUID.randomUUID(), block = parent, entityType = EntityType.BLOCK,
-                    entityId = formerlyOwnedChildId, ownership = BlockOwnership.OWNED,
-                    path = "\$.data/contacts[0]", orderIndex = 0
-                )
-            )
-        )
-
-        whenever(blockRepository.findAllById(setOf(formerlyOwnedChildId))).thenReturn(listOf(formerlyOwnedChild))
-        whenever(blockRepository.saveAll(any<List<BlockEntity>>())).thenAnswer { it.arguments[0] }
-
-        // new payload: NO refs → should unparent previous
-        whenever(blockReferenceRepository.deleteByBlockId(parent.id!!)).then { }
-        whenever(blockReferenceRepository.saveAll(any<List<BlockReferenceEntity>>())).thenReturn(emptyList())
-
-        serviceWithResolvers().upsertReferencesFor(parent, payloadData = emptyMap())
-
-        verify(blockRepository).saveAll(check<List<BlockEntity>> { cleared ->
-            assertEquals(1, cleared.size)
-            assertNull(cleared[0].parent)
-        })
-    }
-
-    // ---------------------------------------------------------------
-    // upsertReferencesFor: cross-organisation OWNED is rejected
-    // ---------------------------------------------------------------
-    @Test
-    fun `upsertReferencesFor rejects cross-org ownership`() {
-        val orgA = UUID.randomUUID()
-        val orgB = UUID.randomUUID()
-        val typeA = BlockFactory.generateBlockType(orgId = orgA)
-        val typeB = BlockFactory.generateBlockType(orgId = orgB)
-        val parent = BlockFactory.generateBlock(orgId = orgA, type = typeA)
-        val childId = UUID.randomUUID()
-        val child = BlockFactory.generateBlock(orgId = orgB, type = typeB).copy(id = childId) // different org
-
-        whenever(
-            blockReferenceRepository.findByBlockIdAndOwnershipAndEntityTypeOrderByPathAscOrderIndexAsc(
-                eq(parent.id!!), eq(BlockOwnership.OWNED), eq(EntityType.BLOCK)
-            )
-        ).thenReturn(emptyList())
-        whenever(blockReferenceRepository.deleteByBlockId(parent.id!!)).then { }
-        whenever(blockReferenceRepository.saveAll(any<List<BlockReferenceEntity>>())).thenAnswer { it.arguments[0] }
-
-        whenever(blockRepository.findById(childId)).thenReturn(Optional.of(child))
-
-        val payloadData = mapOf(
-            "nested" to mapOf("_refType" to "BLOCK", "_refId" to childId.toString(), "_ownership" to "OWNED")
-        )
-
-        assertThrows<IllegalArgumentException> {
-            serviceWithResolvers().upsertReferencesFor(parent, payloadData)
+    // Mock resolver for CLIENT type
+    private val clientResolver = object : ReferenceResolver {
+        override val type = EntityType.CLIENT
+        override fun fetch(ids: Set<UUID>): Map<UUID, Referenceable<*>> {
+            // Return mock client objects
+            return ids.associateWith { id ->
+                object : Referenceable<Any> {
+                    override fun toReference(): Any = mapOf("id" to id, "name" to "Client-$id")
+                }
+            }
         }
     }
 
-    // ------------------------------------------
-    // loadReferences: expands BLOCK, leaves others
-    // ------------------------------------------
+    private fun serviceWithResolvers(resolvers: List<ReferenceResolver> = listOf(blockResolver, clientResolver)) =
+        BlockReferenceService(blockReferenceRepository, resolvers)
+
+    // =============================================================================================
+    // UPSERT ENTITY REFERENCES
+    // =============================================================================================
+
     @Test
-    fun `loadReferences expands BLOCK entities and leaves CLIENT unresolved`() {
+    fun `upsertLinksFor creates new reference rows for entity list`() {
         val orgId = UUID.randomUUID()
-        val svc = serviceWithResolvers(listOf(blockResolver)) // only BLOCK resolver registered
-        val type = BlockFactory.generateBlockType(orgId)
         val blockId = UUID.randomUUID()
-        val blockChildId = UUID.randomUUID()
-        val clientId = UUID.randomUUID()
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
 
-        val rows = listOf(
+        val client1Id = UUID.randomUUID()
+        val client2Id = UUID.randomUUID()
+
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = client1Id),
+                ReferenceItem(type = EntityType.CLIENT, id = client2Id)
+            ),
+            path = "\$.items",
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(emptyList())
+        whenever(blockReferenceRepository.saveAll(any<List<BlockReferenceEntity>>())).thenAnswer { it.arguments[0] }
+
+        val service = serviceWithResolvers()
+        service.upsertLinksFor(block, metadata)
+
+        verify(blockReferenceRepository).saveAll(argThat<List<BlockReferenceEntity>> { rows ->
+            rows.size == 2 &&
+                    rows[0].entityType == EntityType.CLIENT &&
+                    rows[0].entityId == client1Id &&
+                    rows[0].path == "\$.items[0]" &&
+                    rows[0].orderIndex == 0 &&
+                    rows[1].entityId == client2Id &&
+                    rows[1].path == "\$.items[1]" &&
+                    rows[1].orderIndex == 1
+        })
+    }
+
+    @Test
+    fun `upsertLinksFor performs delta upsert - adds, updates, deletes`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        val client1Id = UUID.randomUUID()
+        val client2Id = UUID.randomUUID()
+        val client3Id = UUID.randomUUID()
+
+        // Existing: client1 at [0], client2 at [1]
+        val existing = listOf(
             BlockReferenceEntity(
                 id = UUID.randomUUID(),
-                block = BlockFactory.generateBlock(id = blockId, orgId = orgId, type = type),
-                entityType = EntityType.BLOCK,
-                entityId = blockChildId,
-                ownership = BlockOwnership.LINKED,
-                path = "\$.data/relatedBlocks[0]",
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client1Id,
+                path = "\$.items[0]",
                 orderIndex = 0
             ),
             BlockReferenceEntity(
                 id = UUID.randomUUID(),
-                block = BlockFactory.generateBlock(id = blockId, orgId = orgId, type = type),
+                parentId = blockId,
                 entityType = EntityType.CLIENT,
-                entityId = clientId,
-                ownership = BlockOwnership.LINKED,
-                path = "\$.data/account",
-                orderIndex = null
+                entityId = client2Id,
+                path = "\$.items[1]",
+                orderIndex = 1
             )
         )
 
-        whenever(blockReferenceRepository.findByBlockIdOrderByPathAscOrderIndexAsc(blockId)).thenReturn(rows)
+        // Desired: client2 at [0], client3 at [1]
+        // Should: delete both client1 and client2 (because client2's path changes from [1] to [0]),
+        // then insert client2 at new path [0] and client3 at [1]
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = client2Id),
+                ReferenceItem(type = EntityType.CLIENT, id = client3Id)
+            ),
+            path = "\$.items",
+            meta = BlockMeta()
+        )
 
-        val refs = svc.loadReferences(blockId, expandTypes = setOf(EntityType.BLOCK, EntityType.CLIENT))
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(existing)
+        whenever(blockReferenceRepository.saveAll(any<List<BlockReferenceEntity>>())).thenAnswer { it.arguments[0] }
 
-        // Assert: BLOCK ref has entity populated; CLIENT ref has entity null (no resolver)
-        val blockRef = refs.first { it.entityType == EntityType.BLOCK }
-        assertNotNull(blockRef.entity)
+        val service = serviceWithResolvers()
+        service.upsertLinksFor(block, metadata)
 
-        val clientRef = refs.first { it.entityType == EntityType.CLIENT }
-        assertNull(clientRef.entity)
+        // Verify both client1 and client2 deleted (client2 path changes from [1] to [0])
+        verify(blockReferenceRepository).deleteAllInBatch(argThat<List<BlockReferenceEntity>> { rows ->
+            rows.size == 2 &&
+                    rows.any { it.entityId == client1Id } &&
+                    rows.any { it.entityId == client2Id }
+        })
+
+        // Verify client2 re-inserted at new index 0 and client3 inserted at index 1
+        verify(blockReferenceRepository).saveAll(argThat<List<BlockReferenceEntity>> { rows ->
+            rows.size == 2 &&
+                    rows.any { it.entityId == client2Id && it.orderIndex == 0 && it.path == "\$.items[0]" } &&
+                    rows.any { it.entityId == client3Id && it.orderIndex == 1 && it.path == "\$.items[1]" }
+        })
     }
 
-    // -----------------------------------------------
-    // findOwnedBlocks: grouped by logical slot key
-    // -----------------------------------------------
     @Test
-    fun `findOwnedBlocks groups refs by slot key`() {
-        val svc = serviceWithResolvers()
+    fun `upsertLinksFor throws when duplicates not allowed`() {
         val orgId = UUID.randomUUID()
-        val type = BlockFactory.generateBlockType(orgId = orgId)
-        val parent = BlockFactory.generateBlock(orgId = orgId, type = type)
-        val c1 = UUID.randomUUID()
-        val c2 = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        val clientId = UUID.randomUUID()
+
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = clientId),
+                ReferenceItem(type = EntityType.CLIENT, id = clientId) // Duplicate
+            ),
+            path = "\$.items",
+            allowDuplicates = false,
+            meta = BlockMeta()
+        )
+
+        val service = serviceWithResolvers()
+
+        val exception = assertThrows<IllegalArgumentException> {
+            service.upsertLinksFor(block, metadata)
+        }
+
+        assertTrue(exception.message!!.contains("Duplicate references are not allowed"))
+    }
+
+    @Test
+    fun `upsertLinksFor throws when items include BLOCK type`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.BLOCK, id = UUID.randomUUID()) // Not allowed in EntityReferenceMetadata
+            ),
+            path = "\$.items",
+            meta = BlockMeta()
+        )
+
+        val service = serviceWithResolvers()
+
+        val exception = assertThrows<IllegalArgumentException> {
+            service.upsertLinksFor(block, metadata)
+        }
+
+        assertTrue(exception.message!!.contains("cannot include BLOCK references"))
+    }
+
+    // =============================================================================================
+    // FIND LIST REFERENCES
+    // =============================================================================================
+
+    @Test
+    fun `findListReferences returns LAZY references with metadata only`() {
+        UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+
+        val client1Id = UUID.randomUUID()
+        val client2Id = UUID.randomUUID()
+
         val rows = listOf(
             BlockReferenceEntity(
-                id = UUID.randomUUID(), block = parent, entityType = EntityType.BLOCK,
-                entityId = c1, ownership = BlockOwnership.OWNED, path = "\$.data/contacts[0]", orderIndex = 0
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client1Id,
+                path = "\$.items[0]",
+                orderIndex = 0
             ),
             BlockReferenceEntity(
-                id = UUID.randomUUID(), block = parent, entityType = EntityType.BLOCK,
-                entityId = c2, ownership = BlockOwnership.OWNED, path = "\$.data/contacts[1]", orderIndex = 1
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client2Id,
+                path = "\$.items[1]",
+                orderIndex = 1
             )
         )
-        whenever(
-            blockReferenceRepository.findByBlockIdAndOwnershipAndEntityTypeOrderByPathAscOrderIndexAsc(
-                eq(parent.id!!), eq(BlockOwnership.OWNED), eq(EntityType.BLOCK)
-            )
-        ).thenReturn(rows)
 
-        val grouped = svc.findOwnedBlocks(parent.id!!)
-        assertTrue(grouped.containsKey("contacts"))
-        assertEquals(2, grouped["contacts"]!!.size)
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = client1Id),
+                ReferenceItem(type = EntityType.CLIENT, id = client2Id)
+            ),
+            path = "\$.items",
+            fetchPolicy = BlockReferenceFetchPolicy.LAZY,
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
+
+        val service = serviceWithResolvers()
+        val result = service.findListReferences(blockId, metadata)
+
+        assertEquals(2, result.size)
+        assertEquals(EntityType.CLIENT, result[0].entityType)
+        assertEquals(client1Id, result[0].entityId)
+        assertNull(result[0].entity) // LAZY - entity not loaded
+        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, result[0].warning)
     }
 
-    // ---------------------------------------------------------
-    // findLinkedBlocks: filters LINKED + non-BLOCK references
-    // ---------------------------------------------------------
     @Test
-    fun `findLinkedBlocks returns LINKED blocks and non-block refs only`() {
-        val svc = spy(serviceWithResolvers())
-
+    fun `findListReferences EAGER loads entities via resolvers`() {
+        UUID.randomUUID()
         val blockId = UUID.randomUUID()
-        val ownedBlockRef = okuri.core.models.block.BlockReference(
-            id = UUID.randomUUID(),
-            entityType = EntityType.BLOCK,
-            entityId = UUID.randomUUID(),
-            entity = null,
-            ownership = BlockOwnership.OWNED,
-            orderIndex = 0,
-            path = "\$.data/contacts[0]"
+
+        val client1Id = UUID.randomUUID()
+        val client2Id = UUID.randomUUID()
+
+        val rows = listOf(
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client1Id,
+                path = "\$.items[0]",
+                orderIndex = 0
+            ),
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client2Id,
+                path = "\$.items[1]",
+                orderIndex = 1
+            )
         )
-        val linkedBlockRef = ownedBlockRef.copy(ownership = BlockOwnership.LINKED, path = "\$.data/related[0]")
-        val clientRef = ownedBlockRef.copy(entityType = EntityType.CLIENT, path = "\$.data/account")
 
-        doReturn(listOf(ownedBlockRef, linkedBlockRef, clientRef))
-            .`when`(svc).loadReferences(eq(blockId), any())
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = client1Id),
+                ReferenceItem(type = EntityType.CLIENT, id = client2Id)
+            ),
+            path = "\$.items",
+            fetchPolicy = BlockReferenceFetchPolicy.EAGER,
+            meta = BlockMeta()
+        )
 
-        val links = svc.findLinkedBlocks(blockId)
-        assertFalse(links.containsKey("contacts"))     // owned block excluded
-        assertTrue(links.containsKey("related"))       // linked block included
-        assertTrue(links.containsKey("account"))       // client included
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
+
+        val service = serviceWithResolvers()
+        val result = service.findListReferences(blockId, metadata)
+
+        assertEquals(2, result.size)
+        assertNotNull(result[0].entity) // EAGER - entity loaded
+        assertNotNull(result[1].entity)
+        assertNull(result[0].warning)
+        assertNull(result[1].warning)
+    }
+
+    @Test
+    fun `findListReferences returns MISSING warning when reference not in database`() {
+        UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+
+        val clientId = UUID.randomUUID()
+
+        // Metadata references a client, but no row in database
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = clientId)
+            ),
+            path = "\$.items",
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(emptyList())
+
+        val service = serviceWithResolvers()
+        val result = service.findListReferences(blockId, metadata)
+
+        assertEquals(1, result.size)
+        assertNull(result[0].id) // No database row
+        assertEquals(EntityType.CLIENT, result[0].entityType)
+        assertEquals(clientId, result[0].entityId)
+        assertNull(result[0].entity)
+        assertEquals(BlockReferenceWarning.MISSING, result[0].warning)
+    }
+
+    @Test
+    fun `findListReferences returns UNSUPPORTED warning when no resolver available`() {
+        UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+
+        val projectId = UUID.randomUUID()
+
+        val rows = listOf(
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.PROJECT,
+                entityId = projectId,
+                path = "\$.items[0]",
+                orderIndex = 0
+            )
+        )
+
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.PROJECT, id = projectId)
+            ),
+            path = "\$.items",
+            fetchPolicy = BlockReferenceFetchPolicy.EAGER,
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
+
+        // Service has no PROJECT resolver
+        val service = serviceWithResolvers(listOf(clientResolver))
+        val result = service.findListReferences(blockId, metadata)
+
+        assertEquals(1, result.size)
+        assertNull(result[0].entity)
+        assertEquals(BlockReferenceWarning.UNSUPPORTED, result[0].warning)
+    }
+
+    // =============================================================================================
+    // UPSERT BLOCK LINK
+    // =============================================================================================
+
+    @Test
+    fun `upsertBlockLinkFor creates single block reference`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val referencedBlockId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        val metadata = BlockReferenceMetadata(
+            item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+            path = "\$.block",
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(emptyList())
+        whenever(blockReferenceRepository.save(any())).thenAnswer { it.arguments[0] }
+
+        val service = serviceWithResolvers()
+        service.upsertBlockLinkFor(block, metadata)
+
+        verify(blockReferenceRepository).save(argThat<BlockReferenceEntity> {
+            this.parentId == blockId &&
+                    this.entityType == EntityType.BLOCK &&
+                    this.entityId == referencedBlockId &&
+                    this.path == "\$.block" &&
+                    this.orderIndex == null
+        })
+    }
+
+    @Test
+    fun `upsertBlockLinkFor updates existing block reference`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val oldReferencedBlockId = UUID.randomUUID()
+        val newReferencedBlockId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        val existingRow = BlockReferenceEntity(
+            id = UUID.randomUUID(),
+            parentId = blockId,
+            entityType = EntityType.BLOCK,
+            entityId = oldReferencedBlockId,
+            path = "\$.block",
+            orderIndex = null
+        )
+
+        val metadata = BlockReferenceMetadata(
+            item = ReferenceItem(type = EntityType.BLOCK, id = newReferencedBlockId),
+            path = "\$.block",
+            meta = BlockMeta()
+        )
+
+        whenever(
+            blockReferenceRepository.findByBlockIdAndPathPrefix(
+                blockId,
+                "\$.block"
+            )
+        ).thenReturn(listOf(existingRow))
+        whenever(blockReferenceRepository.save(any())).thenAnswer { it.arguments[0] }
+
+        val service = serviceWithResolvers()
+        service.upsertBlockLinkFor(block, metadata)
+
+        verify(blockReferenceRepository).save(argThat<BlockReferenceEntity> {
+            this.id == existingRow.id &&
+                    this.entityId == newReferencedBlockId
+        })
+    }
+
+    @Test
+    fun `upsertBlockLinkFor throws when item is not BLOCK type`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        val metadata = BlockReferenceMetadata(
+            item = ReferenceItem(type = EntityType.CLIENT, id = UUID.randomUUID()), // Should be BLOCK
+            path = "\$.block",
+            meta = BlockMeta()
+        )
+
+        val service = serviceWithResolvers()
+
+        val exception = assertThrows<IllegalArgumentException> {
+            service.upsertBlockLinkFor(block, metadata)
+        }
+
+        assertTrue(exception.message!!.contains("must be type BLOCK"))
+    }
+
+    @Test
+    fun `upsertBlockLinkFor throws when multiple rows found at path`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        // Multiple rows at single-link path (data corruption scenario)
+        val existing = listOf(
+            BlockReferenceEntity(UUID.randomUUID(), blockId, EntityType.BLOCK, UUID.randomUUID(), "\$.block", null),
+            BlockReferenceEntity(UUID.randomUUID(), blockId, EntityType.BLOCK, UUID.randomUUID(), "\$.block", null)
+        )
+
+        val metadata = BlockReferenceMetadata(
+            item = ReferenceItem(type = EntityType.BLOCK, id = UUID.randomUUID()),
+            path = "\$.block",
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(existing)
+
+        val service = serviceWithResolvers()
+
+        val exception = assertThrows<IllegalArgumentException> {
+            service.upsertBlockLinkFor(block, metadata)
+        }
+
+        assertTrue(exception.message!!.contains("Multiple rows found"))
+    }
+
+    // =============================================================================================
+    // FIND BLOCK LINK
+    // =============================================================================================
+
+    @Test
+    fun `findBlockLink returns LAZY reference without loading block`() {
+        UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val referencedBlockId = UUID.randomUUID()
+
+        val row = BlockReferenceEntity(
+            id = UUID.randomUUID(),
+            parentId = blockId,
+            entityType = EntityType.BLOCK,
+            entityId = referencedBlockId,
+            path = "\$.block",
+            orderIndex = null
+        )
+
+        val metadata = BlockReferenceMetadata(
+            item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+            path = "\$.block",
+            fetchPolicy = BlockReferenceFetchPolicy.LAZY,
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(listOf(row))
+
+        val service = serviceWithResolvers()
+        val result = service.findBlockLink(blockId, metadata)
+
+        assertNotNull(result.id)
+        assertEquals(EntityType.BLOCK, result.entityType)
+        assertEquals(referencedBlockId, result.entityId)
+        assertNull(result.entity) // LAZY
+        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, result.warning)
+    }
+
+    @Test
+    fun `findBlockLink EAGER loads referenced block`() {
+        UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val referencedBlockId = UUID.randomUUID()
+
+        val row = BlockReferenceEntity(
+            id = UUID.randomUUID(),
+            parentId = blockId,
+            entityType = EntityType.BLOCK,
+            entityId = referencedBlockId,
+            path = "\$.block",
+            orderIndex = null
+        )
+
+        val metadata = BlockReferenceMetadata(
+            item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+            path = "\$.block",
+            fetchPolicy = BlockReferenceFetchPolicy.EAGER,
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(listOf(row))
+
+        val service = serviceWithResolvers()
+        val result = service.findBlockLink(blockId, metadata)
+
+        assertNotNull(result.entity) // EAGER - loaded
+        assertTrue(result.entity is Block)
+        assertEquals(referencedBlockId, result.entity!!.id)
+        assertNull(result.warning)
+    }
+
+    @Test
+    fun `findBlockLink returns MISSING warning when no row exists`() {
+        UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val referencedBlockId = UUID.randomUUID()
+
+        val metadata = BlockReferenceMetadata(
+            item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+            path = "\$.block",
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(emptyList())
+
+        val service = serviceWithResolvers()
+        val result = service.findBlockLink(blockId, metadata)
+
+        assertNull(result.id)
+        assertEquals(EntityType.BLOCK, result.entityType)
+        assertEquals(referencedBlockId, result.entityId)
+        assertNull(result.entity)
+        assertEquals(BlockReferenceWarning.MISSING, result.warning)
     }
 }

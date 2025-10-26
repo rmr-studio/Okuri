@@ -305,6 +305,34 @@ class BlockService(
         }
     }
 
+    // ---------- ARCHIVE ----------
+    @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
+    @Transactional
+    fun archiveBlock(block: Block, status: Boolean) {
+        val existing = blockRepository.findById(block.id).orElseThrow()
+        require(existing.organisationId == block.organisationId) {
+            "Block does not belong to the specified organisation"
+        }
+
+        if (existing.archived == status) return // No-op if already in desired state
+
+        val updated = existing.apply {
+            archived = status
+        }
+
+        blockRepository.save(updated)
+
+        activityService.logActivity(
+            activity = okuri.core.enums.activity.Activity.BLOCK,
+            operation = if (status) okuri.core.enums.util.OperationType.ARCHIVE else okuri.core.enums.util.OperationType.RESTORE,
+            userId = authTokenService.getUserId(),
+            organisationId = updated.organisationId,
+            targetId = updated.id,
+            additionalDetails = "Block '${updated.id}' archive status set to $status"
+        )
+    }
+
+    // ---------- helpers ----------
     @Suppress("UNCHECKED_CAST")
     private fun deepMergeJson(a: Map<String, Any?>, b: Map<String, Any?>): Map<String, Any?> {
         val out = a.toMutableMap()

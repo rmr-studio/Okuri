@@ -1,29 +1,26 @@
 package okuri.core.service.block
 
-import io.github.oshai.kotlinlogging.KLogger
 import okuri.core.configuration.auth.OrganisationSecurity
+import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
-import okuri.core.entity.block.BlockReferenceEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.BlockValidationScope
+import okuri.core.enums.core.ComponentType
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Block
-import okuri.core.models.block.BlockTree
+import okuri.core.models.block.ContentNode
 import okuri.core.models.block.request.CreateBlockRequest
-import okuri.core.models.block.structure.BlockMeta
-import okuri.core.models.block.structure.BlockSchema
+import okuri.core.models.block.structure.*
 import okuri.core.models.common.grid.LayoutGrid
-import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.schema.SchemaService
 import okuri.core.service.schema.SchemaValidationException
 import okuri.core.service.util.WithUserPersona
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import okuri.core.service.util.factory.block.BlockFactory
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.*
 import org.springframework.beans.factory.annotation.Autowired
@@ -35,9 +32,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 
 /**
- * Tests updated BlockService behaviour for polymorphic payloads:
- *  - "content" (BlockContentMetadata): validate + no link upsert
- *  - "references" (ReferenceListMetadata): link upsert + no content validation
+ * Comprehensive test suite for BlockService.
+ * Tests block creation, updates, tree building, and archival with the new architecture.
  */
 @SpringBootTest(
     classes = [
@@ -60,10 +56,10 @@ class BlockServiceTest {
     lateinit var blockTypeService: BlockTypeService
 
     @MockitoBean
-    lateinit var blockReferenceService: BlockReferenceService
+    lateinit var blockChildrenService: BlockChildrenService
 
     @MockitoBean
-    lateinit var blockReferenceRepository: BlockReferenceRepository
+    lateinit var blockReferenceService: BlockReferenceService
 
     @MockitoBean
     lateinit var schemaService: SchemaService
@@ -72,55 +68,25 @@ class BlockServiceTest {
     lateinit var activityService: ActivityService
 
     @MockitoBean
-    lateinit var logger: KLogger
-
-    @MockitoBean
     lateinit var authTokenService: AuthTokenService
 
     @Autowired
     lateinit var service: BlockService
 
-    // ---- helpers ---------------------------------------------------------------------------
-
     private fun uuid(s: String) = UUID.fromString(s)
 
-    private fun aType(
-        orgId: UUID,
-        key: String = "contact",
-        version: Int = 1,
-        strictness: BlockValidationScope = BlockValidationScope.SOFT,
-        archived: Boolean = false
-    ): BlockTypeEntity =
-        BlockTypeEntity(
-            id = UUID.randomUUID(),
-            key = key,
-            displayName = "Contact",
-            description = "Contact type",
-            organisationId = orgId,
-            system = false,
-            version = version,
-            strictness = strictness,
-            schema = BlockSchema(name = "Contact"), // minimal
-            archived = archived,
-            displayStructure = okuri.core.models.block.structure.BlockDisplay(
-                form = okuri.core.models.block.structure.BlockFormStructure(emptyMap()),
-                render = okuri.core.models.block.structure.BlockRenderStructure(
-                    version = 1,
-                    layoutGrid = LayoutGrid(items = emptyList()),
-                    components = emptyMap()
-                )
-            )
-        )
+
 
     private fun saved(entity: BlockEntity) = entity.copy(id = UUID.randomUUID())
 
-    // -----------------------------------------------------------------------------------------
-    // createBlock: CONTENT (SOFT) -> validate; no link upsert; activity logged
-    // -----------------------------------------------------------------------------------------
+    // =============================================================================================
+    // CREATE BLOCK - CONTENT BLOCKS
+    // =============================================================================================
+
     @Test
     @WithUserPersona(
         userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-        email = "email@email.com",
+        email = "test@test.com",
         roles = [
             okuri.core.service.util.OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
@@ -128,16 +94,17 @@ class BlockServiceTest {
             )
         ]
     )
-    fun `createBlock(content) validates schema and logs activity`() {
+    fun `createBlock with content metadata validates and persists`() {
         val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        whenever(authTokenService.getUserId()).thenReturn(uuid("00000000-0000-0000-0000-000000000001"))
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
 
-        val type = aType(orgId = orgId, strictness = BlockValidationScope.SOFT)
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId = orgId, strictness = BlockValidationScope.SOFT)
         whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
-        whenever(schemaService.validate(eq(type.schema), any(), eq(type.strictness)))
-            .thenReturn(listOf("warn: extra field"))
+        whenever(schemaService.validate(eq(type.schema), any(), eq(type.strictness), any()))
+            .thenReturn(listOf("warning: extra field"))
 
-        // capture saved entity
         val savedCaptor = argumentCaptor<BlockEntity>()
         whenever(blockRepository.save(savedCaptor.capture())).thenAnswer { saved(savedCaptor.firstValue) }
 
@@ -147,9 +114,9 @@ class BlockServiceTest {
             organisationId = orgId,
             typeVersion = null,
             name = "Primary Contact",
-            payload = mapOf(
-                "kind" to "content",
-                "data" to mapOf("name" to "Jane", "email" to "jane@acme.com")
+            payload = BlockContentMetadata(
+                data = mapOf("name" to "Jane", "email" to "jane@acme.com"),
+                meta = BlockMeta()
             )
         )
 
@@ -157,26 +124,29 @@ class BlockServiceTest {
 
         assertEquals("Primary Contact", created.name)
         assertNotNull(created.id)
-        assertNotNull(created.validationErrors) // SOFT -> warnings bubble up
+        assertNotNull(created.validationErrors)
+        assertEquals(1, created.validationErrors!!.size)
+        assertEquals("warning: extra field", created.validationErrors!![0])
 
-        // No link upsert for content payload
-        verify(blockReferenceService, never()).upsertLinksFor(any(), any(), any())
+        // Verify schema validation was called
+        verify(schemaService).validate(eq(type.schema), any(), eq(type.strictness), any())
 
-        // Activity logged
+        // Verify no reference upsert for content blocks
+        verify(blockReferenceService, never()).upsertLinksFor(any(), any())
+        verify(blockReferenceService, never()).upsertBlockLinkFor(any(), any())
+
+        // Verify activity logged
         verify(activityService).logActivity(
             eq(okuri.core.enums.activity.Activity.BLOCK),
             eq(okuri.core.enums.util.OperationType.CREATE),
-            any(), eq(orgId), any(), any()
+            eq(userId), eq(orgId), any(), any()
         )
     }
 
-    // -----------------------------------------------------------------------------------------
-    // createBlock: CONTENT (STRICT + invalid) -> throws; no save; no links
-    // -----------------------------------------------------------------------------------------
     @Test
     @WithUserPersona(
         userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-        email = "email@email.com",
+        email = "test@test.com",
         roles = [
             okuri.core.service.util.OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
@@ -184,37 +154,39 @@ class BlockServiceTest {
             )
         ]
     )
-    fun `createBlock(content) STRICT invalid throws and does not persist`() {
+    fun `createBlock STRICT mode throws on validation errors`() {
         val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = aType(orgId = orgId, strictness = BlockValidationScope.STRICT)
+
+        val type = BlockFactory.createType(orgId = orgId, strictness = BlockValidationScope.STRICT)
         whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
-        whenever(schemaService.validate(eq(type.schema), any(), eq(type.strictness)))
-            .thenReturn(listOf("error: bad email"))
+        whenever(schemaService.validate(eq(type.schema), any(), eq(type.strictness), any()))
+            .thenReturn(listOf("error: invalid email"))
 
         val req = CreateBlockRequest(
             typeId = type.id,
             typeKey = null,
             organisationId = orgId,
             typeVersion = null,
-            name = "Bad",
-            payload = mapOf("kind" to "content", "data" to mapOf("email" to "bad"))
+            name = "Bad Contact",
+            payload = BlockContentMetadata(
+                data = mapOf("email" to "bad-email"),
+                meta = BlockMeta()
+            )
         )
 
         assertThrows<SchemaValidationException> {
             service.createBlock(req)
         }
 
+        // Verify block was not persisted
         verify(blockRepository, never()).save(any())
-        verify(blockReferenceService, never()).upsertLinksFor(any(), any(), any())
+        verify(activityService, never()).logActivity(any(), any(), any(), any(), any(), any())
     }
 
-    // -----------------------------------------------------------------------------------------
-    // createBlock: REFERENCES -> upsert links; no schema validation of content
-    // -----------------------------------------------------------------------------------------
     @Test
     @WithUserPersona(
         userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-        email = "email@email.com",
+        email = "test@test.com",
         roles = [
             okuri.core.service.util.OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
@@ -222,63 +194,66 @@ class BlockServiceTest {
             )
         ]
     )
-    fun `createBlock(references) upserts links and logs activity`() {
+    fun `createBlock with child attaches to parent via BlockChildrenService`() {
         val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        whenever(authTokenService.getUserId()).thenReturn(uuid("00000000-0000-0000-0000-000000000001"))
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
+        val parentId = UUID.randomUUID()
 
-        val type = aType(orgId = orgId, strictness = BlockValidationScope.SOFT)
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId = orgId)
+        val parentEntity = BlockEntity(
+            id = parentId,
+            organisationId = orgId,
+            type = type,
+            name = "Parent",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+            parentId = null,
+            archived = false
+        )
+
         whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
+        whenever(schemaService.validate(any(), any(), any(), any())).thenReturn(emptyList())
+        whenever(blockRepository.findById(parentId)).thenReturn(Optional.of(parentEntity))
 
-        // save returns entity with ID
         val savedCaptor = argumentCaptor<BlockEntity>()
         whenever(blockRepository.save(savedCaptor.capture())).thenAnswer { saved(savedCaptor.firstValue) }
 
-        val clientId = UUID.randomUUID()
-        val blockId = UUID.randomUUID()
+        val nesting = BlockTypeNesting(max = null, allowedTypes = listOf(ComponentType.CONTACT_CARD))
+
         val req = CreateBlockRequest(
             typeId = type.id,
             typeKey = null,
             organisationId = orgId,
             typeVersion = null,
-            name = "Ref List",
-            payload = mapOf(
-                "kind" to "references",
-                "items" to listOf(
-                    mapOf("type" to "CLIENT", "id" to clientId.toString()),
-                    mapOf("type" to "BLOCK", "id" to blockId.toString())
-                ),
-                "presentation" to "SUMMARY"
-            )
+            name = "Child Block",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+            parentId = parentId,
+            slot = "items",
+            orderIndex = 0,
+            parentNesting = nesting
         )
 
-        val created = service.createBlock(req)
-        assertEquals("Ref List", created.name)
-        assertNotNull(created.id)
+        service.createBlock(req)
 
-        // No schema validate for "references"
-        verify(schemaService, never()).validate(any(), any(), any())
-
-        // Links are upserted once with the items
-        verify(blockReferenceService).upsertLinksFor(
-            any(), // saved entity
-            argThat { size == 2 }, // items
-            eq("\$.items")
-        )
-
-        verify(activityService).logActivity(
-            eq(okuri.core.enums.activity.Activity.BLOCK),
-            eq(okuri.core.enums.util.OperationType.CREATE),
-            any(), eq(orgId), any(), any()
+        // Verify BlockChildrenService.addChild was called
+        verify(blockChildrenService).addChild(
+            child = any(),
+            parentId = eq(parentId),
+            slot = eq("items"),
+            index = eq(0),
+            nesting = eq(nesting)
         )
     }
 
-    // -----------------------------------------------------------------------------------------
-    // updateBlock: CONTENT -> deep merge + validate; no link upsert
-    // -----------------------------------------------------------------------------------------
+    // =============================================================================================
+    // CREATE BLOCK - REFERENCE BLOCKS
+    // =============================================================================================
+
     @Test
     @WithUserPersona(
         userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-        email = "email@email.com",
+        email = "test@test.com",
         roles = [
             okuri.core.service.util.OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
@@ -286,28 +261,124 @@ class BlockServiceTest {
             )
         ]
     )
-    fun `updateBlock(content) merges and validates, no link upsert`() {
+    fun `createBlock with EntityReferenceMetadata upserts references`() {
         val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        whenever(authTokenService.getUserId()).thenReturn(uuid("00000000-0000-0000-0000-000000000001"))
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
+        val clientId = UUID.randomUUID()
 
-        val type = aType(orgId = orgId, strictness = BlockValidationScope.SOFT)
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId = orgId)
         whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
 
-        // Existing entity with content payload
+        val savedCaptor = argumentCaptor<BlockEntity>()
+        whenever(blockRepository.save(savedCaptor.capture())).thenAnswer { saved(savedCaptor.firstValue) }
+
+        val req = CreateBlockRequest(
+            typeId = type.id,
+            typeKey = null,
+            organisationId = orgId,
+            typeVersion = null,
+            name = "Client List",
+            payload = EntityReferenceMetadata(
+                items = listOf(
+                    ReferenceItem(type = EntityType.CLIENT, id = clientId)
+                ),
+                presentation = Presentation.SUMMARY,
+                meta = BlockMeta()
+            )
+        )
+
+        service.createBlock(req)
+
+        // Verify reference upsert was called
+        verify(blockReferenceService).upsertLinksFor(any(), any())
+
+        // Verify no schema validation for references
+        verify(schemaService, never()).validate(any(), any(), any(), any())
+    }
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `createBlock with BlockReferenceMetadata upserts block link`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
+        val referencedBlockId = UUID.randomUUID()
+
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId = orgId)
+        whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
+
+        val savedCaptor = argumentCaptor<BlockEntity>()
+        whenever(blockRepository.save(savedCaptor.capture())).thenAnswer { saved(savedCaptor.firstValue) }
+
+        val req = CreateBlockRequest(
+            typeId = type.id,
+            typeKey = null,
+            organisationId = orgId,
+            typeVersion = null,
+            name = "Block Link",
+            payload = BlockReferenceMetadata(
+                item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+                expandDepth = 1,
+                meta = BlockMeta()
+            )
+        )
+
+        service.createBlock(req)
+
+        // Verify block link upsert was called
+        verify(blockReferenceService).upsertBlockLinkFor(any(), any())
+    }
+
+    // =============================================================================================
+    // UPDATE BLOCK
+    // =============================================================================================
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `updateBlock deep merges content data and validates`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
+
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId = orgId)
+
         val existing = BlockEntity(
             id = UUID.randomUUID(),
             organisationId = orgId,
             type = type,
-            name = "Root",
-            payload = okuri.core.models.block.structure.BlockContentMetadata(
-                data = mapOf("a" to 1, "nested" to mapOf("x" to 1)),
+            name = "Original",
+            payload = BlockContentMetadata(
+                data = mapOf("a" to 1, "nested" to mapOf("x" to 1, "y" to 2)),
                 meta = BlockMeta()
             ),
-            parent = null,
+            parentId = null,
             archived = false
         )
+
         whenever(blockRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
-        whenever(schemaService.validate(eq(type.schema), any(), eq(type.strictness))).thenReturn(emptyList())
+        whenever(schemaService.validate(any(), any(), any(), any())).thenReturn(emptyList())
         whenever(blockRepository.save(any())).thenAnswer { it.arguments[0] as BlockEntity }
 
         val updateModel = Block(
@@ -315,8 +386,8 @@ class BlockServiceTest {
             name = "Updated",
             organisationId = orgId,
             type = type.toModel(),
-            payload = okuri.core.models.block.structure.BlockContentMetadata(
-                data = mapOf("nested" to mapOf("x" to 2, "y" to 9)),
+            payload = BlockContentMetadata(
+                data = mapOf("nested" to mapOf("x" to 99, "z" to 3), "b" to 2),
                 meta = BlockMeta()
             ),
             archived = false
@@ -324,28 +395,27 @@ class BlockServiceTest {
 
         val updated = service.updateBlock(updateModel)
 
-        // Deep merge assertion
-        val merged = (updated.payload as okuri.core.models.block.structure.BlockContentMetadata).data
-        assertEquals(1, merged["a"])
-        assertEquals(mapOf("x" to 2, "y" to 9), merged["nested"])
-        assertEquals("Updated", updated.name)
+        // Verify deep merge: a=1 (preserved), nested.x=99 (updated), nested.y=2 (preserved), nested.z=3 (added), b=2 (added)
+        val mergedData = (updated.payload as BlockContentMetadata).data
+        assertEquals(1, mergedData["a"])
+        assertEquals(2, mergedData["b"])
+        val nested = mergedData["nested"] as Map<*, *>
+        assertEquals(99, nested["x"])
+        assertEquals(2, nested["y"])
+        assertEquals(3, nested["z"])
 
-        verify(schemaService).validate(eq(type.schema), any(), eq(type.strictness))
-        verify(blockReferenceService, never()).upsertLinksFor(any(), any(), any())
+        verify(schemaService).validate(any(), any(), any(), any())
         verify(activityService).logActivity(
             eq(okuri.core.enums.activity.Activity.BLOCK),
             eq(okuri.core.enums.util.OperationType.UPDATE),
-            any(), eq(orgId), any(), any()
+            eq(userId), eq(orgId), any(), any()
         )
     }
 
-    // -----------------------------------------------------------------------------------------
-    // updateBlock: REFERENCES -> replaces list; link upsert; no schema validation
-    // -----------------------------------------------------------------------------------------
     @Test
     @WithUserPersona(
         userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-        email = "email@email.com",
+        email = "test@test.com",
         roles = [
             okuri.core.service.util.OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
@@ -353,72 +423,47 @@ class BlockServiceTest {
             )
         ]
     )
-    fun `updateBlock(references) upserts links and does not validate content`() {
+    fun `updateBlock throws when switching payload kind`() {
         val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        whenever(authTokenService.getUserId()).thenReturn(uuid("00000000-0000-0000-0000-000000000001"))
 
-        val type = aType(orgId = orgId, strictness = BlockValidationScope.SOFT)
+        val type = BlockFactory.createType(orgId = orgId)
 
-        // Existing REF block with one item
         val existing = BlockEntity(
             id = UUID.randomUUID(),
             organisationId = orgId,
             type = type,
-            name = "Refs",
-            payload = okuri.core.models.block.structure.ReferenceListMetadata(
-                items = listOf(
-                    okuri.core.models.block.structure.ReferenceItem(
-                        type = EntityType.CLIENT, id = UUID.randomUUID()
-                    )
-                ),
-                presentation = okuri.core.models.block.structure.Presentation.SUMMARY,
-                meta = BlockMeta()
-            ),
-            parent = null,
+            name = "Original",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+            parentId = null,
             archived = false
         )
-        whenever(blockRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
-        whenever(blockRepository.save(any())).thenAnswer { it.arguments[0] as BlockEntity }
 
-        // Updated block with two items
-        val newItem1 = okuri.core.models.block.structure.ReferenceItem(EntityType.CLIENT, UUID.randomUUID())
-        val newItem2 = okuri.core.models.block.structure.ReferenceItem(EntityType.BLOCK, UUID.randomUUID())
+        whenever(blockRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
+
+        // Try to switch from content to reference
         val updateModel = Block(
             id = existing.id!!,
-            name = "Refs",
+            name = "Updated",
             organisationId = orgId,
             type = type.toModel(),
-            payload = okuri.core.models.block.structure.ReferenceListMetadata(
-                items = listOf(newItem1, newItem2),
-                presentation = okuri.core.models.block.structure.Presentation.SUMMARY,
+            payload = EntityReferenceMetadata(
+                items = listOf(ReferenceItem(EntityType.CLIENT, UUID.randomUUID())),
                 meta = BlockMeta()
             ),
             archived = false
         )
 
-        val updated = service.updateBlock(updateModel)
-        assertEquals("Refs", updated.name)
+        val exception = assertThrows<IllegalArgumentException> {
+            service.updateBlock(updateModel)
+        }
 
-        // No schema validation for references
-        verify(schemaService, never()).validate(any(), any(), any())
-
-        // Links upserted with the new 2 items
-        verify(blockReferenceService).upsertLinksFor(any(), argThat { size == 2 }, eq("\$.items"))
-
-        verify(activityService).logActivity(
-            eq(okuri.core.enums.activity.Activity.BLOCK),
-            eq(okuri.core.enums.util.OperationType.UPDATE),
-            any(), eq(orgId), any(), any()
-        )
+        assertTrue(exception.message!!.contains("Cannot switch payload kind"))
     }
 
-    // -----------------------------------------------------------------------------------------
-    // getBlock: verify child expansion (owned) – keep minimal
-    // -----------------------------------------------------------------------------------------
     @Test
     @WithUserPersona(
         userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-        email = "email@email.com",
+        email = "test@test.com",
         roles = [
             okuri.core.service.util.OrganisationRole(
                 organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
@@ -426,130 +471,228 @@ class BlockServiceTest {
             )
         ]
     )
-    fun `getBlock builds owned-children tree`() {
+    fun `updateBlock with reference metadata upserts links`() {
         val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-        val type = aType(orgId)
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
 
-        val root = BlockEntity(
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId = orgId)
+        val clientId1 = UUID.randomUUID()
+        val clientId2 = UUID.randomUUID()
+
+        val existing = BlockEntity(
             id = UUID.randomUUID(),
             organisationId = orgId,
             type = type,
-            name = "Root",
-            payload = okuri.core.models.block.structure.BlockContentMetadata(
-                data = mapOf("contacts" to emptyList<Any>()),
+            name = "Clients",
+            payload = EntityReferenceMetadata(
+                items = listOf(ReferenceItem(EntityType.CLIENT, clientId1)),
                 meta = BlockMeta()
             ),
-            parent = null,
+            parentId = null,
             archived = false
         )
 
-        val child1 = root.copy(
-            id = UUID.randomUUID(),
-            name = "C1"
+        whenever(blockRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
+        whenever(blockRepository.save(any())).thenAnswer { it.arguments[0] as BlockEntity }
+
+        // Update to include new client
+        val updateModel = Block(
+            id = existing.id!!,
+            name = "Clients",
+            organisationId = orgId,
+            type = type.toModel(),
+            payload = EntityReferenceMetadata(
+                items = listOf(
+                    ReferenceItem(EntityType.CLIENT, clientId1),
+                    ReferenceItem(EntityType.CLIENT, clientId2)
+                ),
+                meta = BlockMeta()
+            ),
+            archived = false
         )
-        val child2 = root.copy(
-            id = UUID.randomUUID(),
-            name = "C2"
-        )
 
-        whenever(blockRepository.findById(root.id!!)).thenReturn(Optional.of(root))
+        service.updateBlock(updateModel)
 
-        // Simulate findOwnedBlocks grouping by slot "contacts"
-        val e1 = BlockReferenceEntity(
-            id = UUID.randomUUID(),
-            block = root,
-            entityType = EntityType.BLOCK,
-            entityId = child1.id!!,
-            ownership = BlockOwnership.OWNED,
-            path = "\$.data/contacts[0]",
-            orderIndex = 0
-        )
-        val e2 = e1.copy(id = UUID.randomUUID(), entityId = child2.id!!, path = "\$.data/contacts[1]", orderIndex = 1)
-        whenever(blockReferenceService.findOwnedBlocks(root.id!!)).thenReturn(mapOf("contacts" to listOf(e1, e2)))
-        whenever(blockRepository.findAllById(setOf(child1.id!!, child2.id!!))).thenReturn(listOf(child1, child2))
+        // Verify references were upserted
+        verify(blockReferenceService).upsertLinksFor(any(), any())
 
-        val tree: BlockTree = service.getBlock(root.id!!, maxDepth = 2)
-
-        assertEquals("Root", tree.root.block.name)
-        tree.root.children.run {
-            assertNotNull(this)
-            assertTrue(this.containsKey("contacts"))
-            this["contacts"].run {
-                assertNotNull(this)
-                assertEquals(2, this.size)
-                val names = this.map { it.block.name }
-                assertTrue(names.containsAll(listOf("C1", "C2")))
-            }
-        }
+        // Verify no schema validation
+        verify(schemaService, never()).validate(any(), any(), any(), any())
     }
 
-    // -----------------------------------------------------------------------------------------
-    // archiveBlock toggles and logs
-    // -----------------------------------------------------------------------------------------
-//    @Test
-//    @WithUserPersona(
-//        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-//        email = "email@email.com",
-//        roles = [
-//            okuri.core.service.util.OrganisationRole(
-//                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
-//                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
-//            )
-//        ]
-//    )
-//    fun `archiveBlock archives and logs`() {
-//        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-//        val type = aType(orgId)
-//        val entity = BlockEntity(
-//            id = UUID.randomUUID(),
-//            organisationId = orgId,
-//            type = type,
-//            name = "X",
-//            payload = okuri.core.models.block.structure.BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-//            parent = null,
-//            archived = false
-//        )
-//
-//        whenever(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
-//        whenever(blockRepository.save(any())).thenAnswer { it.arguments[0] as BlockEntity }
-//
-//        val ok = service.archiveBlock(entity.toModel(), true)
-//        assertTrue(ok)
-//
-//        verify(activityService).logActivity(
-//            eq(okuri.core.enums.activity.Activity.BLOCK),
-//            eq(okuri.core.enums.util.OperationType.ARCHIVE),
-//            any(), eq(orgId), any(), any()
-//        )
-//    }
+    // =============================================================================================
+    // GET BLOCK - TREE BUILDING
+    // =============================================================================================
 
-//    @Test
-//    @WithUserPersona(
-//        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
-//        email = "email@email.com",
-//        roles = [
-//            okuri.core.service.util.OrganisationRole(
-//                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
-//                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
-//            )
-//        ]
-//    )
-//    fun `archiveBlock no-ops if already archived`() {
-//        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
-//        val type = aType(orgId)
-//        val entity = BlockEntity(
-//            id = UUID.randomUUID(),
-//            organisationId = orgId,
-//            type = type,
-//            name = "X",
-//            payload = okuri.core.models.block.structure.BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-//            parent = null,
-//            archived = true
-//        )
-//        whenever(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
-//
-//        val ok = service.archiveBlock(entity.toModel(), true)
-//        assertFalse(ok)
-//        verify(blockRepository, never()).save(any())
-//    }
+    @Test
+    fun `getBlock builds content node with children`() {
+        val orgId = UUID.randomUUID()
+        val type = BlockFactory.createType(orgId)
+
+        val rootId = UUID.randomUUID()
+        val child1Id = UUID.randomUUID()
+        val child2Id = UUID.randomUUID()
+
+        val root = BlockEntity(
+            id = rootId,
+            organisationId = orgId,
+            type = type,
+            name = "Root",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+            parentId = null,
+            archived = false
+        )
+
+        val child1 = root.copy(id = child1Id, name = "Child1")
+        val child2 = root.copy(id = child2Id, name = "Child2")
+
+        whenever(blockRepository.findById(rootId)).thenReturn(Optional.of(root))
+        whenever(blockRepository.findAllById(setOf(child1Id, child2Id))).thenReturn(listOf(child1, child2))
+
+        val edges = mapOf(
+            "items" to listOf(
+                BlockChildEntity(UUID.randomUUID(), rootId, child1Id, "items", 0),
+                BlockChildEntity(UUID.randomUUID(), rootId, child2Id, "items", 1)
+            )
+        )
+
+        whenever(blockChildrenService.listChildrenGrouped(rootId)).thenReturn(edges)
+
+        val tree = service.getBlock(rootId)
+
+        assertNotNull(tree)
+        assertTrue(tree.root is ContentNode)
+        val contentNode = tree.root as ContentNode
+        assertEquals("Root", contentNode.block.name)
+        assertNotNull(contentNode.children)
+        assertEquals(1, contentNode.children!!.size)
+        assertTrue(contentNode.children!!.containsKey("items"))
+        assertEquals(2, contentNode.children!!["items"]!!.size)
+    }
+
+    @Test
+    fun `getBlock detects cycles and returns warning`() {
+        val orgId = UUID.randomUUID()
+        val type = BlockFactory.createType(orgId)
+
+        val blockId = UUID.randomUUID()
+
+        // Block that references itself (cycle)
+        val block = BlockEntity(
+            id = blockId,
+            organisationId = orgId,
+            type = type,
+            name = "Cyclic",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+            parentId = null,
+            archived = false
+        )
+
+        whenever(blockRepository.findById(blockId)).thenReturn(Optional.of(block))
+        whenever(blockRepository.findAllById(setOf(blockId))).thenReturn(listOf(block))
+
+        // Simulate cycle: block has itself as a child
+        val edges = mapOf(
+            "self" to listOf(
+                BlockChildEntity(UUID.randomUUID(), blockId, blockId, "self", 0)
+            )
+        )
+
+        whenever(blockChildrenService.listChildrenGrouped(blockId)).thenReturn(edges)
+
+        val tree = service.getBlock(blockId)
+
+        // Should detect cycle
+        val contentNode = tree.root as ContentNode
+        assertNotNull(contentNode.children)
+        assertNotNull(contentNode.children!!["self"])
+        assertTrue(contentNode.children!!["self"]!!.isNotEmpty())
+        val selfChild = contentNode.children!!["self"]!![0] as ContentNode
+        assertTrue(selfChild.warnings.isNotEmpty())
+        assertTrue(selfChild.warnings.any { it.contains("Cycle detected") })
+    }
+
+    // =============================================================================================
+    // ARCHIVE BLOCK
+    // =============================================================================================
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `archiveBlock sets archived status and logs activity`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
+
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId)
+        val entity = BlockEntity(
+            id = UUID.randomUUID(),
+            organisationId = orgId,
+            type = type,
+            name = "Test",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+            parentId = null,
+            archived = false
+        )
+
+        whenever(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
+        whenever(blockRepository.save(any())).thenAnswer { it.arguments[0] as BlockEntity }
+
+        service.archiveBlock(entity.toModel(), true)
+
+        verify(blockRepository).save(argThat<BlockEntity> {
+            this.id == entity.id && this.archived == true
+        })
+
+        verify(activityService).logActivity(
+            eq(okuri.core.enums.activity.Activity.BLOCK),
+            eq(okuri.core.enums.util.OperationType.ARCHIVE),
+            eq(userId), eq(orgId), eq(entity.id), any()
+        )
+    }
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `archiveBlock no-ops when status unchanged`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+
+        val type = BlockFactory.createType(orgId)
+        val entity = BlockEntity(
+            id = UUID.randomUUID(),
+            organisationId = orgId,
+            type = type,
+            name = "Test",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+            parentId = null,
+            archived = true // Already archived
+        )
+
+        whenever(blockRepository.findById(entity.id!!)).thenReturn(Optional.of(entity))
+
+        service.archiveBlock(entity.toModel(), true)
+
+        // Should not save or log activity
+        verify(blockRepository, never()).save(any())
+        verify(activityService, never()).logActivity(any(), any(), any(), any(), any(), any())
+    }
 }

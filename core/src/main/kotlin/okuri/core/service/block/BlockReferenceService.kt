@@ -92,9 +92,10 @@ class BlockReferenceService(
         if (meta.fetchPolicy == BlockReferenceFetchPolicy.LAZY) return base
 
         val byType = base.filter { it.id != null }.groupBy { it.entityType }
-        val resolvedByType = byType.mapValues { (t, refs) ->
-            resolverByType[t]?.fetch(refs.map { it.entityId }.toSet()) ?: emptyMap()
-        }
+        val resolvedByType = byType.mapNotNull { (t, refs) ->
+            val resolver = resolverByType[t] ?: return@mapNotNull null
+            t to resolver.fetch(refs.map { it.entityId }.toSet())
+        }.toMap()
 
         return base.map { r ->
             if (r.id == null) r
