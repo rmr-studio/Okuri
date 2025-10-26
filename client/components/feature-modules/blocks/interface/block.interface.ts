@@ -15,6 +15,7 @@ export type BlockReference = components["schemas"]["BlockReferenceObject"];
 export type BlockMeta = components["schemas"]["BlockMeta"];
 export type BlockRenderStructure = components["schemas"]["BlockRenderStructure"];
 export type BlockFormStructure = components["schemas"]["BlockFormStructure"];
+export type BlockTypeNesting = components["schemas"]["BlockType"]["nesting"];
 
 // Requests / Responses (where helpful)
 export type CreateBlockRequest = components["schemas"]["CreateBlockRequest"];
