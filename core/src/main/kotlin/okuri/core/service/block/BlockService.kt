@@ -7,7 +7,7 @@ import okuri.core.enums.util.OperationType
 import okuri.core.models.block.*
 import okuri.core.models.block.request.*
 import okuri.core.models.block.structure.BlockContentMetadata
-import okuri.core.models.block.structure.BlockMeta
+import okuri.core.models.block.structure.Metadata
 import okuri.core.models.block.structure.ReferenceMetadata
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
@@ -26,294 +26,224 @@ import java.util.*
 class BlockService(
     private val blockRepository: BlockRepository,
     private val blockTypeService: BlockTypeService,
-    private val blockLinkService: BlockReferenceService,
+    private val blockChildrenService: BlockChildrenService,
+    private val blockReferenceService: BlockReferenceService,
     private val schemaService: SchemaService,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService
 ) {
-    /**
-     * Create a new block for the given organisation using the specified block type and payload.
-     *
-     * Validates the payload against the block type's schema (respecting strictness), persists the block,
-     * rebuilds references from the payload, and records creation activity.
-     *
-     * @param request Request containing organisationId, a block type identifier (either `typeId` or `typeKey` with `typeVersion`), the block name, and a `payload` map.
-     * @return The created Block model with `validationErrors` populated or `null` if there are no validation errors.
-     * @throws IllegalArgumentException If neither `typeId` nor `typeKey` is provided in the request.
-     * @throws IllegalStateException If the resolved block type is archived.
-     * @throws SchemaValidationException If the block type is strict and the payload fails schema validation.
-     */
+    // ---------- CREATE ----------
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     @Transactional
     fun createBlock(request: CreateBlockRequest): Block {
-        // Get Block from specific ID, or Key and version combination
-        val type: BlockTypeEntity = request.let {
-            if (it.typeId != null) {
-                return@let blockTypeService.getById(it.typeId)
-            }
+        val type: BlockTypeEntity = resolveType(request)
+        require(!type.archived) { "BlockType '${type.key}' is archived" }
 
-            if (it.typeKey != null) {
-                return@let blockTypeService.getByKey(
-                    it.typeKey,
-                    request.organisationId,
-                    request.typeVersion
-                )
-            }
-
-            throw IllegalArgumentException("Either typeId or typeKey must be provided")
-        }
-
-        if (type.archived) throw IllegalStateException("BlockType '${type.key}' is archived")
-
-        // Validation only occurs on direct children ContentNodes. Never validate a ReferenceNode
-        val savedMeta = request.payload.let { payload ->
-            when (payload) {
+        // 1) Validate ONLY content blocks
+        val validatedMetadata: Metadata = request.payload.let {
+            when (it) {
                 is BlockContentMetadata -> {
-                    val errors = schemaService.validate(type.schema, payload, type.strictness).let { errors ->
-                        if (type.strictness.isStrict() && errors.isNotEmpty()) {
-                            throw SchemaValidationException(errors)
-                        }
-                        errors
+                    val errs = schemaService.validate(type.schema, it, type.strictness)
+                    if (type.strictness.isStrict() && errs.isNotEmpty()) {
+                        throw SchemaValidationException(errs)
                     }
 
-                    return@let payload.copy(
-                        meta = BlockMeta(
-                            validationErrors = errors,
-                            lastValidatedVersion = type.version
-                        )
-                    )
+                    it.meta.apply {
+                        this.lastValidatedVersion = type.version
+                        this.validationErrors = errs
+                    }
+
+                    it
+
                 }
 
                 is ReferenceMetadata -> {
-                    return@let payload
+                    it.meta.apply {
+                        this.lastValidatedVersion = type.version
+                    }
+                    it
                 }
             }
         }
 
-
+        // 2) Persist
         val entity = BlockEntity(
+            id = null,
             organisationId = request.organisationId,
             type = type,
             name = request.name,
-            payload = savedMeta,
-            parentId = request.parentId,
+            payload = validatedMetadata,
+            parentId = request.parentId, // optional; slot/order managed by BlockChildrenService
             archived = false
         )
+        val saved = blockRepository.save(entity)
 
-        blockRepository.save(entity).run {
-            blockLinkService.createLinks(this)
-            activityService.logActivity(
-                activity = okuri.core.enums.activity.Activity.BLOCK,
-                operation = OperationType.CREATE,
-                userId = authTokenService.getUserId(),
-                organisationId = request.organisationId,
-                targetId = this.id,
-                additionalDetails = "Created Block '${id}' of type '${type.key}'"
-            )
-            return this.toModel()
+        // 3) Create link rows ONLY for reference blocks
+        if (payloadMeta is ReferenceMetadata) {
+            dispatchReferenceUpsert(saved, payloadMeta)
         }
 
+        // 4) (Optional) attach as child when parentId + slot are supplied by API that manages children
+        // You can delegate to BlockChildrenService here if your CreateBlockRequest carries slot/order.
+        // e.g. request.slot?.let { blockChildrenService.attachChild(request.parentId!!, saved.id!!, it, request.orderIndex) }
 
+        // 5) Activity
+        activityService.logActivity(
+            activity = okuri.core.enums.activity.Activity.BLOCK,
+            operation = OperationType.CREATE,
+            userId = authTokenService.getUserId(),
+            organisationId = saved.organisationId,
+            targetId = saved.id,
+            additionalDetails = "Created Block '${saved.id}' of type '${type.key}'"
+        )
+
+        return saved.toModel()
     }
 
-    /**
-     * Apply partial updates to an existing block, validate the merged payload against the block type schema, persist the changes, rebuild references, and record an update activity.
-     *
-     * @param block The block model containing updated fields; payload.data is merged with the existing block's data for a partial update.
-     * @return The persisted updated block model; `validationErrors` is `null` when there are no validation errors.
-     * @throws IllegalArgumentException if the block does not belong to the specified organisation or the block cannot be found.
-     * @throws SchemaValidationException when the block type's strictness requires validation and the merged payload fails schema validation.
-     */
+    // ---------- UPDATE ----------
     @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
     @Transactional
     fun updateBlock(block: Block): Block {
-        blockRepository.findById(block.id).orElseThrow().run {
-            if (this.organisationId != block.organisationId) {
-                throw IllegalArgumentException("Block does not belong to the specified organisation")
-            }
-            return@run this
-        }.let { existing ->
-            // Merge data (partial update)
-            val mergedData = deepMergeJson(existing.payload.data, block.payload.data)
-            val errors = schemaService.validate(existing.type.schema, mergedData, existing.type.strictness)
-            if (existing.type.strictness.isStrict() && errors.isNotEmpty()) throw SchemaValidationException(errors)
+        val existing = blockRepository.findById(block.id).orElseThrow()
+        require(existing.organisationId == block.organisationId) {
+            "Block does not belong to the specified organisation"
+        }
 
-            val updatedBlock = existing.apply {
-                name = block.name ?: existing.name
-                payload = existing.payload.copy(
-                    data = mergedData,
-                    meta = existing.payload.meta.copy(
-                        validationErrors = errors,
+        // Enforce same kind (MVP)
+        require(existing.payload::class == block.payload::class) {
+            "Cannot switch payload kind (content <-> reference) on update. Create a new block instead."
+        }
+
+        val (newPayload, errors) = when (val incoming = block.payload) {
+            is BlockContentMetadata -> {
+                val old = (existing.payload as BlockContentMetadata)
+                val merged = deepMergeJson(old.data, incoming.data)
+                val errs = schemaService.validate(existing.type.schema, merged, existing.type.strictness)
+                if (existing.type.strictness.isStrict() && errs.isNotEmpty()) {
+                    throw SchemaValidationException(errs)
+                }
+                BlockContentMetadata(
+                    data = merged,
+                    meta = old.meta.copy(
+                        validationErrors = errs,
                         lastValidatedVersion = existing.type.version
                     )
-                )
+                ) to errs
             }
 
-            blockRepository.save(updatedBlock).run {
-                // Rebuild refs (and OWNED parenting) based on merged data
-                activityService.logActivity(
-                    activity = okuri.core.enums.activity.Activity.BLOCK,
-                    operation = OperationType.UPDATE,
-                    userId = authTokenService.getUserId(),
-                    organisationId = organisationId,
-                    targetId = id,
-                    additionalDetails = "Updated Block '${id}' of type '${type.key}'"
+            is ReferenceMetadata -> {
+                // We accept the incoming list as the new desired state
+                val norm = incoming.copy(
+                    meta = incoming.meta.copy(lastValidatedVersion = existing.type.version)
                 )
-                blockReferenceService.upsertReferencesFor(this, mergedData)
-                return this.toModel().copy(
-                    validationErrors = errors.ifEmpty { null }
-                )
+                norm to emptyList()
             }
         }
+
+        val updated = existing.apply {
+            name = block.name ?: existing.name
+            payload = newPayload
+        }
+        val saved = blockRepository.save(updated)
+
+        // Upsert links if reference block
+        if (newPayload is ReferenceMetadata) {
+            dispatchReferenceUpsert(saved, newPayload)
+        }
+
+        activityService.logActivity(
+            activity = okuri.core.enums.activity.Activity.BLOCK,
+            operation = OperationType.UPDATE,
+            userId = authTokenService.getUserId(),
+            organisationId = saved.organisationId,
+            targetId = saved.id,
+            additionalDetails = "Updated Block '${saved.id}' of type '${saved.type.key}'"
+        )
+
+        return saved.toModel().copy(
+            validationErrors = errors.ifEmpty { null }
+        )
     }
 
-    /**
-     * Builds a BlockTree for the block with the given id, optionally expanding referenced blocks up to a depth.
-     *
-     * @param blockId UUID of the root block.
-     * @return A BlockTree containing the root node and metadata (`maxDepth` and `expandRefs`).
-     */
+    // ---------- READ (tree) ----------
     fun getBlock(blockId: UUID): BlockTree {
-        val rootEntity = blockRepository.findById(blockId).orElseThrow()
-        buildNode(rootEntity, visited = mutableSetOf<UUID>()).let { rootNode ->
-            return BlockTree(
-                root = rootNode,
+        val root = blockRepository.findById(blockId).orElseThrow()
+        val node = buildNode(root, visited = mutableSetOf())
+        return BlockTree(root = node)
+    }
+
+    private fun buildNode(entity: BlockEntity, visited: MutableSet<UUID>): Node {
+        val id = requireNotNull(entity.id)
+        val model = entity.toModel()
+
+        if (!visited.add(id)) {
+            // Cycles only possible for content nodes (ownership graph)
+            return ContentNode(block = model, warnings = listOf("Cycle detected at ${model.id}"))
+        }
+
+        return when (val meta = entity.payload) {
+            is ReferenceMetadata -> {
+                // Resolve/link list for reference blocks
+                val refs: List<Reference<*>> = blockReferenceService.findBlockReferences(id, meta)
+                ReferenceNode(block = model, warnings = emptyList(), reference = refs)
+            }
+
+            is BlockContentMetadata -> {
+                // Pull owned children via BlockChildrenService
+                val edgesBySlot = blockChildrenService.findChildren(id) // Map<String, List<ChildLink>>
+                val childNodes: Map<String, List<Node>> = edgesBySlot.mapValues { (_, links) ->
+                    // batch fetch children
+                    val ids = links.map { it.childId }.toSet()
+                    val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
+                    links.sortedBy { it.orderIndex }.mapNotNull { link ->
+                        val child = childrenById[link.childId] ?: return@mapNotNull null
+                        buildNode(child, visited)
+                    }
+                }
+                visited.remove(id)
+                ContentNode(block = model, children = childNodes)
+            }
+        }
+    }
+
+    // ---------- helpers ----------
+    private fun resolveType(request: CreateBlockRequest): BlockTypeEntity =
+        when {
+            request.typeId != null -> blockTypeService.getById(request.typeId)
+            request.typeKey != null -> blockTypeService.getByKey(
+                request.typeKey,
+                request.organisationId,
+                request.typeVersion
             )
+
+            else -> throw IllegalArgumentException("Either typeId or typeKey must be provided")
         }
 
-    }
-
-    /**
-     * Constructs a BlockNode for the given BlockEntity, recursively including child nodes up to the specified depth and optionally expanding referenced blocks.
-     *
-     * The function detects cycles and records a warning when a previously visited block is encountered.
-     *
-     * @param entity The root BlockEntity to convert into a BlockNode.
-     * @param visited Mutable set of visited block IDs used for cycle detection; callers should provide and maintain this set across recursion.
-     * @return A BlockNode representing the entity with its children (up to `depth`) and linked references; may contain warnings if a cycle was detected. */
-    private fun buildNode(
-        entity: BlockEntity,
-        visited: MutableSet<UUID>
-    ): Node {
-        val id = requireNotNull(entity.id) { "Block ID cannot be null" }
-        entity.toModel().let { block ->
-            // Base case: if already visited, return with warning
-            if (!visited.add(id)) {
-                // Referenced blocks cannot be children. So it must always be a ContentNode.
-                return ContentNode(block = block, warnings = listOf("Cycle detected at ${block.id}"))
+    private fun dispatchReferenceUpsert(saved: BlockEntity, meta: ReferenceMetadata) {
+        // Heuristic: single BLOCK item ⇒ single linked block; otherwise ⇒ list of entities
+        val items = meta.items
+        val isSingleBlock = items.size == 1 && items.first().type == EntityType.BLOCK
+        if (isSingleBlock) {
+            val item: ReferenceItem = items.first()
+            blockReferenceService.upsertReferenceFor(saved, item)
+        } else {
+            require(items.none { it.type == EntityType.BLOCK }) {
+                "Reference list cannot contain BLOCK items. Use a single BLOCK Reference block."
             }
-
-            entity.payload.let { metadata ->
-                when (metadata) {
-                    is ReferenceMetadata -> {
-                        blockLinkService.findBlockReferences(block.id, metadata).let { references ->
-                            return ReferenceNode(
-                                block = block,
-                                reference = references
-                            )
-                        }
-                    }
-
-                    is BlockContentMetadata -> {
-                        if (entity.type.nesting == null) {
-                            return ContentNode(block = block)
-                        }
-
-                        val edges = blockLinkService.findOwnedBlocks(id)
-                        // Build children nodes
-                        val children: Map<String, List<Node>> =
-                            edges.mapValues { (_, refs) ->
-                                val ids = refs.map { it.entityId }.toSet()
-                                // Bulk fetch all children to avoid N+1
-                                val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
-                                refs.mapNotNull { ref ->
-                                    val child = childrenById[ref.entityId] ?: return@mapNotNull null
-                                    buildNode(child, visited)
-                                }
-                            }
-
-                        return ContentNode(block = block, children = children)
-                    }
-                }
-            }
+            blockReferenceService.upsertLinksFor(saved, items) // uses default "$.items" prefix
         }
     }
 
-    /**
-     * Toggle the archived state of the given block.
-     *
-     * @param block The block whose archived flag will be changed; must belong to the caller's organisation.
-     * @param archive `true` to set the block as archived, `false` to restore it.
-     * @return `true` if the block's archived state was changed, `false` if it was already in the requested state.
-     */
-    @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
-    fun archiveBlock(block: Block, archive: Boolean): Boolean {
-        authTokenService.getUserId().let { user ->
-            blockRepository.findById(block.id).orElseThrow().let { block ->
-                if (block.archived == archive) return false
-                block.apply {
-                    this.archived = archive
-                }.run {
-                    blockRepository.save(this)
-                    activityService.logActivity(
-                        activity = okuri.core.enums.activity.Activity.BLOCK,
-                        operation = if (archive) OperationType.ARCHIVE else OperationType.RESTORE,
-                        userId = user,
-                        organisationId = block.organisationId,
-                        targetId = block.id,
-                        additionalDetails = archive.let {
-                            if (it) {
-                                return@let "Archived Block '${block.id}'"
-                            }
-
-                            return@let "Restored Block '${block.id}'"
-                        }
-                    )
-                }
-            }
-
-        }
-
-        return true
-    }
-
-    /**
-     * Removes the given block and any descendant blocks that are not referenced by other blocks.
-     *
-     * @param block The root block to delete.
-     * @return The total number of blocks removed.
-     * @throws IllegalArgumentException if the block does not belong to the caller's organisation.
-     */
-
-    @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
-    fun deleteBlock(block: Block): Int {
-        TODO()
-    }
-
-    /**
-     * Recursively merges two JSON-like maps, producing a new map that combines keys from both.
-     *
-     * Nested maps are merged recursively; when a key exists in both maps and both values are maps,
-     * their entries are merged. For keys where the new value is not a map, the value from
-     * `objectNew` replaces the one from `objectOld`.
-     *
-     * @param objectOld The original map whose entries are used as defaults.
-     * @param objectNew The map with values that override or extend `objectOld`.
-     * @return A new map containing the deep-merged result of `objectOld` and `objectNew`.
-     */
     @Suppress("UNCHECKED_CAST")
-    private fun deepMergeJson(objectOld: Map<String, Any?>, objectNew: Map<String, Any?>): Map<String, Any?> {
-        val result = objectOld.toMutableMap()
-        for ((k, vNew) in objectNew) {
-            val vOld = result[k]
-            result[k] = when {
-                vOld is Map<*, *> && vNew is Map<*, *> ->
-                    deepMergeJson(vOld as Map<String, Any?>, vNew as Map<String, Any?>)
-
-                else -> vNew
-            }
+    private fun deepMergeJson(a: Map<String, Any?>, b: Map<String, Any?>): Map<String, Any?> {
+        val out = a.toMutableMap()
+        for ((k, vb) in b) {
+            val va = out[k]
+            out[k] = if (va is Map<*, *> && vb is Map<*, *>) {
+                deepMergeJson(va as Map<String, Any?>, vb as Map<String, Any?>)
+            } else vb
         }
-        return result
+        return out
     }
 
 }

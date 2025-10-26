@@ -91,8 +91,8 @@ data class PagingSpec(val pageSize: Int = 20)
 // ---- Transient/system metadata (not business data) ----
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class BlockMeta(
-    val validationErrors: List<String> = emptyList(),
+    var validationErrors: List<String> = emptyList(),
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     val computedFields: JsonObject? = null,    // optional server-computed values for UI summaries
-    val lastValidatedVersion: Int? = null      // BlockType.version used for last validation
+    var lastValidatedVersion: Int? = null      // BlockType.version used for last validation
 )
