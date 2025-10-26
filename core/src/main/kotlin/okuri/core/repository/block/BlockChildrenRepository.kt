@@ -12,7 +12,7 @@ interface BlockChildrenRepository : JpaRepository<BlockChildEntity, UUID> {
 
     fun findByParentIdAndChildId(parentId: UUID, childId: UUID): BlockChildEntity?
 
-    fun findByChildId(childId: UUID): List<BlockChildEntity>
+    fun findByChildId(childId: UUID): BlockChildEntity?
 
     fun deleteAllByParentIdAndSlot(parentId: UUID, slot: String)
 

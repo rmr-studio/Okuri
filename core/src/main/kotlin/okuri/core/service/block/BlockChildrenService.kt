@@ -3,6 +3,7 @@ package okuri.core.service.block
 import jakarta.transaction.Transactional
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
+import okuri.core.models.block.structure.BlockTypeNesting
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
 import org.springframework.stereotype.Service
@@ -18,8 +19,8 @@ import java.util.*
  */
 @Service
 class BlockChildrenService(
-    private val blockRepository: BlockRepository,
-    private val edgeRepository: BlockChildrenRepository
+    private val edgeRepository: BlockChildrenRepository,
+    private val blockRepository: BlockRepository
 ) {
 
     /* =========================
@@ -50,23 +51,24 @@ class BlockChildrenService(
      */
     @Transactional
     fun addChild(
+        child: BlockEntity,
         parentId: UUID,
-        childId: UUID,
         slot: String,
-        index: Int? = null
+        index: Int,
+        nesting: BlockTypeNesting
     ): BlockChildEntity {
-        val parent = load(parentId)
-        val child = load(childId)
-        validateAttach(parent, child, slot)
-
-        // Prevent duplicate edge within the same slot
-        edgeRepository.findByParentIdAndChildId(parentId, childId)?.let {
-            if (it.slot == slot) return it // already there in same slot, idempotent
-            // edge exists in *another* slot; allow move (caller may prefer moveChildToSlot)
+        val childId = requireNotNull(child.id)
+        // Ensure this block is not already a child elsewhere
+        edgeRepository.findByChildId(childId).run {
+            if (this != null) throw IllegalStateException("Block $childId already exists as a child")
         }
 
-        val siblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
-        val insertAt = index?.coerceIn(0, siblings.size) ?: siblings.size
+        val siblings: List<BlockChildEntity> = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
+
+        // TODO: Validate Nesting rules, org match, cycle
+
+
+        val insertAt = index.coerceIn(0, siblings.size)
 
         // Shift down indexes >= insertAt
         siblings.asReversed().forEach { s ->
@@ -262,42 +264,12 @@ class BlockChildrenService(
     private fun load(id: UUID): BlockEntity =
         blockRepository.findById(id).orElseThrow { NoSuchElementException("Block $id not found") }
 
-    private fun sameOrg(a: BlockEntity, b: BlockEntity) = a.organisationId == b.organisationId
-
-    private fun hasParentPointer(b: BlockEntity): Boolean =
-        try {
-            b.parentId != null || true
-        } catch (_: Throwable) {
-            false
-        }
 
     /**
      * Validates org, nesting rules, and cycles.
      */
     private fun validateAttach(parent: BlockEntity, child: BlockEntity, slot: String) {
-        require(parent.id != child.id) { "Parent and child cannot be the same block" }
-        require(sameOrg(parent, child)) { "Cross-organisation parenting is not allowed" }
-
-        // Enforce nesting rules if present
-        parent.type.nesting?.let { nest ->
-            val allowed = nest.allowedTypes // List<String> of type keys, or null for “any” (define your rule)
-            if (!allowed.isNullOrEmpty()) {
-                require(allowed.contains(child.type.key)) {
-                    "Child type '${child.type.key}' not allowed by parent type '${parent.type.key}' in slot '$slot'"
-                }
-            }
-
-            if (nest.allowDuplicates == false) {
-                val exists = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parent.id!!, slot)
-                    .any { it.childId == child.id }
-                require(!exists) { "Duplicate child in slot '$slot' is not allowed" }
-            }
-        } ?: error("Parent type '${parent.type.key}' does not allow nesting")
-
-        // Cycle guard
-        require(!isAncestor(ancestorId = child.id!!, nodeId = parent.id!!)) {
-            "Attaching child ${child.id} under parent ${parent.id} would create a cycle"
-        }
+        TODO()
     }
 
     /** Walk up via BlockChild edges to detect if ancestorId is an ancestor of nodeId. */

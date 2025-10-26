@@ -36,6 +36,13 @@ class BlockService(
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     @Transactional
     fun createBlock(request: CreateBlockRequest): Block {
+        // If we are creating a child. Ensure parent exists, and appropriate metadata has been supplied
+        request.parentId?.run {
+            requireNotNull(request.slot) { "Slot must be provided when creating a child block" }
+            requireNotNull(request.orderIndex) { "Slot must be provided when creating a child block" }
+            requireNotNull(request.parentNesting) { "Parent nesting must be provided when creating a child block" }
+        }
+
         val type: BlockTypeEntity = resolveType(request)
         require(!type.archived) { "BlockType '${type.key}' is archived" }
 
@@ -76,40 +83,42 @@ class BlockService(
             parentId = request.parentId, // optional; slot/order managed by BlockChildrenService
             archived = false
         )
-        val saved = blockRepository.save(entity)
 
-        // Attach to parent if this is a child block
-        request.parentId?.let {
-            requireNotNull(request.slot) { "Slot must be provided when parentId is supplied" }
+        blockRepository.save(entity).run {
+            requireNotNull(this.id) { "Block '$id' not found" }
 
-        }
-
-        // Extract and store references for Reference Blocks
-        when (validatedMetadata) {
-            //
-            is BlockReferenceMetadata -> {
-
+            // If a parent ID is supplied. This would indicate we are creating a child block
+            request.parentId?.let {
+                blockRepository.findById(it).orElseThrow()
+                blockChildrenService.addChild(
+                    parentId = it,
+                    child = this,
+                    // Parent Metadata was previously validated for not null at the start of this method
+                    slot = request.slot!!,
+                    index = request.orderIndex!!,
+                    nesting = request.parentNesting!!
+                )
             }
 
-            is EntityReferenceMetadata -> {
 
+            // Extract and store references for Reference Blocks
+            when (validatedMetadata) {
+                is ReferenceMetadata -> dispatchReferenceUpsert(this, validatedMetadata)
+                else -> Unit
             }
 
-            else -> null
+            // 5) Activity
+            activityService.logActivity(
+                activity = okuri.core.enums.activity.Activity.BLOCK,
+                operation = OperationType.CREATE,
+                userId = authTokenService.getUserId(),
+                organisationId = this.organisationId,
+                targetId = this.id,
+                additionalDetails = "Created Block '${this.id}' of type '${type.key}'"
+            )
+
+            return this.toModel()
         }
-
-
-        // 5) Activity
-        activityService.logActivity(
-            activity = okuri.core.enums.activity.Activity.BLOCK,
-            operation = OperationType.CREATE,
-            userId = authTokenService.getUserId(),
-            organisationId = saved.organisationId,
-            targetId = saved.id,
-            additionalDetails = "Created Block '${saved.id}' of type '${type.key}'"
-        )
-
-        return saved.toModel()
     }
 
     // ---------- UPDATE ----------

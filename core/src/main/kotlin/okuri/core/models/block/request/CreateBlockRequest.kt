@@ -1,6 +1,7 @@
 package okuri.core.models.block.request
 
 import jakarta.validation.constraints.NotNull
+import okuri.core.models.block.structure.BlockTypeNesting
 import okuri.core.models.block.structure.Metadata
 import java.util.*
 
@@ -25,6 +26,7 @@ data class CreateBlockRequest(
     // Reference to the parent block and storage requirement if attaching as a child
     val parentId: UUID? = null,
     val slot: String? = null,
+    val parentNesting: BlockTypeNesting? = null,
     val orderIndex: Int? = null,
 
     ) {
