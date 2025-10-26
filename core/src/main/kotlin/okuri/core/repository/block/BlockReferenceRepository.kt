@@ -3,6 +3,7 @@ package okuri.core.repository.block
 import okuri.core.entity.block.BlockReferenceEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.util.*
 
 interface BlockReferenceRepository : JpaRepository<BlockReferenceEntity, UUID> {
@@ -11,28 +12,22 @@ interface BlockReferenceRepository : JpaRepository<BlockReferenceEntity, UUID> {
      *
      * @param blockId The UUID of the block whose references should be removed.
      */
-    fun deleteByParentBlockId(blockId: UUID)
+    fun deleteByParentId(blockId: UUID)
 
+    // All refs for a block that live under a specific logical prefix (e.g. "$.items")
     @Query(
         """
-        SELECT bre FROM BlockReferenceEntity bre
-        WHERE bre.parentBlock.id = :blockId
-        AND bre.ownership = 'LINKED'
+        select r from BlockReferenceEntity r
+        where r.parentId = :blockId
+          and r.path like concat(:pathPrefix, '%')
+        order by r.path asc, r.orderIndex asc
     """
     )
-    fun findReferencedBlock(
-        blockId: UUID,
+    fun findByBlockIdAndPathPrefix(
+        @Param("blockId") blockId: UUID,
+        @Param("pathPrefix") pathPrefix: String
     ): List<BlockReferenceEntity>
 
-    @Query(
-        """
-        SELECT bre FROM BlockReferenceEntity bre
-        WHERE bre.parentBlock.id = :blockId
-          AND bre.entityType = 'BLOCK'
-          AND bre.ownership = 'OWNED'
-    """
-    )
-    fun findChildBlocks(
-        blockId: UUID,
-    ): List<BlockReferenceEntity>
+    fun findByParentId(blockId: UUID): List<BlockReferenceEntity>
+
 }

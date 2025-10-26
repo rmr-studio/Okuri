@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.persistence.FetchType
 import okuri.core.enums.block.BlockMetadataType
+import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.core.EntityType
 import okuri.core.models.common.json.JsonObject
 import java.util.*
@@ -27,18 +27,41 @@ data class BlockContentMetadata(
     override val meta: BlockMeta = BlockMeta()
 ) : Metadata
 
-data class ReferenceMetadata(
-    // Lazy v Eager loading for Block Building Operations to save on performance
-    val fetchType: FetchType = FetchType.LAZY,
-    val items: List<ReferenceItem>,
+sealed interface ReferenceMetadata : Metadata {
+    val fetchPolicy: BlockReferenceFetchPolicy
+    val path: String
+}
+
+/**
+ * Metadata when a block is referencing a list of external entities
+ */
+data class EntityReferenceMetadata(
     override val kind: BlockMetadataType = BlockMetadataType.REFERENCE,
+    override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
+    override val path: String = "\$.items",           // <— used by service to scope rows
+    val items: List<ReferenceItem>,
     val presentation: Presentation = Presentation.SUMMARY,
     val projection: Projection? = null,
     val sort: SortSpec? = null,
     val filter: FilterSpec? = null,
     val paging: PagingSpec? = null,
+    val allowDuplicates: Boolean = false,          // <— optional guard
     override val meta: BlockMeta = BlockMeta()
-) : Metadata
+) : ReferenceMetadata
+
+/**
+ * Metadata when a block is referencing an external block.
+ */
+data class BlockReferenceMetadata(
+    override val kind: BlockMetadataType = BlockMetadataType.REFERENCE,
+    override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
+    override val meta: BlockMeta = BlockMeta(),
+    override val path: String = "\$.block",
+    val expandDepth: Int = 1,
+    val item: ReferenceItem
+
+
+) : ReferenceMetadata
 
 data class ReferenceItem(
     val type: EntityType,               // CLIENT | COMPANY | BLOCK | ...

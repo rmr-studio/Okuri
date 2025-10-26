@@ -257,11 +257,19 @@ CREATE TABLE public.block_references
     "block_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
     "entity_type" text    NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
     "entity_id"   uuid    NOT NULL, -- id of the referenced entity
-    "path"        text    NOT NULL, -- JSON path within the entity (e.g. "$.data.contact_details.address")
-    "relation"    text    NOT NULL,
-    check ( relation in ('OWNED', 'LINKED') ),
+    "path"        text    NULL,     -- JSON path within the block where this reference is used.
     "order_index" integer NOT NULL DEFAULT 0,
     UNIQUE (block_id, entity_type, entity_id, path)
+);
+
+CREATE TABLE public.block_children
+(
+    "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "parent_id"   uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    "child_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    "slot"        text    NOT NULL, -- e.g. "header", "items", "footer"
+    "order_index" integer NOT NULL DEFAULT 0,
+    UNIQUE (parent_id, child_id, slot)
 );
 
 

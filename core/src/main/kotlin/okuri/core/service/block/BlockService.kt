@@ -4,7 +4,7 @@ import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.isStrict
 import okuri.core.enums.util.OperationType
-import okuri.core.models.block.Block
+import okuri.core.models.block.*
 import okuri.core.models.block.request.*
 import okuri.core.models.block.structure.BlockContentMetadata
 import okuri.core.models.block.structure.BlockMeta
@@ -26,7 +26,7 @@ import java.util.*
 class BlockService(
     private val blockRepository: BlockRepository,
     private val blockTypeService: BlockTypeService,
-    private val blockLinkService: BlockLinkService,
+    private val blockLinkService: BlockReferenceService,
     private val schemaService: SchemaService,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService
@@ -101,14 +101,13 @@ class BlockService(
         )
 
         blockRepository.save(entity).run {
-            // Save refs (and OWNED parenting) based on metadata.data
-            blockReferenceService.upsertReferencesFor(this, entity.payload.data)
+            blockLinkService.createLinks(this)
             activityService.logActivity(
                 activity = okuri.core.enums.activity.Activity.BLOCK,
                 operation = OperationType.CREATE,
                 userId = authTokenService.getUserId(),
-                organisationId = organisationId,
-                targetId = id,
+                organisationId = request.organisationId,
+                targetId = this.id,
                 additionalDetails = "Created Block '${id}' of type '${type.key}'"
             )
             return this.toModel()

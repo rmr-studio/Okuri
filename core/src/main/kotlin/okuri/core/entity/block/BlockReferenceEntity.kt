@@ -2,7 +2,6 @@ package okuri.core.entity.block
 
 
 import jakarta.persistence.*
-import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.core.EntityType
 import java.util.*
 
@@ -26,9 +25,8 @@ data class BlockReferenceEntity(
     val id: UUID? = null,
 
     // The originator block that is referencing another data source
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "block_id", nullable = false)
-    val parentBlock: BlockEntity,
+    @Column(name = "block_id", nullable = false, columnDefinition = "uuid")
+    val parentId: UUID,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "entity_type", nullable = false)
@@ -36,10 +34,6 @@ data class BlockReferenceEntity(
 
     @Column(name = "entity_id", nullable = false, columnDefinition = "uuid")
     val entityId: UUID,
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "relation", nullable = false)
-    val ownership: BlockOwnership = BlockOwnership.OWNED,
 
     @Column(name = "path", nullable = false)
     val path: String,

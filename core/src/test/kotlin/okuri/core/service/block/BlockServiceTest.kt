@@ -5,11 +5,10 @@ import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockReferenceEntity
 import okuri.core.entity.block.BlockTypeEntity
-import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Block
-import okuri.core.models.block.request.BlockTree
+import okuri.core.models.block.BlockTree
 import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.structure.BlockMeta
 import okuri.core.models.block.structure.BlockSchema
@@ -56,18 +55,25 @@ class BlockServiceTest {
 
     @MockitoBean
     lateinit var blockRepository: BlockRepository
+
     @MockitoBean
     lateinit var blockTypeService: BlockTypeService
+
     @MockitoBean
     lateinit var blockReferenceService: BlockReferenceService
+
     @MockitoBean
     lateinit var blockReferenceRepository: BlockReferenceRepository
+
     @MockitoBean
     lateinit var schemaService: SchemaService
+
     @MockitoBean
     lateinit var activityService: ActivityService
+
     @MockitoBean
     lateinit var logger: KLogger
+
     @MockitoBean
     lateinit var authTokenService: AuthTokenService
 

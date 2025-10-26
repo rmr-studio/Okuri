@@ -2,7 +2,6 @@ package okuri.core.service.block
 
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockReferenceEntity
-import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Referenceable
 import okuri.core.repository.block.BlockReferenceRepository
