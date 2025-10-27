@@ -340,6 +340,9 @@ class BlockChildrenService(
             "Cannot attach child from different organisation (parent: ${parent.organisationId}, child: ${child.organisationId})"
         }
 
+        val parentId = requireNotNull(parent.id)
+        requireNotNull(child.id)
+
         // 2. Nesting rules: check if child's type is allowed
         val childType = child.type.key
         val allowedTypes = nesting.allowedTypes
@@ -352,7 +355,7 @@ class BlockChildrenService(
 
         // 3. Max children constraint
         nesting.max?.let { maxChildren ->
-            val currentCount = edgeRepository.countByParentIdAndSlot(parent.id!!, slot)
+            val currentCount = edgeRepository.countByParentIdAndSlot(parentId, slot)
             require(currentCount < maxChildren) {
                 "Parent block ${parent.id} has reached maximum children ($maxChildren) in slot '$slot'"
             }

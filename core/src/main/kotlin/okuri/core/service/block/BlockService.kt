@@ -134,6 +134,10 @@ class BlockService(
             "Cannot switch payload kind (content <-> reference) on update. Create a new block instead."
         }
 
+        require(existing.type.id == block.type.id) {
+            "Cannot change block type on update. Create a new block instead."
+        }
+
         val updatedMetadata: Metadata = block.payload.let {
             when (it) {
                 is BlockContentMetadata -> {
@@ -146,7 +150,7 @@ class BlockService(
                             this.data = updated
                         }
 
-                        val errs = schemaService.validate(block.type.schema, it, existing.type.strictness)
+                        val errs = schemaService.validate(existing.type.schema, it, existing.type.strictness)
 
                         if (existing.type.strictness.isStrict() && errs.isNotEmpty()) {
                             throw SchemaValidationException(errs)
@@ -324,7 +328,7 @@ class BlockService(
 
         activityService.logActivity(
             activity = okuri.core.enums.activity.Activity.BLOCK,
-            operation = if (status) okuri.core.enums.util.OperationType.ARCHIVE else okuri.core.enums.util.OperationType.RESTORE,
+            operation = if (status) OperationType.ARCHIVE else OperationType.RESTORE,
             userId = authTokenService.getUserId(),
             organisationId = updated.organisationId,
             targetId = updated.id,
