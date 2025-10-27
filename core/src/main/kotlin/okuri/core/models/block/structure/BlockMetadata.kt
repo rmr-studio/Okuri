@@ -13,7 +13,8 @@ import java.util.*
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
 @JsonSubTypes(
     JsonSubTypes.Type(value = BlockContentMetadata::class, name = "content"),
-    JsonSubTypes.Type(value = ReferenceMetadata::class, name = "reference")
+    JsonSubTypes.Type(value = EntityReferenceMetadata::class, name = "entity_reference"),
+    JsonSubTypes.Type(value = BlockReferenceMetadata::class, name = "block_reference")
 )
 sealed interface Metadata {
     val kind: BlockMetadataType

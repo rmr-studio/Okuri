@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.util.*
 
 /**
- * Entity representing a direct relationship between a parent block. And an embedded child block.
+ * Entity representing a direct relationship between a parent block and an embedded child block.
  * This allows a block to contain other blocks as children in a structured manner.
  */
 @Entity
@@ -12,6 +12,10 @@ import java.util.*
     name = "block_children",
     uniqueConstraints = [
         UniqueConstraint(columnNames = ["child_id"])
+    ],
+    indexes = [
+        Index(name = "idx_block_children_parent_id", columnList = "parent_id"),
+        Index(name = "idx_block_children_child_id", columnList = "child_id"),
     ]
 )
 data class BlockChildEntity(

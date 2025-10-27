@@ -614,4 +614,235 @@ class BlockReferenceServiceTest {
         assertNull(result.entity)
         assertEquals(BlockReferenceWarning.MISSING, result.warning)
     }
+
+    // =============================================================================================
+    // ADDITIONAL COVERAGE - EDGE CASES FROM TEST PLAN
+    // =============================================================================================
+
+    @Test
+    fun `upsertLinksFor reorders existing items without add or delete`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        val clientAId = UUID.randomUUID()
+        val clientBId = UUID.randomUUID()
+        val clientCId = UUID.randomUUID()
+
+        // Existing: A at [0], B at [1], C at [2]
+        val existing = listOf(
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = clientAId,
+                path = "\$.items[0]",
+                orderIndex = 0
+            ),
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = clientBId,
+                path = "\$.items[1]",
+                orderIndex = 1
+            ),
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = clientCId,
+                path = "\$.items[2]",
+                orderIndex = 2
+            )
+        )
+
+        // Desired: C at [0], A at [1], B at [2] (reorder only)
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = clientCId),
+                ReferenceItem(type = EntityType.CLIENT, id = clientAId),
+                ReferenceItem(type = EntityType.CLIENT, id = clientBId)
+            ),
+            path = "\$.items",
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(existing)
+        whenever(blockReferenceRepository.saveAll(any<List<BlockReferenceEntity>>())).thenAnswer { it.arguments[0] }
+
+        val service = serviceWithResolvers()
+        service.upsertLinksFor(block, metadata)
+
+        // All items change paths, so all deleted and recreated
+        verify(blockReferenceRepository).deleteAllInBatch(argThat<List<BlockReferenceEntity>> { this.size == 3 })
+        verify(blockReferenceRepository).saveAll(argThat<List<BlockReferenceEntity>> {
+            this.size == 3 &&
+                    this.any { it.entityId == clientCId && it.orderIndex == 0 && it.path == "\$.items[0]" } &&
+                    this.any { it.entityId == clientAId && it.orderIndex == 1 && it.path == "\$.items[1]" } &&
+                    this.any { it.entityId == clientBId && it.orderIndex == 2 && it.path == "\$.items[2]" }
+        })
+    }
+
+    @Test
+    fun `upsertLinksFor allows duplicates when allowDuplicates is true`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val clientId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val block = BlockFactory.createBlock(blockId, orgId, type)
+
+        // Same client appears twice
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = clientId),
+                ReferenceItem(type = EntityType.CLIENT, id = clientId)
+            ),
+            path = "\$.items",
+            allowDuplicates = true,
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(emptyList())
+        whenever(blockReferenceRepository.saveAll(any<List<BlockReferenceEntity>>())).thenAnswer { it.arguments[0] }
+
+        val service = serviceWithResolvers()
+        service.upsertLinksFor(block, metadata)
+
+        // Should create two rows for the same client with different paths and indices
+        verify(blockReferenceRepository).saveAll(argThat<List<BlockReferenceEntity>> {
+            this.size == 2 &&
+                    this[0].entityId == clientId && this[0].orderIndex == 0 && this[0].path == "\$.items[0]" &&
+                    this[1].entityId == clientId && this[1].orderIndex == 1 && this[1].path == "\$.items[1]"
+        })
+    }
+
+    @Test
+    fun `findListReferences handles mixed entity types with multiple resolvers`() {
+        val blockId = UUID.randomUUID()
+
+        val client1Id = UUID.randomUUID()
+        val client2Id = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+
+        // Mock PROJECT resolver
+        val projectResolver = object : ReferenceResolver {
+            override val type = EntityType.PROJECT
+            override fun fetch(ids: Set<UUID>): Map<UUID, Referenceable<*>> {
+                return ids.associateWith { id ->
+                    object : Referenceable<Any> {
+                        override fun toReference(): Any = mapOf("id" to id, "name" to "Project-$id")
+                    }
+                }
+            }
+        }
+
+        val rows = listOf(
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client1Id,
+                path = "\$.items[0]",
+                orderIndex = 0
+            ),
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.PROJECT,
+                entityId = projectId,
+                path = "\$.items[1]",
+                orderIndex = 1
+            ),
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client2Id,
+                path = "\$.items[2]",
+                orderIndex = 2
+            )
+        )
+
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = client1Id),
+                ReferenceItem(type = EntityType.PROJECT, id = projectId),
+                ReferenceItem(type = EntityType.CLIENT, id = client2Id)
+            ),
+            path = "\$.items",
+            fetchPolicy = BlockReferenceFetchPolicy.EAGER,
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
+
+        val service = serviceWithResolvers(listOf(clientResolver, projectResolver))
+        val result = service.findListReferences(blockId, metadata)
+
+        assertEquals(3, result.size)
+
+        // All should be resolved
+        assertNotNull(result[0].entity)
+        assertEquals(EntityType.CLIENT, result[0].entityType)
+        assertNull(result[0].warning)
+
+        assertNotNull(result[1].entity)
+        assertEquals(EntityType.PROJECT, result[1].entityType)
+        assertNull(result[1].warning)
+
+        assertNotNull(result[2].entity)
+        assertEquals(EntityType.CLIENT, result[2].entityType)
+        assertNull(result[2].warning)
+    }
+
+    @Test
+    fun `findListReferences returns MISSING for items in metadata not in database`() {
+        val blockId = UUID.randomUUID()
+
+        val client1Id = UUID.randomUUID()
+        val client2Id = UUID.randomUUID()
+
+        // Only client1 exists in database
+        val rows = listOf(
+            BlockReferenceEntity(
+                id = UUID.randomUUID(),
+                parentId = blockId,
+                entityType = EntityType.CLIENT,
+                entityId = client1Id,
+                path = "\$.items[0]",
+                orderIndex = 0
+            )
+        )
+
+        // But metadata references both client1 and client2
+        val metadata = EntityReferenceMetadata(
+            items = listOf(
+                ReferenceItem(type = EntityType.CLIENT, id = client1Id),
+                ReferenceItem(type = EntityType.CLIENT, id = client2Id) // Not in DB
+            ),
+            path = "\$.items",
+            fetchPolicy = BlockReferenceFetchPolicy.EAGER,
+            meta = BlockMeta()
+        )
+
+        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
+
+        val service = serviceWithResolvers()
+        val result = service.findListReferences(blockId, metadata)
+
+        assertEquals(2, result.size)
+
+        // Client1 should be found and loaded
+        assertNotNull(result[0].entity)
+        assertNull(result[0].warning)
+
+        // Client2 should have MISSING warning
+        assertNull(result[1].id) // No row in database
+        assertNull(result[1].entity)
+        assertEquals(BlockReferenceWarning.MISSING, result[1].warning)
+    }
 }

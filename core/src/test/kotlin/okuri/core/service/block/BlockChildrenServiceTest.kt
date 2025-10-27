@@ -508,4 +508,38 @@ class BlockChildrenServiceTest {
         // Verify compaction happened (remaining children renumbered)
         verify(edgeRepository, atLeastOnce()).save(any())
     }
+
+    // =============================================================================================
+    // ADDITIONAL COVERAGE - EDGE CASES FROM TEST PLAN
+    // =============================================================================================
+
+    @Test
+    fun `addChild throws when child already attached to same parent and slot`() {
+        val orgId = UUID.randomUUID()
+        val parentId = UUID.randomUUID()
+        val childId = UUID.randomUUID()
+
+        val childType = BlockFactory.createType(orgId, key = "contact_card")
+        val child = BlockFactory.createBlock(childId, orgId, childType, parentId = parentId)
+
+        val parentType = BlockFactory.createType(orgId)
+        val parent = BlockFactory.createBlock(parentId, orgId, parentType)
+
+        val nesting = BlockTypeNesting(max = null, allowedTypes = listOf(ComponentType.CONTACT_CARD))
+
+        // Child is already attached to the same parent
+        val existingEdge = BlockChildEntity(UUID.randomUUID(), parentId, childId, "items", 0)
+
+        whenever(blockRepository.findById(parentId)).thenReturn(Optional.of(parent))
+        whenever(edgeRepository.findByChildId(childId)).thenReturn(existingEdge)
+
+        // Service should throw exception because child_id is globally unique
+        val exception = assertThrows<IllegalStateException> {
+            service.addChild(child, parentId, "items", 0, nesting)
+        }
+
+        assertTrue(exception.message!!.contains("already exists"))
+        verify(edgeRepository, never()).save(any())
+    }
+
 }
