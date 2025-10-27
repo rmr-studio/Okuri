@@ -5,7 +5,6 @@ import jakarta.persistence.*
 import okuri.core.entity.company.CompanyEntity
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.enums.client.ClientType
-import okuri.core.models.block.Referenceable
 import okuri.core.models.client.Client
 import okuri.core.models.common.Contact
 import org.hibernate.annotations.Type
@@ -48,14 +47,8 @@ data class ClientEntity(
     @Column(name = "type", nullable = true)
     var type: ClientType? = null,
 
-    ) : AuditableEntity(), Referenceable<Client> {
-    /**
- * Creates a Client domain reference from this entity.
- *
- * @return A Client model representing this entity's reference data.
- */
-override fun toReference() = this.toModel()
-
+    ) : AuditableEntity() {
+    
     /**
      * Converts this persistent ClientEntity into a Client domain model.
      *

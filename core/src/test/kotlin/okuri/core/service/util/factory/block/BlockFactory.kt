@@ -47,14 +47,12 @@ object BlockFactory {
         id: UUID,
         orgId: UUID,
         type: BlockTypeEntity,
-        parentId: UUID? = null
     ): BlockEntity = BlockEntity(
         id = id,
         organisationId = orgId,
         type = type,
         name = "Test Block",
         payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-        parentId = parentId,
         archived = false
     )
 

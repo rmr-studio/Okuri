@@ -1,12 +1,16 @@
 package okuri.core.enums.core
 
-enum class EntityType {
-    LINE_ITEM,
-    CLIENT,
-    COMPANY,
-    INVOICE,
-    BLOCK,
-    REPORT,
-    DOCUMENT,
-    PROJECT
+import com.fasterxml.jackson.annotation.JsonValue
+
+enum class EntityType(@get:JsonValue val type: String) {
+    LINE_ITEM("line_item"),
+    CLIENT("client"),
+    COMPANY("company"),
+    INVOICE("invoice"),
+    BLOCK_TREE("block_tree"),
+    REPORT("report"),
+    DOCUMENT("document"),
+    PROJECT("project"),
+    ORGANISATION("organisation"),
+    TASK("task"),
 }

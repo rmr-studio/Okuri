@@ -1,8 +1,9 @@
 package okuri.core.models.block.structure
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.BlockMetadataType
 import okuri.core.enums.block.BlockReferenceFetchPolicy
@@ -10,17 +11,31 @@ import okuri.core.enums.core.EntityType
 import okuri.core.models.common.json.JsonObject
 import java.util.*
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
-@JsonSubTypes(
-    JsonSubTypes.Type(value = BlockContentMetadata::class, name = "content"),
-    JsonSubTypes.Type(value = EntityReferenceMetadata::class, name = "entity_reference"),
-    JsonSubTypes.Type(value = BlockReferenceMetadata::class, name = "block_reference")
+@Schema(
+    oneOf = [
+        BlockContentMetadata::class,
+        EntityReferenceMetadata::class,
+        BlockReferenceMetadata::class
+    ],
+    discriminatorProperty = "kind",
+    discriminatorMapping = [
+        DiscriminatorMapping(value = "content", schema = BlockContentMetadata::class),
+        DiscriminatorMapping(value = "entity_reference", schema = EntityReferenceMetadata::class),
+        DiscriminatorMapping(value = "block_reference", schema = BlockReferenceMetadata::class),
+    ]
+)
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "kind"
 )
 sealed interface Metadata {
     val kind: BlockMetadataType
     val meta: BlockMeta
 }
 
+@JsonTypeName("content")
+@Schema(requiredProperties = ["kind", "meta"])
 data class BlockContentMetadata(
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     var data: JsonObject = emptyMap(),
@@ -28,6 +43,7 @@ data class BlockContentMetadata(
     override val meta: BlockMeta = BlockMeta()
 ) : Metadata
 
+@Schema(hidden = true)
 sealed interface ReferenceMetadata : Metadata {
     val fetchPolicy: BlockReferenceFetchPolicy
     val path: String
@@ -36,6 +52,8 @@ sealed interface ReferenceMetadata : Metadata {
 /**
  * Metadata when a block is referencing a list of external entities
  */
+@JsonTypeName("entity_reference")
+@Schema(requiredProperties = ["kind", "meta"])
 data class EntityReferenceMetadata(
     override val kind: BlockMetadataType = BlockMetadataType.ENTITY_REFERENCE,
     override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
@@ -53,6 +71,8 @@ data class EntityReferenceMetadata(
 /**
  * Metadata when a block is referencing an external block.
  */
+@JsonTypeName("block_reference")
+@Schema(requiredProperties = ["kind", "meta"])
 data class BlockReferenceMetadata(
     override val kind: BlockMetadataType = BlockMetadataType.BLOCK_REFERENCE,
     override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,

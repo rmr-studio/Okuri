@@ -114,7 +114,7 @@ class BlockReferencesController(
         // TODO: Implementation requires:
         // 1. Load the block entity from repository
         // 2. Verify block has BlockReferenceMetadata payload
-        // 3. Verify request.item.type == EntityType.BLOCK
+        // 3. Verify request.item.type == EntityType.BLOCK_TREE
         // 4. Construct BlockReferenceMetadata from request
         // 5. Call blockReferenceService.upsertBlockLinkFor(block, metadata)
         //

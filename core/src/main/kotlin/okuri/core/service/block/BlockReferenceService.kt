@@ -37,7 +37,7 @@ class BlockReferenceService(
             val dups = meta.items.groupBy { it.type to it.id }.filterValues { it.size > 1 }
             require(dups.isEmpty()) { "Duplicate references are not allowed: ${dups.keys}" }
         }
-        require(meta.items.none { it.type == EntityType.BLOCK }) {
+        require(meta.items.none { it.type == EntityType.BLOCK_TREE }) {
             "ReferenceListMetadata cannot include BLOCK references (use BlockLinkMetadata)."
         }
 
@@ -72,7 +72,7 @@ class BlockReferenceService(
         if (toSave.isNotEmpty()) blockReferenceRepository.saveAll(toSave)
     }
 
-    fun findListReferences(blockId: UUID, meta: EntityReferenceMetadata): List<Reference<*>> {
+    fun findListReferences(blockId: UUID, meta: EntityReferenceMetadata): List<Reference> {
         val rows = blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, meta.path)
         val byPath = rows.associateBy { it.path }
         val base = meta.items.mapIndexed { idx, item ->
@@ -117,7 +117,7 @@ class BlockReferenceService(
     @Transactional
     fun upsertBlockLinkFor(block: BlockEntity, meta: BlockReferenceMetadata) {
         val blockId = requireNotNull(block.id)
-        require(meta.item.type == EntityType.BLOCK) { "BlockLinkMetadata.target must be type BLOCK" }
+        require(meta.item.type == EntityType.BLOCK_TREE) { "BlockLinkMetadata.target must be type BLOCK_TREE" }
 
         val existing = blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, meta.path)
         require(existing.size <= 1) {
@@ -130,7 +130,7 @@ class BlockReferenceService(
                 BlockReferenceEntity(
                     id = null,
                     parentId = blockId,
-                    entityType = EntityType.BLOCK,
+                    entityType = EntityType.BLOCK_TREE,
                     entityId = meta.item.id,
                     path = meta.path,          // e.g. "$.block"
                     orderIndex = null
@@ -141,12 +141,12 @@ class BlockReferenceService(
         }
     }
 
-    fun findBlockLink(blockId: UUID, meta: BlockReferenceMetadata): Reference<Block> {
+    fun findBlockLink(blockId: UUID, meta: BlockReferenceMetadata): Reference {
         val rows = blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, meta.path)
         val row = rows.firstOrNull()
             ?: return Reference(
                 id = null,
-                entityType = EntityType.BLOCK,
+                entityType = EntityType.BLOCK_TREE,
                 entityId = meta.item.id,
                 entity = null,
                 warning = BlockReferenceWarning.MISSING
@@ -164,7 +164,7 @@ class BlockReferenceService(
         }
 
         // EAGER ⇒ resolve to a lightweight Block referenceable (or use a BLOCK resolver)
-        val child = resolverByType[EntityType.BLOCK]?.fetch(setOf(row.entityId))?.get(row.entityId)
+        val child = resolverByType[EntityType.BLOCK_TREE]?.fetch(setOf(row.entityId))?.get(row.entityId)
             ?: return Reference(
                 id = row.id,
                 entityType = row.entityType,
@@ -173,18 +173,12 @@ class BlockReferenceService(
                 warning = BlockReferenceWarning.MISSING
             )
 
-        child.toReference().run {
-            if (this is Block) {
-                return Reference(
-                    id = row.id,
-                    entityType = row.entityType,
-                    entityId = row.entityId,
-                    entity = this,
-                    warning = null
-                )
-            }
-
-            throw IllegalStateException("Resolved entity is not of type Block")
-        }
+        return Reference(
+            id = row.id,
+            entityType = row.entityType,
+            entityId = row.entityId,
+            entity = child,
+            warning = null
+        )
     }
 }

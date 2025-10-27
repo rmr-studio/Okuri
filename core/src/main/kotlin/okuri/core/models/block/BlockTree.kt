@@ -1,13 +1,15 @@
 package okuri.core.models.block
 
+import com.fasterxml.jackson.annotation.JsonTypeName
+import io.swagger.v3.oas.annotations.media.Schema
+import okuri.core.enums.core.EntityType
+
+@JsonTypeName("block_tree")
+@Schema(requiredProperties = ["kind", "root"])
 data class BlockTree(
+    override val kind: EntityType = EntityType.BLOCK_TREE,
     val root: Node,
-) : Referenceable<BlockTree> {
-    // NO-OP for BlockTree
-    override fun toReference(): BlockTree {
-        return this
-    }
-}
+) : Referenceable
 
 sealed interface Node {
     val block: Block
@@ -22,8 +24,8 @@ data class ContentNode(
 ) : Node
 
 sealed interface ReferencePayload
-data class EntityReference(val reference: List<Reference<*>>) : ReferencePayload
-data class BlockTreeReference(val reference: Reference<BlockTree>) : ReferencePayload
+data class EntityReference(val reference: List<Reference>) : ReferencePayload
+data class BlockTreeReference(val reference: Reference) : ReferencePayload
 
 data class ReferenceNode(
     override val block: Block,

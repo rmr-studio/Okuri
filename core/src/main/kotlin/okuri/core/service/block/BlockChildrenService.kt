@@ -89,11 +89,6 @@ class BlockChildrenService(
             )
         )
 
-        // Optional: mirror parent pointer on child for denormalization
-        if (child.parentId != parentId) {
-            blockRepository.save(child.copy(parentId = parentId))
-        }
-
         return created
     }
 
@@ -157,11 +152,6 @@ class BlockChildrenService(
                         orderIndex = idx
                     )
                 )
-                // Mirror parent pointer
-                val child = byId[id]!!
-                if (child.parentId != parentId) {
-                    blockRepository.save(child.copy(parentId = parentId))
-                }
             } else if (row.orderIndex != idx) {
                 edgeRepository.save(row.copy(orderIndex = idx))
             }
@@ -281,11 +271,6 @@ class BlockChildrenService(
                 orderIndex = insertAt
             )
         )
-
-        // Optional: mirror parent pointer
-        if (child.parentId != newParentId) {
-            blockRepository.save(child.copy(parentId = newParentId))
-        }
     }
 
     /**
@@ -298,13 +283,6 @@ class BlockChildrenService(
             // Compact the parent's slot
             val siblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(edge.parentId, edge.slot)
             renumber(edge.parentId, edge.slot, siblings)
-
-            // Optional mirror: null out child's parent pointer
-            blockRepository.findById(childId).ifPresent { child ->
-                if (child.parentId != null) {
-                    blockRepository.save(child.copy(parentId = null))
-                }
-            }
         }
     }
 
@@ -321,13 +299,6 @@ class BlockChildrenService(
         // compact the slot
         val remaining = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
         renumber(parentId, slot, remaining)
-
-        // Optional mirror: clear parent pointer
-        blockRepository.findById(childId).ifPresent { child ->
-            if (child.parentId != null) {
-                blockRepository.save(child.copy(parentId = null))
-            }
-        }
     }
 
     /* =========================

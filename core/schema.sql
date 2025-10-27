@@ -14,8 +14,6 @@ CREATE TABLE IF NOT EXISTS "organisations"
     "business_number"   TEXT,
     "tax_id"            TEXT,
     "payment_details"   jsonb,
-    "custom_attributes" jsonb,
-    "tile_layout"       jsonb,
     "member_count"      INTEGER          NOT NULL DEFAULT 0,
     "created_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
     "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,

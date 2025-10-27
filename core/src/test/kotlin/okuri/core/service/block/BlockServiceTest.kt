@@ -3,7 +3,6 @@ package okuri.core.service.block
 import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
-import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.block.BlockValidationScope
@@ -12,7 +11,6 @@ import okuri.core.enums.core.EntityType
 import okuri.core.models.block.*
 import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.structure.*
-import okuri.core.models.common.grid.LayoutGrid
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -75,7 +73,6 @@ class BlockServiceTest {
     lateinit var service: BlockService
 
     private fun uuid(s: String) = UUID.fromString(s)
-
 
 
     private fun saved(entity: BlockEntity) = entity.copy(id = UUID.randomUUID())
@@ -209,7 +206,6 @@ class BlockServiceTest {
             type = type,
             name = "Parent",
             payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-            parentId = null,
             archived = false
         )
 
@@ -330,7 +326,7 @@ class BlockServiceTest {
             typeVersion = null,
             name = "Block Link",
             payload = BlockReferenceMetadata(
-                item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+                item = ReferenceItem(type = EntityType.BLOCK_TREE, id = referencedBlockId),
                 expandDepth = 1,
                 meta = BlockMeta()
             )
@@ -374,7 +370,6 @@ class BlockServiceTest {
                 data = mapOf("a" to 1, "nested" to mapOf("x" to 1, "y" to 2)),
                 meta = BlockMeta()
             ),
-            parentId = null,
             archived = false
         )
 
@@ -435,7 +430,6 @@ class BlockServiceTest {
             type = type,
             name = "Original",
             payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-            parentId = null,
             archived = false
         )
 
@@ -491,7 +485,6 @@ class BlockServiceTest {
                 items = listOf(ReferenceItem(EntityType.CLIENT, clientId1)),
                 meta = BlockMeta()
             ),
-            parentId = null,
             archived = false
         )
 
@@ -542,7 +535,6 @@ class BlockServiceTest {
             type = type,
             name = "Root",
             payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-            parentId = null,
             archived = false
         )
 
@@ -587,7 +579,6 @@ class BlockServiceTest {
             type = type,
             name = "Cyclic",
             payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-            parentId = null,
             archived = false
         )
 
@@ -643,7 +634,6 @@ class BlockServiceTest {
             type = type,
             name = "Test",
             payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-            parentId = null,
             archived = false
         )
 
@@ -684,7 +674,6 @@ class BlockServiceTest {
             type = type,
             name = "Test",
             payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-            parentId = null,
             archived = true // Already archived
         )
 
@@ -799,7 +788,6 @@ class BlockServiceTest {
                 data = mapOf("email" to "valid@email.com"),
                 meta = BlockMeta()
             ),
-            parentId = null,
             archived = false
         )
 
@@ -858,7 +846,6 @@ class BlockServiceTest {
                 path = "$.clients",
                 meta = BlockMeta()
             ),
-            parentId = null,
             archived = false
         )
 
@@ -910,14 +897,13 @@ class BlockServiceTest {
                 fetchPolicy = BlockReferenceFetchPolicy.LAZY,
                 meta = BlockMeta()
             ),
-            parentId = null,
             archived = false
         )
 
         whenever(blockRepository.findById(blockId)).thenReturn(Optional.of(entity))
 
         val references = listOf(
-            Reference<Any>(
+            Reference(
                 id = UUID.randomUUID(),
                 entityType = EntityType.CLIENT,
                 entityId = clientId,
@@ -953,20 +939,19 @@ class BlockServiceTest {
             type = type,
             name = "Block Link",
             payload = BlockReferenceMetadata(
-                item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+                item = ReferenceItem(type = EntityType.BLOCK_TREE, id = referencedBlockId),
                 path = "$.block",
                 fetchPolicy = BlockReferenceFetchPolicy.LAZY,
                 meta = BlockMeta()
             ),
-            parentId = null,
             archived = false
         )
 
         whenever(blockRepository.findById(blockId)).thenReturn(Optional.of(entity))
 
-        val blockRef = Reference<Block>(
+        val blockRef = Reference(
             id = UUID.randomUUID(),
-            entityType = EntityType.BLOCK,
+            entityType = EntityType.BLOCK_TREE,
             entityId = referencedBlockId,
             entity = null,
             warning = BlockReferenceWarning.REQUIRES_LOADING

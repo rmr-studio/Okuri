@@ -80,7 +80,6 @@ class BlockService(
             type = type,
             name = request.name,
             payload = validatedMetadata,
-            parentId = request.parentId, // optional; slot/order managed by BlockChildrenService
             archived = false
         )
 
@@ -215,39 +214,12 @@ class BlockService(
 
         return when (val meta = block.payload) {
             is BlockReferenceMetadata -> {
-                val refs: Reference<BlockTree> = blockReferenceService.findBlockLink(block.id, meta).let {
-                    it.entity.let { ref ->
-                        if (ref == null) {
-                            return@let Reference(
-                                id = it.id,
-                                entityType = it.entityType,
-                                entityId = it.entityId,
-                                entity = null,
-                                warning = it.warning
-                            )
-                        }
-
-                        // Build BlockTree for referenced block
-                        buildNode(ref, mutableSetOf<UUID>()).run {
-                            Reference(
-                                id = it.id,
-                                entityType = it.entityType,
-                                entityId = it.entityId,
-                                entity = BlockTree(
-                                    root = this
-                                ),
-                                warning = it.warning
-                            )
-                        }
-                    }
-                }
-
-
+                val blockRef = blockReferenceService.findBlockLink(block.id, meta)
                 visited.remove(block.id)
                 ReferenceNode(
                     block = block,
                     reference = BlockTreeReference(
-                        reference = refs
+                        reference = blockRef
                     )
                 )
             }
