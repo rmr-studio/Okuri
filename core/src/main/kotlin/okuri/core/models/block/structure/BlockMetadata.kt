@@ -13,7 +13,8 @@ import java.util.*
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
 @JsonSubTypes(
     JsonSubTypes.Type(value = BlockContentMetadata::class, name = "content"),
-    JsonSubTypes.Type(value = ReferenceMetadata::class, name = "reference")
+    JsonSubTypes.Type(value = EntityReferenceMetadata::class, name = "entity_reference"),
+    JsonSubTypes.Type(value = BlockReferenceMetadata::class, name = "block_reference")
 )
 sealed interface Metadata {
     val kind: BlockMetadataType
@@ -36,7 +37,7 @@ sealed interface ReferenceMetadata : Metadata {
  * Metadata when a block is referencing a list of external entities
  */
 data class EntityReferenceMetadata(
-    override val kind: BlockMetadataType = BlockMetadataType.REFERENCE,
+    override val kind: BlockMetadataType = BlockMetadataType.ENTITY_REFERENCE,
     override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
     override val path: String = "\$.items",           // <— used by service to scope rows
     val items: List<ReferenceItem>,
@@ -53,7 +54,7 @@ data class EntityReferenceMetadata(
  * Metadata when a block is referencing an external block.
  */
 data class BlockReferenceMetadata(
-    override val kind: BlockMetadataType = BlockMetadataType.REFERENCE,
+    override val kind: BlockMetadataType = BlockMetadataType.BLOCK_REFERENCE,
     override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
     override val meta: BlockMeta = BlockMeta(),
     override val path: String = "\$.block",

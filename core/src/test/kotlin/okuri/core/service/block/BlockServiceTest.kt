@@ -4,11 +4,12 @@ import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
+import okuri.core.enums.block.BlockReferenceFetchPolicy
+import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.ComponentType
 import okuri.core.enums.core.EntityType
-import okuri.core.models.block.Block
-import okuri.core.models.block.ContentNode
+import okuri.core.models.block.*
 import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.structure.*
 import okuri.core.models.common.grid.LayoutGrid
@@ -694,5 +695,292 @@ class BlockServiceTest {
         // Should not save or log activity
         verify(blockRepository, never()).save(any())
         verify(activityService, never()).logActivity(any(), any(), any(), any(), any(), any())
+    }
+
+    // =============================================================================================
+    // ADDITIONAL COVERAGE - EDGE CASES AND MISSING SCENARIOS
+    // =============================================================================================
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `createBlock throws when using archived BlockType`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+
+        val type = BlockFactory.createType(orgId = orgId, archived = true)
+        whenever(blockTypeService.getById(type.id!!)).thenReturn(type)
+
+        val req = CreateBlockRequest(
+            typeId = type.id,
+            typeKey = null,
+            organisationId = orgId,
+            typeVersion = null,
+            name = "Test Block",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta())
+        )
+
+        val exception = assertThrows<IllegalArgumentException> {
+            service.createBlock(req)
+        }
+
+        assertTrue(exception.message!!.contains("archived"))
+        verify(blockRepository, never()).save(any())
+    }
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `createBlock with typeKey fallback resolves type`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
+
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val type = BlockFactory.createType(orgId = orgId, key = "contact_card", version = 2)
+        whenever(blockTypeService.getByKey("contact_card", orgId, 2)).thenReturn(type)
+        whenever(schemaService.validate(any(), any(), any(), any())).thenReturn(emptyList())
+
+        val savedCaptor = argumentCaptor<BlockEntity>()
+        whenever(blockRepository.save(savedCaptor.capture())).thenAnswer { saved(savedCaptor.firstValue) }
+
+        val req = CreateBlockRequest(
+            typeId = null, // Use typeKey instead
+            typeKey = "contact_card",
+            organisationId = orgId,
+            typeVersion = 2,
+            name = "Fallback Test",
+            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta())
+        )
+
+        val created = service.createBlock(req)
+
+        assertEquals("Fallback Test", created.name)
+        assertEquals(type.id, created.type.id)
+        verify(blockTypeService).getByKey("contact_card", orgId, 2)
+    }
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `updateBlock STRICT mode throws on validation errors`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+
+        val type = BlockFactory.createType(orgId = orgId, strictness = BlockValidationScope.STRICT)
+        val existingEntity = BlockEntity(
+            id = UUID.randomUUID(),
+            organisationId = orgId,
+            type = type,
+            name = "Original",
+            payload = BlockContentMetadata(
+                data = mapOf("email" to "valid@email.com"),
+                meta = BlockMeta()
+            ),
+            parentId = null,
+            archived = false
+        )
+
+        whenever(blockRepository.findById(existingEntity.id!!)).thenReturn(Optional.of(existingEntity))
+        whenever(schemaService.validate(eq(type.schema), any(), eq(type.strictness), any()))
+            .thenReturn(listOf("error: invalid format"))
+
+        val updateModel = Block(
+            id = existingEntity.id!!,
+            organisationId = orgId,
+            type = type.toModel(),
+            name = "Updated",
+            payload = BlockContentMetadata(
+                data = mapOf("email" to "invalid-email"),
+                meta = BlockMeta()
+            ),
+            validationErrors = null,
+            archived = false
+        )
+
+        assertThrows<SchemaValidationException> {
+            service.updateBlock(updateModel)
+        }
+
+        verify(blockRepository, never()).save(any())
+    }
+
+    @Test
+    @WithUserPersona(
+        userId = "f8b1c2d3-4e5f-6789-abcd-ef0123456789",
+        email = "test@test.com",
+        roles = [
+            okuri.core.service.util.OrganisationRole(
+                organisationId = "f8b1c2d3-4e5f-6789-abcd-ef9876543210",
+                role = okuri.core.enums.organisation.OrganisationRoles.OWNER
+            )
+        ]
+    )
+    fun `updateBlock with EntityReferenceMetadata upserts references delta`() {
+        val orgId = uuid("f8b1c2d3-4e5f-6789-abcd-ef9876543210")
+        val userId = uuid("f8b1c2d3-4e5f-6789-abcd-ef0123456789")
+
+        whenever(authTokenService.getUserId()).thenReturn(userId)
+
+        val client1Id = UUID.randomUUID()
+        val client2Id = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val existingEntity = BlockEntity(
+            id = UUID.randomUUID(),
+            organisationId = orgId,
+            type = type,
+            name = "Reference Block",
+            payload = EntityReferenceMetadata(
+                items = listOf(ReferenceItem(type = EntityType.CLIENT, id = client1Id)),
+                path = "$.clients",
+                meta = BlockMeta()
+            ),
+            parentId = null,
+            archived = false
+        )
+
+        whenever(blockRepository.findById(existingEntity.id!!)).thenReturn(Optional.of(existingEntity))
+        whenever(blockRepository.save(any())).thenAnswer { it.arguments[0] }
+
+        val updateModel = Block(
+            id = existingEntity.id!!,
+            organisationId = orgId,
+            type = type.toModel(),
+            name = "Updated Reference Block",
+            payload = EntityReferenceMetadata(
+                items = listOf(
+                    ReferenceItem(type = EntityType.CLIENT, id = client2Id) // Changed to client2
+                ),
+                path = "$.clients",
+                meta = BlockMeta()
+            ),
+            validationErrors = null,
+            archived = false
+        )
+
+        service.updateBlock(updateModel)
+
+        // Verify references were upserted with new list
+        verify(blockReferenceService).upsertLinksFor(any(), any())
+        verify(activityService).logActivity(
+            eq(okuri.core.enums.activity.Activity.BLOCK),
+            eq(okuri.core.enums.util.OperationType.UPDATE),
+            eq(userId), eq(orgId), any(), any()
+        )
+    }
+
+    @Test
+    fun `getBlock returns ReferenceNode for EntityReferenceMetadata`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val clientId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val entity = BlockEntity(
+            id = blockId,
+            organisationId = orgId,
+            type = type,
+            name = "Reference List Block",
+            payload = EntityReferenceMetadata(
+                items = listOf(ReferenceItem(type = EntityType.CLIENT, id = clientId)),
+                path = "$.clients",
+                fetchPolicy = BlockReferenceFetchPolicy.LAZY,
+                meta = BlockMeta()
+            ),
+            parentId = null,
+            archived = false
+        )
+
+        whenever(blockRepository.findById(blockId)).thenReturn(Optional.of(entity))
+
+        val references = listOf(
+            Reference<Any>(
+                id = UUID.randomUUID(),
+                entityType = EntityType.CLIENT,
+                entityId = clientId,
+                entity = null,
+                orderIndex = 0,
+                warning = BlockReferenceWarning.REQUIRES_LOADING
+            )
+        )
+        whenever(blockReferenceService.findListReferences(blockId, entity.payload as EntityReferenceMetadata))
+            .thenReturn(references)
+
+        val tree = service.getBlock(blockId)
+
+        assertNotNull(tree)
+        assertTrue(tree.root is ReferenceNode)
+        val refNode = tree.root as ReferenceNode
+        assertTrue(refNode.reference is EntityReference)
+        val entityRef = refNode.reference as EntityReference
+        assertEquals(1, entityRef.reference.size)
+        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, entityRef.reference[0].warning)
+    }
+
+    @Test
+    fun `getBlock returns ReferenceNode for BlockReferenceMetadata`() {
+        val orgId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val referencedBlockId = UUID.randomUUID()
+
+        val type = BlockFactory.createType(orgId)
+        val entity = BlockEntity(
+            id = blockId,
+            organisationId = orgId,
+            type = type,
+            name = "Block Link",
+            payload = BlockReferenceMetadata(
+                item = ReferenceItem(type = EntityType.BLOCK, id = referencedBlockId),
+                path = "$.block",
+                fetchPolicy = BlockReferenceFetchPolicy.LAZY,
+                meta = BlockMeta()
+            ),
+            parentId = null,
+            archived = false
+        )
+
+        whenever(blockRepository.findById(blockId)).thenReturn(Optional.of(entity))
+
+        val blockRef = Reference<Block>(
+            id = UUID.randomUUID(),
+            entityType = EntityType.BLOCK,
+            entityId = referencedBlockId,
+            entity = null,
+            warning = BlockReferenceWarning.REQUIRES_LOADING
+        )
+        whenever(blockReferenceService.findBlockLink(blockId, entity.payload as BlockReferenceMetadata))
+            .thenReturn(blockRef)
+
+        val tree = service.getBlock(blockId)
+
+        assertNotNull(tree)
+        assertTrue(tree.root is ReferenceNode)
+        val refNode = tree.root as ReferenceNode
+        assertTrue(refNode.reference is BlockTreeReference)
+        val blockTreeRef = refNode.reference as BlockTreeReference
+        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, blockTreeRef.reference.warning)
     }
 }

@@ -1,31 +1,89 @@
 import { components, operations } from "@/lib/types/types";
 
-// Core block models
+/* -------------------------------------------------------------------------- */
+/*                               Core Re-exports                              */
+/* -------------------------------------------------------------------------- */
+
 export type Block = components["schemas"]["Block"];
-export type BlockNode = components["schemas"]["BlockNode"];
-export type BlockTree = components["schemas"]["BlockTree"];
 export type BlockType = components["schemas"]["BlockType"];
 export type BlockSchema = components["schemas"]["BlockSchema"];
 export type BlockDisplay = components["schemas"]["BlockDisplay"];
-export type BlockMetadata = components["schemas"]["BlockMetadata"];
+export type BlockFormStructure = components["schemas"]["BlockFormStructure"];
+export type BlockRenderStructure = components["schemas"]["BlockRenderStructure"];
 export type BlockBinding = components["schemas"]["BlockBinding"];
 export type BlockComponentNode = components["schemas"]["BlockComponentNode"];
 export type ComponentType = components["schemas"]["BlockComponentNode"]["type"];
-export type BlockReference = components["schemas"]["BlockReferenceObject"];
 export type BlockMeta = components["schemas"]["BlockMeta"];
-export type BlockRenderStructure = components["schemas"]["BlockRenderStructure"];
-export type BlockFormStructure = components["schemas"]["BlockFormStructure"];
 export type BlockTypeNesting = components["schemas"]["BlockType"]["nesting"];
 
-// Requests / Responses (where helpful)
+/* -------------------------------------------------------------------------- */
+/*                              Tree Type Helpers                             */
+/* -------------------------------------------------------------------------- */
+
+export type BlockTree = components["schemas"]["BlockTree"];
+
+export type ContentNode = components["schemas"]["ContentNode"] & {
+    children?: Record<string, BlockNode[]>;
+    references?: Record<string, ReferenceCollection>;
+};
+
+export type ReferenceNode = components["schemas"]["ReferenceNode"] & {
+    references?: Record<string, ReferenceCollection>;
+};
+
+export type BlockNode = ContentNode | ReferenceNode;
+
+export type BlockTreeReference = components["schemas"]["BlockTreeReference"];
+export type ReferenceObject = components["schemas"]["ReferenceObject"];
+export type BlockReference = components["schemas"]["ReferenceObject"];
+export type ReferenceItem = components["schemas"]["ReferenceItem"];
+export type ReferenceCollection =
+    | components["schemas"]["ReferenceObject"][]
+    | components["schemas"]["ReferenceBlockTree"][];
+
+/* -------------------------------------------------------------------------- */
+/*                              Metadata Variants                             */
+/* -------------------------------------------------------------------------- */
+
+export type BlockMetadata = components["schemas"]["Metadata"];
+export type BlockContentMetadata = components["schemas"]["BlockContentMetadata"];
+export type BlockReferenceMetadata = components["schemas"]["BlockReferenceMetadata"];
+export type EntityReferenceMetadata = components["schemas"]["EntityReferenceMetadata"];
+
+/* -------------------------------------------------------------------------- */
+/*                        Requests / Response Convenience                     */
+/* -------------------------------------------------------------------------- */
+
 export type CreateBlockRequest = components["schemas"]["CreateBlockRequest"];
 export type CreateBlockTypeRequest = components["schemas"]["CreateBlockTypeRequest"];
 
-// Controller operation types (convenience re-exports)
 export type GetBlockResponse = operations["getBlock"]["responses"]["200"]["content"]["*/*"];
 export type GetBlockTypesResponse =
     operations["getBlockTypes"]["responses"]["200"]["content"]["*/*"];
 
-// Add other block-related operation types as needed by the app
+/* -------------------------------------------------------------------------- */
+/*                                 Type Guards                                */
+/* -------------------------------------------------------------------------- */
+
+const CONTENT_KINDS = new Set(["content", "BlockContentMetadata"]);
+const BLOCK_REFERENCE_KINDS = new Set(["block_reference", "BlockReferenceMetadata"]);
+const ENTITY_REFERENCE_KINDS = new Set(["entity_reference", "EntityReferenceMetadata"]);
+
+export const isContentMetadata = (
+    payload: Block["payload"]
+): payload is BlockContentMetadata => CONTENT_KINDS.has(String(payload?.kind));
+
+export const isBlockReferenceMetadata = (
+    payload: Block["payload"]
+): payload is BlockReferenceMetadata => BLOCK_REFERENCE_KINDS.has(String(payload?.kind));
+
+export const isEntityReferenceMetadata = (
+    payload: Block["payload"]
+): payload is EntityReferenceMetadata => ENTITY_REFERENCE_KINDS.has(String(payload?.kind));
+
+export const isContentNode = (node: BlockNode): node is ContentNode =>
+    Boolean(node?.block && isContentMetadata(node.block.payload));
+
+/* -------------------------------------------------------------------------- */
 
 export * from "@/lib/interfaces/common.interface";

@@ -5,8 +5,8 @@ import {
     pushSelection,
     removeSelection,
     updateSelection,
-} from "@/components/feature-modules/blocks/util/block.focus-manager";
-import { blockElements } from "@/components/feature-modules/blocks/util/block.registry";
+} from "@/components/feature-modules/blocks/util/block/block.focus-manager";
+import { blockElements } from "@/components/feature-modules/blocks/util/block/block.registry";
 import {
     ContextMenu,
     ContextMenuContent,

@@ -28,6 +28,5 @@ data class BlockTreeReference(val reference: Reference<BlockTree>) : ReferencePa
 data class ReferenceNode(
     override val block: Block,
     override val warnings: List<String> = emptyList(),
-    // Allow for lists of entities. But never a list of referenced blocks
     val reference: ReferencePayload
 ) : Node

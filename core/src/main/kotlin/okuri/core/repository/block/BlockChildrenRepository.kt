@@ -18,7 +18,7 @@ interface BlockChildrenRepository : JpaRepository<BlockChildEntity, UUID> {
 
     fun deleteAllByParentId(parentId: UUID)
 
-    fun countByParentIdAndSlot(parentId: UUID, slot: String): Long
+    fun countByParentIdAndSlot(parentId: UUID, slot: String): Int
 
     @Query(
         """

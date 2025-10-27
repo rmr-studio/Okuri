@@ -4,11 +4,11 @@
 
 The Frontend client provides a block-based design environment for all core areas of business logic.
 
-- Clients
-- Projects
-- Invoices
-- Organisations
-- Line Items
+-   Clients
+-   Projects
+-   Invoices
+-   Organisations
+-   Line Items
 
 This environment is built up of multiple fully customisable block trees. Each block tree then contains many different
 sets and layouts
@@ -41,22 +41,22 @@ Contact (Content block)
 
 ```json
 {
-  "name": "Contact",
-  "type": "OBJECT",
-  "required": true,
-  "properties": {
-    "name": {
-      "type": "STRING",
-      "required": true
-    },
-    "email": {
-      "type": "STRING",
-      "format": "email"
-    },
-    "phone": {
-      "type": "STRING"
+    "name": "Contact",
+    "type": "OBJECT",
+    "required": true,
+    "properties": {
+        "name": {
+            "type": "STRING",
+            "required": true
+        },
+        "email": {
+            "type": "STRING",
+            "format": "email"
+        },
+        "phone": {
+            "type": "STRING"
+        }
     }
-  }
 }
 ```
 
@@ -64,11 +64,11 @@ Contact (Content block)
 
 ```json
 {
-  "data": {
-    "name": "Jane Doe",
-    "email": "jane@acme.com",
-    "phone": "+61 400 000 000"
-  }
+    "data": {
+        "name": "Jane Doe",
+        "email": "jane@acme.com",
+        "phone": "+61 400 000 000"
+    }
 }
 ```
 
@@ -76,30 +76,30 @@ Contact (Content block)
 
 ```json
 {
-  "component": "CONTACT_CARD",
-  "bindings": [
-    {
-      "prop": "name",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/name"
-      }
-    },
-    {
-      "prop": "email",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/email"
-      }
-    },
-    {
-      "prop": "phone",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/phone"
-      }
-    }
-  ]
+    "component": "CONTACT_CARD",
+    "bindings": [
+        {
+            "prop": "name",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/name"
+            }
+        },
+        {
+            "prop": "email",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/email"
+            }
+        },
+        {
+            "prop": "phone",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/phone"
+            }
+        }
+    ]
 }
 ```
 
@@ -161,30 +161,30 @@ Company Overview
 
 ```json
 {
-  "component": "BLOCK_REFERENCE",
-  "bindings": [
-    {
-      "prop": "tree",
-      "source": {
-        "type": "BlockTreeRef",
-        "expandDepth": 2
-      }
-    },
-    {
-      "prop": "title",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/title"
-      }
-    }
-  ]
+    "component": "BLOCK_REFERENCE",
+    "bindings": [
+        {
+            "prop": "tree",
+            "source": {
+                "type": "BlockTreeRef",
+                "expandDepth": 2
+            }
+        },
+        {
+            "prop": "title",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/title"
+            }
+        }
+    ]
 }
 ```
 
 **Notes**
 
-- The embedded tree is read-only by default; edits navigate to the source context.
-- Cycle protection prevents embedding a tree that (directly or indirectly) contains this reference block.
+-   The embedded tree is read-only by default; edits navigate to the source context.
+-   Cycle protection prevents embedding a tree that (directly or indirectly) contains this reference block.
 
 #### Entity Reference List (multiple external entities)
 
@@ -200,35 +200,32 @@ Contact Overview
 
 ```json
 {
-  "kind": "REFERENCE",
-  "fetchPolicy": "LAZY",
-  // Defer hydration until component is visible
-  "path": "$.items",
-  "items": [
-    {
-      "type": "CLIENT",
-      "id": "00000000-0000-0000-0000-0000000000a1"
+    "kind": "REFERENCE",
+    "fetchPolicy": "LAZY",
+    // Defer hydration until component is visible
+    "path": "$.items",
+    "items": [
+        {
+            "type": "CLIENT",
+            "id": "00000000-0000-0000-0000-0000000000a1"
+        },
+        {
+            "type": "CLIENT",
+            "id": "00000000-0000-0000-0000-0000000000a2"
+        }
+    ],
+    "presentation": "SUMMARY",
+    "projection": {
+        // limit fields for network efficiency. Only these will be fetched and displayed
+        "fields": ["name", "contact.email"]
     },
-    {
-      "type": "CLIENT",
-      "id": "00000000-0000-0000-0000-0000000000a2"
+    "sort": {
+        "by": "name",
+        "dir": "ASC"
+    },
+    "paging": {
+        "pageSize": 20
     }
-  ],
-  "presentation": "SUMMARY",
-  "projection": {
-    // limit fields for network efficiency. Only these will be fetched and displayed
-    "fields": [
-      "name",
-      "contact.email"
-    ]
-  },
-  "sort": {
-    "by": "name",
-    "dir": "ASC"
-  },
-  "paging": {
-    "pageSize": 20
-  }
 }
 ```
 
@@ -236,31 +233,31 @@ Contact Overview
 
 ```json
 {
-  "component": "ENTITY_REFERENCE_LIST",
-  "bindings": [
-    {
-      "prop": "rows",
-      "source": {
-        "type": "ResolvedRefs",
-        "path": "$.items"
-      }
-    },
-    {
-      "prop": "emptyMessage",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/emptyMessage"
-      }
-    }
-  ]
+    "component": "ENTITY_REFERENCE_LIST",
+    "bindings": [
+        {
+            "prop": "rows",
+            "source": {
+                "type": "ResolvedRefs",
+                "path": "$.items"
+            }
+        },
+        {
+            "prop": "emptyMessage",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/emptyMessage"
+            }
+        }
+    ]
 }
 ```
 
 **Notes**
 
-- Missing entities render fallback rows with a warning badge.
-- `LAZY` fetch defers hydration until the component is visible; use `EAGER` when required for above-the-fold content.
-- `projection.fields` keeps network payloads small and stable for UI rendering.
+-   Missing entities render fallback rows with a warning badge.
+-   `LAZY` fetch defers hydration until the component is visible; use `EAGER` when required for above-the-fold content.
+-   `projection.fields` keeps network payloads small and stable for UI rendering.
 
 # Nested Layouts
 
@@ -291,14 +288,14 @@ Section (2-column)
 
 ```json
 {
-  "title": "Details",
-  "layout": {
-    "columns": 2,
-    "responsive": {
-      "sm": 1,
-      "md": 2
+    "title": "Details",
+    "layout": {
+        "columns": 2,
+        "responsive": {
+            "sm": 1,
+            "md": 2
+        }
     }
-  }
 }
 ```
 
@@ -306,37 +303,37 @@ Section (2-column)
 
 ```json
 {
-  "component": "SECTION",
-  "bindings": [
-    {
-      "prop": "title",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/title"
-      }
-    },
-    {
-      "prop": "contact",
-      "source": {
-        "type": "Slot",
-        "slot": "contact"
-      }
-    },
-    {
-      "prop": "address",
-      "source": {
-        "type": "Slot",
-        "slot": "address"
-      }
-    }
-  ]
+    "component": "SECTION",
+    "bindings": [
+        {
+            "prop": "title",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/title"
+            }
+        },
+        {
+            "prop": "contact",
+            "source": {
+                "type": "Slot",
+                "slot": "contact"
+            }
+        },
+        {
+            "prop": "address",
+            "source": {
+                "type": "Slot",
+                "slot": "address"
+            }
+        }
+    ]
 }
 ```
 
 **Notes**
 
-- Containers do not fetch data; they orchestrate child placement and responsive behavior.
-- Validation for child types and max counts lives in the parent BlockType’s `nesting` rules.
+-   Containers do not fetch data; they orchestrate child placement and responsive behavior.
+-   Validation for child types and max counts lives in the parent BlockType’s `nesting` rules.
 
 ### Block Lists
 
@@ -344,7 +341,7 @@ A block list is a specialised container that holds a list of blocks of a specifi
 lists of content to be created, such as a list of tasks, items, or entries.
 Block lists can be configured to allow for adding, removing, and reordering of blocks within the list.
 
-A block list ***may*** enforce homogeneous types (all children must be of the same block type) or heterogeneous types (
+A block list **_may_** enforce homogeneous types (all children must be of the same block type) or heterogeneous types (
 children can be of different block types) based on the configuration defined in the BlockType's schema.
 The abilty to sort or flter would only be available for homogeneous lists.
 
@@ -361,24 +358,22 @@ Contact (slot "addresses")
 
 ```json
 {
-  "title": "Addresses",
-  "emptyMessage": "Add address",
-  "allowedTypes": [
-    "address"
-  ],
-  // enforce homogeneous list, or multiple for heterogeneous
-  "maxItems": 100,
-  "sort": {
-    "by": "createdAt",
-    "dir": "ASC"
-  },
-  // optional default sort => Would be null if multiple types allowed
-  "layout": {
-    "presentation": "CARD",
-    // CARD | ROW | GRID
-    "columns": 1
-    // only relevant for GRID
-  }
+    "title": "Addresses",
+    "emptyMessage": "Add address",
+    "allowedTypes": ["address"],
+    // enforce homogeneous list, or multiple for heterogeneous
+    "maxItems": 100,
+    "sort": {
+        "by": "createdAt",
+        "dir": "ASC"
+    },
+    // optional default sort => Would be null if multiple types allowed
+    "layout": {
+        "presentation": "CARD",
+        // CARD | ROW | GRID
+        "columns": 1
+        // only relevant for GRID
+    }
 }
 ```
 
@@ -386,39 +381,39 @@ Contact (slot "addresses")
 
 A list block would then have bindings similar to the following:
 
-- A slot binding for the list items
-    - This slot would be used to nest multiple Address blocks within the AddressList block as direct children.
-- A data path binding for the title
-    - This would be direct data stored in the list block.
-- A data path binding for the empty message
-    - This would also be direct data stored in the list block.
+-   A slot binding for the list items
+    -   This slot would be used to nest multiple Address blocks within the AddressList block as direct children.
+-   A data path binding for the title
+    -   This would be direct data stored in the list block.
+-   A data path binding for the empty message
+    -   This would also be direct data stored in the list block.
 
 ```json
 {
-  "component": "LIST",
-  "bindings": [
-    {
-      "prop": "items",
-      "source": {
-        "type": "Slot",
-        "slot": "items"
-      }
-    },
-    {
-      "prop": "title",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/title"
-      }
-    },
-    {
-      "prop": "emptyMessage",
-      "source": {
-        "type": "DataPath",
-        "path": "$.data/emptyMessage"
-      }
-    }
-  ]
+    "component": "LIST",
+    "bindings": [
+        {
+            "prop": "items",
+            "source": {
+                "type": "Slot",
+                "slot": "items"
+            }
+        },
+        {
+            "prop": "title",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/title"
+            }
+        },
+        {
+            "prop": "emptyMessage",
+            "source": {
+                "type": "DataPath",
+                "path": "$.data/emptyMessage"
+            }
+        }
+    ]
 }
 ```
 
@@ -478,7 +473,7 @@ data class Block(
     // The type definition for this block
     val type: BlockType,
     // The metadata differs depending on if this block is a reference block or a content block
-    // All reference blocks must use the `Reference` Block Type for rendering 
+    // All reference blocks must use the `Reference` Block Type for rendering
     val payload: Metadata,
     val archived: Boolean,
     // Validation only occurs on content blocks. We will never validate data on a referenced entity/block
@@ -493,13 +488,14 @@ data class Block(
 
 The block metadata defines the structure of data held within a block. There are two main types of metadata:
 
-- Content Metadata: Holds all data directly within the block
-    - This will store an abitrary JSON object that holds all data fields and attributes for this block.
-    - Content will be accessed directly from this payload, validated upon saving via a comparison with the schema. And
-      each attribute will have an associated data path for access.
-        - An example data path could be: "$.data/project/budget"
-            - This would then access the `budget` field within the `project` object inside the `data` JSON object.
-          ```json
+-   Content Metadata: Holds all data directly within the block
+
+    -   This will store an abitrary JSON object that holds all data fields and attributes for this block.
+    -   Content will be accessed directly from this payload, validated upon saving via a comparison with the schema. And
+        each attribute will have an associated data path for access.
+        -   An example data path could be: "$.data/project/budget"
+            -   This would then access the `budget` field within the `project` object inside the `data` JSON object.
+            ```json
             {
                 "data": {
                     "project": {
@@ -510,9 +506,9 @@ The block metadata defines the structure of data held within a block. There are 
             }
             ```
 
-- Reference Metadata:
-    - This metadata will hold both the reference to the external entity or block. But will further filter and refine
-      what attributes are taken from it and displayed.
+-   Reference Metadata:
+    -   This metadata will hold both the reference to the external entity or block. But will further filter and refine
+        what attributes are taken from it and displayed.
 
 ```kotlin
 sealed interface Metadata {
@@ -635,6 +631,159 @@ data class BlockType(
 )
 ```
 
+### Sample Payload
 
-
-
+```
+{
+  "maxDepth": 2,
+  "expandRefs": true,
+  "root": {
+    "block": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Client Overview",
+      "organisationId": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "type": {
+        "id": "t-root",
+        "key": "client_overview",
+        "version": 1,
+        "name": "Client Overview",
+        "description": "Top-level client profile",
+        "archived": false,
+        "strictness": "SOFT",
+        "system": false,
+        "schema": { "name": "Client", "type": "OBJECT", "required": true, "properties": {} },
+        "display": {
+          "form": { "fields": {} },
+          "render": {
+            "version": 1,
+            "layoutGrid": { "cols": 12, "rowHeight": 32, "items": [] },
+            "components": {}
+          }
+        }
+      },
+      "payload": {
+        "kind": "content",
+        "data": {
+          "clientId": "c-0001",
+          "name": "Jane Doe",
+          "email": "jane@acme.com"
+        },
+        "meta": { "validationErrors": [], "lastValidatedVersion": 1 }
+      },
+      "archived": false
+    },
+    "children": {
+      "addresses": [
+        {
+          "block": {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "name": "Primary Address",
+            "organisationId": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "type": {
+              "id": "t-address",
+              "key": "address",
+              "version": 1,
+              "name": "Address",
+              "description": "Postal address",
+              "archived": false,
+              "strictness": "SOFT",
+              "system": false,
+              "schema": { "name": "Address", "type": "OBJECT", "required": true, "properties": {} },
+              "display": {
+                "form": { "fields": {} },
+                "render": {
+                  "version": 1,
+                  "layoutGrid": { "cols": 12, "rowHeight": 32, "items": [] },
+                  "components": {}
+                }
+              }
+            },
+            "payload": {
+              "kind": "content",
+              "data": {
+                "street": "1 Collins St",
+                "city": "Melbourne",
+                "state": "VIC",
+                "postalCode": "3000",
+                "country": "AU"
+              },
+              "meta": { "validationErrors": [], "lastValidatedVersion": 1 }
+            },
+            "archived": false
+          },
+          "children": {},
+          "warnings": []
+        }
+      ],
+      "company": [
+        {
+          "block": {
+            "id": "33333333-3333-3333-3333-333333333333",
+            "name": "Company Link",
+            "organisationId": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "type": {
+              "id": "t-ref",
+              "key": "entity_reference",
+              "version": 1,
+              "name": "Entity Reference",
+              "description": "A list of external entity references",
+              "archived": false,
+              "strictness": "SOFT",
+              "system": false,
+              "schema": {
+                "name": "ReferenceList",
+                "type": "OBJECT",
+                "required": true,
+                "properties": {
+                  "items": { "type": "ARRAY", "items": { "type": "OBJECT" } }
+                }
+              },
+              "display": {
+                "form": { "fields": {} },
+                "render": {
+                  "version": 1,
+                  "layoutGrid": { "cols": 12, "rowHeight": 32, "items": [] },
+                  "components": {}
+                }
+              }
+            },
+            "payload": {
+              "kind": "references",
+              "items": [
+                {
+                  "type": "COMPANY",
+                  "id": "44444444-4444-4444-4444-444444444444"
+                }
+              ],
+              "meta": { "validationErrors": [], "lastValidatedVersion": 1 }
+            },
+            "archived": false
+          },
+          "children": {},
+          "references": {
+            "items": [
+              {
+                "id": "r-1",
+                "entityType": "COMPANY",
+                "entityId": "44444444-4444-4444-4444-444444444444",
+                "ownership": "LINKED",
+                "path": "$.items[0]",
+                "orderIndex": 0,
+                "blockId": "33333333-3333-3333-3333-333333333333",
+                "entity": {
+                  "id": "44444444-4444-4444-4444-444444444444",
+                  "name": "Acme Pty Ltd",
+                  "domain": "acme.com",
+                  "archived": false
+                }
+              }
+            ]
+          },
+          "warnings": []
+        }
+      ]
+    },
+    "warnings": []
+  }
+}
+```

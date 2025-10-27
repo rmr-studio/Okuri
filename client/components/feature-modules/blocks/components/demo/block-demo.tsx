@@ -21,19 +21,13 @@ import { RenderElementProvider } from "@/components/feature-modules/render/provi
 import {
     BlockEnvironmentProvider,
     EditorBlockInstance,
-    EditorEnvironment,
+    EditorTreeInstance,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
 import { useEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
-import { BlockNode } from "../../interface/block.interface";
-import {
-    createBlankPanelTree,
-    createContactBlockTree,
-    createNoteBlockTree,
-    createProjectBlockTree,
-} from "../../util/block-factories";
 import { editorPanelRegistry } from "../panel/editor-panel";
 import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
+import { createBlankPanelTree, createContactBlockTree, createNoteBlockTree, createProjectBlockTree } from "../../util/block/factory/block.factory";
 
 const DEMO_ORG_ID = "demo-org-12345";
 
@@ -43,10 +37,7 @@ const DEMO_ORG_ID = "demo-org-12345";
 
 export const BlockDemo = () => {
     return (
-        <BlockEnvironmentProvider
-            organisationId={DEMO_ORG_ID}
-            initialEnvironment={createDemoEnvironment()}
-        >
+        <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={createDemoTrees()}>
             <div className="mx-auto max-w-6xl space-y-8 p-6">
                 <header className="space-y-2">
                     <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
@@ -72,9 +63,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
     const { getTopLevelBlocks } = useBlockEnvironment();
     const topLevelBlocks = getTopLevelBlocks();
 
-    const gridOptions = useMemo(() => {
-        return buildGridOptions(topLevelBlocks);
-    }, [topLevelBlocks]);
+    const gridOptions = useMemo(() => buildGridOptions(topLevelBlocks), [topLevelBlocks]);
 
     return (
         <GridProvider initialOptions={gridOptions}>
@@ -127,10 +116,17 @@ const GridStackWidgetSync: React.FC = () => {
             (id: string) => !currentBlockIds.has(id)
         );
 
-        // Add new widgets
+        // Add new widgets (skip ones GridStack already rendered from initial options)
         addedBlockIds.forEach((blockId) => {
             const blockInstance = topLevelBlocks.find((b) => b.tree.root.block.id === blockId);
             if (!blockInstance) return;
+
+            const alreadyInGrid = gridStack.engine.nodes?.some(
+                (node) => String(node.id) === blockId
+            );
+            if (alreadyInGrid) {
+                return;
+            }
 
             console.log(`Adding widget ${blockId} to GridStack`);
 
@@ -146,6 +142,7 @@ const GridStackWidgetSync: React.FC = () => {
                 }),
             };
 
+            console.log("Add");
             // Add to GridStack
             gridStack.addWidget(widgetConfig);
 
@@ -160,9 +157,12 @@ const GridStackWidgetSync: React.FC = () => {
         // Remove old widgets
         removedBlockIds.forEach((blockId) => {
             console.log(`Removing widget ${blockId} from GridStack`);
-            const element = gridStack.engine.nodes.find((n: any) => String(n.id) === blockId)?.el;
+            const node = gridStack.engine.nodes?.find((n) => String(n.id) === blockId);
+            const element =
+                (node?.el as HTMLElement | undefined) ??
+                (gridStack.el?.querySelector(`[gs-id='${blockId}']`) as HTMLElement | null);
             if (element) {
-                gridStack.removeWidget(element, false);
+                gridStack.removeWidget(element, true);
             }
 
             // Remove from rawWidgetMetaMap
@@ -188,12 +188,6 @@ const AddBlockButton: React.FC = () => {
     const { addBlock } = useBlockEnvironment();
 
     const slashItems: SlashMenuItem[] = [
-        {
-            id: "__NEW_PANEL__",
-            label: "Panel",
-            description: "Create a blank panel for nested layouts",
-            icon: <TypeIcon className="size-4" />,
-        },
         ...defaultSlashItems,
         {
             id: "BLANK_NOTE",
@@ -294,115 +288,20 @@ function buildGridOptions(blocks: EditorBlockInstance[]): GridStackOptions {
     };
 }
 
-/**
- * Creates initial demo environment
- */
-function createDemoEnvironment(): EditorEnvironment {
+function createDemoTrees(): EditorTreeInstance[] {
     const contactTree = createContactBlockTree(DEMO_ORG_ID);
     const projectTree = createProjectBlockTree(DEMO_ORG_ID);
 
-    const topLevelBlocks: EditorBlockInstance[] = [
+    return [
         {
+            id: contactTree.root.block.id,
             tree: contactTree,
             layout: { x: 0, y: 0, w: 6, h: 12 },
-            uiMetadata: {},
         },
         {
+            id: projectTree.root.block.id,
             tree: projectTree,
             layout: { x: 6, y: 0, w: 6, h: 14 },
-            uiMetadata: {},
         },
     ];
-
-    // Extract all nested blocks from BlockTrees and build complete hierarchy
-    const { allBlocks, hierarchyMap } = extractAllBlocksFromTrees(topLevelBlocks);
-
-    return {
-        blocks: topLevelBlocks,
-        hierarchy: {
-            parentMap: hierarchyMap,
-        },
-        metadata: {
-            name: "Demo Environment",
-            description: "A demo workspace with sample blocks",
-            organisationId: DEMO_ORG_ID,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        },
-    };
-}
-
-/**
- * Extracts all blocks (including nested children) from BlockTrees
- * and builds a complete hierarchy map
- */
-function extractAllBlocksFromTrees(topLevelBlocks: EditorBlockInstance[]): {
-    allBlocks: EditorBlockInstance[];
-    hierarchyMap: Map<string, string | null>;
-} {
-    const allBlocks: EditorBlockInstance[] = [];
-    const hierarchyMap = new Map<string, string | null>();
-
-    // Process each top-level block
-    topLevelBlocks.forEach((topLevelBlock) => {
-        const parentId = null; // Top-level blocks have no parent
-
-        // Add top-level block
-        allBlocks.push(topLevelBlock);
-        hierarchyMap.set(topLevelBlock.tree.root.block.id, parentId);
-
-        // Recursively extract nested children from the BlockTree
-        extractNestedBlocks(
-            topLevelBlock.tree.root,
-            topLevelBlock.tree.root.block.id,
-            allBlocks,
-            hierarchyMap
-        );
-    });
-
-    return { allBlocks, hierarchyMap };
-}
-
-/**
- * Recursively extracts nested blocks from a BlockNode
- */
-function extractNestedBlocks(
-    node: BlockNode, // BlockNode type
-    parentId: string,
-    allBlocks: EditorBlockInstance[],
-    hierarchyMap: Map<string, string | null>
-): void {
-    // Iterate through all slots in children
-    for (const [_slotName, childNodes] of Object.entries(node.children)) {
-        const children = childNodes as any[]; // Array of BlockNode
-
-        children.forEach((childNode, index) => {
-            const childId = childNode.block.id;
-
-            // Create a BlockTree for this child
-            const childTree = {
-                maxDepth: 10,
-                expandRefs: true,
-                root: childNode,
-            };
-
-            // Add child block to allBlocks
-            allBlocks.push({
-                tree: childTree,
-                layout: {
-                    x: 0,
-                    y: index * 2,
-                    w: 12,
-                    h: 6,
-                },
-                uiMetadata: {},
-            });
-
-            // Add to hierarchy map
-            hierarchyMap.set(childId, parentId);
-
-            // Recursively process this child's children
-            extractNestedBlocks(childNode, childId, allBlocks, hierarchyMap);
-        });
-    }
 }

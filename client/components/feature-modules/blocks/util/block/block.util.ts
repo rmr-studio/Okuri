@@ -1,6 +1,8 @@
-import { TreeCtx } from "@/components/feature-modules/blocks/components/render";
 import { Condition } from "@/lib/interfaces/common.interface";
+import { TreeCtx } from "../../components/render";
 import { getByPath } from "./block.binding";
+
+
 
 export function evalVisible(cond: Condition | undefined, ctx: TreeCtx): boolean {
     if (!cond) return true;

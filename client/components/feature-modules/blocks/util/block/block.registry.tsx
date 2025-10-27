@@ -7,13 +7,13 @@
 import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import React, { ComponentType as Component } from "react";
 import { z } from "zod";
-import { AddressCard } from "../components/bespoke/AddressCard";
-import { ContactCard } from "../components/bespoke/ContactCard";
-import { ButtonBlock } from "../components/primitive/block.button";
-import { LayoutContainerBlock } from "../components/primitive/block.container";
-import { ListBlock } from "../components/primitive/block.list";
-import { DataSummaryTable } from "../components/primitive/block.table";
-import { TextBlock } from "../components/primitive/block.text";
+import { AddressCard } from "../../components/bespoke/AddressCard";
+import { ContactCard } from "../../components/bespoke/ContactCard";
+import { ButtonBlock } from "../../components/primitive/block.button";
+import { LayoutContainerBlock } from "../../components/primitive/block.container";
+import { ListBlock } from "../../components/primitive/block.list";
+import { DataSummaryTable } from "../../components/primitive/block.table";
+import { TextBlock } from "../../components/primitive/block.text";
 
 const ContactCardSchema = z
     .object({

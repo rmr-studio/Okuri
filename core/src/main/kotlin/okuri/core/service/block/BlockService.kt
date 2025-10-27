@@ -39,7 +39,7 @@ class BlockService(
         // If we are creating a child. Ensure parent exists, and appropriate metadata has been supplied
         request.parentId?.run {
             requireNotNull(request.slot) { "Slot must be provided when creating a child block" }
-            requireNotNull(request.orderIndex) { "Slot must be provided when creating a child block" }
+            requireNotNull(request.orderIndex) { "Order index must be provided when creating a child block" }
             requireNotNull(request.parentNesting) { "Parent nesting must be provided when creating a child block" }
         }
 
@@ -134,6 +134,10 @@ class BlockService(
             "Cannot switch payload kind (content <-> reference) on update. Create a new block instead."
         }
 
+        require(existing.type.id == block.type.id) {
+            "Cannot change block type on update. Create a new block instead."
+        }
+
         val updatedMetadata: Metadata = block.payload.let {
             when (it) {
                 is BlockContentMetadata -> {
@@ -146,7 +150,7 @@ class BlockService(
                             this.data = updated
                         }
 
-                        val errs = schemaService.validate(block.type.schema, it, existing.type.strictness)
+                        val errs = schemaService.validate(existing.type.schema, it, existing.type.strictness)
 
                         if (existing.type.strictness.isStrict() && errs.isNotEmpty()) {
                             throw SchemaValidationException(errs)
@@ -324,12 +328,21 @@ class BlockService(
 
         activityService.logActivity(
             activity = okuri.core.enums.activity.Activity.BLOCK,
-            operation = if (status) okuri.core.enums.util.OperationType.ARCHIVE else okuri.core.enums.util.OperationType.RESTORE,
+            operation = if (status) OperationType.ARCHIVE else OperationType.RESTORE,
             userId = authTokenService.getUserId(),
             organisationId = updated.organisationId,
             targetId = updated.id,
             additionalDetails = "Block '${updated.id}' archive status set to $status"
         )
+    }
+
+    /**
+     * Deletes the specified block from the system, will also recursively delete all embedded child blocks.
+     */
+    @PreAuthorize("@organisationSecurity.hasOrg(#tree.root.block.organisationId)")
+    @Transactional
+    fun deleteBlock(tree: BlockTree) {
+        TODO()
     }
 
     // ---------- helpers ----------

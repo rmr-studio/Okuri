@@ -135,7 +135,7 @@ class BlockController(
     @DeleteMapping("/{blockId}")
     @Operation(
         summary = "Delete a block",
-        description = "Deletes a block by ID. The request must include the full block payload to ensure authorisation and cascading rules are applied correctly."
+        description = "Deletes a block by ID. This operation will then also remove all child blocks recursively."
     )
     @ApiResponses(
         ApiResponse(responseCode = "204", description = "Block deleted successfully"),
@@ -146,7 +146,9 @@ class BlockController(
     fun deleteBlockById(
         @PathVariable blockId: UUID,
     ): ResponseEntity<Unit> {
-        TODO()
+        blockService.getBlock(blockId).run {
+            blockService.deleteBlock(this)
+        }
         return ResponseEntity.noContent().build()
     }
 }

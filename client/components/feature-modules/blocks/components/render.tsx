@@ -8,22 +8,25 @@
 "use client";
 
 import {
+    PanelWrapper,
+    QuickActionItem,
+} from "@/components/feature-modules/blocks/components/panel/panel-wrapper";
+import {
     BlockReference,
     BlockRenderStructure,
     BlockTree,
 } from "@/components/feature-modules/blocks/interface/block.interface";
-import { applyBindings } from "@/components/feature-modules/blocks/util/block.binding";
-import { buildDisplayFromGridState } from "@/components/feature-modules/blocks/util/block.layout";
-import { blockRenderRegistry } from "@/components/feature-modules/blocks/util/block.registry";
-import { evalVisible } from "@/components/feature-modules/blocks/util/block.visibility";
+import { applyBindings } from "@/components/feature-modules/blocks/util/block/block.binding";
+import { blockRenderRegistry } from "@/components/feature-modules/blocks/util/block/block.registry";
 import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
 import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
-import { PanelWrapper, QuickActionItem } from "@/components/feature-modules/blocks/components/panel/panel-wrapper";
 import type { RenderElementMetadata } from "@/components/feature-modules/render/util/render-element.registry";
 import type { GridStackOptions, GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { buildDisplayFromGridState } from "../util/block/block.layout";
+import { evalVisible } from "../util/block/block.util";
 
 /** Lightweight context passed to helpers when binding component props. */
 export interface TreeCtx {

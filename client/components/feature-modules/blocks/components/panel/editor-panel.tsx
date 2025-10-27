@@ -2,6 +2,11 @@ import { useMemo } from "react";
 import { z } from "zod";
 import { createRenderElement } from "../../../render/util/render-element.registry";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
+import {
+    createContactBlockTree,
+    createNoteBlockTree,
+    createProjectBlockTree,
+} from "../../util/block/factory/block.factory";
 import { RenderBlock } from "../render";
 import { PanelWrapper, QuickActionItem, SlashMenuItem, defaultSlashItems } from "./panel-wrapper";
 
@@ -43,9 +48,7 @@ const EditorPanelWidget: React.FC<z.infer<typeof EditorPanelSchema>> = ({ blockI
 
     if (!blockInstance) {
         return (
-            <div className="p-4 text-center text-muted-foreground">
-                Block {blockId} not found
-            </div>
+            <div className="p-4 text-center text-muted-foreground">Block {blockId} not found</div>
         );
     }
 
@@ -90,9 +93,7 @@ const EditorPanelWidget: React.FC<z.infer<typeof EditorPanelSchema>> = ({ blockI
         if (!newTree) return;
 
         // Find current block's position
-        const currentIndex = topLevelBlocks.findIndex(
-            (b) => b.tree.root.block.id === blockId
-        );
+        const currentIndex = topLevelBlocks.findIndex((b) => b.tree.root.block.id === blockId);
 
         // Calculate layout position (below current block)
         const currentLayout = blockInstance.layout;
@@ -180,20 +181,10 @@ export const editorPanelRegistry = {
  * Helper function to create a BlockTree from a slash menu item
  */
 function createBlockTreeFromSlashItem(item: SlashMenuItem): any {
-    // Import factory functions
-    const {
-        createBlankPanelTree,
-        createContactBlockTree,
-        createProjectBlockTree,
-        createNoteBlockTree,
-    } = require("../../util/block-factories");
-
     // Use demo org ID - in production, this would come from context/user
     const orgId = "demo-org-12345";
 
     switch (item.id) {
-        case "__NEW_PANEL__":
-            return createBlankPanelTree(orgId);
         case "CONTACT_CARD":
             return createContactBlockTree(orgId);
         case "LAYOUT_CONTAINER":
