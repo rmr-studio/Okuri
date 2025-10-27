@@ -197,14 +197,7 @@ fun detachChildrenBySlot(parentId: UUID, slot: String) {
 
     val childIds = edges.map { it.childId }
     val children = blockRepository.findAllById(childIds)
-
-    // Clear parent pointers
-    children.forEach { child ->
-        if (child.parentId == parentId) {
-            blockRepository.save(child.copy(parentId = null))
-        }
-    }
-
+    
     // Delete edges
     edgeRepository.deleteAllInBatch(edges)
 }

@@ -3,6 +3,7 @@ package okuri.core.service.block
 import jakarta.transaction.Transactional
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
+import okuri.core.models.block.structure.BlockContentMetadata
 import okuri.core.models.block.structure.BlockTypeNesting
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
@@ -110,6 +111,9 @@ class BlockChildrenService(
         orderedChildIds: List<UUID>,
         nesting: BlockTypeNesting
     ) {
+        require(orderedChildIds.distinct().size == orderedChildIds.size) {
+            "Duplicate child IDs not allowed in slot '$slot' for parent $parentId"
+        }
         val parent = load(parentId)
         // Preload and validate each child type/org
         val children = blockRepository.findAllById(orderedChildIds.toSet())
@@ -199,6 +203,10 @@ class BlockChildrenService(
     ) {
         val row = edgeRepository.findByParentIdAndChildId(parentId, childId)
             ?: throw NoSuchElementException("Child $childId not attached to parent $parentId")
+        require(row.slot == fromSlot) {
+            "Child $childId is in slot '${row.slot}', not '$fromSlot'"
+        }
+
         if (row.slot == toSlot) {
             // same slot -> use reorder
             reorderWithinSlot(parentId, toSlot, childId, index ?: row.orderIndex)
@@ -209,10 +217,10 @@ class BlockChildrenService(
         val child = load(childId)
         validateAttach(parent, child, toSlot, nesting)
 
-        // Remove from old slot (compact)
-        val fromSiblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, fromSlot)
+        // Remove from old slot (compact using actual slot)
+        val fromSiblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, row.slot)
         val remaining = fromSiblings.filter { it.childId != childId }
-        renumber(parentId, fromSlot, remaining)
+        renumber(parentId, row.slot, remaining)
 
         // Insert into new slot
         val toSiblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, toSlot)
@@ -338,6 +346,10 @@ class BlockChildrenService(
         // 1. Same organisation check
         require(parent.organisationId == child.organisationId) {
             "Cannot attach child from different organisation (parent: ${parent.organisationId}, child: ${child.organisationId})"
+        }
+
+        require(parent.payload is BlockContentMetadata) {
+            "Cannot attach children to a reference block (parent: ${parent.id})"
         }
 
         val parentId = requireNotNull(parent.id)

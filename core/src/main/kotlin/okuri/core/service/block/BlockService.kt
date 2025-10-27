@@ -39,7 +39,7 @@ class BlockService(
         // If we are creating a child. Ensure parent exists, and appropriate metadata has been supplied
         request.parentId?.run {
             requireNotNull(request.slot) { "Slot must be provided when creating a child block" }
-            requireNotNull(request.orderIndex) { "Slot must be provided when creating a child block" }
+            requireNotNull(request.orderIndex) { "Order index must be provided when creating a child block" }
             requireNotNull(request.parentNesting) { "Parent nesting must be provided when creating a child block" }
         }
 
@@ -334,6 +334,15 @@ class BlockService(
             targetId = updated.id,
             additionalDetails = "Block '${updated.id}' archive status set to $status"
         )
+    }
+
+    /**
+     * Deletes the specified block from the system, will also recursively delete all embedded child blocks.
+     */
+    @PreAuthorize("@organisationSecurity.hasOrg(#tree.root.block.organisationId)")
+    @Transactional
+    fun deleteBlock(tree: BlockTree) {
+        TODO()
     }
 
     // ---------- helpers ----------

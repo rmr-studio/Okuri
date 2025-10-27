@@ -7,9 +7,7 @@ import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Block
-import okuri.core.models.block.BlockTree
 import okuri.core.models.block.Reference
-import okuri.core.models.block.Referenceable
 import okuri.core.models.block.structure.BlockReferenceMetadata
 import okuri.core.models.block.structure.EntityReferenceMetadata
 import okuri.core.repository.block.BlockReferenceRepository
@@ -76,10 +74,10 @@ class BlockReferenceService(
 
     fun findListReferences(blockId: UUID, meta: EntityReferenceMetadata): List<Reference<*>> {
         val rows = blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, meta.path)
-        val byTypeId = rows.associateBy { it.entityType to it.entityId }
-
+        val byPath = rows.associateBy { it.path }
         val base = meta.items.mapIndexed { idx, item ->
-            val row = byTypeId[item.type to item.id]
+            val path = "${meta.path}[$idx]"
+            val row = byPath[path]
             if (row == null) Reference(
                 id = null, entityType = item.type, entityId = item.id,
                 entity = null, orderIndex = idx, warning = BlockReferenceWarning.MISSING

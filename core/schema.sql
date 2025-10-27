@@ -268,11 +268,11 @@ CREATE TABLE public.block_children
     "child_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
     "slot"        text    NOT NULL, -- e.g. "header", "items", "footer"
     "order_index" integer NOT NULL DEFAULT 0,
-    UNIQUE (child_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_block_children_parent ON block_children (parent_id);
-CREATE INDEX IF NOT EXISTS idx_block_children_slot ON block_children (child_id);
+CREATE INDEX IF NOT EXISTS idx_block_children_child ON public.block_children (child_id);
+CREATE INDEX IF NOT EXISTS idx_block_children_parent_slot_order ON public.block_children (parent_id, slot, order_index);
 
 -- A block can only be the child of a singular parent block. Ensure no blocks are shared when looking at direct children
 alter table public.block_children

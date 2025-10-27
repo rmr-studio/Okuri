@@ -123,6 +123,7 @@ class BlockChildrenController(
      * Use this endpoint when:
      * - Drag-and-drop reordering within the same slot (change index)
      * - Moving across slots within same parent (slot change + new index)
+     *
      * - For reparenting to different parent, use that parent's addChild endpoint
      *
      * @param parentId The UUID of the parent block
@@ -132,7 +133,7 @@ class BlockChildrenController(
      */
     @PatchMapping("/{parentId}/children/{childId}/move")
     @Operation(
-        summary = "Move a child block to a different position or slot",
+        summary = "Move a child block internally to a different position or slot",
         description = "Moves a child block within the same parent. " +
                 "Can reorder within same slot or move to a different slot. " +
                 "Source slot is inferred from current edge. " +
