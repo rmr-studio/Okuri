@@ -19,7 +19,7 @@ class SchemaServiceTest {
         schemaService = SchemaService(ObjectMapper())
     }
 
-    private fun validateAllScopes(schema: BlockSchema, payload: Any?): Map<BlockValidationScope, List<String>> {
+    private fun validateAllScopes(schema: BlockSchema, payload: okuri.core.models.block.structure.BlockContentMetadata): Map<BlockValidationScope, List<String>> {
         return BlockValidationScope.entries.associateWith { scope ->
             schemaService.validate(schema, payload, scope)
         }

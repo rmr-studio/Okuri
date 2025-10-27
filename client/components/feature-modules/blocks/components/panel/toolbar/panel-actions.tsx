@@ -6,6 +6,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MoreHorizontalIcon } from "lucide-react";
 import { FC } from "react";
 
@@ -20,16 +21,21 @@ const PanelActions: FC<PanelActionsProps> = ({ menuActions, toolbarButtonClass, 
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="More actions"
-                    className={toolbarButtonClass}
-                >
-                    <MoreHorizontalIcon className="size-3.5" />
-                </Button>
-            </DropdownMenuTrigger>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="More actions"
+                            className={toolbarButtonClass}
+                        >
+                            <MoreHorizontalIcon className="size-3.5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>More actions</TooltipContent>
+            </Tooltip>
             <DropdownMenuContent align="end" className="min-w-[10rem]">
                 {menuActions.map((action) => (
                     <DropdownMenuItem

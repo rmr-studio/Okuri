@@ -3,71 +3,61 @@ package okuri.core.service.util.factory.block
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.BlockValidationScope
-import okuri.core.models.block.structure.BlockDisplay
-import okuri.core.models.block.structure.BlockMeta
-import okuri.core.models.block.structure.BlockMetadata
-import okuri.core.models.block.structure.BlockSchema
+import okuri.core.enums.core.ComponentType
+import okuri.core.models.block.structure.*
+import okuri.core.models.common.grid.LayoutGrid
 import java.util.*
 
 object BlockFactory {
 
-    /**
-     * Creates a BlockTypeEntity populated with sensible defaults, allowing overrides for organisation, key, version, validation scope, and archived state.
-     *
-     * @param orgId The organisation UUID; pass `null` to mark the block type as a system-level type.
-     * @param key The block type key (defaults to "contact_card").
-     * @param version The block type version.
-     * @param scope The validation strictness for the block type.
-     * @param archived Whether the block type is archived.
-     * @return A new BlockTypeEntity configured with the provided values and default schema and display structures.
-     */
-    fun generateBlockType(
-        orgId: UUID?,
+    fun createType(
+        orgId: UUID,
         key: String = "contact_card",
         version: Int = 1,
-        scope: BlockValidationScope = BlockValidationScope.SOFT,
-        archived: Boolean = false
-    ) = BlockTypeEntity(
+        strictness: BlockValidationScope = BlockValidationScope.SOFT,
+        schema: BlockSchema = BlockSchema(name = "Contact"),
+        archived: Boolean = false,
+        nesting: BlockTypeNesting = BlockTypeNesting(
+            max = null,
+            allowedTypes = listOf(ComponentType.CONTACT_CARD)
+        )
+    ): BlockTypeEntity = BlockTypeEntity(
         id = UUID.randomUUID(),
         key = key,
-        displayName = "Contact Card",
-        description = null,
+        displayName = "Contact",
+        description = "Contact type",
         organisationId = orgId,
-        system = orgId == null,
+        system = false,
         version = version,
-        strictness = scope,
-        schema = BlockSchema(name = "root"),
+        strictness = strictness,
+        schema = schema,
         archived = archived,
-        displayStructure = generateDisplay()
+        displayStructure = BlockDisplay(
+            form = BlockFormStructure(emptyMap()),
+            render = BlockRenderStructure(
+                version = 1,
+                layoutGrid = LayoutGrid(items = emptyList()),
+                components = emptyMap()
+            )
+        ),
+        nesting = nesting
     )
 
-    /**
-     * Create a BlockEntity linked to the given BlockTypeEntity.
-     *
-     * @param id Optional identifier for the block; a random UUID is generated when omitted.
-     * @param orgId Organisation identifier that owns the block.
-     * @param type The BlockTypeEntity that defines this block's type.
-     * @param name Optional human-readable name for the block.
-     * @param data Initial payload data for the block; stored in the block's metadata.
-     * @param parent Optional parent block to establish hierarchy.
-     * @return The constructed BlockEntity whose payload contains the provided `data`, an empty `refs` list, and a default `BlockMeta`.
-     */
-    fun generateBlock(
-        id: UUID = UUID.randomUUID(),
+    fun createBlock(
+        id: UUID,
         orgId: UUID,
         type: BlockTypeEntity,
-        name: String? = null,
-        data: Map<String, Any?> = emptyMap(),
-        parent: BlockEntity? = null
-    ) = BlockEntity(
+        parentId: UUID? = null
+    ): BlockEntity = BlockEntity(
         id = id,
         organisationId = orgId,
         type = type,
-        name = name,
-        payload = BlockMetadata(data = data, refs = emptyList(), meta = BlockMeta()),
-        parent = parent,
+        name = "Test Block",
+        payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+        parentId = parentId,
         archived = false
     )
+
 
     /**
      * Creates a default root schema for a block.

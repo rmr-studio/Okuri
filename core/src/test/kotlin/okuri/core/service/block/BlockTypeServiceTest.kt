@@ -67,11 +67,11 @@ class BlockTypeServiceTest {
     fun `publishBlockType saves and returns model, logs CREATE activity`() {
         // Scenario: A user publishes a block type. Repository saves and returns entity with id.
         // Expect: returned model matches saved entity; activity logged.
-        val type = BlockFactory.generateBlockType(
+        val type = BlockFactory.createType(
             orgId = orgId,
             key = "invoice_header",
             version = 1,
-            scope = BlockValidationScope.SOFT
+            strictness = BlockValidationScope.SOFT
         )
 
         whenever(blockTypeRepository.save(any<BlockTypeEntity>())).thenReturn(type)
@@ -111,11 +111,11 @@ class BlockTypeServiceTest {
         // Scenario: Updating an existing type should append a new row (version+1), not mutate existing.
         // Expect: repo.save called with id=null and version=existing.version+1; activity logged as CREATE.
 
-        val type = BlockFactory.generateBlockType(
+        val type = BlockFactory.createType(
             orgId = orgId,
             key = "invoice_header",
             version = 3,
-            scope = BlockValidationScope.SOFT
+            strictness = BlockValidationScope.SOFT
         )
 
         whenever(blockTypeRepository.findById(type.id!!)).thenReturn(Optional.of(type))
@@ -165,11 +165,11 @@ class BlockTypeServiceTest {
     fun `archiveBlockType sets archived true and logs ARCHIVED`() {
         // Scenario: Archiving a type sets archived=true and logs DELETE
 
-        val type = BlockFactory.generateBlockType(
+        val type = BlockFactory.createType(
             orgId = orgId,
             key = "invoice_header",
             version = 3,
-            scope = BlockValidationScope.SOFT
+            strictness = BlockValidationScope.SOFT
         )
 
         whenever(blockTypeRepository.findById(type.id!!)).thenReturn(Optional.of(type))
@@ -194,11 +194,11 @@ class BlockTypeServiceTest {
     @Test
     fun `archiveBlockType sets archived false and logs RESTORE`() {
         // Scenario: Restoring a type sets archived=false and logs UPDATE
-        val existing = BlockFactory.generateBlockType(
+        val existing = BlockFactory.createType(
             orgId = orgId,
             key = "invoice_header",
             version = 3,
-            scope = BlockValidationScope.SOFT,
+            strictness = BlockValidationScope.SOFT,
             archived = true
         )
 
@@ -224,11 +224,11 @@ class BlockTypeServiceTest {
     @Test
     fun `archiveBlockType no-ops when status unchanged`() {
         // Scenario: Calling archive with the current status does nothing
-        val existing = BlockFactory.generateBlockType(
+        val existing = BlockFactory.createType(
             orgId = orgId,
             key = "invoice_header",
             version = 3,
-            scope = BlockValidationScope.SOFT,
+            strictness = BlockValidationScope.SOFT,
             archived = true
         )
 

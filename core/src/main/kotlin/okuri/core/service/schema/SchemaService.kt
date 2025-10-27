@@ -7,6 +7,7 @@ import com.networknt.schema.SpecVersion
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.DataFormat
 import okuri.core.enums.core.DataType
+import okuri.core.models.block.structure.BlockContentMetadata
 import okuri.core.models.block.structure.BlockSchema
 import okuri.core.models.block.structure.toJsonSchema
 import org.springframework.stereotype.Service
@@ -38,7 +39,7 @@ class SchemaService(
      */
     fun validate(
         schema: BlockSchema,
-        payload: Any?,
+        payload: BlockContentMetadata,
         scope: BlockValidationScope = BlockValidationScope.STRICT,
         path: String = "$"
     ): List<String> {
@@ -69,7 +70,7 @@ class SchemaService(
      */
     fun validateOrThrow(
         schema: BlockSchema,
-        payload: Any?,
+        payload: BlockContentMetadata,
         scope: BlockValidationScope
     ) {
         val errs = validate(schema, payload, scope)

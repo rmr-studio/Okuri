@@ -2,11 +2,7 @@ package okuri.core.entity.block
 
 
 import jakarta.persistence.*
-import okuri.core.entity.client.ClientEntity
-import okuri.core.enums.block.BlockOwnership
 import okuri.core.enums.core.EntityType
-import okuri.core.models.block.BlockReference
-import okuri.core.models.block.Referenceable
 import java.util.*
 
 /**
@@ -29,9 +25,8 @@ data class BlockReferenceEntity(
     val id: UUID? = null,
 
     // The originator block that is referencing another data source
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "block_id", nullable = false)
-    val block: BlockEntity,
+    @Column(name = "block_id", nullable = false, columnDefinition = "uuid")
+    val parentId: UUID,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "entity_type", nullable = false)
@@ -40,86 +35,10 @@ data class BlockReferenceEntity(
     @Column(name = "entity_id", nullable = false, columnDefinition = "uuid")
     val entityId: UUID,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "relation", nullable = false)
-    val ownership: BlockOwnership = BlockOwnership.LINKED,
-
     @Column(name = "path", nullable = false)
     val path: String,
 
     @Column(name = "order_index")
-    val orderIndex: Int? = null
-) {
-    /**
-     * Convert this persistence entity into a BlockReference model instance.
-     *
-     * When `entity` is null the resulting BlockReference contains no resolved `entity` reference;
-     * when `entity` is provided it must match `entityType` (currently supports `EntityType.BLOCK` and `EntityType.CLIENT`)
-     * and will be included as a reference in the resulting model.
-     *
-     * @param entity The resolved referenced entity (may be null). Must implement `Referenceable` and match `entityType` when non-null.
-     * @return A BlockReference populated from this entity, including `ownership`, `path`, and `orderIndex` when available.
-     * @throws IllegalArgumentException if this entity's `id` or associated `block.id` is null, if a non-null `entity` does not match the declared `entityType`, or if `entityType` is unsupported.
-     */
-    fun <T : Referenceable<E>, E : Any?> toModel(entity: T?): BlockReference<*> {
-        val id = requireNotNull(this.id) { "BlockReferenceEntity ID cannot be null when converting to model" }
-        requireNotNull(this.block.id) { "Block ID cannot be null when converting to model" }
-
-        if (entity == null) {
-            return BlockReference(
-                id = id,
-                entityType = this.entityType,
-                entityId = this.entityId,
-                ownership = this.ownership,
-                orderIndex = this.orderIndex,
-                path = this.path,
-                entity = null
-            )
-        }
-
-        when (this.entityType) {
-            EntityType.BLOCK -> {
-                if (entity !is BlockEntity) {
-                    throw IllegalArgumentException("Expected entity of type BlockEntity for EntityType.BLOCK")
-                }
-                // Convert to model
-                return BlockReference(
-                    id = id,
-                    entityType = this.entityType,
-                    entityId = this.entityId,
-                    entity = entity.toReference(),
-                    ownership = this.ownership,
-                    path = this.path,
-                    orderIndex = this.orderIndex,
-                )
-            }
-
-            EntityType.CLIENT -> {
-                if (entity !is ClientEntity) {
-                    throw IllegalArgumentException("Expected entity of type ClientEntity for EntityType.CLIENT")
-                }
-                // Convert to model
-                return BlockReference(
-                    id = id,
-                    entityType = this.entityType,
-                    entityId = this.entityId,
-                    entity = entity.toReference(),
-                    ownership = this.ownership,
-                    path = this.path,
-                    orderIndex = this.orderIndex,
-                )
-            }
-
-            // todo: Flesh out remaining entity types
-
-            // Add other entity types here as needed
-            else -> {
-                throw IllegalArgumentException("Unsupported EntityType: ${this.entityType}")
-            }
-        }
-
-
-    }
-
-}
+    var orderIndex: Int? = null
+)
 

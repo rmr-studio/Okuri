@@ -14,6 +14,7 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
 import { TypeIcon } from "lucide-react";
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -59,6 +60,7 @@ export interface Props {
     className?: string;
     nested?: React.ReactNode;
     nestedFooter?: React.ReactNode;
+    allowInsert?: boolean;
 }
 
 export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).map((meta) => ({
@@ -88,7 +90,10 @@ export const PanelWrapper: React.FC<Props> = ({
     className,
     nested,
     nestedFooter,
+    allowInsert = false,
 }) => {
+    // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
+
     const panelId = useId();
     const surfaceId = id ?? panelId;
     const [isSelected, setIsSelected] = useState(false);
@@ -98,9 +103,12 @@ export const PanelWrapper: React.FC<Props> = ({
     const [isInlineMenuOpen, setInlineMenuOpen] = useState(false);
     const [draftTitle, setDraftTitle] = useState(title ?? "");
     const [insertContext, setInsertContext] = useState<"nested" | "sibling">("nested");
-    const inlineSearchRef = useRef<HTMLInputElement>(null);
+    const [isHovered, setHovered] = useState(false);
+    const inlineSearchRef = useRef<HTMLInputElement | null>(null);
 
     const content = mode === "form" ? form : display ?? children;
+    const showInsertHandle =
+        allowInsert && (isSelected || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered);
 
     const items = slashItems ?? defaultSlashItems;
     const actions = quickActions ?? [];
@@ -118,9 +126,12 @@ export const PanelWrapper: React.FC<Props> = ({
         return actions;
     }, [actions, onDelete]);
     const hasMenuActions = menuActions.length > 0;
-    const [isHovered, setHovered] = useState(false);
+
     const shouldHighlight =
-        isSelected || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered;
+        isSelected ||
+        isQuickOpen ||
+        (allowInsert && (isInlineMenuOpen || isSlashOpen)) ||
+        isHovered;
     const toolbarVisible = shouldHighlight;
 
     useEffect(() => {
@@ -174,7 +185,13 @@ export const PanelWrapper: React.FC<Props> = ({
                     active.tagName === "TEXTAREA" ||
                     active.getAttribute("contenteditable") === "true");
 
-            if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            if (
+                allowInsert &&
+                event.key === "/" &&
+                !event.metaKey &&
+                !event.ctrlKey &&
+                !event.altKey
+            ) {
                 if (isInput) return;
                 event.preventDefault();
                 setInsertContext("nested");
@@ -189,7 +206,7 @@ export const PanelWrapper: React.FC<Props> = ({
 
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
                 event.preventDefault();
-                if (actions.length === 0) {
+                if (allowInsert && actions.length === 0) {
                     setInsertContext("nested");
                     pushSelection({ type: "panel", id: surfaceId, onDelete });
                     setInlineMenuOpen(true);
@@ -202,20 +219,22 @@ export const PanelWrapper: React.FC<Props> = ({
 
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [toggleMode, actions.length, isSelected, surfaceId, onDelete]);
+    }, [allowInsert, toggleMode, actions.length, isSelected, surfaceId, onDelete]);
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
     }, [draftTitle, onTitleChange, title]);
 
     const handleOpenInsertModal = useCallback(() => {
+        if (!allowInsert) return;
         setInlineMenuOpen(false);
         setSlashOpen(true);
         pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [setInlineMenuOpen, setSlashOpen, surfaceId, onDelete]);
+    }, [allowInsert, setInlineMenuOpen, setSlashOpen, surfaceId, onDelete]);
 
     const handleSelect = useCallback(
         (item: SlashMenuItem) => {
+            if (!allowInsert) return;
             setInlineMenuOpen(false);
             setSlashOpen(false);
             item.onSelect?.();
@@ -233,7 +252,7 @@ export const PanelWrapper: React.FC<Props> = ({
                 onInsertSibling(item);
             }
         },
-        [insertContext, onInsert, onInsertSibling, setInlineMenuOpen, setSlashOpen]
+        [allowInsert, insertContext, onInsert, onInsertSibling, setInlineMenuOpen, setSlashOpen]
     );
 
     const handleQuickSelect = useCallback(
@@ -261,28 +280,34 @@ export const PanelWrapper: React.FC<Props> = ({
     }, [setQuickOpen, surfaceId, onDelete]);
 
     const handleInlineInsertOpen = useCallback(() => {
+        if (!allowInsert) return;
         setInsertContext("nested");
         setInlineMenuOpen(true);
         pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [setInsertContext, setInlineMenuOpen, surfaceId, onDelete]);
+    }, [allowInsert, setInsertContext, setInlineMenuOpen, surfaceId, onDelete]);
 
     const handleQuickInsertOpenQuickActions = useCallback(() => {
+        if (!allowInsert) return;
         setInlineMenuOpen(false);
         setQuickOpen(true);
         pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [setInlineMenuOpen, setQuickOpen, surfaceId, onDelete]);
+    }, [allowInsert, setInlineMenuOpen, setQuickOpen, surfaceId, onDelete]);
 
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
                 <div
                     className={cn(
-                        "group relative flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm transition-colors",
-                        shouldHighlight
-                            ? "border-primary ring-2 ring-primary/30"
-                            : isHovered
-                            ? "border-primary/50"
-                            : "border-border",
+                        "group relative flex flex-col rounded-xl border text-card-foreground transition-colors",
+                        allowInsert
+                            ? shouldHighlight
+                                ? "border-primary ring-2 ring-primary/30 bg-card shadow-sm"
+                                : isHovered
+                                ? "border-primary/40 bg-card/90 shadow-sm"
+                                : "border-border bg-card/80 shadow-sm"
+                            : shouldHighlight
+                            ? "border-primary/70 bg-background/80"
+                            : "border-transparent bg-transparent",
                         className
                     )}
                     data-surface-id={surfaceId}
@@ -327,14 +352,19 @@ export const PanelWrapper: React.FC<Props> = ({
                         mode={mode}
                         onToggleMode={handleToggleModeClick}
                         onQuickActionsClick={handleQuickActionsOpen}
-                        onInlineInsertClick={handleInlineInsertOpen}
-                        inlineMenuOpen={isInlineMenuOpen}
-                        onInlineMenuOpenChange={(open) => setInlineMenuOpen(open)}
-                        inlineSearchRef={inlineSearchRef}
-                        items={items}
-                        onSelectItem={handleSelect}
-                        onShowAllOptions={handleOpenInsertModal}
-                        onOpenQuickActionsFromInline={handleQuickInsertOpenQuickActions}
+                        allowInsert={allowInsert}
+                        onInlineInsertClick={allowInsert ? handleInlineInsertOpen : undefined}
+                        inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
+                        onInlineMenuOpenChange={
+                            allowInsert ? (open) => setInlineMenuOpen(open) : undefined
+                        }
+                        inlineSearchRef={allowInsert ? inlineSearchRef : undefined}
+                        items={allowInsert ? items : undefined}
+                        onSelectItem={allowInsert ? handleSelect : undefined}
+                        onShowAllOptions={allowInsert ? handleOpenInsertModal : undefined}
+                        onOpenQuickActionsFromInline={
+                            allowInsert ? handleQuickInsertOpenQuickActions : undefined
+                        }
                         draftTitle={draftTitle}
                         onDraftTitleChange={(value) => setDraftTitle(value)}
                         onTitleBlur={handleTitleBlur}
@@ -345,8 +375,19 @@ export const PanelWrapper: React.FC<Props> = ({
                         menuActions={menuActions}
                         onMenuAction={handleMenuAction}
                     />
-                    <section className="px-4 pb-4 pt-12">
-                        <div className="rounded-lg border bg-background/40 p-4">
+                    <section
+                        className={cn(
+                            allowInsert ? "pb-10" : "pb-4",
+                            "pt-11",
+                            allowInsert ? "px-4" : "px-3"
+                        )}
+                    >
+                        <div
+                            className={cn(
+                                "rounded-lg border bg-background/40 p-4",
+                                !allowInsert && "border-transparent bg-transparent p-0"
+                            )}
+                        >
                             <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 {modeLabel}
                             </div>
@@ -359,23 +400,34 @@ export const PanelWrapper: React.FC<Props> = ({
                             )}
                         </div>
                         {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
-                        {nestedFooter}
                     </section>
 
-                    <InsertBlockModal
-                        open={isSlashOpen}
-                        onOpenChange={setSlashOpen}
-                        onSelect={handleSelect}
-                        items={items}
-                    />
+                    {allowInsert ? (
+                        <InsertBlockModal
+                            open={isSlashOpen}
+                            onOpenChange={setSlashOpen}
+                            onSelect={handleSelect}
+                            items={items}
+                        />
+                    ) : null}
                     <QuickActionModal
                         open={isQuickOpen}
                         setOpen={setQuickOpen}
-                        surfaceId={surfaceId}
-                        onInsert={handleOpenInsertModal}
+                        onInsert={allowInsert ? handleOpenInsertModal : undefined}
                         onActionSelect={handleQuickSelect}
                         actions={actions}
+                        allowInsert={allowInsert}
                     />
+                    {showInsertHandle && nestedFooter ? (
+                        <div className="pointer-events-none absolute bottom-3 right-4">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="pointer-events-auto">{nestedFooter}</div>
+                                </TooltipTrigger>
+                                <TooltipContent>Add nested block</TooltipContent>
+                            </Tooltip>
+                        </div>
+                    ) : null}
                 </div>
             </ContextMenuTrigger>
             {hasMenuActions ? (

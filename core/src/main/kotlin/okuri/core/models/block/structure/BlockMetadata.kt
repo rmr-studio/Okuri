@@ -1,84 +1,99 @@
 package okuri.core.models.block.structure
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.swagger.v3.oas.annotations.media.Schema
-import okuri.core.enums.block.BlockOwnership
+import okuri.core.enums.block.BlockMetadataType
+import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.core.EntityType
-import okuri.core.models.block.BlockReference
 import okuri.core.models.common.json.JsonObject
-import okuri.core.models.common.json.JsonValue
-import java.io.Serializable
 import java.util.*
 
-data class BlockMetadata(
-    @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
-    val data: JsonObject = emptyMap(),
-    val refs: List<BlockReference<*>> = emptyList(),
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = BlockContentMetadata::class, name = "content"),
+    JsonSubTypes.Type(value = EntityReferenceMetadata::class, name = "entity_reference"),
+    JsonSubTypes.Type(value = BlockReferenceMetadata::class, name = "block_reference")
+)
+sealed interface Metadata {
+    val kind: BlockMetadataType
     val meta: BlockMeta
-) : Serializable {
-
-    companion object RefJson {
-        // Inline reference markers allowed inside `data` at the exact slot of a nested block / entity
-        const val REF_TYPE = "_refType"      // e.g., "BLOCK", "CLIENT" (must match EntityType.name)
-        const val REF_ID = "_refId"        // UUID string
-        const val OWNERSHIP = "_ownership"    // "OWNED" | "LINKED"
-        const val SUMMARY = "_summary"      // optional JsonObject snapshot for quick render
-
-        /**
-         * Builds a JsonObject representing an inline reference node for a referenced entity or block.
-         *
-         * @param type The EntityType of the referenced entity; stored under the `_refType` key as its name.
-         * @param id The UUID of the referenced entity; stored under the `_refId` key as a string.
-         * @param ownership The BlockOwnership of the reference; stored under the `_ownership` key. Defaults to `LINKED`.
-         * @param summary Optional JsonObject snapshot to include under the `_summary` key for quick rendering.
-         * @return A JsonObject containing `_refType`, `_refId`, `_ownership`, and, if provided, `_summary`.
-         */
-        private fun refNode(
-            type: EntityType,
-            id: UUID,
-            ownership: BlockOwnership = BlockOwnership.LINKED,
-            summary: JsonObject? = null
-        ): JsonObject {
-            val base = mutableMapOf<String, JsonValue>(
-                REF_TYPE to type.name,
-                REF_ID to id.toString(),
-                OWNERSHIP to ownership.name
-            )
-            if (summary != null) base[SUMMARY] = summary
-            return base
-        }
-
-        /**
-         * Builds an inline reference JsonObject for an owned block.
-         *
-         * @param id UUID of the referenced block.
-         * @param summary Optional snapshot JsonObject for quick rendering; included under the `_summary` key when provided.
-         * @return A JsonObject containing `_refType` set to the block type, `_refId` set to the block UUID, `_ownership` set to `"OWNED"`, and `_summary` when `summary` is provided.
-         */
-        fun ownedBlockRefNode(id: UUID, summary: JsonObject? = null): JsonObject =
-            refNode(EntityType.BLOCK, id, BlockOwnership.OWNED, summary)
-
-        /**
-         * Creates a JSON reference node for a linked block.
-         *
-         * The produced object contains the reference type, reference id, and ownership marker,
-         * and includes an optional summary snapshot when provided.
-         *
-         * @param id The UUID of the referenced block.
-         * @param summary Optional JSON snapshot of the referenced block for quick rendering.
-         * @return A JsonObject representing the inline reference node (contains REF_TYPE, REF_ID, OWNERSHIP, and optionally SUMMARY).
-         */
-        fun linkedBlockRefNode(id: UUID, summary: JsonObject? = null): JsonObject =
-            refNode(EntityType.BLOCK, id, BlockOwnership.LINKED, summary)
-    }
 }
+
+data class BlockContentMetadata(
+    @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
+    var data: JsonObject = emptyMap(),
+    override val kind: BlockMetadataType = BlockMetadataType.CONTENT,
+    override val meta: BlockMeta = BlockMeta()
+) : Metadata
+
+sealed interface ReferenceMetadata : Metadata {
+    val fetchPolicy: BlockReferenceFetchPolicy
+    val path: String
+}
+
+/**
+ * Metadata when a block is referencing a list of external entities
+ */
+data class EntityReferenceMetadata(
+    override val kind: BlockMetadataType = BlockMetadataType.ENTITY_REFERENCE,
+    override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
+    override val path: String = "\$.items",           // <— used by service to scope rows
+    val items: List<ReferenceItem>,
+    val presentation: Presentation = Presentation.SUMMARY,
+    val projection: Projection? = null,
+    val sort: SortSpec? = null,
+    val filter: FilterSpec? = null,
+    val paging: PagingSpec? = null,
+    val allowDuplicates: Boolean = false,          // <— optional guard
+    override val meta: BlockMeta = BlockMeta()
+) : ReferenceMetadata
+
+/**
+ * Metadata when a block is referencing an external block.
+ */
+data class BlockReferenceMetadata(
+    override val kind: BlockMetadataType = BlockMetadataType.BLOCK_REFERENCE,
+    override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
+    override val meta: BlockMeta = BlockMeta(),
+    override val path: String = "\$.block",
+    val expandDepth: Int = 1,
+    val item: ReferenceItem
+
+
+) : ReferenceMetadata
+
+data class ReferenceItem(
+    val type: EntityType,               // CLIENT | COMPANY | BLOCK | ...
+    val id: UUID,
+    val labelOverride: String? = null,
+    val badge: String? = null,
+//    val actions: List<ActionRef>? = null
+)
+
+enum class Presentation { SUMMARY, ENTITY, TABLE, GRID }
+
+data class Projection(
+    val fields: List<String> = emptyList(), // e.g., ["name","domain","contact.email"]
+    val templateId: UUID? = null            // optional reusable template
+)
+
+data class SortSpec(val by: String, val dir: SortDir = SortDir.ASC)
+enum class SortDir { ASC, DESC }
+data class FilterSpec(
+    @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
+    val expr: Map<String, Any?> = emptyMap()
+)
+
+data class PagingSpec(val pageSize: Int = 20)
 
 
 // ---- Transient/system metadata (not business data) ----
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class BlockMeta(
-    val validationErrors: List<String> = emptyList(),
+    var validationErrors: List<String> = emptyList(),
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     val computedFields: JsonObject? = null,    // optional server-computed values for UI summaries
-    val lastValidatedVersion: Int? = null      // BlockType.version used for last validation
+    var lastValidatedVersion: Int? = null      // BlockType.version used for last validation
 )

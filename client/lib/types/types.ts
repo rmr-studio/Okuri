@@ -173,7 +173,7 @@ export interface paths {
         };
         /**
          * Get a block tree
-         * @description Retrieves a block with optional expansion of references and a maximum depth for child blocks.
+         * @description Retrieves a block tree by its ID, fetching all associated children
          */
         get: operations["getBlock"];
         /**
@@ -184,7 +184,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a block
-         * @description Deletes a block by ID. The request must include the full block payload to ensure authorisation and cascading rules are applied correctly.
+         * @description Deletes a block by ID. This operation will then also remove all child blocks recursively.
          */
         delete: operations["deleteBlockById"];
         options?: never;
@@ -245,6 +245,46 @@ export interface paths {
          * @description Archives a block type by its ID. The block type will still be visible to users currently using it but cannot be used in new blocks.
          */
         put: operations["updateArchiveStatusByBlockTypeId"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/reference/{id}/refs:links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update entity reference list
+         * @description Performs delta-upsert on a reference block's entity list. Adds new references, updates positions, and removes entries not in the new list. Honors allowDuplicates policy. Rejects type=BLOCK (use refs:block endpoint for block references).
+         */
+        put: operations["upsertEntityReferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/reference/{id}/refs:block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update single block reference
+         * @description Updates which block is referenced by a BlockReferenceMetadata block. Ensures exactly one reference row exists. The referenced item must have type=BLOCK.
+         */
+        put: operations["upsertBlockReference"];
         post?: never;
         delete?: never;
         options?: never;
@@ -424,6 +464,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/block/child/{parentId}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a child block to a parent
+         * @description Creates a parent-child relationship by adding a block to a parent's slot. Validates organisation ownership, slot compatibility, and type nesting rules. Rejects cycles and enforces child_id uniqueness (a block can only have one parent).
+         */
+        post: operations["addChild"];
+        /**
+         * Clear all children from a slot
+         * @description Removes all children from the specified slot. Child blocks remain in the system as top-level blocks. This is a bulk detachment operation.
+         */
+        delete: operations["clearSlot"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/child/{parentId}/children:bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add multiple children to a parent slot
+         * @description Bulk operation to add multiple blocks to a parent's slot. The service normalizes order indices to 0..n-1. All children must pass the same validation as single child addition.
+         */
+        post: operations["addChildrenBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/block/": {
         parameters: {
             query?: never;
@@ -442,6 +526,46 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/child/{parentId}/children/{childId}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Move a child block internally to a different position or slot
+         * @description Moves a child block within the same parent. Can reorder within same slot or move to a different slot. Source slot is inferred from current edge. Renumbers both affected slots automatically.
+         */
+        patch: operations["moveChild"];
+        trace?: never;
+    };
+    "/api/v1/block/child/{parentId}/children/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Reorder children within a single slot
+         * @description Reorders all children in a slot according to the provided order list. Validates set equality (all existing children must be in the order list). Normalizes indices to 0..n-1.
+         */
+        patch: operations["reorderChildren"];
         trace?: never;
     };
     "/api/v1/user/{userId}": {
@@ -636,6 +760,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/block/reference/{id}/refs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get resolved references for a block
+         * @description Retrieves and optionally resolves references for a reference block. Returns different response types based on the block's metadata type: EntityReferenceMetadata returns a list, BlockReferenceMetadata returns a single reference. LAZY mode returns IDs only, EAGER mode resolves entities via configured resolvers.
+         */
+        get: operations["getReferences"];
+        put?: never;
+        post?: never;
+        /**
+         * Clear all references from a block
+         * @description Removes all reference entries for the specified block. The block itself is not deleted, only its reference relationships are cleared.
+         */
+        delete: operations["clearAllReferences"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organisation/{organisationId}/member": {
         parameters: {
             query?: never;
@@ -663,6 +811,46 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["revokeInvite"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/reference/{id}/refs/{entityType}/{entityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a single reference
+         * @description Removes a specific reference entry by entity type and ID. For reference lists with allowDuplicates=true, include the path parameter to specify which occurrence to remove (e.g., ?path=$.items[3]).
+         */
+        delete: operations["removeReference"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/block/child/{parentId}/children/{childId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a child from a parent
+         * @description Removes the parent-child relationship without deleting the child block. The child block remains in the system as a top-level block. Automatically renumbers remaining children in the affected slot.
+         */
+        delete: operations["removeChild"];
         options?: never;
         head?: never;
         patch?: never;
@@ -794,7 +982,7 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
             type: components["schemas"]["BlockType"];
-            payload: components["schemas"]["BlockMetadata"];
+            payload: components["schemas"]["BlockContentMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["ReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"];
             archived: boolean;
             validationErrors?: string[];
             /** Format: date-time */
@@ -831,6 +1019,13 @@ export interface components {
             /** @enum {string} */
             fetchPolicy: "INHERIT" | "LAZY" | "EAGER";
         };
+        BlockContentMetadata: {
+            kind: "BlockContentMetadata";
+        } & (Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind"> & {
+            data: {
+                [key: string]: unknown;
+            };
+        });
         BlockDisplay: {
             form: components["schemas"]["BlockFormStructure"];
             render: components["schemas"]["BlockRenderStructure"];
@@ -848,39 +1043,11 @@ export interface components {
             /** Format: int32 */
             lastValidatedVersion?: number;
         };
-        BlockMetadata: {
-            data: {
-                [key: string]: unknown;
-            };
-            refs: components["schemas"]["BlockReferenceObject"][];
-            meta: components["schemas"]["BlockMeta"];
-        };
-        BlockNode: {
-            block: components["schemas"]["Block"];
-            children: {
-                [key: string]: components["schemas"]["BlockNode"][];
-            };
-            references: {
-                [key: string]: components["schemas"]["BlockReferenceObject"][];
-            };
-            warnings: string[];
-        };
-        BlockReferenceObject: {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
-            /** Format: uuid */
-            entityId: string;
-            entity?: {
-                [key: string]: unknown;
-            };
-            /** @enum {string} */
-            ownership: "OWNED" | "LINKED";
+        BlockReferenceMetadata: Omit<components["schemas"]["ReferenceMetadata"], "kind"> & {
             /** Format: int32 */
-            orderIndex?: number;
-            path: string;
-        };
+            expandDepth: number;
+            item: components["schemas"]["ReferenceItem"];
+        } & Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind">;
         BlockRenderStructure: {
             /** Format: int32 */
             version: number;
@@ -904,10 +1071,10 @@ export interface components {
             items?: components["schemas"]["BlockSchema"];
         };
         BlockTree: {
-            /** Format: int32 */
-            maxDepth: number;
-            expandRefs: boolean;
-            root: components["schemas"]["BlockNode"];
+            root: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
+        };
+        BlockTreeReference: components["schemas"]["ReferencePayload"] & {
+            reference: components["schemas"]["ReferenceBlockTree"];
         };
         BlockType: {
             /** Format: uuid */
@@ -918,6 +1085,7 @@ export interface components {
             name: string;
             /** Format: uuid */
             sourceId?: string;
+            nesting?: components["schemas"]["BlockTypeNesting"];
             description?: string;
             /** Format: uuid */
             organisationId?: string;
@@ -935,6 +1103,11 @@ export interface components {
             createdBy?: string;
             /** Format: uuid */
             updatedBy?: string;
+        };
+        BlockTypeNesting: {
+            /** Format: int32 */
+            max?: number;
+            allowedTypes: ("CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT")[];
         };
         Client: {
             /** Format: uuid */
@@ -1010,11 +1183,34 @@ export interface components {
                 [key: string]: string;
             };
         };
+        ContentNode: WithRequired<components["schemas"]["Node"], "block" | "warnings"> & {
+            children?: {
+                [key: string]: components["schemas"]["Node"][];
+            };
+        };
         DataPath: {
             type: "DataPath";
         } & (Omit<components["schemas"]["BindingSource"], "type"> & {
             path: string;
         });
+        EntityReference: components["schemas"]["ReferencePayload"] & {
+            reference: components["schemas"]["ReferenceObject"][];
+        };
+        EntityReferenceMetadata: Omit<components["schemas"]["ReferenceMetadata"], "kind"> & {
+            items: components["schemas"]["ReferenceItem"][];
+            /** @enum {string} */
+            presentation: "SUMMARY" | "ENTITY" | "TABLE" | "GRID";
+            projection?: components["schemas"]["Projection"];
+            sort?: components["schemas"]["SortSpec"];
+            filter?: components["schemas"]["FilterSpec"];
+            paging?: components["schemas"]["PagingSpec"];
+            allowDuplicates: boolean;
+        } & Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind">;
+        FilterSpec: {
+            expr: {
+                [key: string]: unknown;
+            };
+        };
         FormWidgetConfig: {
             /** @enum {string} */
             type: "TEXT_INPUT" | "NUMBER_INPUT" | "CHECKBOX" | "RADIO_BUTTON" | "DROPDOWN" | "DATE_PICKER" | "EMAIL_INPUT" | "PHONE_INPUT" | "CURRENCY_INPUT" | "TEXT_AREA" | "FILE_UPLOAD" | "SLIDER" | "TOGGLE_SWITCH";
@@ -1102,6 +1298,15 @@ export interface components {
             height?: number;
             items: components["schemas"]["GridItem"][];
         };
+        Metadata: {
+            /** @enum {string} */
+            kind: "content" | "block_reference" | "entity_reference";
+            meta: components["schemas"]["BlockMeta"];
+        };
+        Node: {
+            warnings: string[];
+            block: components["schemas"]["Block"];
+        };
         Operand: {
             kind: string;
         };
@@ -1109,11 +1314,20 @@ export interface components {
             label: string;
             value: string;
         };
+        PagingSpec: {
+            /** Format: int32 */
+            pageSize: number;
+        };
         Path: {
             kind: "Path";
         } & (Omit<components["schemas"]["Operand"], "kind"> & {
             path: string;
         });
+        Projection: {
+            fields: string[];
+            /** Format: uuid */
+            templateId?: string;
+        };
         RefSlot: {
             type: "RefSlot";
         } & (Omit<components["schemas"]["BindingSource"], "type"> & {
@@ -1124,12 +1338,64 @@ export interface components {
             /** Format: int32 */
             expandDepth?: number;
         });
+        ReferenceBlockTree: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+            /** Format: uuid */
+            entityId: string;
+            path?: string;
+            /** Format: int32 */
+            orderIndex?: number;
+            entity?: components["schemas"]["BlockTree"];
+            /** @enum {string} */
+            warning?: "MISSING" | "REQUIRES_LOADING" | "UNSUPPORTED" | "CIRCULAR" | "DEPTH_EXCEEDED";
+        };
+        ReferenceItem: {
+            /** @enum {string} */
+            type: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+            /** Format: uuid */
+            id: string;
+            labelOverride?: string;
+            badge?: string;
+        };
+        ReferenceMetadata: {
+            kind: "ReferenceMetadata";
+        } & (Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind"> & {
+            path: string;
+            /** @enum {string} */
+            fetchPolicy: "LAZY" | "EAGER";
+        });
+        ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "warnings"> & {
+            reference: components["schemas"]["BlockTreeReference"] | components["schemas"]["EntityReference"];
+        };
+        ReferenceObject: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+            /** Format: uuid */
+            entityId: string;
+            path?: string;
+            /** Format: int32 */
+            orderIndex?: number;
+            entity?: Record<string, never>;
+            /** @enum {string} */
+            warning?: "MISSING" | "REQUIRES_LOADING" | "UNSUPPORTED" | "CIRCULAR" | "DEPTH_EXCEEDED";
+        };
+        ReferencePayload: Record<string, never>;
         ReportTemplateFieldStructure: {
             name: string;
             description?: string;
             type: string;
             required: boolean;
             children: components["schemas"]["ReportTemplateFieldStructure"][];
+        };
+        SortSpec: {
+            by: string;
+            /** @enum {string} */
+            dir: "ASC" | "DESC";
         };
         TemplateInvoiceTemplateFieldStructure: {
             /** Format: uuid */
@@ -1179,6 +1445,14 @@ export interface components {
         } & (Omit<components["schemas"]["Operand"], "kind"> & {
             value?: Record<string, never>;
         });
+        UpsertEntityReferencesRequest: {
+            items: components["schemas"]["ReferenceItem"][];
+            pathPrefix?: string;
+        };
+        UpsertBlockReferenceRequest: {
+            item: components["schemas"]["ReferenceItem"];
+            path?: string;
+        };
         OrganisationCreationRequest: {
             name: string;
             avatarUrl?: string;
@@ -1261,18 +1535,59 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
         };
+        AddChildRequest: {
+            /** Format: uuid */
+            childId: string;
+            slot: string;
+            /** Format: int32 */
+            orderIndex?: number;
+        };
+        BlockChildEntity: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            parentId: string;
+            /** Format: uuid */
+            childId: string;
+            slot: string;
+            /** Format: int32 */
+            orderIndex: number;
+        };
+        AddChildrenBulkRequest: {
+            slot: string;
+            children: components["schemas"]["ChildOrderItem"][];
+        };
+        ChildOrderItem: {
+            /** Format: uuid */
+            childId: string;
+            /** Format: int32 */
+            orderIndex?: number;
+        };
         CreateBlockRequest: {
+            /** Format: uuid */
+            organisationId: string;
             /** Format: uuid */
             typeId?: string;
             typeKey?: string;
-            /** Format: uuid */
-            organisationId: string;
             /** Format: int32 */
             typeVersion?: number;
             name?: string;
-            payload: {
-                [key: string]: unknown;
-            };
+            payload: components["schemas"]["BlockContentMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["ReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"];
+            /** Format: uuid */
+            parentId?: string;
+            slot?: string;
+            parentNesting?: components["schemas"]["BlockTypeNesting"];
+            /** Format: int32 */
+            orderIndex?: number;
+        };
+        MoveChildRequest: {
+            toSlot: string;
+            /** Format: int32 */
+            toIndex: number;
+        };
+        ReorderChildrenRequest: {
+            slot: string;
+            order: string[];
         };
     };
     responses: never;
@@ -1951,10 +2266,7 @@ export interface operations {
     };
     getBlock: {
         parameters: {
-            query?: {
-                expandRefs?: boolean;
-                maxDepth?: number;
-            };
+            query?: never;
             header?: never;
             path: {
                 blockId: string;
@@ -2054,11 +2366,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Block"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Block deleted successfully */
             204: {
@@ -2208,6 +2516,103 @@ export interface operations {
                 content?: never;
             };
             /** @description Block type not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertEntityReferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertEntityReferencesRequest"];
+            };
+        };
+        responses: {
+            /** @description References updated successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data or BLOCK type in entity list */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate references when allowDuplicates=false */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertBlockReference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertBlockReferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Block reference updated successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data or non-BLOCK type */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2565,6 +2970,163 @@ export interface operations {
             };
         };
     };
+    addChild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddChildRequest"];
+            };
+        };
+        responses: {
+            /** @description Child added successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"];
+                };
+            };
+            /** @description Invalid request data or validation failure */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"];
+                };
+            };
+            /** @description Parent or child block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"];
+                };
+            };
+            /** @description Child already belongs to another parent */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"];
+                };
+            };
+        };
+    };
+    clearSlot: {
+        parameters: {
+            query: {
+                slot: string;
+            };
+            header?: never;
+            path: {
+                parentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Slot cleared successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Slot parameter is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parent block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    addChildrenBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddChildrenBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Children added successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data or validation failure */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parent or one or more child blocks not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description One or more children already belong to another parent */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     createBlock: {
         parameters: {
             query?: never;
@@ -2604,6 +3166,104 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["Block"];
                 };
+            };
+        };
+    };
+    moveChild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parentId: string;
+                childId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveChildRequest"];
+            };
+        };
+        responses: {
+            /** @description Child moved successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data or validation failure */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parent or child block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error during move */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reorderChildren: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderChildrenRequest"];
+            };
+        };
+        responses: {
+            /** @description Children reordered successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request data or set mismatch */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parent block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3025,6 +3685,82 @@ export interface operations {
             };
         };
     };
+    getReferences: {
+        parameters: {
+            query?: {
+                policy?: "LAZY" | "EAGER";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description References retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+            /** @description Block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    clearAllReferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description References cleared successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     removeMemberFromOrganisation: {
         parameters: {
             query?: never;
@@ -3070,4 +3806,87 @@ export interface operations {
             };
         };
     };
+    removeReference: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+                entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+                entityId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reference removed successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ambiguous deletion (multiple entries found, path required) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Block or reference not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removeChild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parentId: string;
+                childId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Child removed successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parent or child block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
 }
+type WithRequired<T, K extends keyof T> = T & {
+    [P in K]-?: T[P];
+};

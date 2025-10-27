@@ -163,9 +163,10 @@ CREATE TABLE if not exists public.block_types
     "id"                uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
     "key"               text  NOT NULL,                                                                             -- machine key e.g. "contact_card"
     "display_name"      text  NOT NULL,
-    "source_id"         uuid  references block_types (id) ON DELETE SET NULL,                                       -- if copied from another block type
+    "source_id"         uuid  references block_types (id) ON DELETE SET NULL,                                       -- refers to the original block type if this is a copy/updated version
     "description"       text,
     "organisation_id"   uuid  REFERENCES organisations (id) ON DELETE SET NULL,                                     -- null for global
+    "nesting"           jsonb,                                                                                      -- options for storing blocks within this block. Null indicates no children allowed
     "system"            boolean                  DEFAULT FALSE,                                                     -- system types you control
     "schema"            jsonb NOT NULL,                                                                             -- JSON Schema for validation
     "display_structure" jsonb not NULL,                                                                             -- UI metadata for frontend display (ie. Form Structure, Display Component Rendering, etc)
@@ -216,11 +217,10 @@ create table if not exists public.blocks
 (
     "id"              uuid PRIMARY KEY         DEFAULT uuid_generate_v4(),
     "organisation_id" uuid REFERENCES organisations (id) NOT NULL,
-    "type_id"         uuid REFERENCES block_types (id)   NOT NULL,                                  -- true if payload contains references to another block/entities
-    "name"            text,                                                                         -- human-friendly title
-    "payload"         jsonb                    DEFAULT '{}',                                        -- flexible content
-    "parent_id"       uuid                               REFERENCES blocks (id) ON DELETE SET NULL, -- optional single-parent
-    "archived"        boolean                  DEFAULT false,                                       -- archives
+    "type_id"         uuid REFERENCES block_types (id)   NOT NULL, -- true if payload contains references to another block/entities
+    "name"            text,                                        -- human-friendly title
+    "payload"         jsonb                    DEFAULT '{}',       -- flexible content
+    "archived"        boolean                  DEFAULT false,      -- archives
     "created_by"      uuid                               references public.users (id) ON DELETE SET NULL,
     "updated_by"      uuid                               references public.users (id) ON DELETE SET NULL,
     "created_at"      TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -256,12 +256,27 @@ CREATE TABLE public.block_references
     "block_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
     "entity_type" text    NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
     "entity_id"   uuid    NOT NULL, -- id of the referenced entity
-    "path"        text    NOT NULL, -- JSON path within the entity (e.g. "$.data.contact_details.address")
-    "relation"    text    NOT NULL,
-    check ( relation in ('OWNED', 'LINKED') ),
+    "path"        text    NULL,     -- JSON path within the block where this reference is used.
     "order_index" integer NOT NULL DEFAULT 0,
     UNIQUE (block_id, entity_type, entity_id, path)
 );
+
+CREATE TABLE public.block_children
+(
+    "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "parent_id"   uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    "child_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    "slot"        text    NOT NULL, -- e.g. "header", "items", "footer"
+    "order_index" integer NOT NULL DEFAULT 0,
+);
+
+CREATE INDEX IF NOT EXISTS idx_block_children_parent ON block_children (parent_id);
+CREATE INDEX IF NOT EXISTS idx_block_children_child ON public.block_children (child_id);
+CREATE INDEX IF NOT EXISTS idx_block_children_parent_slot_order ON public.block_children (parent_id, slot, order_index);
+
+-- A block can only be the child of a singular parent block. Ensure no blocks are shared when looking at direct children
+alter table public.block_children
+    add constraint uq_block_child unique (child_id);
 
 
 -- Mapping an entity (client, line item, etc) to the parent level blocks it should display

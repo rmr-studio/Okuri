@@ -20,9 +20,6 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
     const playground = usePlayground();
     const { removeWidget } = useGrid();
     const block = playground.getBlock(panelId, parentPath);
-
-    // compute values without depending on `block`
-    const childrenLen = block?.children?.length ?? 0;
     const isTopLevel = !parentPath || parentPath.length === 0;
     const handleDelete = useCallback(() => {
         removeWidget(panelId);
@@ -44,6 +41,12 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
 
     if (!block) return null;
 
+    const allowInsert = Boolean(block.allowInsert);
+    const childrenLen = allowInsert ? block.children?.length ?? 0 : 0;
+    const nestedContent = allowInsert && childrenLen > 0 ? (
+        <PanelGridWorkspace parentPath={[...(parentPath ?? []), block.id]} />
+    ) : null;
+
     return (
         <PanelWrapper
             id={block.id}
@@ -52,7 +55,12 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
             badge={block.badge}
             slashItems={playground.slashItems}
             quickActions={panelActions}
-            onInsert={(item) => playground.insertNested(block.id, item, childrenLen)}
+            allowInsert={allowInsert}
+            onInsert={
+                allowInsert
+                    ? (item) => playground.insertNested(block.id, item, childrenLen)
+                    : undefined
+            }
             onInsertSibling={(item) => {
                 if (!isTopLevel) return;
                 const topLevelIndex = playground.blocks.findIndex((b) => b.id === block.id);
@@ -60,24 +68,16 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
                 playground.insertPanel(item, insertAt);
             }}
             onDelete={handleDelete}
-            nested={
-                childrenLen > 0 ? (
-                    <div className="rounded-lg border border-dashed/60 bg-background/40 p-4">
-                        <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-                            Nested blocks
-                        </h3>
-                        <PanelGridWorkspace parentPath={[...(parentPath ?? []), block.id]} />
-                    </div>
-                ) : null
-            }
+            nested={nestedContent}
             nestedFooter={
-                <div className="pt-3">
+                allowInsert ? (
                     <InsertHandle
                         items={playground.slashItems}
                         label="Add nested block"
+                        compact
                         onSelect={(item) => playground.insertNested(block.id, item, childrenLen)}
                     />
-                </div>
+                ) : null
             }
         >
             <RenderBlock tree={block.tree} display={block.display} />
@@ -86,10 +86,18 @@ const PanelWidget: React.FC<z.infer<typeof PanelWidgetSchema>> = ({ panelId, par
 };
 
 export const panelRegistry = {
-    BLOCK_PANEL: createRenderElement({
-        type: "BLOCK_PANEL",
-        name: "Block panel",
-        description: "Editable block panel container",
+    PLAYGROUND_PANEL: createRenderElement({
+        type: "PLAYGROUND_PANEL",
+        name: "Panel",
+        description: "Editable block container that supports nested layouts.",
+        category: "BLOCK",
+        schema: PanelWidgetSchema,
+        component: PanelWidget,
+    }),
+    PLAYGROUND_BLOCK: createRenderElement({
+        type: "PLAYGROUND_BLOCK",
+        name: "Block",
+        description: "Editable block without nested layout capabilities.",
         category: "BLOCK",
         schema: PanelWidgetSchema,
         component: PanelWidget,
