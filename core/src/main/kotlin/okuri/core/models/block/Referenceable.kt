@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.core.EntityType
+import okuri.core.models.block.tree.BlockTree
 import okuri.core.models.client.Client
 import okuri.core.models.organisation.Organisation
 

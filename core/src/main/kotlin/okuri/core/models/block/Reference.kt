@@ -3,6 +3,7 @@ package okuri.core.models.block
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
+import okuri.core.models.block.tree.BlockTree
 import okuri.core.models.client.Client
 import okuri.core.models.organisation.Organisation
 import java.util.*

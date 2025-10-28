@@ -1,4 +1,4 @@
-package okuri.core.models.block.structure
+package okuri.core.models.block.display
 
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.BlockFetchPolicy

@@ -5,11 +5,11 @@ import okuri.core.entity.organisation.toModel
 import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
-import okuri.core.models.block.Block
-import okuri.core.models.block.BlockTree
-import okuri.core.models.block.ContentNode
 import okuri.core.models.block.Referenceable
-import okuri.core.models.block.structure.*
+import okuri.core.models.block.metadata.BlockMeta
+import okuri.core.models.block.metadata.BlockReferenceMetadata
+import okuri.core.models.block.metadata.EntityReferenceMetadata
+import okuri.core.models.block.metadata.ReferenceItem
 import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.service.block.resolvers.ReferenceResolver
 import okuri.core.service.util.factory.ClientFactory
@@ -31,30 +31,6 @@ import java.util.*
 class BlockReferenceServiceTest {
 
     private val blockReferenceRepository: BlockReferenceRepository = mock()
-
-    // Mock resolver for BLOCK type
-    private val blockResolver = object : ReferenceResolver {
-        override val type = EntityType.BLOCK_TREE
-        override fun fetch(ids: Set<UUID>): Map<UUID, Referenceable> {
-            val orgId = UUID.randomUUID()
-            val typeEntity = BlockFactory.createType(orgId)
-            return ids.associateWith { id ->
-                BlockTree(
-                    root = ContentNode(
-                        block = Block(
-                            id = id,
-                            organisationId = orgId,
-                            type = typeEntity.toModel(),
-                            name = "Block-$id",
-                            payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
-                            archived = false
-                        )
-                    )
-                )
-
-            }
-        }
-    }
 
     // Mock resolver for CLIENT type
     private val clientResolver = object : ReferenceResolver {
@@ -78,7 +54,12 @@ class BlockReferenceServiceTest {
         }
     }
 
-    private fun serviceWithResolvers(resolvers: List<ReferenceResolver> = listOf(blockResolver, clientResolver)) =
+    private fun serviceWithResolvers(
+        resolvers: List<ReferenceResolver> = listOf(
+            clientResolver,
+            organisationResolver
+        )
+    ) =
         BlockReferenceService(blockReferenceRepository, resolvers)
 
     // =============================================================================================
@@ -576,45 +557,13 @@ class BlockReferenceServiceTest {
         whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(listOf(row))
 
         val service = serviceWithResolvers()
-        val result = service.findBlockLink(blockId, metadata)
+        val (ref, _) = service.findBlockLink(blockId, metadata)
 
-        assertNotNull(result.id)
-        assertEquals(EntityType.BLOCK_TREE, result.entityType)
-        assertEquals(referencedBlockId, result.entityId)
-        assertNull(result.entity) // LAZY
-        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, result.warning)
-    }
-
-    @Test
-    fun `findBlockLink EAGER loads referenced block`() {
-        UUID.randomUUID()
-        val blockId = UUID.randomUUID()
-        val referencedBlockId = UUID.randomUUID()
-
-        val row = BlockReferenceEntity(
-            id = UUID.randomUUID(),
-            parentId = blockId,
-            entityType = EntityType.BLOCK_TREE,
-            entityId = referencedBlockId,
-            path = "\$.block",
-            orderIndex = null
-        )
-
-        val metadata = BlockReferenceMetadata(
-            item = ReferenceItem(type = EntityType.BLOCK_TREE, id = referencedBlockId),
-            path = "\$.block",
-            fetchPolicy = BlockReferenceFetchPolicy.EAGER,
-            meta = BlockMeta()
-        )
-
-        whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(listOf(row))
-
-        val service = serviceWithResolvers()
-        val result = service.findBlockLink(blockId, metadata)
-
-        assertNotNull(result.entity) // EAGER - loaded
-        assertTrue(result.entity is BlockTree)
-        assertNull(result.warning)
+        assertNotNull(ref.id)
+        assertEquals(EntityType.BLOCK_TREE, ref.entityType)
+        assertEquals(referencedBlockId, ref.entityId)
+        assertNull(ref.entity) // LAZY
+        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, ref.warning)
     }
 
     @Test
@@ -632,13 +581,13 @@ class BlockReferenceServiceTest {
         whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.block")).thenReturn(emptyList())
 
         val service = serviceWithResolvers()
-        val result = service.findBlockLink(blockId, metadata)
+        val (ref, _) = service.findBlockLink(blockId, metadata)
 
-        assertNull(result.id)
-        assertEquals(EntityType.BLOCK_TREE, result.entityType)
-        assertEquals(referencedBlockId, result.entityId)
-        assertNull(result.entity)
-        assertEquals(BlockReferenceWarning.MISSING, result.warning)
+        assertNull(ref.id)
+        assertEquals(EntityType.BLOCK_TREE, ref.entityType)
+        assertEquals(referencedBlockId, ref.entityId)
+        assertNull(ref.entity)
+        assertEquals(BlockReferenceWarning.MISSING, ref.warning)
     }
 
     // =============================================================================================

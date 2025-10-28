@@ -1,7 +1,8 @@
 package okuri.core.service.util.factory.block
 
 import okuri.core.enums.core.ComponentType
-import okuri.core.models.block.structure.*
+import okuri.core.models.block.display.*
+import okuri.core.models.block.validation.BlockFormStructure
 import okuri.core.models.common.Condition
 import okuri.core.models.common.Op
 import okuri.core.models.common.Operand

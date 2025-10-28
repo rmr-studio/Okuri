@@ -1,4 +1,6 @@
-package okuri.core.models.block.structure
+package okuri.core.models.block.display
+
+import okuri.core.models.block.validation.BlockFormStructure
 
 /**
  * Defines the UI structure of:
@@ -29,4 +31,3 @@ data class BlockDisplay(
     val form: BlockFormStructure,
     val render: BlockRenderStructure
 )
-

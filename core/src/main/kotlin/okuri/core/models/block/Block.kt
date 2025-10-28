@@ -1,7 +1,7 @@
 package okuri.core.models.block
 
 import okuri.core.entity.util.AuditableModel
-import okuri.core.models.block.structure.Metadata
+import okuri.core.models.block.metadata.Metadata
 import java.io.Serializable
 import java.time.ZonedDateTime
 import java.util.*

@@ -255,9 +255,11 @@ CREATE TABLE public.block_references
     "entity_type" text    NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
     "entity_id"   uuid    NOT NULL, -- id of the referenced entity
     "path"        text    NULL,     -- JSON path within the block where this reference is used.
-    "order_index" integer NOT NULL DEFAULT 0,
+    "order_index" integer NULL,
     UNIQUE (block_id, entity_type, entity_id, path)
 );
+
+
 
 CREATE TABLE public.block_children
 (

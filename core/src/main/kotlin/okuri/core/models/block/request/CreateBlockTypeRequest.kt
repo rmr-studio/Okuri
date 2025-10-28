@@ -1,8 +1,8 @@
 package okuri.core.models.block.request
 
 import okuri.core.enums.block.BlockValidationScope
-import okuri.core.models.block.structure.BlockDisplay
-import okuri.core.models.block.structure.BlockSchema
+import okuri.core.models.block.display.BlockDisplay
+import okuri.core.models.block.validation.BlockSchema
 import java.util.*
 
 /**

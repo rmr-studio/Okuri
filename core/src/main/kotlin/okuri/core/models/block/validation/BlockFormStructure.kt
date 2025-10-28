@@ -1,4 +1,4 @@
-package okuri.core.models.block.structure
+package okuri.core.models.block.validation
 
 import okuri.core.enums.block.BlockFormWidgetType
 

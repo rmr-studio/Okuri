@@ -1,4 +1,4 @@
-package okuri.core.models.block.structure
+package okuri.core.models.block.display
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo

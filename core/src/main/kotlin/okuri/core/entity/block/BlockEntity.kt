@@ -4,7 +4,7 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.block.Block
-import okuri.core.models.block.structure.Metadata
+import okuri.core.models.block.metadata.Metadata
 import org.hibernate.annotations.Type
 import java.util.*
 

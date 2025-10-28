@@ -3,8 +3,8 @@ package okuri.core.service.block
 import jakarta.transaction.Transactional
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
-import okuri.core.models.block.structure.BlockContentMetadata
-import okuri.core.models.block.structure.BlockTypeNesting
+import okuri.core.models.block.display.BlockTypeNesting
+import okuri.core.models.block.metadata.BlockContentMetadata
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
 import org.springframework.stereotype.Service

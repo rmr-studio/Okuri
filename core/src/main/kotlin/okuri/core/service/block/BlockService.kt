@@ -3,11 +3,14 @@ package okuri.core.service.block
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
+import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.isStrict
 import okuri.core.enums.util.OperationType
-import okuri.core.models.block.*
+import okuri.core.models.block.Block
+import okuri.core.models.block.Reference
+import okuri.core.models.block.metadata.*
 import okuri.core.models.block.request.CreateBlockRequest
-import okuri.core.models.block.structure.*
+import okuri.core.models.block.tree.*
 import okuri.core.models.common.json.JsonObject
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
@@ -214,7 +217,18 @@ class BlockService(
 
         return when (val meta = block.payload) {
             is BlockReferenceMetadata -> {
-                val blockRef = blockReferenceService.findBlockLink(block.id, meta)
+                val (ref, edge) = blockReferenceService.findBlockLink(block.id, meta)
+                val blockRef: Reference = meta.fetchPolicy.let {
+                    if (it == BlockReferenceFetchPolicy.LAZY || edge == null) return@let ref
+
+                    // Build block tree for EAGER fetch
+                    val tree = getBlock(ref.entityId)
+                    ref.copy(
+                        entity = tree,
+                        warning = null,
+                    )
+                }
+
                 visited.remove(block.id)
                 ReferenceNode(
                     block = block,

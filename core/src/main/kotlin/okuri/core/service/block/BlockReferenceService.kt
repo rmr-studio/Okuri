@@ -6,10 +6,9 @@ import okuri.core.entity.block.BlockReferenceEntity
 import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
-import okuri.core.models.block.Block
 import okuri.core.models.block.Reference
-import okuri.core.models.block.structure.BlockReferenceMetadata
-import okuri.core.models.block.structure.EntityReferenceMetadata
+import okuri.core.models.block.metadata.BlockReferenceMetadata
+import okuri.core.models.block.metadata.EntityReferenceMetadata
 import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.service.block.resolvers.ReferenceResolver
 import org.springframework.stereotype.Service
@@ -141,44 +140,30 @@ class BlockReferenceService(
         }
     }
 
-    fun findBlockLink(blockId: UUID, meta: BlockReferenceMetadata): Reference {
+    /**
+     * Returns the reference to a block tree.
+     * Will always return a reference skeleton, and the associated row. But wont build the tree
+     */
+    fun findBlockLink(blockId: UUID, meta: BlockReferenceMetadata): Pair<Reference, BlockReferenceEntity?> {
         val rows = blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, meta.path)
-        val row = rows.firstOrNull()
-            ?: return Reference(
-                id = null,
-                entityType = EntityType.BLOCK_TREE,
-                entityId = meta.item.id,
-                entity = null,
-                warning = BlockReferenceWarning.MISSING
-            )
+        rows.firstOrNull().run {
+            if (this == null) {
+                return Reference(
+                    id = null,
+                    entityType = EntityType.BLOCK_TREE,
+                    entityId = meta.item.id,
+                    entity = null,
+                    warning = BlockReferenceWarning.MISSING
+                ) to this
+            }
 
-        // LAZY ⇒ unresolved
-        if (meta.fetchPolicy == BlockReferenceFetchPolicy.LAZY) {
             return Reference(
-                id = row.id,
-                entityType = row.entityType,
-                entityId = row.entityId,
+                id = this.id,
+                entityType = this.entityType,
+                entityId = this.entityId,
                 entity = null,
-                warning = BlockReferenceWarning.REQUIRES_LOADING
-            )
+                warning = BlockReferenceWarning.REQUIRES_LOADING,
+            ) to this
         }
-
-        // EAGER ⇒ resolve to a lightweight Block referenceable (or use a BLOCK resolver)
-        val child = resolverByType[EntityType.BLOCK_TREE]?.fetch(setOf(row.entityId))?.get(row.entityId)
-            ?: return Reference(
-                id = row.id,
-                entityType = row.entityType,
-                entityId = row.entityId,
-                entity = null,
-                warning = BlockReferenceWarning.MISSING
-            )
-
-        return Reference(
-            id = row.id,
-            entityType = row.entityType,
-            entityId = row.entityId,
-            entity = child,
-            warning = null
-        )
     }
 }

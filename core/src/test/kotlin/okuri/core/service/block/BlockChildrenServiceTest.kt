@@ -1,9 +1,8 @@
 package okuri.core.service.block
 
 import okuri.core.entity.block.BlockChildEntity
-import okuri.core.entity.block.BlockEntity
 import okuri.core.enums.core.ComponentType
-import okuri.core.models.block.structure.BlockTypeNesting
+import okuri.core.models.block.display.BlockTypeNesting
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.util.factory.block.BlockFactory

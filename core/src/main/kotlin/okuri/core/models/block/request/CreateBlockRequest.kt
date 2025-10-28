@@ -1,8 +1,8 @@
 package okuri.core.models.block.request
 
 import jakarta.validation.constraints.NotNull
-import okuri.core.models.block.structure.BlockTypeNesting
-import okuri.core.models.block.structure.Metadata
+import okuri.core.models.block.display.BlockTypeNesting
+import okuri.core.models.block.metadata.Metadata
 import java.util.*
 
 /**

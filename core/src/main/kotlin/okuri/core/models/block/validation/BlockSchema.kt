@@ -1,6 +1,5 @@
-package okuri.core.models.block.structure
+package okuri.core.models.block.validation
 
-import com.fasterxml.jackson.databind.JsonNode
 import okuri.core.enums.core.DataFormat
 import okuri.core.enums.core.DataType
 

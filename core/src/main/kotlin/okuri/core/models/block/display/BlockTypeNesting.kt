@@ -1,4 +1,4 @@
-package okuri.core.models.block.structure
+package okuri.core.models.block.display
 
 import okuri.core.enums.core.ComponentType
 

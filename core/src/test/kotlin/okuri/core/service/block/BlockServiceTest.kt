@@ -3,14 +3,21 @@ package okuri.core.service.block
 import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
+import okuri.core.entity.block.BlockReferenceEntity
 import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.BlockReferenceWarning
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.ComponentType
 import okuri.core.enums.core.EntityType
-import okuri.core.models.block.*
+import okuri.core.models.block.Block
+import okuri.core.models.block.Reference
+import okuri.core.models.block.display.BlockTypeNesting
+import okuri.core.models.block.metadata.*
 import okuri.core.models.block.request.CreateBlockRequest
-import okuri.core.models.block.structure.*
+import okuri.core.models.block.tree.BlockTreeReference
+import okuri.core.models.block.tree.ContentNode
+import okuri.core.models.block.tree.EntityReference
+import okuri.core.models.block.tree.ReferenceNode
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -956,8 +963,17 @@ class BlockServiceTest {
             entity = null,
             warning = BlockReferenceWarning.REQUIRES_LOADING
         )
+        val edge = BlockReferenceEntity(
+            id = UUID.randomUUID(),
+            parentId = blockId,
+            entityType = EntityType.BLOCK_TREE,
+            entityId = referencedBlockId,
+            path = "$.block",
+            orderIndex = null
+        )
+
         whenever(blockReferenceService.findBlockLink(blockId, entity.payload as BlockReferenceMetadata))
-            .thenReturn(blockRef)
+            .thenReturn(blockRef to edge)
 
         val tree = service.getBlock(blockId)
 

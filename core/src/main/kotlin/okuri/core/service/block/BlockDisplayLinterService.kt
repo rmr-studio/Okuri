@@ -1,9 +1,9 @@
 package okuri.core.service.block
 
 import okuri.core.enums.common.IssueLevel
-import okuri.core.models.block.structure.BindingSource
-import okuri.core.models.block.structure.BlockDisplay
-import okuri.core.models.block.structure.RefPresentation
+import okuri.core.models.block.display.BindingSource
+import okuri.core.models.block.display.BlockDisplay
+import okuri.core.models.block.display.RefPresentation
 import okuri.core.models.common.LintIssue
 import org.springframework.stereotype.Service
 
@@ -74,7 +74,7 @@ class BlockDisplayLinterService {
                 }
             }
         }
-        
+
         return issues
     }
 }
