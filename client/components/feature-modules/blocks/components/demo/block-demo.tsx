@@ -66,8 +66,8 @@ export const BlockDemo = () => {
 /* -------------------------------------------------------------------------- */
 
 const BlockEnvironmentWorkspace: React.FC = () => {
-    
-    const gridOptions = useMemo(() => buildGridEnvironment(topLevelBlocks), [topLevelBlocks]);
+    const { getTrees } = useBlockEnvironment();
+    const gridOptions = useMemo(() => buildGridEnvironment(getTrees()), [getTrees]);
 
     return (
         <GridProvider initialOptions={gridOptions}>

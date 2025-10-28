@@ -3,7 +3,7 @@
 /* -------------------------------------------------------------------------- */
 
 import { ChildNodeProps } from "@/lib/interfaces/interface";
-import { Block, BlockTree, GridRect } from "./block.interface";
+import { BlockNode, BlockTree, GridRect } from "./block.interface";
 
 /** Metadata describing the environment itself. */
 export interface EditorEnvironmentMetadata {
@@ -40,16 +40,15 @@ export interface BlockEnvironmentProviderProps extends ChildNodeProps {
 /** Context contract exposed to consumers. */
 export interface BlockEnvironmentContextValue {
     environment: EditorEnvironment;
-    addBlock(tree: BlockTree, parentId?: string | null): string;
+    addBlock(tree: BlockNode, parentId?: string | null): string;
     removeBlock(blockId: string): void;
-    updateBlock(blockId: string, tree: BlockTree): void;
+    updateBlock(blockId: string, updatedContent: BlockNode): void;
     updateLayout(blockId: string, updatedDimensions: GridRect): void;
 
-    getBlock(blockId: string): Block;
+    getBlock(blockId: string): BlockNode | undefined;
     getTrees(): BlockTree[];
 
-    insertNestedBlock(parentId: string, slotName: string, childTree: BlockTree): string;
-    promoteToTopLevel(blockId: string): void;
+    insertBlock(child: BlockNode, parentId: string, slotName: string): string;
     moveBlock(blockId: string, targetParentId: string | null, targetSlot?: string): void;
 
     getParent(blockId: string): string | null;

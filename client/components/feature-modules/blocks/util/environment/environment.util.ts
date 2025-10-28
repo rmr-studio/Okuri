@@ -18,7 +18,7 @@ function buildTreeFromNode(node: BlockNode): BlockTree {
 }
 
 /** Collect descendant ids for a node (used when removing or re-indexing). */
-function collectDescendantIds(node: BlockNode, acc: Set<string>): void {
+export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void => {
     if (!isContentNode(node) || !node.children) {
         return;
     }
@@ -29,13 +29,13 @@ function collectDescendantIds(node: BlockNode, acc: Set<string>): void {
             collectDescendantIds(child, acc);
         });
     });
-}
+};
 
 /**
  * Registers the entire subtree inside the hierarchy, tree index, layout, and UI maps.
  * `skipExistingLayout` lets callers keep a precomputed layout for the root node.
  */
-function traverseTree(
+export const traverseTree = (
     node: BlockNode,
     parentId: string | null,
     treeId: string,
@@ -43,7 +43,7 @@ function traverseTree(
     treeIndex: Map<string, string>,
     layouts: Map<string, GridRect>,
     skipExistingLayout = false
-): void {
+): void => {
     const blockId = node.block.id;
 
     // Record hierarchy + ownership.
@@ -64,19 +64,19 @@ function traverseTree(
             traverseTree(child, blockId, treeId, hierarchy, treeIndex, layouts);
         });
     });
-}
+};
 
 /** Depth-first search for a block node. */
-function findNodeById(node: BlockNode, targetId: string): BlockNode | undefined {
-    if (node.block.id === targetId) {
-        return node;
+export const findNodeById = (curr: BlockNode, targetId: string): BlockNode | undefined => {
+    if (curr.block.id === targetId) {
+        return curr;
     }
 
-    if (!isContentNode(node) || !node.children) {
+    if (!isContentNode(curr) || !curr.children) {
         return undefined;
     }
 
-    for (const slotChildren of Object.values(node.children)) {
+    for (const slotChildren of Object.values(curr.children)) {
         for (const child of slotChildren) {
             const match = findNodeById(child, targetId);
             if (match) {
@@ -86,7 +86,7 @@ function findNodeById(node: BlockNode, targetId: string): BlockNode | undefined 
     }
 
     return undefined;
-}
+};
 
 interface DetachResult {
     updatedTree: BlockTree;
@@ -94,11 +94,35 @@ interface DetachResult {
     slotName: string | null;
 }
 
+export const updateTrees = (
+    environment: EditorEnvironment,
+    updatedTree: BlockTree
+): BlockTree[] => {
+    return environment.trees.map((tree) => {
+        if (getTreeId(tree) != getTreeId(updatedTree)) return tree;
+        return updatedTree;
+    });
+};
+
+export const updateManyTrees = (
+    environment: EditorEnvironment,
+    updatedTrees: BlockTree[]
+): BlockTree[] => {
+    return environment.trees.map((tree) => {
+        const updatedTree = updatedTrees.find((t) => getTreeId(t) === getTreeId(tree));
+        return updatedTree ? updatedTree : tree;
+    });
+};
+
+export const findTree = (environment: EditorEnvironment, treeId: string): BlockTree | undefined => {
+    return environment.trees.find((tree) => getTreeId(tree) === treeId);
+};
+
 /**
  * Remove a node from a tree and return both the updated tree and the extracted node.
  * Root removal is handled by callers, so we bail out when the requested id is the root.
  */
-function detachNode(tree: BlockTree, blockId: string): DetachResult | null {
+export const detachNode = (tree: BlockTree, blockId: string): DetachResult | null => {
     if (tree.root.block.id === blockId) {
         return null;
     }
@@ -167,15 +191,24 @@ function detachNode(tree: BlockTree, blockId: string): DetachResult | null {
     }
 
     return null;
-}
+};
+
+/**
+ * We use the root block id as the tree identifier.
+ * @param tree The block tree to get the ID from.
+ * @returns The ID of the root block.
+ */
+export const getTreeId = (tree: BlockTree) => {
+    return tree.root.block.id;
+};
 
 /** Insert a node beneath a specific parent/slot, returning a fresh tree instance. */
-function insertNode(
+export const insertNode = (
     tree: BlockTree,
     parentId: string,
     slotName: string,
     nodeToInsert: BlockNode
-): BlockTree {
+): BlockTree => {
     if (tree.root.block.id === parentId) {
         // Disallow inserting into reference nodes
         if (!isContentNode(tree.root)) return tree;
@@ -216,10 +249,11 @@ function insertNode(
             children: updatedChildren,
         },
     };
-}
+};
 
 /** Replace a node in-place, returning a new tree. */
-function replaceNode(tree: BlockTree, blockId: string, replacement: BlockNode): BlockTree {
+export const replaceNode = (tree: BlockTree, replacement: BlockNode): BlockTree => {
+    const blockId = replacement.block.id;
     if (tree.root.block.id === blockId) {
         return {
             ...tree,
@@ -252,13 +286,19 @@ function replaceNode(tree: BlockTree, blockId: string, replacement: BlockNode): 
             children: updatedChildren,
         },
     };
-}
+};
+
+/**
+ * After any structural changes to a tree, we may need to recalculate layouts to ensure
+ * that the dimensions are sufficient enough to contain all children without overlap or scrolling
+ */
+export const calculateTreeLayout = () => {};
 
 /**
  * Produces the next available layout slot for a block under `parentId`.
  * Computes the lowest free row by scanning sibling layouts.
  */
-function calculateNextLayout(
+export function calculateNextLayout(
     block: BlockNode,
     layouts: Map<string, GridRect>,
     hierarchy: Map<string, string | null>,
@@ -287,34 +327,12 @@ function calculateNextLayout(
 }
 
 /** Update environment metadata timestamp after a mutation. */
-function updateMetadata(metadata: EditorEnvironmentMetadata): EditorEnvironmentMetadata {
+export const updateMetadata = (metadata: EditorEnvironmentMetadata): EditorEnvironmentMetadata => {
     return {
         ...metadata,
         updatedAt: nowIso(),
     };
-}
-
-/** Gather every block id contained in a tree. */
-function collectTreeBlockIds(tree: BlockTree): string[] {
-    const ids: string[] = [tree.root.block.id];
-    const stack: BlockNode[] = [tree.root];
-
-    while (stack.length > 0) {
-        const node = stack.pop()!;
-        if (!isContentNode(node) || !node.children) {
-            continue;
-        }
-
-        Object.values(node.children).forEach((slotChildren) => {
-            slotChildren.forEach((child) => {
-                ids.push(child.block.id);
-                stack.push(child);
-            });
-        });
-    }
-
-    return ids;
-}
+};
 
 /**
  * Initialise an empty editor environment for the given organisation id.
