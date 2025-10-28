@@ -34,6 +34,7 @@ export type Reference = components["schemas"]["Reference"];
 export type ReferenceWarning = components["schemas"]["Reference"]["warning"];
 
 export type ReferencePayload = EntityReferencePayload | BlockReferencePayload;
+export type Metadata = BlockContentMetadata | BlockReferenceMetadata | EntityReferenceMetadata;
 export type BlockNode = ContentNode | ReferenceNode;
 
 /* -------------------------------------------------------------------------- */

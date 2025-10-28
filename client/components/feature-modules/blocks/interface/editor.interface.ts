@@ -2,37 +2,8 @@
 /*                              Type Definitions                              */
 /* -------------------------------------------------------------------------- */
 
-import { Block, BlockTree } from "./block.interface";
-
-/** GridStack layout rectangle for a block widget. */
-export interface EditorLayoutRect {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-}
-
-/** UI-only metadata kept locally by the editor (not persisted). */
-export interface EditorBlockUIMetadata {
-    collapsed?: boolean;
-    locked?: boolean;
-}
-
-/** Wrapper for a block tree plus editor-specific layout data. */
-
-export interface RenderedItem {
-    id: string;
-    uiMetadata?: EditorBlockUIMetadata;
-    layout: EditorLayoutRect;
-}
-
-export interface RenderedTree extends RenderedItem {
-    tree: BlockTree;
-}
-
-export interface RenderedBlock extends RenderedItem {
-    block: Block;
-}
+import { ChildNodeProps } from "@/lib/interfaces/interface";
+import { Block, BlockTree, GridRect } from "./block.interface";
 
 /** Metadata describing the environment itself. */
 export interface EditorEnvironmentMetadata {
@@ -51,40 +22,35 @@ export interface EditorEnvironmentMetadata {
  * - `layouts` and `uiMetadata` store per-block editor state.
  */
 export interface EditorEnvironment {
-    trees: RenderedTree[];
+    trees: BlockTree[];
+    // Lookup for parent block IDs (null for top-level)
     hierarchy: Map<string, string | null>;
+    // Lookup for which tree a block belongs to
     treeIndex: Map<string, string>;
-    layouts: Map<string, EditorLayoutRect>;
-    uiMetadata: Map<string, EditorBlockUIMetadata>;
+    // Lookup for current block layouts in the editor
+    layouts: Map<string, GridRect>;
     metadata: EditorEnvironmentMetadata;
+}
+
+export interface BlockEnvironmentProviderProps extends ChildNodeProps {
+    organisationId: string;
+    initialTrees?: BlockTree[];
 }
 
 /** Context contract exposed to consumers. */
 export interface BlockEnvironmentContextValue {
     environment: EditorEnvironment;
-
-    addBlock(tree: BlockTree, layout?: EditorLayoutRect, parentId?: string | null): string;
+    addBlock(tree: BlockTree, parentId?: string | null): string;
     removeBlock(blockId: string): void;
     updateBlock(blockId: string, tree: BlockTree): void;
-    updateLayout(blockId: string, layout: EditorLayoutRect): void;
+    updateLayout(blockId: string, updatedDimensions: GridRect): void;
 
-    getBlock(blockId: string): RenderedBlock | undefined;
-    getAllBlocks(): RenderedBlock[];
-    getTrees(): RenderedTree[];
+    getBlock(blockId: string): Block;
+    getTrees(): BlockTree[];
 
-    insertNestedBlock(
-        parentId: string,
-        slotName: string,
-        childTree: BlockTree,
-        layout?: EditorLayoutRect
-    ): string;
-    promoteToTopLevel(blockId: string, layout?: EditorLayoutRect): void;
-    moveBlock(
-        blockId: string,
-        targetParentId: string | null,
-        targetSlot?: string,
-        layout?: EditorLayoutRect
-    ): void;
+    insertNestedBlock(parentId: string, slotName: string, childTree: BlockTree): string;
+    promoteToTopLevel(blockId: string): void;
+    moveBlock(blockId: string, targetParentId: string | null, targetSlot?: string): void;
 
     getParent(blockId: string): string | null;
     getChildren(blockId: string, slotName?: string): string[];
@@ -92,6 +58,5 @@ export interface BlockEnvironmentContextValue {
     isDescendantOf(blockId: string, ancestorId: string): boolean;
     updateHierarchy(blockId: string, newParentId: string | null): void;
 
-    updateUIMetadata(blockId: string, metadata: Partial<EditorBlockUIMetadata>): void;
     clear(): void;
 }

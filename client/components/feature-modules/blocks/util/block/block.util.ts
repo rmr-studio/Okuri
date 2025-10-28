@@ -1,8 +1,7 @@
-import { Condition } from "@/lib/interfaces/common.interface";
+import { Condition, GridRect } from "@/lib/interfaces/common.interface";
 import { TreeCtx } from "../../components/render";
+import { BlockNode, ContentNode } from "../../interface/block.interface";
 import { getByPath } from "./block.binding";
-
-
 
 export function evalVisible(cond: Condition | undefined, ctx: TreeCtx): boolean {
     if (!cond) return true;
@@ -43,3 +42,48 @@ export function evalVisible(cond: Condition | undefined, ctx: TreeCtx): boolean 
             return true;
     }
 }
+
+export const allowChildren = (node: BlockNode): boolean => {
+    return !!node.block.type.nesting;
+};
+
+export const insertChild = (parent: ContentNode, child: BlockNode, slotName: string): BlockNode => {
+    if (!allowChildren(parent)) {
+        return parent;
+    }
+
+    const existingSlot = parent.children?.[slotName];
+    if (!existingSlot) {
+        // Slot does not exist, create it
+        const newChildren = {
+            ...(parent.children ?? {}),
+            [slotName]: [child],
+        };
+
+        return {
+            ...parent,
+            children: newChildren,
+        };
+    }
+
+    // Slot exists, append to it
+    const newChildren = {
+        ...parent.children,
+        [slotName]: [...existingSlot, child],
+    };
+
+    return {
+        ...parent,
+        children: newChildren,
+    };
+};
+
+/**
+ * Returns the current dimensions of a block node, either from its explicit layout, if the block has been moved/resized,
+ * or its default layout from the block type.
+ * @param node The block node to get dimensions for.
+ * @returns The GridRect representing the block's dimensions.
+ */
+export const getCurrentDimensions = (node: BlockNode): GridRect => {
+    return node.block.layout ?? node.block.type.display.render.layoutGrid.layout;
+};

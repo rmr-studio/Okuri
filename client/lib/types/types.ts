@@ -981,6 +981,7 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
             type: components["schemas"]["BlockType"];
+            layout?: components["schemas"]["GridRect"];
             payload: components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["BlockContentMetadata"];
             archived: boolean;
             validationErrors?: string[];
@@ -1245,6 +1246,8 @@ export interface components {
             /** Format: int32 */
             y: number;
             /** Format: int32 */
+            margin?: number;
+            /** Format: int32 */
             width: number;
             /** Format: int32 */
             height: number;
@@ -1299,16 +1302,7 @@ export interface components {
             children: components["schemas"]["InvoiceTemplateFieldStructure"][];
         };
         LayoutGrid: {
-            /** Format: int32 */
-            cols?: number;
-            /** Format: int32 */
-            rowHeight?: number;
-            /** Format: int32 */
-            width?: number;
-            /** Format: int32 */
-            margin?: number;
-            /** Format: int32 */
-            height?: number;
+            layout: components["schemas"]["GridRect"];
             items: components["schemas"]["GridItem"][];
         };
         Metadata: {

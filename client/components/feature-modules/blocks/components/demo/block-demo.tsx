@@ -23,12 +23,14 @@ import {
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
 import { useEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
+import { BlockTree } from "../../interface/block.interface";
+import { getCurrentDimensions } from "../../util/block/block.util";
 import {
-    createBlankPanelTree,
     createContactBlockTree,
+    createContactBlockType,
     createNoteBlockTree,
-    createProjectBlockTree,
-} from "../../util/block/factory/block.factory";
+} from "../../util/block/factory/mock.factory";
+import { createLayoutContainerBlockType } from "../../util/block/factory/type.factory";
 import { editorPanelRegistry } from "../panel/editor-panel";
 import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 
@@ -39,8 +41,9 @@ const DEMO_ORG_ID = "demo-org-12345";
 /* -------------------------------------------------------------------------- */
 
 export const BlockDemo = () => {
+    const blocks = useMemo(() => createDemoTrees(), []);
     return (
-        <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={createDemoTrees()}>
+        <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={blocks}>
             <div className="mx-auto max-w-6xl space-y-8 p-6">
                 <header className="space-y-2">
                     <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
@@ -63,10 +66,8 @@ export const BlockDemo = () => {
 /* -------------------------------------------------------------------------- */
 
 const BlockEnvironmentWorkspace: React.FC = () => {
-    const { getTopLevelBlocks } = useBlockEnvironment();
-    const topLevelBlocks = getTopLevelBlocks();
-
-    const gridOptions = useMemo(() => buildGridOptions(topLevelBlocks), [topLevelBlocks]);
+    
+    const gridOptions = useMemo(() => buildGridEnvironment(topLevelBlocks), [topLevelBlocks]);
 
     return (
         <GridProvider initialOptions={gridOptions}>
@@ -205,15 +206,12 @@ const AddBlockButton: React.FC = () => {
 
         let tree;
         switch (item.id) {
-            case "__NEW_PANEL__":
-                tree = createBlankPanelTree(DEMO_ORG_ID);
-                break;
             case "CONTACT_CARD":
-                tree = createContactBlockTree(DEMO_ORG_ID);
+                tree = createContactBlockType(DEMO_ORG_ID);
                 break;
             case "LAYOUT_CONTAINER":
             case "LINE_ITEM":
-                tree = createProjectBlockTree(DEMO_ORG_ID);
+                tree = createLayoutContainerBlockType(DEMO_ORG_ID);
                 break;
             case "TEXT":
             case "BLANK_NOTE":
@@ -268,43 +266,34 @@ const AddBlockButton: React.FC = () => {
 /**
  * Builds GridStack options from top-level blocks
  */
-function buildGridOptions(blocks: EditorBlockInstance[]): GridStackOptions {
+function buildGridEnvironment(blocks: BlockTree[]): GridStackOptions {
+    // Base grid configuration that contains all trees
     const BASE_GRID = { cols: 12, rowHeight: 60, margin: 12 };
-
     return {
-        column: BASE_GRID.cols,
+        column: "auto",
         cellHeight: BASE_GRID.rowHeight,
         margin: BASE_GRID.margin,
         animate: true,
         acceptWidgets: true,
-        children: blocks.map((blockInstance) => ({
-            id: blockInstance.tree.root.block.id,
-            x: blockInstance.layout.x,
-            y: blockInstance.layout.y,
-            w: blockInstance.layout.w,
-            h: blockInstance.layout.h,
-            content: JSON.stringify({
-                type: "EDITOR_PANEL",
-                blockId: blockInstance.tree.root.block.id,
-            }),
-        })),
+        children: blocks.map((blockInstance) => {
+            const node = blockInstance.root;
+            const grid = getCurrentDimensions(node);
+            return {
+                id: node.block.id,
+                x: grid.x,
+                y: grid.y,
+                w: grid.width,
+                h: grid.height,
+                content: JSON.stringify({
+                    type: node.block.type.key,
+                    blockId: node.block.id,
+                }),
+            };
+        }),
     };
 }
 
-function createDemoTrees(): EditorTreeInstance[] {
+function createDemoTrees(): BlockTree[] {
     const contactTree = createContactBlockTree(DEMO_ORG_ID);
-    const projectTree = createProjectBlockTree(DEMO_ORG_ID);
-
-    return [
-        {
-            id: contactTree.root.block.id,
-            tree: contactTree,
-            layout: { x: 0, y: 0, w: 6, h: 12 },
-        },
-        {
-            id: projectTree.root.block.id,
-            tree: projectTree,
-            layout: { x: 6, y: 0, w: 6, h: 14 },
-        },
-    ];
+    return [contactTree];
 }

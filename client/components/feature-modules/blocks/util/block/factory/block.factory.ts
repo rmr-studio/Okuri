@@ -14,6 +14,7 @@ import {
     EntityReferenceMetadata,
     EntityReferencePayload,
     EntityType,
+    Metadata,
     NodeType,
     Reference,
     Referenceable,
@@ -74,7 +75,7 @@ export const createEntityReferenceMetadata = ({
     meta: createMeta(meta),
 });
 
-const createBlockReferenceMetadata = ({
+export const createBlockReferenceMetadata = ({
     item,
     expandDepth = 1,
     fetchPolicy = "LAZY",
@@ -95,7 +96,7 @@ const createBlockReferenceMetadata = ({
     meta: createMeta(meta),
 });
 
-const createBlockBase = ({
+export const createBlockBase = ({
     id,
     organisationId,
     type,
@@ -107,7 +108,7 @@ const createBlockBase = ({
     organisationId: string;
     type: BlockType;
     name?: string;
-    payload: Block["payload"];
+    payload: Metadata;
     archived?: boolean;
 }): Block => ({
     id: id ?? uniqueId("block"),
@@ -120,7 +121,7 @@ const createBlockBase = ({
     updatedAt: nowIso(),
 });
 
-const createContentNode = ({
+export const createContentNode = ({
     organisationId,
     type,
     data,
@@ -147,7 +148,7 @@ const createContentNode = ({
     warnings: [],
 });
 
-const createReferenceNode = ({
+export const createReferenceNode = ({
     type,
     reference,
     block,
@@ -164,7 +165,7 @@ const createReferenceNode = ({
     warnings: warnings ?? [],
 });
 
-const createEntityReference = ({
+export const createEntityReference = ({
     entities,
 }: {
     entities: Referenceable[];
@@ -190,7 +191,7 @@ const createEntityReference = ({
     };
 };
 
-const createBlockReference = ({ block }: { block: BlockTree }): BlockReferencePayload => {
+export const createBlockReference = ({ block }: { block: BlockTree }): BlockReferencePayload => {
     const reference = createReference({
         type: "block_tree",
         entityId: block.root.block.id,
@@ -203,7 +204,7 @@ const createBlockReference = ({ block }: { block: BlockTree }): BlockReferencePa
     };
 };
 
-const createReference = ({
+export const createReference = ({
     type,
     entityId,
     path,
@@ -266,7 +267,7 @@ export const createBlockType = ({
 });
 
 export const GRID_LAYOUT = {
-    cols: 12,
+    
     rowHeight: 60,
     margin: 16,
 };

@@ -1,15 +1,31 @@
 import { uniqueId } from "@/lib/util/utils";
-import { BlockTree, ReferenceNode, BlockNode, BlockType, BlockComponentNode, BlockRenderStructure } from "../../../interface/block.interface";
-import { GRID_LAYOUT } from "./block.factory";
-import { createLayoutContainerBlockType, createBlockListBlockType, createEntityReferenceListType, createBlockReferenceType, ALL_BLOCK_COMPONENT_TYPES } from "./type.factory";
+import {
+    BlockComponentNode,
+    BlockRenderStructure,
+    BlockTree,
+    BlockType,
+    ReferenceNode,
+} from "../../../interface/block.interface";
+import {
+    createBlockBase,
+    createBlockType,
+    createContentNode,
+    createEntityReferenceMetadata,
+    createReference,
+    GRID_LAYOUT,
+} from "./block.factory";
+import {
+    ALL_BLOCK_COMPONENT_TYPES,
+    createBlockListBlockType,
+    createEntityReferenceListType,
+    createLayoutContainerBlockType,
+} from "./type.factory";
 
 export function createContactBlockTree(organisationId: string): BlockTree {
-    const contactType = createContactBlockType(organisationId);
     const addressType = createAddressBlockType(organisationId);
     const layoutType = createLayoutContainerBlockType(organisationId);
     const listType = createBlockListBlockType(organisationId);
     const entityReferenceType = createEntityReferenceListType(organisationId);
-    const blockReferenceType = createBlockReferenceType(organisationId);
 
     const addressNodes = [
         createContentNode({
@@ -62,6 +78,7 @@ export function createContactBlockTree(organisationId: string): BlockTree {
 
     const clientEntityId = uniqueId("client");
     const entityReferenceNode: ReferenceNode = {
+        type: "reference_node",
         block: createBlockBase({
             organisationId,
             type: entityReferenceType,
@@ -78,48 +95,24 @@ export function createContactBlockTree(organisationId: string): BlockTree {
         }),
         warnings: [],
         reference: {
-            items: [
-                createReferenceObject({
-                    entityType: "CLIENT",
+            type: "entity_reference",
+            reference: [
+                createReference({
+                    type: "client",
                     entityId: clientEntityId,
                     path: "$.items[0]",
-                    orderIndex: 0,
+                    order: 0,
                     entity: {
                         id: clientEntityId,
+                        organisationId: "dd",
+                        type: "client",
                         name: "Jane Doe",
-                        email: "jane@acme.com",
-                    },
-                }),
-            ],
-        },
-    };
-
-    const projectReferenceId = uniqueId("block-ref");
-    const blockReferenceNode: ReferenceNode = {
-        block: createBlockBase({
-            organisationId,
-            type: blockReferenceType,
-            name: "Project summary",
-            payload: createBlockReferenceMetadata({
-                expandDepth: 1,
-                item: {
-                    type: "block_tree",
-                    id: projectReferenceId,
-                    labelOverride: "Onboarding portal",
-                },
-            }),
-        }),
-        warnings: [],
-        reference: {
-            block: [
-                createReferenceObject({
-                    entityType: "BLOCK",
-                    entityId: projectReferenceId,
-                    path: "$.block",
-                    orderIndex: 0,
-                    entity: {
-                        id: projectReferenceId,
-                        name: "Onboarding portal",
+                        contact: {
+                            email: "jane@acme.com",
+                        },
+                        archived: false,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
                     },
                 }),
             ],
@@ -135,49 +128,13 @@ export function createContactBlockTree(organisationId: string): BlockTree {
             description: "Addresses and related entities",
         },
         children: {
-            main: [addressListNode, entityReferenceNode, blockReferenceNode],
+            main: [addressListNode, entityReferenceNode],
         },
     });
 
-    const clientSummaryId = uniqueId("client-summary");
-
-    const root: BlockNode = {
-        ...createContentNode({
-            organisationId,
-            type: contactType,
-            name: "Client overview",
-            data: {
-                name: "Jane Doe",
-                email: "jane@acme.com",
-                phone: "+61 400 000 000",
-                profileUrl: "/clients/jane-doe",
-                avatarUrl: "https://avatar.vercel.sh/jane",
-            },
-            children: {
-                details: [layoutNode],
-            },
-        }),
-        reference: {
-            type
-            client: [
-                createReferenceObject({
-                    entityType: "CLIENT",
-                    entityId: clientSummaryId,
-                    path: "$.data/client",
-                    orderIndex: 0,
-                    entity: {
-                        id: clientSummaryId,
-                        name: "Jane Doe",
-                        type: "ENTERPRISE",
-                    },
-                }),
-            ],
-        },
-    };
-
     return {
         type: "block_tree",
-        root,
+        root: layoutNode,
     };
 }
 
@@ -273,7 +230,7 @@ export function createBlankPanelTree(organisationId: string): BlockTree {
     };
 }
 
-const createContactBlockType = (organisationId: string): BlockType => {
+export const createContactBlockType = (organisationId: string): BlockType => {
     const component: BlockComponentNode = {
         id: "contactCard",
         type: "CONTACT_CARD",
@@ -586,4 +543,3 @@ const createTaskNodes = (organisationId: string, taskType: BlockType) => {
         })
     );
 };
-
