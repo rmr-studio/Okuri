@@ -14,6 +14,7 @@ import okuri.core.models.common.theme.ThemeTokens
 
 data class BlockRenderStructure(
     val version: Int = 1,
+    // Defines internal initial layout of the block
     val layoutGrid: LayoutGrid,
     val components: Map<String, BlockComponentNode> = emptyMap(),
     val theme: ThemeTokens? = null,

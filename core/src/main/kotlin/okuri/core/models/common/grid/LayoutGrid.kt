@@ -1,10 +1,6 @@
 package okuri.core.models.common.grid
 
 data class LayoutGrid(
-    val cols: Int? = null,
-    val rowHeight: Int? = null,
-    val width: Int? = null,
-    val margin: Int? = null,
-    val height: Int? = null,
+    val layout: GridRect = GridRect(0, 0, 8, 12, 0),
     val items: List<GridItem> = emptyList(),
 )
