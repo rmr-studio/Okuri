@@ -26,11 +26,11 @@ import { useEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import { BlockTree } from "../../interface/block.interface";
 import { getCurrentDimensions } from "../../util/block/block.util";
 import {
-    createContactBlockTree,
-    createContactBlockType,
-    createNoteBlockTree,
+    createContactBlockNode,
+    createLayoutContainerNode,
+    createNoteNode,
 } from "../../util/block/factory/mock.factory";
-import { createLayoutContainerBlockType } from "../../util/block/factory/type.factory";
+import { getTreeId } from "../../util/environment/environment.util";
 import { editorPanelRegistry } from "../panel/editor-panel";
 import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 
@@ -93,9 +93,11 @@ const BlockEnvironmentGridSync: React.FC<{ parentId: string | null }> = ({ paren
  */
 const GridStackWidgetSync: React.FC = () => {
     const { gridStack, _rawWidgetMetaMap } = useGrid();
-    const { getTopLevelBlocks } = useBlockEnvironment();
-    const topLevelBlocks = getTopLevelBlocks();
-    const topLevelBlocksRef = useRef(topLevelBlocks);
+
+    const { getTrees } = useBlockEnvironment();
+    const trees = useMemo(() => getTrees(), [getTrees]);
+    const topLevelBlocks = useMemo(() => trees, [trees]);
+    const topLevelBlocksRef = useRef<BlockTree[]>(topLevelBlocks);
 
     // Track previous block IDs to detect changes
     const prevBlockIdsRef = useRef(new Set<string>());
@@ -107,7 +109,7 @@ const GridStackWidgetSync: React.FC = () => {
     useEffect(() => {
         if (!gridStack) return;
 
-        const currentBlockIds = new Set(topLevelBlocks.map((b) => b.tree.root.block.id));
+        const currentBlockIds = new Set(topLevelBlocks.map((tree) => getTreeId(tree)));
         const prevBlockIds = prevBlockIdsRef.current;
 
         // Find blocks that were added
@@ -122,7 +124,7 @@ const GridStackWidgetSync: React.FC = () => {
 
         // Add new widgets (skip ones GridStack already rendered from initial options)
         addedBlockIds.forEach((blockId) => {
-            const blockInstance = topLevelBlocks.find((b) => b.tree.root.block.id === blockId);
+            const blockInstance = topLevelBlocks.find((tree) => getTreeId(tree) === blockId);
             if (!blockInstance) return;
 
             const alreadyInGrid = gridStack.engine.nodes?.some(
@@ -133,20 +135,20 @@ const GridStackWidgetSync: React.FC = () => {
             }
 
             console.log(`Adding widget ${blockId} to GridStack`);
+            const { x, y, width, height } = getCurrentDimensions(blockInstance.root);
 
             const widgetConfig = {
                 id: blockId,
-                x: blockInstance.layout.x,
-                y: blockInstance.layout.y,
-                w: blockInstance.layout.w,
-                h: blockInstance.layout.h,
+                x,
+                y,
+                w: width,
+                h: height,
                 content: JSON.stringify({
-                    type: "EDITOR_PANEL",
+                    type: blockInstance.root.block.type.key,
                     blockId: blockId,
                 }),
             };
 
-            console.log("Add");
             // Add to GridStack
             gridStack.addWidget(widgetConfig);
 
@@ -204,26 +206,22 @@ const AddBlockButton: React.FC = () => {
     const handleSelect = (item: SlashMenuItem) => {
         setOpen(false);
 
-        let tree;
         switch (item.id) {
             case "CONTACT_CARD":
-                tree = createContactBlockType(DEMO_ORG_ID);
+                addBlock(createContactBlockNode(DEMO_ORG_ID));
                 break;
             case "LAYOUT_CONTAINER":
             case "LINE_ITEM":
-                tree = createLayoutContainerBlockType(DEMO_ORG_ID);
+                addBlock(createLayoutContainerNode(DEMO_ORG_ID));
                 break;
             case "TEXT":
             case "BLANK_NOTE":
-                tree = createNoteBlockTree(DEMO_ORG_ID);
+                addBlock(createNoteNode(DEMO_ORG_ID));
                 break;
             default:
-                tree = createNoteBlockTree(DEMO_ORG_ID, `New ${item.label}`);
+                addBlock(createNoteNode(DEMO_ORG_ID, `New ${item.label}`));
                 break;
         }
-
-        // Add block to environment (layout will be calculated automatically)
-        addBlock(tree, undefined, null);
     };
 
     return (
@@ -294,6 +292,10 @@ function buildGridEnvironment(blocks: BlockTree[]): GridStackOptions {
 }
 
 function createDemoTrees(): BlockTree[] {
-    const contactTree = createContactBlockTree(DEMO_ORG_ID);
+    const node = createContactBlockNode(DEMO_ORG_ID);
+    const contactTree: BlockTree = {
+        type: "block_tree",
+        root: node,
+    };
     return [contactTree];
 }

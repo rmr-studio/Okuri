@@ -265,9 +265,3 @@ export const createBlockType = ({
     createdAt: nowIso(),
     updatedAt: nowIso(),
 });
-
-export const GRID_LAYOUT = {
-    
-    rowHeight: 60,
-    margin: 16,
-};

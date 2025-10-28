@@ -1,9 +1,10 @@
 import { uniqueId } from "@/lib/util/utils";
 import {
     BlockComponentNode,
+    BlockNode,
     BlockRenderStructure,
-    BlockTree,
     BlockType,
+    GridRect,
     ReferenceNode,
 } from "../../../interface/block.interface";
 import {
@@ -12,7 +13,6 @@ import {
     createContentNode,
     createEntityReferenceMetadata,
     createReference,
-    GRID_LAYOUT,
 } from "./block.factory";
 import {
     ALL_BLOCK_COMPONENT_TYPES,
@@ -21,7 +21,13 @@ import {
     createLayoutContainerBlockType,
 } from "./type.factory";
 
-export function createContactBlockTree(organisationId: string): BlockTree {
+/**
+ * ============================================================================
+ * Block Nodes
+ * ============================================================================
+ */
+
+export function createContactBlockNode(organisationId: string): BlockNode {
     const addressType = createAddressBlockType(organisationId);
     const layoutType = createLayoutContainerBlockType(organisationId);
     const listType = createBlockListBlockType(organisationId);
@@ -119,7 +125,7 @@ export function createContactBlockTree(organisationId: string): BlockTree {
         },
     };
 
-    const layoutNode = createContentNode({
+    return createContentNode({
         organisationId,
         type: layoutType,
         name: "Client details",
@@ -131,14 +137,9 @@ export function createContactBlockTree(organisationId: string): BlockTree {
             main: [addressListNode, entityReferenceNode],
         },
     });
-
-    return {
-        type: "block_tree",
-        root: layoutNode,
-    };
 }
 
-export function createProjectBlockTree(organisationId: string): BlockTree {
+export function createProjectBlockNode(organisationId: string): BlockNode {
     const projectType = createProjectOverviewType(organisationId);
     const taskType = createTaskBlockType(organisationId);
     const layoutType = createLayoutContainerBlockType(organisationId);
@@ -173,7 +174,7 @@ export function createProjectBlockTree(organisationId: string): BlockTree {
         },
     });
 
-    const root = createContentNode({
+    return createContentNode({
         organisationId,
         type: projectType,
         name: "Project health",
@@ -186,17 +187,12 @@ export function createProjectBlockTree(organisationId: string): BlockTree {
             body: [layoutNode],
         },
     });
-
-    return {
-        type: "block_tree",
-        root,
-    };
 }
 
-export function createNoteBlockTree(organisationId: string, content?: string): BlockTree {
+export function createNoteNode(organisationId: string, content?: string): BlockNode {
     const noteType = createNoteBlockType(organisationId);
 
-    const root = createContentNode({
+    return createContentNode({
         organisationId,
         type: noteType,
         name: "Note",
@@ -204,17 +200,12 @@ export function createNoteBlockTree(organisationId: string, content?: string): B
             content: content ?? "Start typing...",
         },
     });
-
-    return {
-        type: "block_tree",
-        root,
-    };
 }
 
-export function createBlankPanelTree(organisationId: string): BlockTree {
+export function createLayoutContainerNode(organisationId: string): BlockNode {
     const layoutType = createLayoutContainerBlockType(organisationId);
 
-    const root = createContentNode({
+    return createContentNode({
         organisationId,
         type: layoutType,
         name: "Layout container",
@@ -223,12 +214,13 @@ export function createBlankPanelTree(organisationId: string): BlockTree {
             description: "",
         },
     });
-
-    return {
-        type: "block_tree",
-        root,
-    };
 }
+
+/**
+ * ============================================================================
+ * Block Types
+ * ============================================================================
+ */
 
 export const createContactBlockType = (organisationId: string): BlockType => {
     const component: BlockComponentNode = {
@@ -262,7 +254,7 @@ export const createContactBlockType = (organisationId: string): BlockType => {
     const render: BlockRenderStructure = {
         version: 1,
         layoutGrid: {
-            ...GRID_LAYOUT,
+            layout: DEFAULT_GRID_LAYOUT,
             items: [
                 {
                     id: component.id,
@@ -319,7 +311,7 @@ const createAddressBlockType = (organisationId: string): BlockType => {
     const render: BlockRenderStructure = {
         version: 1,
         layoutGrid: {
-            ...GRID_LAYOUT,
+            layout: DEFAULT_GRID_LAYOUT,
             items: [
                 {
                     id: component.id,
@@ -381,7 +373,7 @@ const createTaskBlockType = (organisationId: string): BlockType => {
     const render: BlockRenderStructure = {
         version: 1,
         layoutGrid: {
-            ...GRID_LAYOUT,
+            layout: DEFAULT_GRID_LAYOUT,
             items: [
                 {
                     id: component.id,
@@ -428,7 +420,7 @@ const createNoteBlockType = (organisationId: string): BlockType => {
     const render: BlockRenderStructure = {
         version: 1,
         layoutGrid: {
-            ...GRID_LAYOUT,
+            layout: DEFAULT_GRID_LAYOUT,
             items: [
                 {
                     id: component.id,
@@ -477,7 +469,7 @@ const createProjectOverviewType = (organisationId: string): BlockType => {
     const render: BlockRenderStructure = {
         version: 1,
         layoutGrid: {
-            ...GRID_LAYOUT,
+            layout: DEFAULT_GRID_LAYOUT,
             items: [
                 {
                     id: component.id,
@@ -542,4 +534,12 @@ const createTaskNodes = (organisationId: string, taskType: BlockType) => {
             name: task.title,
         })
     );
+};
+
+export const DEFAULT_GRID_LAYOUT: GridRect = {
+    x: 0,
+    y: 0,
+    width: 60,
+    height: 40,
+    locked: false,
 };
