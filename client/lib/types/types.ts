@@ -875,6 +875,11 @@ export interface components {
             memberSince: string;
         };
         Organisation: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "organisation";
             /** Format: uuid */
             id: string;
             name: string;
@@ -895,12 +900,6 @@ export interface components {
             taxId?: string;
             address?: components["schemas"]["Address"];
             organisationPaymentDetails?: components["schemas"]["OrganisationPaymentDetails"];
-            customAttributes: {
-                [key: string]: Record<string, never>;
-            };
-            tileLayout?: {
-                [key: string]: Record<string, never>;
-            };
             /** Format: int32 */
             memberCount: number;
             /** Format: date-time */
@@ -982,7 +981,7 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
             type: components["schemas"]["BlockType"];
-            payload: components["schemas"]["BlockContentMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["ReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"];
+            payload: components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["BlockContentMetadata"];
             archived: boolean;
             validationErrors?: string[];
             /** Format: date-time */
@@ -1019,13 +1018,11 @@ export interface components {
             /** @enum {string} */
             fetchPolicy: "INHERIT" | "LAZY" | "EAGER";
         };
-        BlockContentMetadata: {
-            kind: "BlockContentMetadata";
-        } & (Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind"> & {
+        BlockContentMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
             data: {
                 [key: string]: unknown;
             };
-        });
+        };
         BlockDisplay: {
             form: components["schemas"]["BlockFormStructure"];
             render: components["schemas"]["BlockRenderStructure"];
@@ -1043,11 +1040,14 @@ export interface components {
             /** Format: int32 */
             lastValidatedVersion?: number;
         };
-        BlockReferenceMetadata: Omit<components["schemas"]["ReferenceMetadata"], "kind"> & {
+        BlockReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
+            /** @enum {string} */
+            fetchPolicy: "LAZY" | "EAGER";
+            path: string;
             /** Format: int32 */
             expandDepth: number;
             item: components["schemas"]["ReferenceItem"];
-        } & Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind">;
+        };
         BlockRenderStructure: {
             /** Format: int32 */
             version: number;
@@ -1071,10 +1071,15 @@ export interface components {
             items?: components["schemas"]["BlockSchema"];
         };
         BlockTree: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "block_tree";
             root: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
         };
-        BlockTreeReference: components["schemas"]["ReferencePayload"] & {
-            reference: components["schemas"]["ReferenceBlockTree"];
+        BlockTreeReference: WithRequired<components["schemas"]["ReferencePayload"], "type"> & {
+            reference: components["schemas"]["Reference"];
         };
         BlockType: {
             /** Format: uuid */
@@ -1110,6 +1115,11 @@ export interface components {
             allowedTypes: ("CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT")[];
         };
         Client: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "client";
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -1117,7 +1127,7 @@ export interface components {
             name: string;
             contact: components["schemas"]["Contact"];
             /** @enum {string} */
-            type?: "PROSPECT" | "CUSTOMER" | "SUBSCRIBER" | "SERVICE" | "ENTERPRISE" | "PARTNER" | "VENDOR" | "DORMANT" | "TRIAL" | "CHURNED" | "INFLUENCER" | "OTHER";
+            clientType?: "PROSPECT" | "CUSTOMER" | "SUBSCRIBER" | "SERVICE" | "ENTERPRISE" | "PARTNER" | "VENDOR" | "DORMANT" | "TRIAL" | "CHURNED" | "INFLUENCER" | "OTHER";
             company?: components["schemas"]["Company"];
             role?: string;
             archived: boolean;
@@ -1183,7 +1193,7 @@ export interface components {
                 [key: string]: string;
             };
         };
-        ContentNode: WithRequired<components["schemas"]["Node"], "block" | "warnings"> & {
+        ContentNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
             children?: {
                 [key: string]: components["schemas"]["Node"][];
             };
@@ -1193,10 +1203,13 @@ export interface components {
         } & (Omit<components["schemas"]["BindingSource"], "type"> & {
             path: string;
         });
-        EntityReference: components["schemas"]["ReferencePayload"] & {
-            reference: components["schemas"]["ReferenceObject"][];
+        EntityReference: WithRequired<components["schemas"]["ReferencePayload"], "type"> & {
+            reference: components["schemas"]["Reference"][];
         };
-        EntityReferenceMetadata: Omit<components["schemas"]["ReferenceMetadata"], "kind"> & {
+        EntityReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
+            /** @enum {string} */
+            fetchPolicy: "LAZY" | "EAGER";
+            path: string;
             items: components["schemas"]["ReferenceItem"][];
             /** @enum {string} */
             presentation: "SUMMARY" | "ENTITY" | "TABLE" | "GRID";
@@ -1205,7 +1218,7 @@ export interface components {
             filter?: components["schemas"]["FilterSpec"];
             paging?: components["schemas"]["PagingSpec"];
             allowDuplicates: boolean;
-        } & Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind">;
+        };
         FilterSpec: {
             expr: {
                 [key: string]: unknown;
@@ -1300,11 +1313,13 @@ export interface components {
         };
         Metadata: {
             /** @enum {string} */
-            kind: "content" | "block_reference" | "entity_reference";
+            type: "content" | "entity_reference" | "block_reference";
             meta: components["schemas"]["BlockMeta"];
         };
         Node: {
             warnings: string[];
+            /** @enum {string} */
+            type: "reference_node" | "content_node";
             block: components["schemas"]["Block"];
         };
         Operand: {
@@ -1338,53 +1353,40 @@ export interface components {
             /** Format: int32 */
             expandDepth?: number;
         });
-        ReferenceBlockTree: {
+        Reference: {
             /** Format: uuid */
             id?: string;
             /** @enum {string} */
-            entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+            entityType: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task";
             /** Format: uuid */
             entityId: string;
             path?: string;
             /** Format: int32 */
             orderIndex?: number;
-            entity?: components["schemas"]["BlockTree"];
+            /** @description Inline, discriminated entity */
+            entity?: components["schemas"]["Referenceable"];
             /** @enum {string} */
             warning?: "MISSING" | "REQUIRES_LOADING" | "UNSUPPORTED" | "CIRCULAR" | "DEPTH_EXCEEDED";
         };
         ReferenceItem: {
             /** @enum {string} */
-            type: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+            type: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task";
             /** Format: uuid */
             id: string;
             labelOverride?: string;
             badge?: string;
         };
-        ReferenceMetadata: {
-            kind: "ReferenceMetadata";
-        } & (Omit<WithRequired<components["schemas"]["Metadata"], "kind" | "meta">, "kind"> & {
-            path: string;
-            /** @enum {string} */
-            fetchPolicy: "LAZY" | "EAGER";
-        });
-        ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "warnings"> & {
-            reference: components["schemas"]["BlockTreeReference"] | components["schemas"]["EntityReference"];
+        ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
+            reference: components["schemas"]["EntityReference"] | components["schemas"]["BlockTreeReference"];
         };
-        ReferenceObject: {
-            /** Format: uuid */
-            id?: string;
+        ReferencePayload: {
             /** @enum {string} */
-            entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
-            /** Format: uuid */
-            entityId: string;
-            path?: string;
-            /** Format: int32 */
-            orderIndex?: number;
-            entity?: Record<string, never>;
-            /** @enum {string} */
-            warning?: "MISSING" | "REQUIRES_LOADING" | "UNSUPPORTED" | "CIRCULAR" | "DEPTH_EXCEEDED";
+            type: "block_reference" | "entity_reference";
         };
-        ReferencePayload: Record<string, never>;
+        Referenceable: {
+            /** @enum {string} */
+            type: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task";
+        } & (components["schemas"]["Client"] | components["schemas"]["Organisation"] | components["schemas"]["BlockTree"]);
         ReportTemplateFieldStructure: {
             name: string;
             description?: string;
@@ -1572,7 +1574,7 @@ export interface components {
             /** Format: int32 */
             typeVersion?: number;
             name?: string;
-            payload: components["schemas"]["BlockContentMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["ReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["EntityReferenceMetadata"];
+            payload: unknown;
             /** Format: uuid */
             parentId?: string;
             slot?: string;
@@ -3814,7 +3816,7 @@ export interface operations {
             header?: never;
             path: {
                 id: string;
-                entityType: "LINE_ITEM" | "CLIENT" | "COMPANY" | "INVOICE" | "BLOCK" | "REPORT" | "DOCUMENT" | "PROJECT";
+                entityType: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task";
                 entityId: string;
             };
             cookie?: never;

@@ -2,118 +2,15 @@
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 
+import { nowIso } from "@/lib/util/utils";
+import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
-    BlockNode,
-    BlockTree,
-    ReferenceCollection,
-    isContentNode,
-} from "../interface/block.interface";
-
-/* -------------------------------------------------------------------------- */
-/*                              Type Definitions                              */
-/* -------------------------------------------------------------------------- */
-
-/** GridStack layout rectangle for a block widget. */
-export interface EditorLayoutRect {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-}
-
-/** UI-only metadata kept locally by the editor (not persisted). */
-export interface EditorBlockUIMetadata {
-    collapsed?: boolean;
-    locked?: boolean;
-}
-
-/** Wrapper for a block tree plus editor-specific layout data. */
-export interface EditorBlockInstance {
-    tree: BlockTree;
-    layout: EditorLayoutRect;
-    uiMetadata?: EditorBlockUIMetadata;
-}
-
-/** Metadata describing the environment itself. */
-export interface EditorEnvironmentMetadata {
-    name: string;
-    description?: string;
-    organisationId: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
-/** Editor representation of a top-level block tree. */
-export interface EditorTreeInstance {
-    id: string;
-    tree: BlockTree;
-    layout?: EditorLayoutRect;
-}
-
-/**
- * Internal environment model used by the provider.
- * - `trees` holds each top-level block tree.
- * - `hierarchy` maps blockId -> parentBlockId (null for roots).
- * - `treeIndex` maps blockId -> owning tree root id.
- * - `layouts` and `uiMetadata` store per-block editor state.
- */
-interface EditorEnvironment {
-    trees: EditorTreeInstance[];
-    hierarchy: Map<string, string | null>;
-    treeIndex: Map<string, string>;
-    layouts: Map<string, EditorLayoutRect>;
-    uiMetadata: Map<string, EditorBlockUIMetadata>;
-    metadata: EditorEnvironmentMetadata;
-}
-
-/** Payload returned when exporting the editor state. */
-export interface ServerEnvironmentPayload {
-    metadata: EditorEnvironmentMetadata;
-    blocks: {
-        tree: BlockTree;
-        layout: EditorLayoutRect;
-    }[];
-}
-
-/** Context contract exposed to consumers. */
-export interface BlockEnvironmentContextValue {
-    environment: EditorEnvironment;
-
-    addBlock(tree: BlockTree, layout?: EditorLayoutRect, parentId?: string | null): string;
-    removeBlock(blockId: string): void;
-    updateBlock(blockId: string, tree: BlockTree): void;
-    updateLayout(blockId: string, layout: EditorLayoutRect): void;
-
-    getBlock(blockId: string): EditorBlockInstance | undefined;
-    getAllBlocks(): EditorBlockInstance[];
-    getTopLevelBlocks(): EditorBlockInstance[];
-
-    insertNestedBlock(
-        parentId: string,
-        slotName: string,
-        childTree: BlockTree,
-        layout?: EditorLayoutRect
-    ): string;
-    promoteToTopLevel(blockId: string, layout?: EditorLayoutRect): void;
-    moveBlock(
-        blockId: string,
-        targetParentId: string | null,
-        targetSlot?: string,
-        layout?: EditorLayoutRect
-    ): void;
-
-    getParent(blockId: string): string | null;
-    getChildren(blockId: string, slotName?: string): string[];
-    getDescendants(blockId: string): string[];
-    isDescendantOf(blockId: string, ancestorId: string): boolean;
-    updateHierarchy(blockId: string, newParentId: string | null): void;
-
-    updateUIMetadata(blockId: string, metadata: Partial<EditorBlockUIMetadata>): void;
-    duplicateBlock(blockId: string): string | null;
-
-    exportToServer(): ServerEnvironmentPayload;
-    clear(): void;
-}
+    BlockEnvironmentContextValue,
+    EditorBlockUIMetadata,
+    EditorEnvironment,
+    EditorEnvironmentMetadata,
+    EditorLayoutRect,
+} from "../interface/editor.interface";
 
 const BlockEnvironmentContext = createContext<BlockEnvironmentContextValue | null>(null);
 
@@ -123,84 +20,10 @@ const BlockEnvironmentContext = createContext<BlockEnvironmentContextValue | nul
 
 const DEFAULT_LAYOUT: EditorLayoutRect = { x: 0, y: 0, w: 12, h: 8 };
 
-/** Returns a fresh ISO timestamp. */
-const nowIso = () => new Date().toISOString();
-
-/** Convenience check: can we use the Web Crypto API? */
-const hasCrypto = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function";
-
-/**
- * Generates a client-side block id when we need to promote or duplicate blocks.
- * Random ids keep the demo stable without requiring a backend round-trip.
- */
-function generateBlockId(): string {
-    return hasCrypto
-        ? crypto.randomUUID()
-        : `block-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
-
-/** Deep-clone a block tree (preserving all ids). */
-function cloneBlockTree(tree: BlockTree): BlockTree {
-    return JSON.parse(JSON.stringify(tree));
-}
-
-/** Deep-clone a block node (preserving the id). */
-function cloneBlockNode(node: BlockNode): BlockNode {
-    return JSON.parse(JSON.stringify(node));
-}
-
-/**
- * Deep-clone a block tree while assigning new ids to every node.
- * Useful for duplication so the new tree does not clash with existing block ids.
- */
-function cloneTreeWithNewIds(tree: BlockTree): BlockTree {
-    const idMap = new Map<string, string>();
-
-    const cloneNode = (node: BlockNode): BlockNode => {
-        const cloned = cloneBlockNode(node);
-        const newId = generateBlockId();
-        idMap.set(node.block.id, newId);
-        cloned.block.id = newId;
-
-        if (isContentNode(cloned) && cloned.children) {
-            cloned.children = Object.fromEntries(
-                Object.entries(cloned.children).map(([slot, nodes]) => [
-                    slot,
-                    nodes.map((child) => cloneNode(child)),
-                ])
-            );
-        }
-
-        // Update any reference collections that point at block ids we have remapped.
-        if (cloned.references) {
-            Object.values(cloned.references).forEach((collection: ReferenceCollection) => {
-                collection.forEach((ref) => {
-                    if (
-                        "entityType" in ref &&
-                        ref.entityType === "BLOCK" &&
-                        ref.entityId &&
-                        idMap.has(ref.entityId)
-                    ) {
-                        ref.entityId = idMap.get(ref.entityId)!;
-                    }
-                });
-            });
-        }
-
-        return cloned;
-    };
-
-    const clonedTree = cloneBlockTree(tree);
-    clonedTree.root = cloneNode(tree.root);
-    return clonedTree;
-}
-
-/** Wrap a single node in a `BlockTree`, preserving depth settings. */
-function buildTreeFromNode(node: BlockNode, source: BlockTree): BlockTree {
+function buildTreeFromNode(node: BlockNode): BlockTree {
     return {
-        maxDepth: source.maxDepth,
-        expandRefs: source.expandRefs,
-        root: cloneBlockNode(node),
+        kind: "block_tree",
+        root: node,
     };
 }
 
@@ -872,7 +695,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
 
                 const currentParent = prev.hierarchy.get(blockId) ?? null;
 
-                // Nothing changed – optionally persist the new layout.
+                // Nothing changed - optionally persist the new layout.
                 if (targetParentId === currentParent) {
                     if (layout) {
                         const layouts = new Map(prev.layouts);
@@ -952,7 +775,9 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 }
 
                 const sourceTreeInstance = prev.trees.find((instance) => instance.id === treeId);
-                const targetTreeInstance = prev.trees.find((instance) => instance.id === targetTreeId);
+                const targetTreeInstance = prev.trees.find(
+                    (instance) => instance.id === targetTreeId
+                );
                 if (!sourceTreeInstance || !targetTreeInstance) {
                     return prev;
                 }
@@ -983,7 +808,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                     return instance;
                 });
 
-                const nextLayout = layout ?? calculateNextLayout(layouts, hierarchy, targetParentId);
+                const nextLayout =
+                    layout ?? calculateNextLayout(layouts, hierarchy, targetParentId);
                 layouts.set(blockId, nextLayout);
                 hierarchy.set(blockId, targetParentId);
 
@@ -1089,34 +915,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             });
         },
         []
-    );
-
-    /** Duplicate a block tree (with fresh ids) either at top-level or within the same parent. */
-    const duplicateBlock = useCallback(
-        (blockId: string): string | null => {
-            const source = materialiseBlockInstance(environment, blockId);
-            if (!source) {
-                return null;
-            }
-
-            const clonedTree = cloneTreeWithNewIds(source.tree);
-            const newRootId = clonedTree.root.block.id;
-            const parentId = environment.hierarchy.get(blockId) ?? null;
-
-            const layout = {
-                ...source.layout,
-                y: source.layout.y + source.layout.h + 1,
-            };
-
-            if (parentId === null) {
-                addBlock(clonedTree, layout, null);
-                return newRootId;
-            }
-
-            insertNestedBlock(parentId, "main", clonedTree, layout);
-            return newRootId;
-        },
-        [environment, addBlock, insertNestedBlock]
     );
 
     /** Prepare a serialisable payload for persistence. */
@@ -1234,7 +1032,16 @@ function insertNestedBlockInternal(
         const childLayout = layout ?? calculateNextLayout(layouts, hierarchy, parentId);
         layouts.set(childId, childLayout);
 
-        traverseTree(childNode, parentId, parentTreeId, hierarchy, treeIndex, layouts, uiMetadata, true);
+        traverseTree(
+            childNode,
+            parentId,
+            parentTreeId,
+            hierarchy,
+            treeIndex,
+            layouts,
+            uiMetadata,
+            true
+        );
 
         return {
             ...prev,

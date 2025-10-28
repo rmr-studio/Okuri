@@ -20,14 +20,17 @@ import { RenderElementProvider } from "@/components/feature-modules/render/provi
 
 import {
     BlockEnvironmentProvider,
-    EditorBlockInstance,
-    EditorTreeInstance,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
 import { useEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
+import {
+    createBlankPanelTree,
+    createContactBlockTree,
+    createNoteBlockTree,
+    createProjectBlockTree,
+} from "../../util/block/factory/block.factory";
 import { editorPanelRegistry } from "../panel/editor-panel";
 import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
-import { createBlankPanelTree, createContactBlockTree, createNoteBlockTree, createProjectBlockTree } from "../../util/block/factory/block.factory";
 
 const DEMO_ORG_ID = "demo-org-12345";
 

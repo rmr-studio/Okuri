@@ -8,3 +8,5 @@ export type Condition = components["schemas"]["Condition"];
 export type GridItem = components["schemas"]["GridItem"];
 export type GridRect = components["schemas"]["GridRect"];
 export type LayoutGrid = components["schemas"]["LayoutGrid"];
+
+export type EntityType = components["schemas"]["Reference"]["entityType"];
