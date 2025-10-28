@@ -13,14 +13,14 @@ import java.time.ZonedDateTime
 import java.util.*
 
 @JsonTypeName("client")
-@Schema(requiredProperties = ["kind", "id", "name", "organisationId"])
+@Schema(requiredProperties = ["type", "id", "name", "organisationId"])
 data class Client(
-    override val kind: EntityType = EntityType.CLIENT,
+    override val type: EntityType = EntityType.CLIENT,
     val id: UUID,
     val organisationId: UUID,
     val name: String,
     var contact: Contact,
-    var type: ClientType? = null,
+    var clientType: ClientType? = null,
     // Optional company details for service/enterprise based clients
     var company: Company? = null,
     var role: String? = null,

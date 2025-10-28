@@ -48,7 +48,7 @@ data class ClientEntity(
     var type: ClientType? = null,
 
     ) : AuditableEntity() {
-    
+
     /**
      * Converts this persistent ClientEntity into a Client domain model.
      *
@@ -68,7 +68,7 @@ data class ClientEntity(
             company = this.company?.toModel(audit),
             role = this.companyRole,
             archived = this.archived,
-            type = this.type,
+            clientType = this.type,
             createdAt = if (audit) this.createdAt else null,
             updatedAt = if (audit) this.updatedAt else null,
             createdBy = if (audit) this.createdBy else null,

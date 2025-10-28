@@ -5,11 +5,10 @@ import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.BlockMetadataType
 import okuri.core.models.common.json.JsonObject
 
-@JsonTypeName("content")
-@Schema(requiredProperties = ["kind", "meta"])
+@JsonTypeName("block_content")
 data class BlockContentMetadata(
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     var data: JsonObject = emptyMap(),
-    override val kind: BlockMetadataType = BlockMetadataType.CONTENT,
+    override val type: BlockMetadataType = BlockMetadataType.CONTENT,
     override val meta: BlockMeta = BlockMeta()
 ) : Metadata

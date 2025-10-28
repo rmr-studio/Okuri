@@ -8,14 +8,14 @@ import okuri.core.models.block.Block
 
 @Schema(hidden = true)
 sealed interface Node {
-    val kind: NodeType
+    val type: NodeType
     val block: Block
     val warnings: List<String>
 }
 
 @JsonTypeName("content_node")
 data class ContentNode(
-    override val kind: NodeType = NodeType.CONTENT,
+    override val type: NodeType = NodeType.CONTENT,
     override val block: Block,
     override val warnings: List<String> = emptyList(),
     // All child blocks, given a block and its associated block type supports nesting
@@ -25,7 +25,7 @@ data class ContentNode(
 
 @JsonTypeName("reference_node")
 data class ReferenceNode(
-    override val kind: NodeType = NodeType.REFERENCE,
+    override val type: NodeType = NodeType.REFERENCE,
     override val block: Block,
     override val warnings: List<String> = emptyList(),
     @field:Schema(

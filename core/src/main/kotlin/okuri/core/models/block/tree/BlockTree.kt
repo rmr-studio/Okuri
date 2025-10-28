@@ -7,7 +7,7 @@ import okuri.core.models.block.Referenceable
 
 
 data class BlockTree(
-    override val kind: EntityType = EntityType.BLOCK_TREE,
+    override val type: EntityType = EntityType.BLOCK_TREE,
     @field:Schema(
         oneOf = [ContentNode::class, ReferenceNode::class],
         discriminatorProperty = "type",

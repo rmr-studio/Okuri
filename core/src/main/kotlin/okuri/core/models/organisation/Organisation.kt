@@ -10,9 +10,9 @@ import java.time.ZonedDateTime
 import java.util.*
 
 @JsonTypeName("organisation")
-@Schema(requiredProperties = ["kind", "id", "name"])
+@Schema(requiredProperties = ["type", "id", "name"])
 data class Organisation(
-    override val kind: EntityType = EntityType.ORGANISATION,
+    override val type: EntityType = EntityType.ORGANISATION,
     val id: UUID,
     var name: String,
     val plan: OrganisationPlan,

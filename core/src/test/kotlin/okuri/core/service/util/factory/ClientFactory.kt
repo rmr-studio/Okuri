@@ -18,7 +18,7 @@ object ClientFactory {
             contact = Contact(
                 email = "email@email.com",
             ),
-            type = ClientType.CUSTOMER
+            clientType = ClientType.CUSTOMER
         )
     }
 }

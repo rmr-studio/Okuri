@@ -15,7 +15,7 @@ import okuri.core.models.organisation.Organisation
         Organisation::class,
         BlockTree::class
     ],
-    discriminatorProperty = "kind",
+    discriminatorProperty = "type",
     discriminatorMapping = [
         DiscriminatorMapping(value = "client", schema = Client::class),
         DiscriminatorMapping(value = "organisation", schema = Organisation::class),
@@ -25,8 +25,8 @@ import okuri.core.models.organisation.Organisation
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.PROPERTY,
-    property = "kind"
+    property = "type"
 )
 interface Referenceable {
-    val kind: EntityType
+    val type: EntityType
 }
