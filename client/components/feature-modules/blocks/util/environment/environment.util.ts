@@ -94,6 +94,18 @@ interface DetachResult {
     slotName: string | null;
 }
 
+export const insertTree = (
+    environment: EditorEnvironment,
+    newTree: BlockTree,
+    index: number | null
+): BlockTree[] => {
+    if (index === null) return [...environment.trees, newTree];
+
+    const trees = [...environment.trees];
+    trees.splice(index, 0, newTree);
+    return trees;
+};
+
 export const updateTrees = (
     environment: EditorEnvironment,
     updatedTree: BlockTree
@@ -207,7 +219,8 @@ export const insertNode = (
     tree: BlockTree,
     parentId: string,
     slotName: string,
-    nodeToInsert: BlockNode
+    nodeToInsert: BlockNode,
+    index: number | null = null
 ): BlockTree => {
     if (tree.root.block.id === parentId) {
         // Disallow inserting into reference nodes
@@ -226,6 +239,7 @@ export const insertNode = (
         return tree;
     }
 
+    // Create a new child node with the updated index, if set to null, append to end
     const updatedChildren: Record<string, BlockNode[]> = {};
     Object.entries(rootNode.children).forEach(([slot, nodes]) => {
         updatedChildren[slot] = nodes.map((child) => {
@@ -275,7 +289,7 @@ export const replaceNode = (tree: BlockTree, replacement: BlockNode): BlockTree 
             if (!isContentNode(child)) {
                 return child;
             }
-            return replaceNode({ ...tree, root: child }, blockId, replacement).root;
+            return replaceNode({ ...tree, root: child }, replacement).root;
         });
     });
 

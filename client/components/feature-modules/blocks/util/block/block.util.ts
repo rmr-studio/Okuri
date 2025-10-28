@@ -47,7 +47,12 @@ export const allowChildren = (node: BlockNode): boolean => {
     return !!node.block.type.nesting;
 };
 
-export const insertChild = (parent: ContentNode, child: BlockNode, slotName: string): BlockNode => {
+export const insertChild = (
+    parent: ContentNode,
+    child: BlockNode,
+    slotName: string,
+    index: number | null = null
+): BlockNode => {
     if (!allowChildren(parent)) {
         return parent;
     }
@@ -69,7 +74,10 @@ export const insertChild = (parent: ContentNode, child: BlockNode, slotName: str
     // Slot exists, append to it
     const newChildren = {
         ...parent.children,
-        [slotName]: [...existingSlot, child],
+        [slotName]:
+            index !== null
+                ? [...existingSlot.slice(0, index), child, ...existingSlot.slice(index)]
+                : [...existingSlot, child],
     };
 
     return {

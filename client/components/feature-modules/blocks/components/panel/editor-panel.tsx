@@ -27,16 +27,8 @@ const EditorPanelSchema = z.object({
  * - Provides delete, duplicate, and insert operations
  */
 const EditorPanelWidget: React.FC<z.infer<typeof EditorPanelSchema>> = ({ blockId }) => {
-    const {
-        getBlock,
-        removeBlock,
-        insertNestedBlock,
-        updateBlock,
-        duplicateBlock,
-        getChildren,
-        getTopLevelBlocks,
-        addBlock,
-    } = useBlockEnvironment();
+    const { getBlock, removeBlock, insertBlock, updateBlock, getChildren, addBlock } =
+        useBlockEnvironment();
 
     const blockInstance = getBlock(blockId);
 
@@ -112,7 +104,8 @@ const EditorPanelWidget: React.FC<z.infer<typeof EditorPanelSchema>> = ({ blockI
      * Handle block duplication
      */
     const handleDuplicate = () => {
-        duplicateBlock(blockId);
+        // TODO Implement tree/block duplication logic
+        alert("Duplicate block feature not yet implemented.");
     };
 
     /**
