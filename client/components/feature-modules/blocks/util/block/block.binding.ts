@@ -5,7 +5,7 @@
  * the actual runtime props consumed by the React components.
  */
 // binding.ts
-import { TreeCtx } from "@/components/feature-modules/blocks/components/render";
+import { TreeCtx } from "@/components/feature-modules/blocks/components/render/render";
 import {
     BlockBinding,
     BlockComponentNode,

@@ -20,6 +20,7 @@ import {
     init,
     insertNode,
     insertTree,
+    persistLayoutOnTree,
     replaceNode,
     traverseTree,
     updateManyTrees,
@@ -29,7 +30,17 @@ import {
 
 //todo. Maybe migrate to Zustand.
 
-const BlockEnvironmentContext = createContext<BlockEnvironmentContextValue | null>(null);
+export const BlockEnvironmentContext = createContext<BlockEnvironmentContextValue | null>(null);
+
+type LayoutLike = Partial<GridRect> & { w?: number; h?: number };
+
+const normaliseLayout = (layout: LayoutLike = {}): GridRect => ({
+    x: layout.x ?? 0,
+    y: layout.y ?? 0,
+    width: layout.width ?? layout.w ?? 1,
+    height: layout.height ?? layout.h ?? 1,
+    locked: layout.locked ?? false,
+});
 
 /**
  * Provides state and helpers for the block environment editor.
@@ -44,6 +55,90 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     );
 
     /**
+     * Inserts a block under the specified parent/slot, updating all relevant environment maps.
+     * @param child The block to insert.
+     * @param parentId The ID of the parent block.
+     * @param slotName The name of the slot to insert into.
+     * @returns The ID of the inserted block.
+     */
+    const insertBlock = useCallback(
+        (
+            child: BlockNode,
+            parentId: string,
+            slotName: string,
+            index: number | null = null
+        ): string => {
+            setEnvironment((prev) => {
+                const parentTreeId = prev.treeIndex.get(parentId);
+                if (!parentTreeId) {
+                    console.warn(`Parent block ${parentId} not found`);
+                    return prev;
+                }
+
+                const parentTree = findTree(prev, parentTreeId);
+                if (!parentTree) {
+                    console.warn(`Tree ${parentTreeId} not found for parent ${parentId}`);
+                    return prev;
+                }
+
+                const layouts = new Map(prev.layouts);
+                const hierarchy = new Map(prev.hierarchy);
+                const treeIndex = new Map(prev.treeIndex);
+
+                const baseLayout =
+                    child.block.layout ?? calculateNextLayout(child, layouts, hierarchy, parentId);
+                const layout = normaliseLayout(baseLayout);
+
+                const nodeWithLayout: BlockNode = {
+                    ...child,
+                    block: {
+                        ...child.block,
+                        layout,
+                    },
+                };
+
+                layouts.set(nodeWithLayout.block.id, layout);
+
+                const updatedTree = insertNode(
+                    parentTree,
+                    parentId,
+                    slotName,
+                    nodeWithLayout,
+                    index
+                );
+                const treeWithLayout = persistLayoutOnTree(
+                    updatedTree,
+                    nodeWithLayout.block.id,
+                    layout
+                );
+                const trees = updateTrees(prev, treeWithLayout);
+
+                traverseTree(
+                    nodeWithLayout,
+                    parentId,
+                    parentTreeId,
+                    hierarchy,
+                    treeIndex,
+                    layouts,
+                    true
+                );
+
+                return {
+                    ...prev,
+                    trees,
+                    layouts,
+                    hierarchy,
+                    treeIndex,
+                    metadata: updateMetadata(prev.metadata),
+                };
+            });
+
+            return child.block.id;
+        },
+        []
+    );
+
+    /**
      * Add either a top-level block tree (when `parentId` is null)
      * or a nested block inside an existing parent.
      */
@@ -54,40 +149,42 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             slotName: string = "main",
             index: number | null = null
         ): string => {
-            // If Parent ID is specified. Insert block as child inside existing node
             if (parentId) {
-                // TODO Handle new slot names (Maybe default inside "blockTree??")
                 return insertBlock(block, parentId, slotName, index);
             }
 
-            // Otherwise, add as new top-level tree
             const id = block.block.id;
             setEnvironment((prev) => {
-                // Prevent duplicate top-level trees
                 if (prev.treeIndex.has(id)) {
                     console.warn(`Block ${id} already exists in environment`);
                     return prev;
                 }
 
-                const tree: BlockTree = {
-                    type: "block_tree",
-                    root: block,
+                const layout = normaliseLayout(block.block.layout ?? getCurrentDimensions(block));
+                const rootNode: BlockNode = {
+                    ...block,
+                    block: {
+                        ...block.block,
+                        layout,
+                    },
                 };
 
-                // Insert at specified index or append to end
+                const tree: BlockTree = {
+                    type: "block_tree",
+                    root: rootNode,
+                };
+
                 const trees = insertTree(prev, tree, index);
                 const layouts = new Map(prev.layouts);
                 const hierarchy = new Map(prev.hierarchy);
                 const treeIndex = new Map(prev.treeIndex);
-                const layout = getCurrentDimensions(block);
 
                 layouts.set(id, layout);
                 hierarchy.set(id, null);
                 treeIndex.set(id, id);
 
-                // If we have children, traverse them to index properly and ensure they reference the appropriate parents
-                if (isContentNode(block) && block.children) {
-                    Object.values(block.children).forEach((slotChildren) => {
+                if (isContentNode(rootNode) && rootNode.children) {
+                    Object.values(rootNode.children).forEach((slotChildren) => {
                         slotChildren.forEach((child) => {
                             traverseTree(child, id, id, hierarchy, treeIndex, layouts);
                         });
@@ -106,58 +203,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
 
             return id;
         },
-        []
+        [insertBlock]
     );
-
-    /**
-     * Inserts a block under the specified parent/slot, updating all relevant environment maps.
-     * @param child The block to insert.
-     * @param parentId The ID of the parent block.
-     * @param slotName The name of the slot to insert into.
-     * @returns The ID of the inserted block.
-     */
-    const insertBlock = (
-        child: BlockNode,
-        parentId: string,
-        slotName: string,
-        index: number | null
-    ): string => {
-        setEnvironment((prev) => {
-            const parentTreeId = prev.treeIndex.get(parentId);
-            if (!parentTreeId) {
-                console.warn(`Parent block ${parentId} not found`);
-                return prev;
-            }
-
-            // Update tree layout to accommodate new child
-            const trees = prev.trees.map((instance) => {
-                if (getTreeId(instance) !== parentTreeId) return instance;
-                const updatedTree = insertNode(instance, parentId, slotName, child, index);
-                return { ...instance, tree: updatedTree };
-            });
-
-            const layouts = new Map(prev.layouts);
-            const hierarchy = new Map(prev.hierarchy);
-            const treeIndex = new Map(prev.treeIndex);
-            const childLayout = calculateNextLayout(child, layouts, hierarchy, parentId);
-            layouts.set(child.block.id, childLayout);
-
-            // Traverse the inserted tree and rehydrate environmental maps to ensure all further descendants have their associated relationships established
-            // Skip layout adjustment during traversal as we've already calculated the initial layout for the root above
-            traverseTree(child, parentId, parentTreeId, hierarchy, treeIndex, layouts, true);
-
-            return {
-                ...prev,
-                trees,
-                layouts,
-                hierarchy,
-                treeIndex,
-                metadata: updateMetadata(prev.metadata),
-            };
-        });
-
-        return child.block.id;
-    };
 
     /** Remove a block tree (top-level) or a nested block from its parent. */
     const removeBlock = useCallback((blockId: string): void => {
@@ -179,8 +226,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const removeTree = (environment: EditorEnvironment, treeId: string): EditorEnvironment => {
         const trees = environment.trees.filter((instance) => getTreeId(instance) !== treeId);
         // Find all current children that belong to this tree
-        const children = environment.treeIndex
-            .entries()
+        const children = Array.from(environment.treeIndex.entries())
             .filter(([, tId]) => tId === treeId)
             .map(([id]) => id);
 
@@ -266,12 +312,29 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 return prev;
             }
 
-            const updatedTree = replaceNode(tree, updatedContent);
+            const normalisedNode =
+                updatedContent.block.layout != null
+                    ? {
+                          ...updatedContent,
+                          block: {
+                              ...updatedContent.block,
+                              layout: normaliseLayout(updatedContent.block.layout),
+                          },
+                      }
+                    : updatedContent;
+
+            const updatedTree = replaceNode(tree, normalisedNode);
             const trees = updateTrees(prev, updatedTree);
+
+            const layouts = new Map(prev.layouts);
+            if (normalisedNode.block.layout) {
+                layouts.set(blockId, normalisedNode.block.layout);
+            }
 
             return {
                 ...prev,
                 trees,
+                layouts,
                 metadata: updateMetadata(prev.metadata),
             };
         });
@@ -279,10 +342,29 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
 
     /** Persist a new layout rectangle for the given block id. */
     const updateLayout = useCallback((blockId: string, layout: GridRect): void => {
+        const nextLayout = normaliseLayout(layout);
+
         setEnvironment((prev) => {
             const layouts = new Map(prev.layouts);
-            layouts.set(blockId, layout);
-            return { ...prev, layouts };
+            layouts.set(blockId, nextLayout);
+
+            const treeId = prev.treeIndex.get(blockId);
+            let trees = prev.trees;
+
+            if (treeId) {
+                const tree = findTree(prev, treeId);
+                if (tree) {
+                    const updatedTree = persistLayoutOnTree(tree, blockId, nextLayout);
+                    trees = updateTrees(prev, updatedTree);
+                }
+            }
+
+            return {
+                ...prev,
+                trees,
+                layouts,
+                metadata: updateMetadata(prev.metadata),
+            };
         });
     }, []);
 
@@ -310,25 +392,54 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
      * Core move operation handling promotions, demotions, and cross-tree moves.
      */
     const moveBlock = useCallback(
-        (blockId: string, targetParentId: string | null, targetSlot: string = "main") => {
+        (
+            blockId: string,
+            targetParentId: string | null,
+            targetSlot: string = "main",
+            layoutOverride?: GridRect
+        ) => {
+            console.log("hey");
             setEnvironment((prev) => {
-                // Get current position of block in terms of arching tree
                 const treeId = prev.treeIndex.get(blockId);
                 if (!treeId) {
                     return prev;
                 }
 
-                // Get direct parent
-                const currentParent = prev.hierarchy.get(blockId) ?? null;
-                if (targetParentId === currentParent) return prev;
-
-                // Move node to the top level, prepare new tree and insert into environment
-                if (targetParentId === null) return moveBlockToTopLevel(prev, blockId, treeId);
-
-                // Otherwise, move within or across existing trees
                 const layouts = new Map(environment.layouts);
                 const hierarchy = new Map(environment.hierarchy);
                 const treeIndex = new Map(environment.treeIndex);
+
+                const currentParent = prev.hierarchy.get(blockId) ?? null;
+                const normalisedOverride = layoutOverride
+                    ? normaliseLayout(layoutOverride)
+                    : undefined;
+
+                if (targetParentId === currentParent) {
+                    if (!normalisedOverride) {
+                        return prev;
+                    }
+
+                    const layouts = new Map(prev.layouts);
+                    layouts.set(blockId, normalisedOverride);
+
+                    const tree = findTree(prev, treeId);
+                    let trees = prev.trees;
+                    if (tree) {
+                        const updatedTree = persistLayoutOnTree(tree, blockId, normalisedOverride);
+                        trees = updateTrees(prev, updatedTree);
+                    }
+
+                    return {
+                        ...prev,
+                        trees,
+                        layouts,
+                        metadata: updateMetadata(prev.metadata),
+                    };
+                }
+
+                if (targetParentId === null) {
+                    return moveBlockToTopLevel(prev, blockId, treeId, normalisedOverride);
+                }
 
                 const targetTreeId = treeIndex.get(targetParentId);
                 if (!targetTreeId) {
@@ -337,37 +448,72 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
 
                 const sourceTree = findTree(prev, treeId);
                 const targetTree = findTree(prev, targetTreeId);
-
-                if (!sourceTree || !targetTree) return prev;
+                if (!sourceTree || !targetTree) {
+                    return prev;
+                }
 
                 const detachResult = detachNode(sourceTree, blockId);
-                if (!detachResult) return prev;
+                if (!detachResult) {
+                    return prev;
+                }
+
                 const { updatedTree: updatedSourceTree, detachedNode } = detachResult;
 
-                const updatedTargetTree: BlockTree = insertNode(
-                    targetTreeId === treeId ? updatedSourceTree : targetTree,
-                    targetParentId,
-                    targetSlot,
-                    detachedNode
-                );
-
-                // Update trees array
-                const trees = updateManyTrees(prev, [updatedSourceTree, updatedTargetTree]);
-
-                // Update layout and hierarchy maps
-                const nextLayout = calculateNextLayout(
+                const fallbackLayout = calculateNextLayout(
                     detachedNode,
                     layouts,
                     hierarchy,
                     targetParentId
                 );
-                layouts.set(blockId, nextLayout);
-                hierarchy.set(blockId, targetParentId);
+                const layout = normalisedOverride
+                    ? normaliseLayout({
+                          ...fallbackLayout,
+                          ...normalisedOverride,
+                          width: normalisedOverride.width ?? fallbackLayout.width,
+                          height: normalisedOverride.height ?? fallbackLayout.height,
+                      })
+                    : normaliseLayout(fallbackLayout);
 
-                // Update all child nodes to reference the new tree
-                const reindexedIds = new Set<string>([blockId]);
-                collectDescendantIds(detachResult.detachedNode, reindexedIds);
-                reindexedIds.forEach((id) => treeIndex.set(id, targetTreeId));
+                const nodeWithLayout: BlockNode = {
+                    ...detachedNode,
+                    block: {
+                        ...detachedNode.block,
+                        layout,
+                    },
+                };
+
+                let trees: BlockTree[];
+                if (targetTreeId === treeId) {
+                    const treeWithInsertion = insertNode(
+                        updatedSourceTree,
+                        targetParentId,
+                        targetSlot,
+                        nodeWithLayout
+                    );
+                    const finalTree = persistLayoutOnTree(treeWithInsertion, blockId, layout);
+                    trees = updateTrees(prev, finalTree);
+                } else {
+                    const treeWithInsertion = insertNode(
+                        targetTree,
+                        targetParentId,
+                        targetSlot,
+                        nodeWithLayout
+                    );
+                    const finalTarget = persistLayoutOnTree(treeWithInsertion, blockId, layout);
+                    trees = updateManyTrees(prev, [updatedSourceTree, finalTarget]);
+                }
+
+                layouts.set(blockId, layout);
+
+                traverseTree(
+                    nodeWithLayout,
+                    targetParentId,
+                    targetTreeId,
+                    hierarchy,
+                    treeIndex,
+                    layouts,
+                    true
+                );
 
                 return {
                     ...prev,
@@ -385,37 +531,52 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const moveBlockToTopLevel = (
         environment: EditorEnvironment,
         blockId: string,
-        currentTreeId: string
+        currentTreeId: string,
+        layoutOverride?: GridRect
     ): EditorEnvironment => {
         const tree = findTree(environment, currentTreeId);
         if (!tree) return environment;
-        // Attempt to detach from current tree
+
         const detachResult = detachNode(tree, blockId);
         if (!detachResult) return environment;
 
         const { updatedTree, detachedNode } = detachResult;
-        const newTree: BlockTree = {
-            type: "block_tree",
-            root: detachedNode,
-        };
 
         const layouts = new Map(environment.layouts);
         const hierarchy = new Map(environment.hierarchy);
         const treeIndex = new Map(environment.treeIndex);
 
-        // Update the original tree instance
-        const layout = calculateNextLayout(detachedNode, layouts, hierarchy, null);
+        const fallbackLayout = calculateNextLayout(detachedNode, layouts, hierarchy, null);
+        const layout = layoutOverride
+            ? normaliseLayout({
+                  ...fallbackLayout,
+                  ...layoutOverride,
+                  width: layoutOverride.width ?? fallbackLayout.width,
+                  height: layoutOverride.height ?? fallbackLayout.height,
+              })
+            : normaliseLayout(fallbackLayout);
 
-        // TODO: Implement Environment Block Tree order indexing to allow precise control over new tree placement. For now we append to the end.
+        const nodeWithLayout: BlockNode = {
+            ...detachedNode,
+            block: {
+                ...detachedNode.block,
+                layout,
+            },
+        };
+
+        const newTree: BlockTree = {
+            type: "block_tree",
+            root: nodeWithLayout,
+        };
+
         const trees = [...updateTrees(environment, updatedTree), newTree];
 
         layouts.set(blockId, layout);
         hierarchy.set(blockId, null);
         treeIndex.set(blockId, blockId);
 
-        // Traverse any children to re-index their relationships in the environment maps
-        if (isContentNode(detachedNode) && detachedNode.children) {
-            Object.values(detachedNode.children).forEach((slotChildren) => {
+        if (isContentNode(nodeWithLayout) && nodeWithLayout.children) {
+            Object.values(nodeWithLayout.children).forEach((slotChildren) => {
                 slotChildren.forEach((child) => {
                     traverseTree(child, blockId, blockId, hierarchy, treeIndex, layouts);
                 });

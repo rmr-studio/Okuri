@@ -14,16 +14,18 @@ import "gridstack/dist/gridstack.css";
 import { PlusIcon, TypeIcon } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { GridContainerProvider } from "@/components/feature-modules/grid/provider/grid-container-provider";
-import { GridProvider, useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
-import { RenderElementProvider } from "@/components/feature-modules/render/provider/render-element-provider";
+import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
+import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
+import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
 import { useEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import { BlockTree } from "../../interface/block.interface";
+import { EditorEnvironment } from "../../interface/editor.interface";
 import { getCurrentDimensions } from "../../util/block/block.util";
 import {
     createContactBlockNode,
@@ -31,7 +33,6 @@ import {
     createNoteNode,
 } from "../../util/block/factory/mock.factory";
 import { getTreeId } from "../../util/environment/environment.util";
-import { editorPanelRegistry } from "../panel/editor-panel";
 import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 
 const DEMO_ORG_ID = "demo-org-12345";
@@ -53,9 +54,8 @@ export const BlockDemo = () => {
                     </p>
                 </header>
 
-                <BlockEnvironmentWorkspace />
-
                 <AddBlockButton />
+                <BlockEnvironmentWorkspace />
             </div>
         </BlockEnvironmentProvider>
     );
@@ -70,20 +70,61 @@ const BlockEnvironmentWorkspace: React.FC = () => {
     const gridOptions = useMemo(() => buildGridEnvironment(getTrees()), [getTrees]);
 
     return (
-        <GridProvider initialOptions={gridOptions}>
-            <BlockEnvironmentGridSync parentId={null} />
-            <GridStackWidgetSync />
-            <GridContainerProvider>
-                <RenderElementProvider registry={editorPanelRegistry} />
-            </GridContainerProvider>
-        </GridProvider>
+        <>
+            <GridProvider initialOptions={gridOptions}>
+                <BlockEnvironmentGridSync parentId={null} />
+                <GridStackWidgetSync />
+                <GridContainerProvider>
+                    <RenderElementProvider />
+                </GridContainerProvider>
+            </GridProvider>
+            <DebugInfo />
+        </>
     );
 };
+
+const DebugInfo = () => {
+    "use client";
+    const { environment } = useBlockEnvironment();
+    const [snapshot, setSnapshot] = useState<string>("");
+
+    useEffect(() => {
+        setSnapshot(formatEnvironment(environment));
+    }, [environment]);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Debug Info</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4">
+                <div>
+                    <h3 className="mb-2 font-semibold">Environment Snapshot</h3>
+                    <pre className="bg-muted text-muted-foreground p-4 text-sm">
+                        {snapshot || "Collecting environment state…"}
+                    </pre>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+function formatEnvironment(environment: EditorEnvironment): string {
+    const serialisable = {
+        metadata: environment.metadata,
+        trees: environment.trees,
+        hierarchy: Array.from(environment.hierarchy.entries()),
+        treeIndex: Array.from(environment.treeIndex.entries()),
+        layouts: Array.from(environment.layouts.entries()),
+    };
+
+    return JSON.stringify(serialisable, null, 2);
+}
 
 /**
  * Synchronizes GridStack with BlockEnvironment
  */
-const BlockEnvironmentGridSync: React.FC<{ parentId: string | null }> = ({ parentId }) => {
+export const BlockEnvironmentGridSync: React.FC<{ parentId: string | null }> = ({ parentId }) => {
     useEnvironmentGridSync(parentId);
     return null;
 };
@@ -145,7 +186,7 @@ const GridStackWidgetSync: React.FC = () => {
                 h: height,
                 content: JSON.stringify({
                     type: blockInstance.root.block.type.key,
-                    blockId: blockId,
+                    blockId: blockInstance.root.block.id,
                 }),
             };
 
@@ -262,14 +303,14 @@ const AddBlockButton: React.FC = () => {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Builds GridStack options from top-level blocks
+ * Builds GridStack options the environment grid, and maps top-level blocks as base grid widgets
  */
 function buildGridEnvironment(blocks: BlockTree[]): GridStackOptions {
     // Base grid configuration that contains all trees
-    const BASE_GRID = { cols: 12, rowHeight: 60, margin: 12 };
+    const BASE_GRID = { cols: 12, margin: 12 };
     return {
         column: "auto",
-        cellHeight: BASE_GRID.rowHeight,
+        sizeToContent: true,
         margin: BASE_GRID.margin,
         animate: true,
         acceptWidgets: true,

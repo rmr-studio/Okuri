@@ -4,7 +4,6 @@ import {
     BlockNode,
     BlockRenderStructure,
     BlockType,
-    GridRect,
     ReferenceNode,
 } from "../../../interface/block.interface";
 import {
@@ -19,6 +18,7 @@ import {
     createBlockListBlockType,
     createEntityReferenceListType,
     createLayoutContainerBlockType,
+    DEFAULT_GRID_LAYOUT,
 } from "./type.factory";
 
 /**
@@ -534,12 +534,4 @@ const createTaskNodes = (organisationId: string, taskType: BlockType) => {
             name: task.title,
         })
     );
-};
-
-export const DEFAULT_GRID_LAYOUT: GridRect = {
-    x: 0,
-    y: 0,
-    width: 60,
-    height: 40,
-    locked: false,
 };

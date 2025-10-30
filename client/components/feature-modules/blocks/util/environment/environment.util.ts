@@ -223,23 +223,19 @@ export const insertNode = (
     index: number | null = null
 ): BlockTree => {
     if (tree.root.block.id === parentId) {
-        // Disallow inserting into reference nodes
         if (!isContentNode(tree.root)) return tree;
-        const node = insertChild(tree.root, nodeToInsert, slotName);
+        const node = insertChild(tree.root, nodeToInsert, slotName, index);
         return {
             ...tree,
             root: node,
         };
     }
 
-    // Recurse into children
-
     const rootNode = tree.root;
     if (!isContentNode(rootNode) || !rootNode.children) {
         return tree;
     }
 
-    // Create a new child node with the updated index, if set to null, append to end
     const updatedChildren: Record<string, BlockNode[]> = {};
     Object.entries(rootNode.children).forEach(([slot, nodes]) => {
         updatedChildren[slot] = nodes.map((child) => {
@@ -247,12 +243,13 @@ export const insertNode = (
                 if (!isContentNode(child)) {
                     return child;
                 }
-                return insertChild(child, nodeToInsert, slotName);
+                return insertChild(child, nodeToInsert, slotName, index);
             }
             if (!isContentNode(child)) {
                 return child;
             }
-            return insertNode({ ...tree, root: child }, parentId, slotName, nodeToInsert).root;
+            return insertNode({ ...tree, root: child }, parentId, slotName, nodeToInsert, index)
+                .root;
         });
     });
 
@@ -299,6 +296,84 @@ export const replaceNode = (tree: BlockTree, replacement: BlockNode): BlockTree 
             ...rootNode,
             children: updatedChildren,
         },
+    };
+};
+
+const applyLayoutToNode = (node: BlockNode, layout: GridRect): BlockNode => {
+    return {
+        ...node,
+        block: {
+            ...node.block,
+            layout: { ...layout },
+        },
+    };
+};
+
+const updateLayoutRecursive = (node: BlockNode, blockId: string, layout: GridRect): BlockNode => {
+    if (node.block.id === blockId) {
+        return applyLayoutToNode(node, layout);
+    }
+
+    if (!isContentNode(node) || !node.children) {
+        return node;
+    }
+
+    let anyChildChanged = false;
+    const updatedChildren: Record<string, BlockNode[]> = {};
+
+    Object.entries(node.children).forEach(([slot, children]) => {
+        let slotChanged = false;
+        const nextChildren = children.map((child) => {
+            const next = updateLayoutRecursive(child, blockId, layout);
+            if (next !== child) {
+                slotChanged = true;
+            }
+            return next;
+        });
+
+        if (slotChanged) {
+            anyChildChanged = true;
+            updatedChildren[slot] = nextChildren;
+        } else {
+            updatedChildren[slot] = children;
+        }
+
+        if (!slotChanged && children !== nextChildren) {
+            // mapping returns new array reference even without changes,
+            // so reuse the original array to avoid unnecessary churn
+            updatedChildren[slot] = children;
+        }
+    });
+
+    if (!anyChildChanged) {
+        return node;
+    }
+
+    return {
+        ...node,
+        children: updatedChildren,
+    };
+};
+
+export const persistLayoutOnTree = (
+    tree: BlockTree,
+    blockId: string,
+    layout: GridRect
+): BlockTree => {
+    if (tree.root.block.id === blockId) {
+        return {
+            ...tree,
+            root: applyLayoutToNode(tree.root, layout),
+        };
+    }
+
+    if (!isContentNode(tree.root) || !tree.root.children) {
+        return tree;
+    }
+
+    return {
+        ...tree,
+        root: updateLayoutRecursive(tree.root, blockId, layout),
     };
 };
 
@@ -419,6 +494,7 @@ export const init = (organisationId: string, initialTrees: BlockTree[] = []): Ed
 export const generateTreeLayout = (node: BlockNode, index: number = 1): GridRect => {
     // If we have already generated a layout for this node, return it
     if (node.block.layout) return node.block.layout;
+    console.log("Generating layout for node", node.block.id);
 
     // Otherwise, generate a default layout based on index and existing layout config
     const defaultLayout: GridRect = getCurrentDimensions(node);

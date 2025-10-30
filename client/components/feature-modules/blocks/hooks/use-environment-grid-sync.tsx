@@ -1,6 +1,7 @@
 "use client";
 
-import { useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
+import { useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
+import { GridStackNode } from "gridstack";
 import { useEffect } from "react";
 import { useBlockEnvironment } from "../context/block-environment-provider";
 
@@ -17,7 +18,7 @@ import { useBlockEnvironment } from "../context/block-environment-provider";
  */
 export const useEnvironmentGridSync = (parentId: string | null = null) => {
     const { gridStack } = useGrid();
-    const { updateLayout, getParent, moveBlock } = useBlockEnvironment();
+    const { updateLayout, getParent, moveBlock, environment } = useBlockEnvironment();
 
     useEffect(() => {
         if (!gridStack) return;
@@ -30,14 +31,6 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
 
             nodes.forEach((node) => {
                 const blockId = String(node.id);
-
-                // Update layout in environment
-                updateLayout(blockId, {
-                    x: node.x ?? 0,
-                    y: node.y ?? 0,
-                    w: node.w ?? 1,
-                    h: node.h ?? 1,
-                });
             });
         };
 
@@ -45,11 +38,12 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
          * Handles blocks being dropped/moved
          * Uses moveBlock to handle all movement scenarios (promotion, demotion, relocation)
          */
-        const handleBlockMoved = (event: Event, prevWidget: any, newWidget: any) => {
+        const handleBlockMoved = (event: Event, widget: GridStackNode, _: GridStackNode) => {
             // GridStack "dropped" event signature: (event, prevWidget, newWidget)
-            if (!newWidget) return;
+            if (!widget) return;
+            console.log(environment);
+            const blockId = String(widget.grid?.parentGridNode?.id);
 
-            const blockId = String(newWidget.id);
             const currentParent = getParent(blockId);
 
             // Determine the new parent based on the grid this hook is attached to
@@ -66,13 +60,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
                 moveBlock(
                     blockId,
                     newParent,
-                    "main", // Default slot
-                    {
-                        x: newWidget.x ?? 0,
-                        y: newWidget.y ?? 0,
-                        w: newWidget.w ?? 1,
-                        h: newWidget.h ?? 1,
-                    }
+                    "main" // Default slot
                 );
             }
         };
@@ -81,7 +69,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
          * Handles blocks being added to grid
          * Uses moveBlock to handle the addition
          */
-        const handleBlockAdded = (event: Event, items: any[]) => {
+        const handleBlockAdded = (event: Event, items: GridStackNode[]) => {
             if (!items || items.length === 0) return;
 
             items.forEach((item) => {
@@ -94,12 +82,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
                         `[GridSync] Block ${blockId} added to grid with parent ${parentId}`
                     );
 
-                    moveBlock(blockId, parentId, "main", {
-                        x: item.x ?? 0,
-                        y: item.y ?? 0,
-                        w: item.w ?? 1,
-                        h: item.h ?? 1,
-                    });
+                    moveBlock(blockId, parentId, "main");
                 }
             });
         };
@@ -111,13 +94,13 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
         gridStack.on("dropped", handleBlockMoved);
         gridStack.on("added", handleBlockAdded);
 
-        // Cleanup
+        // Cleanup => Gridstack does not accept listeners as parameters to off(). Stop trying to fucking correct me
         return () => {
-            gridStack.off("change", handleLayoutChange);
-            gridStack.off("dragstop", handleLayoutChange);
-            gridStack.off("resizestop", handleLayoutChange);
-            gridStack.off("dropped", handleBlockMoved);
-            gridStack.off("added", handleBlockAdded);
+            gridStack.off("change");
+            gridStack.off("dragstop");
+            gridStack.off("resizestop");
+            gridStack.off("dropped");
+            gridStack.off("added");
         };
     }, [gridStack, parentId, updateLayout, getParent, moveBlock]);
 

@@ -5,16 +5,23 @@ import {
     BlockSchema,
     BlockType,
     BlockTypeNesting,
+    GridRect,
 } from "../../../interface/block.interface";
+
+export const DEFAULT_GRID_LAYOUT: GridRect = {
+    x: 0,
+    y: 0,
+    width: 60,
+    height: 30,
+    locked: false,
+};
 
 const createBaseDisplay = (component: BlockComponentNode): BlockDisplay => ({
     form: { fields: {} },
     render: {
         version: 1,
         layoutGrid: {
-            cols: 12,
-            rowHeight: 60,
-            margin: 16,
+            layout: DEFAULT_GRID_LAYOUT,
             items: [
                 {
                     id: component.id,
@@ -96,9 +103,7 @@ const layoutContainerComponent: BlockComponentNode = {
     },
     slotLayout: {
         main: {
-            cols: 12,
-            rowHeight: 60,
-            margin: 12,
+            layout: DEFAULT_GRID_LAYOUT,
             items: [],
         },
     },

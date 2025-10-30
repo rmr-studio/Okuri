@@ -49,7 +49,12 @@ export interface BlockEnvironmentContextValue {
     getTrees(): BlockTree[];
 
     insertBlock(child: BlockNode, parentId: string, slotName: string, index: number | null): string;
-    moveBlock(blockId: string, targetParentId: string | null, targetSlot?: string): void;
+    moveBlock(
+        blockId: string,
+        targetParentId: string | null,
+        targetSlot?: string,
+        layoutOverride?: GridRect
+    ): void;
 
     getParent(blockId: string): string | null;
     getChildren(blockId: string, slotName?: string): string[];

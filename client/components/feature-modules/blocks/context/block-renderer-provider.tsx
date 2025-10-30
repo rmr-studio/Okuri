@@ -1,71 +1,24 @@
 "use client";
 
-/**
- * Binds GridStack widget metadata to concrete React components.
- *
- * The provider iterates over the registered widgets, parses their payloads,
- * validates props against the schema defined in the render element registry,
- * and portals the resulting component into the DOM node GridStack owns.
- */
-
-import type { GridStackWidget } from "gridstack";
-import { ComponentType, createContext, FC, useContext, type ReactNode } from "react";
+import { ComponentType, createContext, FC, useContext } from "react";
 import { createPortal } from "react-dom";
-import { useContainer } from "@/components/feature-modules/grid/provider/grid-container-provider";
-import { useGrid } from "@/components/feature-modules/grid/provider/grid-provider";
-import {
-    RenderElementMetadata,
-    RenderElementRegistry,
-} from "@/components/feature-modules/render/util/render-element.registry";
-
-interface ParsedContent {
-    type: string;
-    props?: unknown;
-    componentId?: string;
-    slot?: string;
-    parentId?: string;
-}
-
-/** Parse the serialised widget payload back into a typed object. */
-function parseContent(meta: GridStackWidget): ParsedContent | null {
-    if (!meta.content) return null;
-    try {
-        const payload = JSON.parse(meta.content);
-        if (payload && typeof payload.type === "string") {
-            return { type: payload.type, props: payload.props ?? payload };
-        }
-    } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-            console.error("[RenderElementProvider] Failed to parse widget content", error);
-        }
-    }
-    return null;
-}
+import { ProviderProps } from "../interface/render.interface";
+import { blockRenderRegistry } from "../util/block/block.registry";
+import { parseContent } from "../util/render/render.util";
+import { useContainer } from "./grid-container-provider";
+import { useGrid } from "./grid-provider";
 
 export const RenderElementContext = createContext<{ widget: { id: string } } | null>(null);
 
-interface ProviderProps {
-    registry: RenderElementRegistry;
-    transformProps?: (args: {
-        id: string;
-        meta: GridStackWidget;
-        element: RenderElementMetadata<any>;
-        parsedProps: unknown;
-        raw: ParsedContent | null;
-    }) => unknown;
-    onUnknownType?: (info: { id: string; raw: ParsedContent | null }) => void;
-    wrapElement?: (args: {
-        id: string;
-        meta: GridStackWidget;
-        element: ReactNode;
-        elementMeta: RenderElementMetadata<any>;
-        parsedProps: unknown;
-        raw: ParsedContent | null;
-    }) => ReactNode;
-}
-
+/**
+ * This is a provider that will extract the metadata stored inside a GridStackWidget.
+ * Examine the associated metadata/props and will render the appropriate component registered
+ *
+ * If a component type is unknown, it will resort to displaying a generic fallback component, and
+ * will invoke an optionally provided `onUnknownType` callback.
+ *
+ */
 export const RenderElementProvider: FC<ProviderProps> = ({
-    registry,
     transformProps,
     onUnknownType,
     wrapElement,
@@ -79,12 +32,12 @@ export const RenderElementProvider: FC<ProviderProps> = ({
                 const raw = parseContent(meta);
                 if (!raw) return null;
 
-                let elementMeta = registry[raw.type];
+                let elementMeta = blockRenderRegistry[raw.type];
                 let effectiveRaw = raw;
 
                 if (!elementMeta) {
                     onUnknownType?.({ id, raw });
-                    const fallbackMeta = registry["FALLBACK"];
+                    const fallbackMeta = blockRenderRegistry["FALLBACK"];
                     if (!fallbackMeta) {
                         if (process.env.NODE_ENV !== "production") {
                             console.warn(
@@ -170,7 +123,6 @@ export const RenderElementProvider: FC<ProviderProps> = ({
     );
 };
 
-/** Access the context created by `RenderElementProvider`. */
 export function useRenderElement() {
     const context = useContext(RenderElementContext);
     if (!context) {

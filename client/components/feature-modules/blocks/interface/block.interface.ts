@@ -34,6 +34,7 @@ export type Reference = components["schemas"]["Reference"];
 export type ReferenceWarning = components["schemas"]["Reference"]["warning"];
 
 export type ReferencePayload = EntityReferencePayload | BlockReferencePayload;
+export type ReferenceType = ReferencePayload["type"];
 export type Metadata = BlockContentMetadata | BlockReferenceMetadata | EntityReferenceMetadata;
 export type BlockNode = ContentNode | ReferenceNode;
 
@@ -86,6 +87,9 @@ export const isEntityReferenceMetadata = (
 
 export const isContentNode = (node: BlockNode): node is ContentNode =>
     Boolean(node?.block && isContentMetadata(node.block.payload));
+
+export const isReferenceNode = (node: BlockNode): node is ReferenceNode =>
+    Boolean(node?.block && !isContentMetadata(node.block.payload));
 
 /* -------------------------------------------------------------------------- */
 
