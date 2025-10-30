@@ -1,4 +1,4 @@
-import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
+import { createRenderElement } from "../../util/render/render-element.registry";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
 import { z } from "zod";

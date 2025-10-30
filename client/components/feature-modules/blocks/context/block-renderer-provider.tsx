@@ -1,22 +1,22 @@
 "use client";
 
-import { ComponentType, createContext, FC, useContext } from "react";
+import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
 import { ProviderProps } from "../interface/render.interface";
-import { blockRenderRegistry } from "../util/block/block.registry";
+import { BlockStructureRenderer } from "../components/render/block-structure-renderer";
 import { parseContent } from "../util/render/render.util";
 import { useContainer } from "./grid-container-provider";
 import { useGrid } from "./grid-provider";
+import { useBlockEnvironment } from "./block-environment-provider";
+import { isContentNode } from "../interface/block.interface";
 
 export const RenderElementContext = createContext<{ widget: { id: string } } | null>(null);
 
 /**
- * This is a provider that will extract the metadata stored inside a GridStackWidget.
- * Examine the associated metadata/props and will render the appropriate component registered
+ * This provider renders blocks using their BlockRenderStructure.
  *
- * If a component type is unknown, it will resort to displaying a generic fallback component, and
- * will invoke an optionally provided `onUnknownType` callback.
- *
+ * Each widget corresponds to one block, which may contain multiple components.
+ * The BlockStructureRenderer handles rendering all components and resolving bindings.
  */
 export const RenderElementProvider: FC<ProviderProps> = ({
     transformProps,
@@ -25,96 +25,66 @@ export const RenderElementProvider: FC<ProviderProps> = ({
 }) => {
     const { _rawWidgetMetaMap } = useGrid();
     const { getWidgetContainer } = useContainer();
+    const { getBlock } = useBlockEnvironment();
 
     return (
         <>
-            {Array.from(_rawWidgetMetaMap.value.entries()).map(([id, meta]) => {
+            {Array.from(_rawWidgetMetaMap.value.entries()).map(([widgetId, meta]) => {
                 const raw = parseContent(meta);
                 if (!raw) return null;
 
-                let elementMeta = blockRenderRegistry[raw.type];
-                let effectiveRaw = raw;
+                const blockId = raw.blockId || widgetId;
+                const blockNode = getBlock(blockId);
 
-                if (!elementMeta) {
-                    onUnknownType?.({ id, raw });
-                    const fallbackMeta = blockRenderRegistry["FALLBACK"];
-                    if (!fallbackMeta) {
-                        if (process.env.NODE_ENV !== "production") {
-                            console.warn(
-                                `[RenderElementProvider] Unknown render element type "${raw.type}" for id "${id}".`
-                            );
-                        }
-                        return null;
-                    }
-                    elementMeta = fallbackMeta;
-                    effectiveRaw = {
-                        type: "FALLBACK",
-                        props: { reason: `Unknown component type "${raw.type}"` },
-                    };
+                if (!blockNode) {
+                    console.warn(`Block ${blockId} not found in environment`);
+                    return null;
                 }
 
-                let parsedProps: unknown;
-                try {
-                    parsedProps = elementMeta.schema.parse(effectiveRaw.props ?? {});
-                } catch (error) {
-                    const fallbackMeta = registry["FALLBACK"];
-                    if (fallbackMeta && elementMeta.type !== "FALLBACK") {
-                        elementMeta = fallbackMeta;
-                        effectiveRaw = {
-                            type: "FALLBACK",
-                            props: {
-                                reason: `Invalid props for component "${raw.type ?? "unknown"}"`,
-                            },
-                        };
-                        try {
-                            parsedProps = fallbackMeta.schema.parse(effectiveRaw.props ?? {});
-                        } catch (fallbackError) {
-                            if (process.env.NODE_ENV !== "production") {
-                                console.error(
-                                    "[RenderElementProvider] Fallback schema validation failed.",
-                                    fallbackError
-                                );
-                            }
-                            return null;
-                        }
-                    } else {
-                        if (process.env.NODE_ENV !== "production") {
-                            console.error(
-                                `[RenderElementProvider] Schema validation failed for element "${effectiveRaw.type}" (${id}).`,
-                                error
-                            );
-                        }
-                        return null;
-                    }
-                }
-
-                const container = getWidgetContainer(id);
+                const container = getWidgetContainer(widgetId);
                 if (!container) return null;
 
-                const finalProps =
-                    transformProps?.({
-                        id,
-                        meta,
-                        element: elementMeta,
-                        parsedProps,
-                        raw: effectiveRaw,
-                    }) ?? parsedProps;
+                // Get render structure from the parsed content or from the block type
+                const renderStructure =
+                    raw.renderStructure || blockNode.block.type.display?.render;
 
-                const Component = elementMeta.component as ComponentType<any>;
-                let rendered: React.ReactNode = <Component {...(finalProps as any)} />;
+                if (!renderStructure) {
+                    console.warn(`No render structure found for block ${blockId}`);
+                    return null;
+                }
+
+                // Get child blocks if this is a content node
+                const childBlocks = isContentNode(blockNode) ? blockNode.children || {} : {};
+
+                // Render the block structure with all its components
+                let rendered: ReactNode = (
+                    <BlockStructureRenderer
+                        blockId={blockId}
+                        renderStructure={renderStructure}
+                        payload={blockNode.block.payload}
+                        childBlocks={childBlocks}
+                        renderChildBlock={(childNode) => {
+                            // Recursively render child blocks
+                            // This will be handled by the GridStack subgrid
+                            return null;
+                        }}
+                    />
+                );
+
+                // Wrap the entire block structure if wrapElement is provided
                 if (wrapElement) {
                     rendered = wrapElement({
-                        id,
+                        id: widgetId,
                         meta,
                         element: rendered,
-                        elementMeta,
-                        parsedProps,
-                        raw: effectiveRaw,
+                        elementMeta: null as any,
+                        parsedProps: {},
+                        raw,
                     });
                 }
 
                 return (
-                    <RenderElementContext.Provider key={id} value={{ widget: { id } }}>
+                    <RenderElementContext.Provider key={widgetId} value={{ widget: { id: widgetId } }}>
                         {createPortal(rendered, container)}
                     </RenderElementContext.Provider>
                 );

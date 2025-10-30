@@ -16,6 +16,7 @@ export const DEFAULT_GRID_LAYOUT: GridRect = {
     locked: false,
 };
 
+
 const createBaseDisplay = (component: BlockComponentNode): BlockDisplay => ({
     form: { fields: {} },
     render: {
@@ -85,8 +86,8 @@ const layoutContainerComponent: BlockComponentNode = {
     id: "layout",
     type: "LAYOUT_CONTAINER",
     props: {
-        title: "Section",
-        description: "Organise nested blocks within a responsive grid.",
+        variant: "card",
+        padded: true,
     },
     bindings: [
         {
@@ -99,7 +100,7 @@ const layoutContainerComponent: BlockComponentNode = {
         },
     ],
     slots: {
-        main: [],
+        main: ["*"], // ← Wildcard slot for dynamic child blocks
     },
     slotLayout: {
         main: {

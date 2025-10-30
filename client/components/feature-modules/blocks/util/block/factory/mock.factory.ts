@@ -1,4 +1,4 @@
-import { uniqueId } from "@/lib/util/utils";
+import { nowIso, uniqueId } from "@/lib/util/utils";
 import {
     BlockComponentNode,
     BlockNode,
@@ -18,6 +18,8 @@ import {
     createBlockListBlockType,
     createEntityReferenceListType,
     createLayoutContainerBlockType,
+    createAddressBlockType,
+    createNoteBlockType,
     DEFAULT_GRID_LAYOUT,
 } from "./type.factory";
 
@@ -27,12 +29,20 @@ import {
  * ============================================================================
  */
 
+/**
+ * Creates a rich client overview block with multiple components:
+ * - Contact card (left)
+ * - Address list (right)
+ *
+ * This demonstrates:
+ * 1. Multiple components in one block (2-column layout)
+ * 2. Data bindings from block payload
+ * 3. RefSlot bindings for child blocks
+ */
 export function createContactBlockNode(organisationId: string): BlockNode {
     const addressType = createAddressBlockType(organisationId);
-    const layoutType = createLayoutContainerBlockType(organisationId);
-    const listType = createBlockListBlockType(organisationId);
-    const entityReferenceType = createEntityReferenceListType(organisationId);
 
+    // Create address child blocks
     const addressNodes = [
         createContentNode({
             organisationId,
@@ -68,73 +78,113 @@ export function createContactBlockNode(organisationId: string): BlockNode {
         }),
     ];
 
-    const addressListNode = createContentNode({
+    // Create a BlockType with multiple components
+    const clientOverviewType: BlockType = {
+        id: uniqueId("type-client-overview"),
+        key: "client_overview_multi",
+        version: 1,
+        name: "Client Overview",
+        description: "Contact card with address list side-by-side",
         organisationId,
-        type: listType,
-        name: "Addresses",
-        data: {
-            title: "Addresses",
-            description: "Primary and secondary locations",
-            emptyMessage: "Add an address",
+        archived: false,
+        strictness: "SOFT",
+        system: false,
+        schema: {
+            name: "ClientOverview",
+            type: "OBJECT",
+            required: true,
+            properties: {
+                name: { name: "Name", type: "STRING", required: true },
+                email: { name: "Email", type: "STRING", required: false },
+                phone: { name: "Phone", type: "STRING", required: false },
+                company: { name: "Company", type: "STRING", required: false },
+            },
         },
-        children: {
-            items: addressNodes,
-        },
-    });
-
-    const clientEntityId = uniqueId("client");
-    const entityReferenceNode: ReferenceNode = {
-        type: "reference_node",
-        block: createBlockBase({
-            organisationId,
-            type: entityReferenceType,
-            name: "Key contacts",
-            payload: createEntityReferenceMetadata({
-                items: [
-                    { type: "client", id: clientEntityId, labelOverride: "Jane Doe" },
-                    { type: "client", id: uniqueId("client"), labelOverride: "Kai Wong" },
-                ],
-                projection: { fields: ["name", "contact.email"] },
-                sort: { by: "name", dir: "ASC" },
-                paging: { pageSize: 20 },
-            }),
-        }),
-        warnings: [],
-        reference: {
-            type: "entity_reference",
-            reference: [
-                createReference({
-                    type: "client",
-                    entityId: clientEntityId,
-                    path: "$.items[0]",
-                    order: 0,
-                    entity: {
-                        id: clientEntityId,
-                        organisationId: "dd",
-                        type: "client",
-                        name: "Jane Doe",
-                        contact: {
-                            email: "jane@acme.com",
+        display: {
+            form: { fields: {} },
+            render: {
+                version: 1,
+                layoutGrid: {
+                    layout: DEFAULT_GRID_LAYOUT,
+                    rowHeight: 40,
+                    margin: 8,
+                    items: [
+                        // Contact card on left (cols 0-5)
+                        {
+                            id: "contact_card",
+                            sm: { x: 0, y: 0, w: 12, h: 8, locked: false },
+                            lg: { x: 0, y: 0, w: 6, h: 10, locked: false },
                         },
-                        archived: false,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
+                        // Address list on right (cols 6-11)
+                        {
+                            id: "address_list",
+                            sm: { x: 0, y: 8, w: 12, h: 8, locked: false },
+                            lg: { x: 6, y: 0, w: 6, h: 10, locked: false },
+                        },
+                    ],
+                },
+                components: {
+                    contact_card: {
+                        id: "contact_card",
+                        type: "CONTACT_CARD",
+                        props: {
+                            avatarShape: "circle",
+                        },
+                        bindings: [
+                            {
+                                prop: "client",
+                                source: {
+                                    type: "DataPath",
+                                    path: "$.data",
+                                },
+                            },
+                        ],
+                        fetchPolicy: "LAZY",
                     },
-                }),
-            ],
+                    address_list: {
+                        id: "address_list",
+                        type: "LINE_ITEM",
+                        props: {
+                            title: "Addresses",
+                            itemComponent: "ADDRESS_CARD",
+                            emptyMessage: "No addresses",
+                        },
+                        bindings: [
+                            {
+                                prop: "items",
+                                source: {
+                                    type: "RefSlot",
+                                    slot: "addresses",
+                                    presentation: "INLINE",
+                                    expandDepth: 1,
+                                },
+                            },
+                        ],
+                        fetchPolicy: "LAZY",
+                    },
+                },
+            },
         },
+        nesting: {
+            max: undefined,
+            allowedTypes: ALL_BLOCK_COMPONENT_TYPES,
+        },
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
     };
 
     return createContentNode({
         organisationId,
-        type: layoutType,
-        name: "Client details",
+        type: clientOverviewType,
+        name: "Jane Doe",
         data: {
-            title: "Client details",
-            description: "Addresses and related entities",
+            name: "Jane Doe",
+            email: "jane@acme.com",
+            phone: "+61 400 123 456",
+            company: "Acme Corporation",
         },
         children: {
-            main: [addressListNode, entityReferenceNode],
+            addresses: addressNodes,
         },
     });
 }
@@ -202,16 +252,47 @@ export function createNoteNode(organisationId: string, content?: string): BlockN
     });
 }
 
+/**
+ * Creates a layout container with nested blocks.
+ *
+ * This demonstrates:
+ * 1. Wildcard slots ("*") for dynamic child blocks
+ * 2. Layout container holding multiple different block types
+ */
 export function createLayoutContainerNode(organisationId: string): BlockNode {
     const layoutType = createLayoutContainerBlockType(organisationId);
+    const noteType = createNoteBlockType(organisationId);
+
+    // Create some nested blocks
+    const nestedBlocks = [
+        createContentNode({
+            organisationId,
+            type: noteType,
+            name: "Welcome note",
+            data: {
+                content: "Welcome to the block environment! This is a nested block inside a layout container.",
+            },
+        }),
+        createContentNode({
+            organisationId,
+            type: noteType,
+            name: "Instructions",
+            data: {
+                content: "You can add, remove, and rearrange blocks using the toolbar. Try dragging blocks around!",
+            },
+        }),
+    ];
 
     return createContentNode({
         organisationId,
         type: layoutType,
-        name: "Layout container",
+        name: "Getting Started",
         data: {
-            title: "",
-            description: "",
+            title: "Getting Started",
+            description: "An introduction to block environments",
+        },
+        children: {
+            main: nestedBlocks,
         },
     });
 }

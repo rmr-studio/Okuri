@@ -54,13 +54,25 @@ export const GridStackContext = createContext<{
  *
  * @param initialOptions - Initial GridStackOptions used to populate the provider and to
  *   pre-seed the internal widget metadata map (recursively inspects `initialOptions.children`).
+ * @param initialWidgetMap - Optional pre-built widget map containing all widgets (roots + descendants).
+ *   When provided, this overrides the automatic map building from initialOptions.children.
  */
 export function GridProvider({
     children,
     initialOptions,
-}: PropsWithChildren<{ initialOptions: GridStackOptions }>) {
+    initialWidgetMap,
+}: PropsWithChildren<{
+    initialOptions: GridStackOptions;
+    initialWidgetMap?: Map<string, GridStackWidget>;
+}>) {
     const [gridStack, setGridStack] = useState<GridStack | null>(null);
     const buildRawWidgetMetaMap = useCallback(() => {
+        // If a pre-built widget map is provided, use it directly
+        if (initialWidgetMap) {
+            return initialWidgetMap;
+        }
+
+        // Otherwise, build the map by recursively scanning initialOptions.children
         const map = new Map<string, GridStackWidget>();
         const deepFindNodeWithContent = (obj: GridStackWidget) => {
             if (obj.id && obj.content) {
@@ -76,7 +88,7 @@ export function GridProvider({
             deepFindNodeWithContent(child);
         });
         return map;
-    }, [initialOptions]);
+    }, [initialOptions, initialWidgetMap]);
 
     const [rawWidgetMetaMap, setRawWidgetMetaMap] = useState<Map<string, GridStackWidget>>(() =>
         buildRawWidgetMetaMap()

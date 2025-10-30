@@ -9,10 +9,10 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import type { GridStackOptions } from "gridstack";
+import type { GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { PlusIcon, TypeIcon } from "lucide-react";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
@@ -24,7 +24,7 @@ import {
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
 import { useEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
-import { BlockTree } from "../../interface/block.interface";
+import { BlockNode, BlockTree, isContentNode } from "../../interface/block.interface";
 import { EditorEnvironment } from "../../interface/editor.interface";
 import { getCurrentDimensions } from "../../util/block/block.util";
 import {
@@ -33,7 +33,8 @@ import {
     createNoteNode,
 } from "../../util/block/factory/mock.factory";
 import { getTreeId } from "../../util/environment/environment.util";
-import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
+import { buildGridEnvironmentWithWidgetMap } from "../../util/render/render.tree";
+import { PanelWrapper, SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 
 const DEMO_ORG_ID = "demo-org-12345";
 
@@ -67,21 +68,117 @@ export const BlockDemo = () => {
 
 const BlockEnvironmentWorkspace: React.FC = () => {
     const { getTrees } = useBlockEnvironment();
-    const gridOptions = useMemo(() => buildGridEnvironment(getTrees()), [getTrees]);
+    const { options, widgetMap } = useMemo(
+        () => buildGridEnvironmentWithWidgetMap(getTrees()),
+        [getTrees]
+    );
 
     return (
         <>
-            <GridProvider initialOptions={gridOptions}>
+            <GridProvider initialOptions={options} initialWidgetMap={widgetMap}>
                 <BlockEnvironmentGridSync parentId={null} />
                 <GridStackWidgetSync />
                 <GridContainerProvider>
-                    <RenderElementProvider />
+                    <BlockRenderer />
                 </GridContainerProvider>
             </GridProvider>
             <DebugInfo />
         </>
     );
 };
+
+/**
+ * Renders all blocks with proper wrapping (PanelWrapper for toolbar, slash menu, etc.)
+ */
+const BlockRenderer: React.FC = () => {
+    const { getBlock, removeBlock, insertBlock } = useBlockEnvironment();
+
+    const wrapElement = useCallback(
+        ({
+            id,
+            raw,
+            element,
+            elementMeta,
+        }: {
+            id: string;
+            meta: GridStackWidget;
+            element: React.ReactNode;
+            elementMeta: any;
+            parsedProps: unknown;
+            raw: { type: string; props?: unknown; blockId?: string; componentId?: string } | null;
+        }) => {
+            const blockId = String(raw?.blockId ?? raw?.componentId ?? id);
+            const blockNode = getBlock(blockId);
+
+            if (!blockNode) {
+                return element;
+            }
+
+            const canNest = Boolean(blockNode.block.type.nesting);
+            const organisationId = blockNode.block.organisationId;
+
+            const handleDelete = () => removeBlock(blockId);
+            const handleInsert = (item: SlashMenuItem) => {
+                if (!canNest || !organisationId) return;
+                const newNode = createNodeFromSlashItem(item, organisationId);
+                if (!newNode) return;
+                insertBlock(newNode, blockId, "main", null);
+            };
+
+            const quickActions = [
+                {
+                    id: "delete",
+                    label: "Delete block",
+                    shortcut: "⌘⌫",
+                    onSelect: handleDelete,
+                },
+            ];
+
+            const title =
+                blockNode.block.type.name ??
+                blockNode.block.name ??
+                elementMeta?.name ??
+                "Untitled Block";
+            const description = blockNode.block.type.description ?? elementMeta?.description;
+
+            return (
+                <PanelWrapper
+                    id={blockId}
+                    title={title}
+                    description={description}
+                    slashItems={defaultSlashItems}
+                    quickActions={quickActions}
+                    allowInsert={canNest}
+                    onInsert={canNest ? handleInsert : undefined}
+                    onDelete={handleDelete}
+                >
+                    {element}
+                </PanelWrapper>
+            );
+        },
+        [getBlock, insertBlock, removeBlock]
+    );
+
+    return <RenderElementProvider wrapElement={wrapElement} />;
+};
+
+/**
+ * Helper to create a block node from a slash menu item
+ */
+function createNodeFromSlashItem(item: SlashMenuItem, organisationId: string): BlockNode | null {
+    switch (item.id) {
+        case "CONTACT_CARD":
+            return createContactBlockNode(organisationId);
+        case "LAYOUT_CONTAINER":
+        case "LINE_ITEM":
+            return createLayoutContainerNode(organisationId);
+        case "TEXT":
+        case "BLANK_NOTE":
+            return createNoteNode(organisationId);
+        default:
+            return createNoteNode(organisationId, `New ${item.label}`);
+    }
+}
 
 const DebugInfo = () => {
     "use client";
@@ -130,27 +227,33 @@ export const BlockEnvironmentGridSync: React.FC<{ parentId: string | null }> = (
 };
 
 /**
- * Synchronizes GridStack widgets when top-level blocks change
+ * Synchronizes GridStack widgets when blocks change at any level of the tree.
+ *
+ * Handles:
+ * - Adding new top-level blocks to the main grid
+ * - Adding nested blocks to parent subgrids
+ * - Removing blocks and their descendants from widget map
+ * - Maintaining 1:1 widget-to-block mapping
  */
 const GridStackWidgetSync: React.FC = () => {
     const { gridStack, _rawWidgetMetaMap } = useGrid();
+    const { getTrees, getParent, environment } = useBlockEnvironment();
 
-    const { getTrees } = useBlockEnvironment();
     const trees = useMemo(() => getTrees(), [getTrees]);
     const topLevelBlocks = useMemo(() => trees, [trees]);
-    const topLevelBlocksRef = useRef<BlockTree[]>(topLevelBlocks);
 
-    // Track previous block IDs to detect changes
+    // Track ALL block IDs in the environment (not just top-level)
+    const allBlockIds = useMemo(() => {
+        return new Set(environment.treeIndex.keys());
+    }, [environment.treeIndex]);
+
+    // Track previous state
     const prevBlockIdsRef = useRef(new Set<string>());
-
-    useEffect(() => {
-        topLevelBlocksRef.current = topLevelBlocks;
-    }, [topLevelBlocks]);
 
     useEffect(() => {
         if (!gridStack) return;
 
-        const currentBlockIds = new Set(topLevelBlocks.map((tree) => getTreeId(tree)));
+        const currentBlockIds = allBlockIds;
         const prevBlockIds = prevBlockIdsRef.current;
 
         // Find blocks that were added
@@ -163,11 +266,9 @@ const GridStackWidgetSync: React.FC = () => {
             (id: string) => !currentBlockIds.has(id)
         );
 
-        // Add new widgets (skip ones GridStack already rendered from initial options)
+        // Add new widgets
         addedBlockIds.forEach((blockId) => {
-            const blockInstance = topLevelBlocks.find((tree) => getTreeId(tree) === blockId);
-            if (!blockInstance) return;
-
+            // Check if widget already exists in GridStack
             const alreadyInGrid = gridStack.engine.nodes?.some(
                 (node) => String(node.id) === blockId
             );
@@ -175,25 +276,52 @@ const GridStackWidgetSync: React.FC = () => {
                 return;
             }
 
-            console.log(`Adding widget ${blockId} to GridStack`);
-            const { x, y, width, height } = getCurrentDimensions(blockInstance.root);
+            // Find the block tree containing this block
+            const treeId = environment.treeIndex.get(blockId);
+            if (!treeId) return;
+
+            const tree = topLevelBlocks.find((t) => getTreeId(t) === treeId);
+            if (!tree) return;
+
+            // Find the block node
+            const blockNode = findBlockNodeById(tree.root, blockId);
+            if (!blockNode) return;
+
+            const layout = blockNode.block.layout ?? getCurrentDimensions(blockNode);
+            const parentId = getParent(blockId);
 
             const widgetConfig = {
                 id: blockId,
-                x,
-                y,
-                w: width,
-                h: height,
+                x: layout.x,
+                y: layout.y,
+                w: layout.width,
+                h: layout.height,
                 content: JSON.stringify({
-                    type: blockInstance.root.block.type.key,
-                    blockId: blockInstance.root.block.id,
+                    type: blockNode.block.type.key,
+                    blockId: blockId,
                 }),
             };
 
-            // Add to GridStack
-            gridStack.addWidget(widgetConfig);
+            if (!parentId) {
+                // Top-level block - add to main grid
+                console.log(`Adding top-level widget ${blockId} to GridStack`);
+                gridStack.addWidget(widgetConfig);
+            } else {
+                // Nested block - add to parent's subgrid
+                console.log(`Adding nested widget ${blockId} to parent ${parentId} subgrid`);
+                const parentNode = gridStack.engine.nodes?.find((n) => String(n.id) === parentId);
+                const parentSubGrid = parentNode?.subGrid;
+                if (parentSubGrid) {
+                    parentSubGrid.addWidget(widgetConfig);
+                } else {
+                    console.warn(
+                        `Parent ${parentId} has no subgrid for child ${blockId}. Widget not added.`
+                    );
+                    return;
+                }
+            }
 
-            // CRITICAL: Update rawWidgetMetaMap so RenderElementProvider can find it
+            // Update rawWidgetMetaMap so RenderElementProvider can find it
             _rawWidgetMetaMap.set((prev) => {
                 const newMap = new Map(prev);
                 newMap.set(blockId, widgetConfig);
@@ -208,11 +336,12 @@ const GridStackWidgetSync: React.FC = () => {
             const element =
                 (node?.el as HTMLElement | undefined) ??
                 (gridStack.el?.querySelector(`[gs-id='${blockId}']`) as HTMLElement | null);
+
             if (element) {
                 gridStack.removeWidget(element, true);
             }
 
-            // Remove from rawWidgetMetaMap
+            // Remove from rawWidgetMetaMap (descendants are handled by GridProvider's removeWidget)
             _rawWidgetMetaMap.set((prev) => {
                 const newMap = new Map(prev);
                 newMap.delete(blockId);
@@ -221,11 +350,31 @@ const GridStackWidgetSync: React.FC = () => {
         });
 
         // Update the ref for next render
-        prevBlockIdsRef.current = currentBlockIds;
-    }, [gridStack, topLevelBlocks, _rawWidgetMetaMap]);
+        prevBlockIdsRef.current = new Set(currentBlockIds);
+    }, [gridStack, allBlockIds, topLevelBlocks, environment, getParent, _rawWidgetMetaMap]);
 
     return null;
 };
+
+/**
+ * Helper to find a block node by ID within a tree (DFS)
+ */
+function findBlockNodeById(node: BlockNode, blockId: string): BlockNode | undefined {
+    if (node.block.id === blockId) {
+        return node;
+    }
+
+    if (isContentNode(node) && node.children) {
+        for (const slotChildren of Object.values(node.children)) {
+            for (const child of slotChildren) {
+                const found = findBlockNodeById(child, blockId);
+                if (found) return found;
+            }
+        }
+    }
+
+    return undefined;
+}
 
 /**
  * Button to add new blocks
@@ -302,41 +451,23 @@ const AddBlockButton: React.FC = () => {
 /*                               Helpers                                      */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Builds GridStack options the environment grid, and maps top-level blocks as base grid widgets
- */
-function buildGridEnvironment(blocks: BlockTree[]): GridStackOptions {
-    // Base grid configuration that contains all trees
-    const BASE_GRID = { cols: 12, margin: 12 };
-    return {
-        column: "auto",
-        sizeToContent: true,
-        margin: BASE_GRID.margin,
-        animate: true,
-        acceptWidgets: true,
-        children: blocks.map((blockInstance) => {
-            const node = blockInstance.root;
-            const grid = getCurrentDimensions(node);
-            return {
-                id: node.block.id,
-                x: grid.x,
-                y: grid.y,
-                w: grid.width,
-                h: grid.height,
-                content: JSON.stringify({
-                    type: node.block.type.key,
-                    blockId: node.block.id,
-                }),
-            };
-        }),
-    };
-}
+// Note: buildGridEnvironment has been replaced by buildGridEnvironmentWithWidgetMap
+// from util/render/render.tree.ts which recursively builds widgets for the entire tree
 
 function createDemoTrees(): BlockTree[] {
-    const node = createContactBlockNode(DEMO_ORG_ID);
+    // Create a client overview block (demonstrates multi-component block)
+    const contactNode = createContactBlockNode(DEMO_ORG_ID);
     const contactTree: BlockTree = {
         type: "block_tree",
-        root: node,
+        root: contactNode,
     };
-    return [contactTree];
+
+    // Create a layout container (demonstrates wildcard slots)
+    const layoutNode = createLayoutContainerNode(DEMO_ORG_ID);
+    const layoutTree: BlockTree = {
+        type: "block_tree",
+        root: layoutNode,
+    };
+
+    return [contactTree, layoutTree];
 }

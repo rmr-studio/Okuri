@@ -23,9 +23,11 @@ export interface ProviderProps {
 }
 
 export interface ParsedContent {
-    type: ComponentType;
+    type: ComponentType | string;
     props?: unknown;
     componentId?: string;
     slot?: string;
     parentId?: string;
+    blockId?: string;
+    renderStructure?: any; // BlockRenderStructure
 }

@@ -54,13 +54,7 @@ type Props = z.infer<typeof schema> & {
     };
 };
 
-const ContactCardComponent: FC<Props> = ({
-    client,
-    accounts,
-    href,
-    avatarUrl,
-    avatarShape,
-}) => {
+const Block: FC<Props> = ({ client, accounts, href, avatarUrl, avatarShape }) => {
     const name = client?.name ?? "Unnamed client";
     const email = client?.contact?.email ?? "No email";
     const phone = client?.contact?.phone;
@@ -127,7 +121,5 @@ export const ContactCard: RenderElementMetadata<typeof schema> = {
     name: "Contact card",
     description: "Displays primary client information with linked account summary.",
     schema,
-    component: ContactCardComponent as FC<z.infer<typeof schema>>,
+    component: Block as FC<z.infer<typeof schema>>,
 };
-
-export { ContactCardComponent };

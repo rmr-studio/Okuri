@@ -1,8 +1,8 @@
-import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/util/utils";
 import { FC, ReactNode, useEffect, useRef } from "react";
 import { z } from "zod";
+import { RenderElementMetadata } from "../../util/block/block.registry";
 
 interface Props {
     title?: string;
@@ -95,11 +95,10 @@ export const Block: FC<Props> = ({
     );
 };
 
-export const LayoutContainerBlock = createRenderElement({
+export const LayoutContainerBlock: RenderElementMetadata<typeof Schema> = {
     type: "LAYOUT_CONTAINER",
     name: "Layout container",
     description: "Wrapper component that hosts a nested grid layout.",
-    category: "BLOCK",
     schema: Schema,
     component: Block,
-});
+};

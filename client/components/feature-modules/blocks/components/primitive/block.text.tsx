@@ -1,4 +1,4 @@
-import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
+import { createRenderElement } from "../../util/render/render-element.registry";
 import { cn } from "@/lib/util/utils";
 import { FC, JSX } from "react";
 import { z } from "zod";

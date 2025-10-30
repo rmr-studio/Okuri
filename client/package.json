@@ -46,6 +46,7 @@
     "framer-motion": "^12.18.1",
     "gridstack": "^12.3.3",
     "input-otp": "^1.4.2",
+    "jsonpath-plus": "^10.3.0",
     "jsonpointer": "^5.0.1",
     "lucide-react": "^0.522.0",
     "motion": "^12.23.12",
