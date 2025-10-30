@@ -47,7 +47,7 @@ object BlockDisplayFactory {
         Condition(op = Op.EXISTS, left = Operand.Path(path))
 
     fun lg(x: Int, y: Int, w: Int, h: Int, locked: Boolean = false) =
-        GridRect(x = x, y = y, width = w, height = h, locked = locked)
+        GridRect(x = x, y = y, width = w, height = h, locked = locked, margin = null)
 
     fun item(id: String, rect: GridRect, sm: GridRect? = null) =
         GridItem(id = id, lg = rect, sm = sm)

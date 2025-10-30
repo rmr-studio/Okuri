@@ -23,7 +23,6 @@ import java.util.*
 class BlockTypeService(
     private val blockTypeRepository: BlockTypeRepository,
     private val authTokenService: AuthTokenService,
-    private val displayLinterService: BlockDisplayLinterService,
     private val activityService: ActivityService,
     private val organisationSecurity: OrganisationSecurity
 ) {
@@ -36,12 +35,6 @@ class BlockTypeService(
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     fun publishBlockType(request: CreateBlockTypeRequest): BlockType {
         authTokenService.getUserId().let { userId ->
-            // Validate display structure
-            displayLinterService.lint(request.display).let { issues ->
-                if (issues.any { it.level.name == "ERROR" }) {
-                    throw IllegalArgumentException("BlockType display structure has errors: $issues")
-                }
-            }
             val entity = BlockTypeEntity.fromRequest(request)
             blockTypeRepository.save(entity).run {
                 activityService.logActivity(
@@ -68,12 +61,6 @@ class BlockTypeService(
     @PreAuthorize("@organisationSecurity.hasOrg(#type.organisationId)")
     fun updateBlockType(type: BlockType) {
         val userId = authTokenService.getUserId()
-        this.lintBlockTypeDisplay(type).let { issues ->
-            if (issues.any { it.level.name == "ERROR" }) {
-                throw IllegalArgumentException("BlockType display structure has errors: $issues")
-            }
-        }
-
         val existing = findOrThrow { blockTypeRepository.findById(type.id) }
 
         // compute next version number (could also query max)
@@ -221,12 +208,4 @@ class BlockTypeService(
         return findOrThrow { blockTypeRepository.findById(id) }
     }
 
-    /**
-     * Lints the display structure of a block type and returns any issues found.
-     *
-     * @param type The BlockType whose display structure should be linted.
-     * @return A list of linting issues found in the display structure.
-     */
-    @PreAuthorize("@organisationSecurity.hasOrg(#type.organisationId)")
-    fun lintBlockTypeDisplay(type: BlockType) = displayLinterService.lint(type.display)
 }

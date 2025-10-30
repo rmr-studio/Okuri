@@ -10,4 +10,5 @@ enum class ComponentType {
     IMAGE,
     BUTTON,
     ATTACHMENT,
+    FALLBACK
 }

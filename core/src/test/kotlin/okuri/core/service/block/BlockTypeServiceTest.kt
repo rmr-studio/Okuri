@@ -51,10 +51,7 @@ class BlockTypeServiceTest {
 
     @MockitoBean
     private lateinit var logger: KLogger
-
-    @MockitoBean
-    private lateinit var linterService: BlockDisplayLinterService
-
+    
     @Autowired
     private lateinit var blockTypeService: BlockTypeService
 

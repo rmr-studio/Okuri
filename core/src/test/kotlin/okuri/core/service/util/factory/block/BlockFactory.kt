@@ -4,6 +4,7 @@ import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.ComponentType
+import okuri.core.models.block.display.BlockComponentNode
 import okuri.core.models.block.display.BlockDisplay
 import okuri.core.models.block.display.BlockRenderStructure
 import okuri.core.models.block.display.BlockTypeNesting
@@ -15,6 +16,15 @@ import okuri.core.models.common.grid.LayoutGrid
 import java.util.*
 
 object BlockFactory {
+
+    fun createComponent(): BlockComponentNode = BlockComponentNode(
+        id = "component_1",
+        type = ComponentType.CONTACT_CARD,
+        props = mapOf(
+            "title" to "Contact Card",
+            "showEmail" to true
+        )
+    )
 
     fun createType(
         orgId: UUID,
