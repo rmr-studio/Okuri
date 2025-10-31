@@ -34,7 +34,7 @@ export const createContentMetadata = (
     data: Record<string, unknown>,
     overrides?: Partial<BlockMeta>
 ): BlockContentMetadata => ({
-    type: "block_reference",
+    type: "content",
     data,
     meta: createMeta(overrides),
 });

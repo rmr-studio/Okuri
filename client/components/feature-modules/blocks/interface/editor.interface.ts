@@ -40,21 +40,17 @@ export interface BlockEnvironmentProviderProps extends ChildNodeProps {
 /** Context contract exposed to consumers. */
 export interface BlockEnvironmentContextValue {
     environment: EditorEnvironment;
+    isInitialized: boolean;
+    setIsInitialized(value: boolean): void;
     addBlock(tree: BlockNode, parentId?: string | null): string;
     removeBlock(blockId: string): void;
     updateBlock(blockId: string, updatedContent: BlockNode): void;
-    updateLayout(blockId: string, updatedDimensions: GridRect): void;
 
     getBlock(blockId: string): BlockNode | undefined;
     getTrees(): BlockTree[];
 
     insertBlock(child: BlockNode, parentId: string, slotName: string, index: number | null): string;
-    moveBlock(
-        blockId: string,
-        targetParentId: string | null,
-        targetSlot?: string,
-        layoutOverride?: GridRect
-    ): void;
+    moveBlock(blockId: string, targetParentId: string | null, targetSlot?: string): void;
 
     getParent(blockId: string): string | null;
     getChildren(blockId: string, slotName?: string): string[];

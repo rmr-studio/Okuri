@@ -355,27 +355,6 @@ const updateLayoutRecursive = (node: BlockNode, blockId: string, layout: GridRec
     };
 };
 
-export const persistLayoutOnTree = (
-    tree: BlockTree,
-    blockId: string,
-    layout: GridRect
-): BlockTree => {
-    if (tree.root.block.id === blockId) {
-        return {
-            ...tree,
-            root: applyLayoutToNode(tree.root, layout),
-        };
-    }
-
-    if (!isContentNode(tree.root) || !tree.root.children) {
-        return tree;
-    }
-
-    return {
-        ...tree,
-        root: updateLayoutRecursive(tree.root, blockId, layout),
-    };
-};
 
 /**
  * After any structural changes to a tree, we may need to recalculate layouts to ensure

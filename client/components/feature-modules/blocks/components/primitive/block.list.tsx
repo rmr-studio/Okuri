@@ -1,6 +1,6 @@
 import { createRenderElement } from "../../util/render/render-element.registry";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import React from "react";
+import React, { FC } from "react";
 import { z } from "zod";
 import { AddressCard } from "../bespoke/AddressCard";
 import { InvoiceLineItemCard } from "../bespoke/InvoiceLineItemCard";
@@ -33,11 +33,16 @@ type Renderer = React.ComponentType<{
     context: Omit<Props, "items" | "itemComponent">;
 }>;
 
+// Extract the actual React components from RenderElementMetadata
+const AddressCardComponent = AddressCard.component as FC<any>;
+const TaskCardComponent = TaskCard.component as FC<any>;
+const InvoiceLineItemCardComponent = InvoiceLineItemCard.component as FC<any>;
+
 const componentMap: Record<string, Renderer> = {
-    ADDRESS_CARD: ({ data }) => <AddressCard address={data} />,
-    PROJECT_TASK: ({ data }) => <TaskCard task={data} />,
+    ADDRESS_CARD: ({ data }) => <AddressCardComponent address={data} />,
+    PROJECT_TASK: ({ data }) => <TaskCardComponent task={data} />,
     INVOICE_LINE_ITEM: ({ data, context }) => (
-        <InvoiceLineItemCard item={data} currency={context.currency} />
+        <InvoiceLineItemCardComponent item={data} currency={context.currency} />
     ),
 };
 
@@ -78,19 +83,19 @@ export const Block: React.FC<Props> = ({
 
     if (title || description) {
         return (
-            <Card className="transition-shadow duration-150 hover:shadow-lg">
+            <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-lg">
                 <CardHeader>
                     {title ? (
                         <CardTitle className="text-base font-semibold">{title}</CardTitle>
                     ) : null}
                     {description ? <CardDescription>{description}</CardDescription> : null}
                 </CardHeader>
-                <CardContent>{content}</CardContent>
+                <CardContent className="flex-1">{content}</CardContent>
             </Card>
         );
     }
 
-    return content;
+    return <div className="h-full flex flex-col">{content}</div>;
 };
 
 export const ListBlock = createRenderElement({

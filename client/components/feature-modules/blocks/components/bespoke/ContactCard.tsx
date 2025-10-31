@@ -13,6 +13,8 @@ const schema = z
             .object({
                 id: z.string().optional(),
                 name: z.string().optional(),
+                email: z.string().optional(), // Support flat email
+                phone: z.string().optional(), // Support flat phone
                 contact: z
                     .object({
                         email: z.string().optional(),
@@ -21,16 +23,18 @@ const schema = z
                     .partial()
                     .optional(),
                 company: z
-                    .object({
-                        name: z.string().optional(),
-                    })
-                    .partial()
+                    .union([
+                        z.string(), // Accept string
+                        z.object({
+                            name: z.string().optional(),
+                        }).partial(),
+                    ])
                     .optional(),
                 archived: z.boolean().optional(),
                 type: z.string().optional(),
                 organisationId: z.string().optional(),
             })
-            .partial()
+            .passthrough()
             .optional(),
         accounts: z
             .array(
@@ -56,13 +60,15 @@ type Props = z.infer<typeof schema> & {
 
 const Block: FC<Props> = ({ client, accounts, href, avatarUrl, avatarShape }) => {
     const name = client?.name ?? "Unnamed client";
-    const email = client?.contact?.email ?? "No email";
-    const phone = client?.contact?.phone;
-    const companyName = client?.company?.name;
+    const email = client?.contact?.email ?? client?.email ?? "No email";
+    const phone = client?.contact?.phone ?? client?.phone;
+    const companyName = typeof client?.company === "string"
+        ? client.company
+        : client?.company?.name;
     const account = accounts?.[0];
 
     const body = (
-        <Card className="transition-shadow duration-150 hover:shadow-lg">
+        <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar className={avatarShape === "square" ? "rounded-md" : "rounded-full"}>
                     <AvatarImage src={avatarUrl ?? undefined} alt={name} />
@@ -73,7 +79,7 @@ const Block: FC<Props> = ({ client, accounts, href, avatarUrl, avatarShape }) =>
                     <CardDescription className="truncate">{email}</CardDescription>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <CardContent className="flex-1 space-y-3 text-sm text-muted-foreground">
                 {phone ? <div className="font-medium text-foreground">{phone}</div> : null}
                 {companyName ? (
                     <div>

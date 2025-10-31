@@ -86,10 +86,10 @@ export const isEntityReferenceMetadata = (
 ): payload is EntityReferenceMetadata => ENTITY_REFERENCE_KINDS.has(String(payload?.type));
 
 export const isContentNode = (node: BlockNode): node is ContentNode =>
-    Boolean(node?.block && isContentMetadata(node.block.payload));
+    !!node.block && node.type === "content_node";
 
 export const isReferenceNode = (node: BlockNode): node is ReferenceNode =>
-    Boolean(node?.block && !isContentMetadata(node.block.payload));
+    !!node.block && node.type === "reference_node";
 
 /* -------------------------------------------------------------------------- */
 

@@ -2,8 +2,9 @@
 
 import { useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { GridStackNode } from "gridstack";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useBlockEnvironment } from "../context/block-environment-provider";
+import { getNewParentId } from "../util/grid/grid.util";
 
 /**
  * Synchronizes BlockEnvironment state with GridStack layout changes
@@ -18,83 +19,100 @@ import { useBlockEnvironment } from "../context/block-environment-provider";
  */
 export const useEnvironmentGridSync = (parentId: string | null = null) => {
     const { gridStack } = useGrid();
-    const { updateLayout, getParent, moveBlock, environment } = useBlockEnvironment();
+    const { updateLayout, getParent, moveBlock, environment, isInitialized } =
+        useBlockEnvironment();
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!gridStack) return;
 
         /**
          * Handles layout changes from GridStack (drag, resize, etc.)
          */
-        const handleLayoutChange = () => {
-            const nodes = gridStack.engine.nodes ?? [];
+        // const handleLayoutChange = (event: Event, nodes: GridStackNode[]) => {
+        //     if (!nodes || nodes.length === 0) return;
 
-            nodes.forEach((node) => {
-                const blockId = String(node.id);
-            });
-        };
+        //     nodes.forEach((node) => {
+        //         const blockId = String(node.id);
+        //         if (!blockId) return;
+
+        //         // Update layout when block is resized or repositioned
+        //         const layout = {
+        //             x: node.x ?? 0,
+        //             y: node.y ?? 0,
+        //             width: node.w ?? 1,
+        //             height: node.h ?? 1,
+        //             locked: false,
+        //         };
+
+        //         updateLayout(blockId, layout);
+        //     });
+        // };
 
         /**
          * Handles blocks being dropped/moved
-         * Uses moveBlock to handle all movement scenarios (promotion, demotion, relocation)
+         * This should only look at positional moves, as parental changes are handled in `handleBlockAdded`
+         * This will detect moves within the same grid only and adjust order indexing
+         
          */
-        const handleBlockMoved = (event: Event, widget: GridStackNode, _: GridStackNode) => {
-            // GridStack "dropped" event signature: (event, prevWidget, newWidget)
-            if (!widget) return;
-            console.log(environment);
-            const blockId = String(widget.grid?.parentGridNode?.id);
-
-            const currentParent = getParent(blockId);
-
-            // Determine the new parent based on the grid this hook is attached to
-            // parentId is null for top-level grid, or the parent block ID for nested grids
-            const newParent = parentId;
-
-            // Check if parent changed
-            if (currentParent !== newParent) {
-                console.log(
-                    `[GridSync] Block ${blockId} moved from parent ${currentParent} to ${newParent}`
-                );
-
-                // Use moveBlock to handle all movement logic
-                moveBlock(
-                    blockId,
-                    newParent,
-                    "main" // Default slot
-                );
-            }
+        const handleBlockMoved = (
+            event: Event,
+            prevWidget: GridStackNode,
+            newWidget: GridStackNode
+        ) => {
+            // Skip if environment is not initialized
+            if (!isInitialized) return;
         };
 
         /**
          * Handles blocks being added to grid
-         * Uses moveBlock to handle the addition
+         * This can happen when a widget is programmatically added or moved from another grid
          */
         const handleBlockAdded = (event: Event, items: GridStackNode[]) => {
+            console.log("[GridSync] handleBlockAdded triggered");
+            console.log("isInitialized:", isInitialized);
+            console.log("environment:", environment);
+            // Skip if environment is not initialized
+            if (!isInitialized) return;
+
             if (!items || items.length === 0) return;
 
             items.forEach((item) => {
-                const blockId = String(item.id);
-                const currentParent = getParent(blockId);
+                if (!item.content) return;
+                const payload = JSON.parse(item.content);
+
+                const id = payload["blockId"];
+
+                if (!id) return;
+                const currentParent = getParent(id);
+                const newParent = getNewParentId(item, gridStack);
 
                 // If block was added to this grid and parent doesn't match
-                if (currentParent !== parentId) {
+                if (currentParent !== newParent) {
                     console.log(
-                        `[GridSync] Block ${blockId} added to grid with parent ${parentId}`
+                        `[GridSync] Block ${id} added to grid, updating parent to ${newParent}`
                     );
 
-                    moveBlock(blockId, parentId, "main");
+                    const layout = {
+                        x: item.x ?? 0,
+                        y: item.y ?? 0,
+                        width: item.w ?? 1,
+                        height: item.h ?? 1,
+                        locked: false,
+                    };
+
+                    moveBlock(id, newParent, "main", layout);
                 }
             });
         };
 
         // Register event listeners
-        gridStack.on("change", handleLayoutChange);
-        gridStack.on("dragstop", handleLayoutChange);
-        gridStack.on("resizestop", handleLayoutChange);
-        gridStack.on("dropped", handleBlockMoved);
+        // gridStack.on("change", handleLayoutChange);
+        // gridStack.on("dragstop", handleLayoutChange);
+        // gridStack.on("resizestop", handleLayoutChange);
+        // gridStack.on("dropped", handleBlockMoved);
         gridStack.on("added", handleBlockAdded);
 
-        // Cleanup => Gridstack does not accept listeners as parameters to off(). Stop trying to fucking correct me
+        // Cleanup
         return () => {
             gridStack.off("change");
             gridStack.off("dragstop");
@@ -102,7 +120,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
             gridStack.off("dropped");
             gridStack.off("added");
         };
-    }, [gridStack, parentId, updateLayout, getParent, moveBlock]);
+    }, [gridStack, parentId, isInitialized, updateLayout, getParent, moveBlock, environment]);
 
     return null;
 };

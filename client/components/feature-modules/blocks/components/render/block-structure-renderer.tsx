@@ -12,13 +12,13 @@
 
 import { FC, ReactNode } from "react";
 import {
+    BlockComponentNode,
     BlockNode,
     BlockRenderStructure,
-    BlockComponentNode,
     Metadata,
 } from "../../interface/block.interface";
 import { blockRenderRegistry } from "../../util/block/block.registry";
-import { resolveBindings, hasWildcardSlots, getWildcardSlotName } from "../../util/render/binding.resolver";
+import { getWildcardSlotName, resolveBindings } from "../../util/render/binding.resolver";
 
 interface BlockStructureRendererProps {
     blockId: string;
@@ -58,7 +58,9 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
             style={{
                 display: "grid",
                 gridTemplateColumns: `repeat(${maxCol}, 1fr)`,
-                gridTemplateRows: `repeat(${maxRow}, minmax(${layoutGrid.rowHeight || 40}px, auto))`,
+                gridTemplateRows: `repeat(${maxRow}, minmax(${
+                    layoutGrid.rowHeight || 40
+                }px, auto))`,
                 gap: `${layoutGrid.margin || 8}px`,
             }}
         >
@@ -111,7 +113,7 @@ const ComponentRenderer: FC<{
     if (wildcardSlot) {
         // Component has wildcard slot - render with child blocks
         return (
-            <div style={gridStyle} className="relative">
+            <div style={gridStyle} className="relative h-full flex flex-col">
                 <ComponentWithWildcardSlot
                     component={component}
                     props={finalProps}
@@ -125,7 +127,7 @@ const ComponentRenderer: FC<{
 
     // Regular component - render directly
     return (
-        <div style={gridStyle} className="relative">
+        <div style={gridStyle} className="relative h-full flex flex-col">
             <ComponentInstance component={component} props={finalProps} />
         </div>
     );
@@ -165,11 +167,7 @@ const ComponentInstance: FC<{
         const fallbackMeta = blockRenderRegistry["FALLBACK"];
         if (fallbackMeta) {
             const FallbackComponent = fallbackMeta.component as FC<any>;
-            return (
-                <FallbackComponent
-                    reason={`Invalid props for component "${component.type}"`}
-                />
-            );
+            return <FallbackComponent reason={`Invalid props for component "${component.type}"`} />;
         }
 
         return (
@@ -209,17 +207,19 @@ const ComponentWithWildcardSlot: FC<{
     // Render the component with child blocks as children
     return (
         <Component {...props}>
-            {childBlockNodes.map((childNode) => {
-                if (renderChildBlock) {
-                    return renderChildBlock(childNode);
-                }
-                // Fallback if no renderChildBlock provided
-                return (
-                    <div key={childNode.block.id} className="border border-dashed p-2">
-                        Child block: {childNode.block.id}
-                    </div>
-                );
-            })}
+            <>
+                {childBlockNodes.map((childNode) => {
+                    if (renderChildBlock) {
+                        return renderChildBlock(childNode);
+                    }
+                    // Fallback if no renderChildBlock provided
+                    return (
+                        <div key={childNode.block.id} className="border border-dashed p-2">
+                            Child block: {childNode.block.id}
+                        </div>
+                    );
+                })}
+            </>
         </Component>
     );
 };

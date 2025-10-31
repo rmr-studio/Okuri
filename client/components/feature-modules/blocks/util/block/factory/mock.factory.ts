@@ -4,22 +4,12 @@ import {
     BlockNode,
     BlockRenderStructure,
     BlockType,
-    ReferenceNode,
 } from "../../../interface/block.interface";
-import {
-    createBlockBase,
-    createBlockType,
-    createContentNode,
-    createEntityReferenceMetadata,
-    createReference,
-} from "./block.factory";
+import { createBlockType, createContentNode } from "./block.factory";
 import {
     ALL_BLOCK_COMPONENT_TYPES,
     createBlockListBlockType,
-    createEntityReferenceListType,
     createLayoutContainerBlockType,
-    createAddressBlockType,
-    createNoteBlockType,
     DEFAULT_GRID_LAYOUT,
 } from "./type.factory";
 
@@ -106,20 +96,18 @@ export function createContactBlockNode(organisationId: string): BlockNode {
                 version: 1,
                 layoutGrid: {
                     layout: DEFAULT_GRID_LAYOUT,
-                    rowHeight: 40,
-                    margin: 8,
                     items: [
                         // Contact card on left (cols 0-5)
                         {
                             id: "contact_card",
-                            sm: { x: 0, y: 0, w: 12, h: 8, locked: false },
-                            lg: { x: 0, y: 0, w: 6, h: 10, locked: false },
+                            sm: { x: 0, y: 0, width: 12, height: 8, locked: false },
+                            lg: { x: 0, y: 0, width: 6, height: 10, locked: false },
                         },
                         // Address list on right (cols 6-11)
                         {
                             id: "address_list",
-                            sm: { x: 0, y: 8, w: 12, h: 8, locked: false },
-                            lg: { x: 6, y: 0, w: 6, h: 10, locked: false },
+                            sm: { x: 0, y: 8, width: 12, height: 8, locked: false },
+                            lg: { x: 6, y: 0, width: 6, height: 10, locked: false },
                         },
                     ],
                 },
@@ -164,10 +152,6 @@ export function createContactBlockNode(organisationId: string): BlockNode {
                     },
                 },
             },
-        },
-        nesting: {
-            max: undefined,
-            allowedTypes: ALL_BLOCK_COMPONENT_TYPES,
         },
         createdAt: nowIso(),
         updatedAt: nowIso(),
@@ -270,7 +254,8 @@ export function createLayoutContainerNode(organisationId: string): BlockNode {
             type: noteType,
             name: "Welcome note",
             data: {
-                content: "Welcome to the block environment! This is a nested block inside a layout container.",
+                content:
+                    "Welcome to the block environment! This is a nested block inside a layout container.",
             },
         }),
         createContentNode({
@@ -278,7 +263,8 @@ export function createLayoutContainerNode(organisationId: string): BlockNode {
             type: noteType,
             name: "Instructions",
             data: {
-                content: "You can add, remove, and rearrange blocks using the toolbar. Try dragging blocks around!",
+                content:
+                    "You can add, remove, and rearrange blocks using the toolbar. Try dragging blocks around!",
             },
         }),
     ];

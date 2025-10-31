@@ -55,31 +55,40 @@ export function buildWidgetTree(
     );
 
     // Only create subgrids for blocks with wildcard slots (dynamic containers)
-    if (hasWildcards && isContentNode(node) && node.children) {
-        const subgridChildren: GridStackWidget[] = [];
+    if (hasWildcards && isContentNode(node)) {
+        const subgridOpt: Partial<GridStackOptions> = {
+            column: 12,
+            cellHeight: 40,
+            margin: 8,
+            acceptWidgets: true,
+            animate: true,
+            class: "grid-stack-subgrid",
+        };
+
+        if (!node.children) {
+            widget.subGridOpts = subgridOpt;
+            widgetMap.set(blockId, widget); // Update map with subgrid info
+            return widget;
+        }
 
         // Process each slot's children
-        Object.entries(node.children).forEach(([slotName, slotChildren]) => {
-            slotChildren.forEach((child) => {
-                // Recursively build child widget
-                const childWidget = buildWidgetTree(child, widgetMap);
-                subgridChildren.push(childWidget);
-                // Note: child is already added to widgetMap inside buildWidgetTree
-            });
-        });
+        const children: GridStackWidget[] = Object.entries(node.children).flatMap(
+            ([slotName, slotChildren]) => {
+                return slotChildren.map((child) => {
+                    // Recursively build child widget
+                    return buildWidgetTree(child, widgetMap);
 
-        // Attach subgrid configuration if we have children
-        if (subgridChildren.length > 0) {
-            widget.subGridOpts = {
-                column: 12,
-                cellHeight: 40,
-                margin: 8,
-                acceptWidgets: true,
-                animate: true,
-                class: "grid-stack-subgrid",
-                children: subgridChildren,
-            };
-        }
+                    // Note: child is already added to widgetMap inside buildWidgetTree
+                });
+            }
+        );
+
+        widget.subGridOpts = {
+            ...subgridOpt,
+            children: children,
+        };
+
+        widgetMap.set(blockId, widget); // Update map with subgrid info
     }
 
     return widget;
@@ -91,9 +100,7 @@ export function buildWidgetTree(
  * @param trees - Array of block trees to convert
  * @returns Object containing GridStack options and complete widget map
  */
-export function buildGridEnvironmentWithWidgetMap(
-    trees: { root: BlockNode }[]
-): {
+export function buildGridEnvironmentWithWidgetMap(trees: { root: BlockNode }[]): {
     options: GridStackOptions;
     widgetMap: Map<string, GridStackWidget>;
 } {
@@ -105,8 +112,6 @@ export function buildGridEnvironmentWithWidgetMap(
 
     return {
         options: {
-            column: "auto",
-            sizeToContent: true,
             margin: 12,
             animate: true,
             acceptWidgets: true,

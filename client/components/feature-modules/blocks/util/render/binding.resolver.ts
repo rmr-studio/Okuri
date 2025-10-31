@@ -8,12 +8,7 @@
  */
 
 import { JSONPath } from "jsonpath-plus";
-import {
-    BlockBinding,
-    BlockNode,
-    Metadata,
-    isContentNode,
-} from "../../interface/block.interface";
+import { BlockBinding, BlockNode, Metadata, isContentNode } from "../../interface/block.interface";
 
 /**
  * Resolves all bindings for a component to produce final props.
@@ -54,19 +49,6 @@ function resolveBinding(
 
         case "RefSlot":
             return resolveRefSlot(binding.source, childBlocks);
-
-        case "Slot":
-            // Component slots - just return the slot name for now
-            // The component itself will handle rendering child components
-            return binding.source.slot;
-
-        case "BlockTreeRef":
-            // Block tree references - return child blocks
-            return childBlocks[binding.source.slot] || [];
-
-        case "ResolvedRefs":
-            // Resolved entity references
-            return resolveResolvedRefs(binding.source, payload, childBlocks);
 
         default:
             console.warn(`Unknown binding source type:`, binding.source);
@@ -186,9 +168,7 @@ function extractBlockData(block: BlockNode): Record<string, unknown> {
 /**
  * Checks if a component has wildcard slots ("*").
  */
-export function hasWildcardSlots(component: {
-    slots?: Record<string, string[]>;
-}): boolean {
+export function hasWildcardSlots(component: { slots?: Record<string, string[]> }): boolean {
     if (!component.slots) return false;
 
     return Object.values(component.slots).some((slotIds) => slotIds.includes("*"));

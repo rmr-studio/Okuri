@@ -11,11 +11,10 @@ import {
 export const DEFAULT_GRID_LAYOUT: GridRect = {
     x: 0,
     y: 0,
-    width: 60,
-    height: 30,
+    width: 12,
+    height: 4,
     locked: false,
 };
-
 
 const createBaseDisplay = (component: BlockComponentNode): BlockDisplay => ({
     form: { fields: {} },

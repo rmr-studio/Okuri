@@ -1,0 +1,33 @@
+/**
+ * Custom GridStack styles for block height filling
+ *
+ * Ensures blocks fill the entire height of their GridStack item
+ * and resize properly when the grid item is resized.
+ */
+
+/* Make GridStack item content fill the entire item height */
+.grid-stack-item-content {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Make the render root fill the content container */
+.grid-render-root {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure subgrids also fill their container height */
+.grid-stack-subgrid {
+    height: 100% !important;
+}
+
+/* Make nested grid items also fill height */
+.grid-stack-subgrid .grid-stack-item-content {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}

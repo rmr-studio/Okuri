@@ -43,12 +43,12 @@ const block: FC<Props> = ({ address, title = "Address", description, footer }) =
     const location = [city, state, postalCode].filter(Boolean).join(", ");
 
     return (
-        <Card className="transition-shadow duration-150 hover:shadow-lg">
+        <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-lg">
             <CardHeader>
                 <CardTitle className="text-base font-semibold">{title}</CardTitle>
                 {description ? <CardDescription>{description}</CardDescription> : null}
             </CardHeader>
-            <CardContent className="space-y-1 text-sm text-foreground">
+            <CardContent className="flex-1 space-y-1 text-sm text-foreground">
                 {street ? <div>{street}</div> : null}
                 {location ? <div>{location}</div> : null}
                 {country ? <div>{country}</div> : null}

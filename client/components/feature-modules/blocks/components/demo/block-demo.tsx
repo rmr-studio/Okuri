@@ -12,7 +12,8 @@ import {
 import type { GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { PlusIcon, TypeIcon } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import "../../styles/gridstack-custom.css";
 
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
@@ -67,11 +68,15 @@ export const BlockDemo = () => {
 /* -------------------------------------------------------------------------- */
 
 const BlockEnvironmentWorkspace: React.FC = () => {
-    const { getTrees } = useBlockEnvironment();
+    const { getTrees, environment } = useBlockEnvironment();
     const { options, widgetMap } = useMemo(
         () => buildGridEnvironmentWithWidgetMap(getTrees()),
         [getTrees]
     );
+
+    useEffect(() => {
+        console.log(environment);
+    }, [environment]);
 
     return (
         <>
@@ -237,7 +242,8 @@ export const BlockEnvironmentGridSync: React.FC<{ parentId: string | null }> = (
  */
 const GridStackWidgetSync: React.FC = () => {
     const { gridStack, _rawWidgetMetaMap } = useGrid();
-    const { getTrees, getParent, environment } = useBlockEnvironment();
+    const { getTrees, getParent, environment, isInitialized, setIsInitialized } =
+        useBlockEnvironment();
 
     const trees = useMemo(() => getTrees(), [getTrees]);
     const topLevelBlocks = useMemo(() => trees, [trees]);
@@ -249,8 +255,9 @@ const GridStackWidgetSync: React.FC = () => {
 
     // Track previous state
     const prevBlockIdsRef = useRef(new Set<string>());
+    const hasInitiallyLoadedRef = useRef(false);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!gridStack) return;
 
         const currentBlockIds = allBlockIds;
@@ -351,6 +358,15 @@ const GridStackWidgetSync: React.FC = () => {
 
         // Update the ref for next render
         prevBlockIdsRef.current = new Set(currentBlockIds);
+
+        // Mark as initialized after the first load completes
+        if (!hasInitiallyLoadedRef.current && !isInitialized) {
+            hasInitiallyLoadedRef.current = true;
+            setIsInitialized(true);
+            console.log(
+                "[GridStackWidgetSync] Initial grid load complete, environment initialized"
+            );
+        }
     }, [gridStack, allBlockIds, topLevelBlocks, environment, getParent, _rawWidgetMetaMap]);
 
     return null;
