@@ -60,7 +60,7 @@ data class Block(
         discriminatorMapping = [
             DiscriminatorMapping(value = "entity_reference", schema = EntityReferenceMetadata::class),
             DiscriminatorMapping(value = "block_reference", schema = BlockReferenceMetadata::class),
-            DiscriminatorMapping(value = "block_content", schema = BlockReferenceMetadata::class),
+            DiscriminatorMapping(value = "block_content", schema = BlockContentMetadata::class),
         ]
     )
     val payload: Metadata,

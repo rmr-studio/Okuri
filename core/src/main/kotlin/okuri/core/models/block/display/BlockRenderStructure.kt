@@ -31,9 +31,9 @@ import okuri.core.models.common.theme.ThemeTokens
  *      "type": "TABLE",
  *      "props": {
  *          "columns": [
- *              "{ "key": "name", "label": "Name" },
- *              "{ "key": "qty", "label": "Qty" },
- *              "{ "key": "price", "label": "Price" }]
+ *              { "key": "name", "label": "Name" },
+ *              { "key": "qty", "label": "Qty" },
+ *              { "key": "price", "label": "Price" }]
  *              },
  *      "bindings": [ { "type": "data", "prop": "rows", "path": "$.data/lineItems" } ]},
  *   "card": {
