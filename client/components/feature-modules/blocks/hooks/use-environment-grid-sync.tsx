@@ -19,8 +19,7 @@ import { getNewParentId } from "../util/grid/grid.util";
  */
 export const useEnvironmentGridSync = (parentId: string | null = null) => {
     const { gridStack } = useGrid();
-    const { updateLayout, getParent, moveBlock, environment, isInitialized } =
-        useBlockEnvironment();
+    const { getParent, moveBlock, environment, isInitialized } = useBlockEnvironment();
 
     useLayoutEffect(() => {
         if (!gridStack) return;
@@ -92,15 +91,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
                         `[GridSync] Block ${id} added to grid, updating parent to ${newParent}`
                     );
 
-                    const layout = {
-                        x: item.x ?? 0,
-                        y: item.y ?? 0,
-                        width: item.w ?? 1,
-                        height: item.h ?? 1,
-                        locked: false,
-                    };
-
-                    moveBlock(id, newParent, "main", layout);
+                    moveBlock(id, newParent, "main");
                 }
             });
         };
@@ -120,7 +111,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
             gridStack.off("dropped");
             gridStack.off("added");
         };
-    }, [gridStack, parentId, isInitialized, updateLayout, getParent, moveBlock, environment]);
+    }, [gridStack, parentId, isInitialized, getParent, moveBlock, environment]);
 
     return null;
 };

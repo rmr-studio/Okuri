@@ -34,6 +34,7 @@ import {
     createNoteNode,
 } from "../../util/block/factory/mock.factory";
 import { getTreeId } from "../../util/environment/environment.util";
+import { hasWildcardSlots } from "../../util/render/binding.resolver";
 import { buildGridEnvironmentWithWidgetMap } from "../../util/render/render.tree";
 import { PanelWrapper, SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 
@@ -275,10 +276,29 @@ const GridStackWidgetSync: React.FC = () => {
 
         // Add new widgets
         addedBlockIds.forEach((blockId) => {
-            // Check if widget already exists in GridStack
-            const alreadyInGrid = gridStack.engine.nodes?.some(
-                (node) => String(node.id) === blockId
-            );
+            // Check if widget already exists in GridStack (including subgrids)
+            const checkNodeExists = (
+                nodes: Array<{ id?: string; subGrid?: { engine?: { nodes?: unknown[] } } }>
+            ): boolean => {
+                return nodes.some((node) => {
+                    if (String(node.id) === blockId) return true;
+                    // Recursively check subgrids
+                    if (node.subGrid?.engine?.nodes) {
+                        return checkNodeExists(
+                            node.subGrid.engine.nodes as Array<{
+                                id?: string;
+                                subGrid?: { engine?: { nodes?: unknown[] } };
+                            }>
+                        );
+                    }
+                    return false;
+                });
+            };
+
+            const alreadyInGrid = gridStack.engine.nodes
+                ? checkNodeExists(gridStack.engine.nodes)
+                : false;
+
             if (alreadyInGrid) {
                 return;
             }
@@ -297,7 +317,7 @@ const GridStackWidgetSync: React.FC = () => {
             const layout = blockNode.block.layout ?? getCurrentDimensions(blockNode);
             const parentId = getParent(blockId);
 
-            const widgetConfig = {
+            const widgetConfig: GridStackWidget = {
                 id: blockId,
                 x: layout.x,
                 y: layout.y,
@@ -309,15 +329,59 @@ const GridStackWidgetSync: React.FC = () => {
                 }),
             };
 
+            // Check if this block should have a subgrid (for blocks with wildcard slots)
+            const renderStructure = blockNode.block.type.display.render;
+            const hasWildcards = Object.values(renderStructure.components || {}).some((component) =>
+                hasWildcardSlots(component)
+            );
+
+            if (hasWildcards && isContentNode(blockNode)) {
+                // Add subgrid configuration - children will be added separately by the sync logic
+                widgetConfig.subGridOpts = {
+                    column: 12,
+                    cellHeight: 40,
+                    margin: 8,
+                    acceptWidgets: true,
+                    animate: true,
+                    class: "grid-stack-subgrid",
+                    children: [],
+                };
+            }
+
             if (!parentId) {
                 // Top-level block - add to main grid
                 console.log(`Adding top-level widget ${blockId} to GridStack`);
                 gridStack.addWidget(widgetConfig);
             } else {
                 // Nested block - add to parent's subgrid
+                // Need to search recursively through subgrids to find the parent
                 console.log(`Adding nested widget ${blockId} to parent ${parentId} subgrid`);
-                const parentNode = gridStack.engine.nodes?.find((n) => String(n.id) === parentId);
+
+                const findNodeRecursively = (
+                    nodes: Array<{ id?: string; subGrid?: { engine?: { nodes?: unknown[] } } }>
+                ): { id?: string; subGrid?: unknown } | null => {
+                    for (const node of nodes) {
+                        if (String(node.id) === parentId) {
+                            return node;
+                        }
+                        if (node.subGrid?.engine?.nodes) {
+                            const found = findNodeRecursively(
+                                node.subGrid.engine.nodes as Array<{
+                                    id?: string;
+                                    subGrid?: { engine?: { nodes?: unknown[] } };
+                                }>
+                            );
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+
+                const parentNode = gridStack.engine.nodes
+                    ? findNodeRecursively(gridStack.engine.nodes)
+                    : null;
                 const parentSubGrid = parentNode?.subGrid;
+
                 if (parentSubGrid) {
                     parentSubGrid.addWidget(widgetConfig);
                 } else {
@@ -367,7 +431,16 @@ const GridStackWidgetSync: React.FC = () => {
                 "[GridStackWidgetSync] Initial grid load complete, environment initialized"
             );
         }
-    }, [gridStack, allBlockIds, topLevelBlocks, environment, getParent, _rawWidgetMetaMap]);
+    }, [
+        gridStack,
+        allBlockIds,
+        topLevelBlocks,
+        environment,
+        getParent,
+        _rawWidgetMetaMap,
+        isInitialized,
+        setIsInitialized,
+    ]);
 
     return null;
 };
