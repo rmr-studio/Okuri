@@ -5,6 +5,17 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+export const uniqueId = (prefix: string) =>
+    `${prefix}-${
+        typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2)
+    }`;
+
+export const nowIso = (): string => {
+    return new Date().toISOString();
+};
+
 export function undefinedIfNull<T>(value: T | null): T | undefined {
     return value === null ? undefined : value;
 }

@@ -14,8 +14,6 @@ CREATE TABLE IF NOT EXISTS "organisations"
     "business_number"   TEXT,
     "tax_id"            TEXT,
     "payment_details"   jsonb,
-    "custom_attributes" jsonb,
-    "tile_layout"       jsonb,
     "member_count"      INTEGER          NOT NULL DEFAULT 0,
     "created_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
     "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
@@ -257,9 +255,11 @@ CREATE TABLE public.block_references
     "entity_type" text    NOT NULL, -- e.g. "line_item", "client", "invoice", "block"
     "entity_id"   uuid    NOT NULL, -- id of the referenced entity
     "path"        text    NULL,     -- JSON path within the block where this reference is used.
-    "order_index" integer NOT NULL DEFAULT 0,
+    "order_index" integer NULL,
     UNIQUE (block_id, entity_type, entity_id, path)
 );
+
+
 
 CREATE TABLE public.block_children
 (

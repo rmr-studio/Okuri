@@ -37,15 +37,6 @@ const QuickActionModal: FC<Props> = ({
                         <CommandItem onSelect={onInsert}>
                             <CommandIcon className="size-4 opacity-60" />
                             <div className="flex flex-col items-start">
-                                <span>Insert Panel</span>
-                                <span className="text-xs text-muted-foreground">
-                                    Add a new panel to this workspace
-                                </span>
-                            </div>
-                        </CommandItem>
-                        <CommandItem onSelect={onInsert}>
-                            <CommandIcon className="size-4 opacity-60" />
-                            <div className="flex flex-col items-start">
                                 <span>Insert Block…</span>
                                 <span className="text-xs text-muted-foreground">
                                     Add a new block to this panel

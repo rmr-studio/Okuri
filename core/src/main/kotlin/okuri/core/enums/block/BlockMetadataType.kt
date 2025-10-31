@@ -1,14 +1,10 @@
 package okuri.core.enums.block
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonValue
 
-enum class BlockMetadataType {
-    @JsonProperty("content")
-    CONTENT,
-
-    @JsonProperty("block_reference")
-    BLOCK_REFERENCE,
-
-    @JsonProperty("entity_reference")
-    ENTITY_REFERENCE
+// ----- Discriminator enum with wire values -----
+enum class BlockMetadataType(@get:JsonValue val def: String) {
+    CONTENT("content"),
+    ENTITY_REFERENCE("entity_reference"),
+    BLOCK_REFERENCE("block_reference")
 }

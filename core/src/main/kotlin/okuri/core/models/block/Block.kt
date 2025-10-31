@@ -1,7 +1,13 @@
 package okuri.core.models.block
 
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
+import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.entity.util.AuditableModel
-import okuri.core.models.block.structure.Metadata
+import okuri.core.models.block.metadata.BlockContentMetadata
+import okuri.core.models.block.metadata.BlockReferenceMetadata
+import okuri.core.models.block.metadata.EntityReferenceMetadata
+import okuri.core.models.block.metadata.Metadata
+import okuri.core.models.common.grid.GridRect
 import java.io.Serializable
 import java.time.ZonedDateTime
 import java.util.*
@@ -45,6 +51,18 @@ data class Block(
     val name: String?,
     val organisationId: UUID,
     val type: BlockType,
+    // Current layout positioning of this block within a grid
+    val layout: GridRect? = null,
+
+    @field:Schema(
+        oneOf = [EntityReferenceMetadata::class, BlockReferenceMetadata::class, BlockContentMetadata::class],
+        discriminatorProperty = "type",
+        discriminatorMapping = [
+            DiscriminatorMapping(value = "entity_reference", schema = EntityReferenceMetadata::class),
+            DiscriminatorMapping(value = "block_reference", schema = BlockReferenceMetadata::class),
+            DiscriminatorMapping(value = "block_content", schema = BlockContentMetadata::class),
+        ]
+    )
     val payload: Metadata,
     val archived: Boolean,
     // If there are any validation errors with this block's payload

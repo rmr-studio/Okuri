@@ -5,8 +5,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import okuri.core.models.block.Block
-import okuri.core.models.block.BlockTree
 import okuri.core.models.block.request.CreateBlockRequest
+import okuri.core.models.block.tree.BlockTree
 import okuri.core.service.block.BlockService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

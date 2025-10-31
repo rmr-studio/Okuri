@@ -82,7 +82,6 @@ class OrganisationService(
                 address = request.address,
                 taxId = request.taxId,
                 organisationPaymentDetails = request.payment,
-                customAttributes = request.customAttributes,
             )
             organisationRepository.save(entity).run {
                 val organisation = this.toModel(includeMetadata = false)
@@ -146,8 +145,6 @@ class OrganisationService(
                     address = organisation.address
                     taxId = organisation.taxId
                     organisationPaymentDetails = organisation.organisationPaymentDetails
-                    customAttributes = organisation.customAttributes
-                    tileLayout = organisation.tileLayout
                 }
 
                 organisationRepository.save(entity).let { updatedEntity ->

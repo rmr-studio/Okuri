@@ -3,11 +3,14 @@ package okuri.core.service.block
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
+import okuri.core.enums.block.BlockReferenceFetchPolicy
 import okuri.core.enums.block.isStrict
 import okuri.core.enums.util.OperationType
-import okuri.core.models.block.*
+import okuri.core.models.block.Block
+import okuri.core.models.block.Reference
+import okuri.core.models.block.metadata.*
 import okuri.core.models.block.request.CreateBlockRequest
-import okuri.core.models.block.structure.*
+import okuri.core.models.block.tree.*
 import okuri.core.models.common.json.JsonObject
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.activity.ActivityService
@@ -80,7 +83,6 @@ class BlockService(
             type = type,
             name = request.name,
             payload = validatedMetadata,
-            parentId = request.parentId, // optional; slot/order managed by BlockChildrenService
             archived = false
         )
 
@@ -215,39 +217,23 @@ class BlockService(
 
         return when (val meta = block.payload) {
             is BlockReferenceMetadata -> {
-                val refs: Reference<BlockTree> = blockReferenceService.findBlockLink(block.id, meta).let {
-                    it.entity.let { ref ->
-                        if (ref == null) {
-                            return@let Reference(
-                                id = it.id,
-                                entityType = it.entityType,
-                                entityId = it.entityId,
-                                entity = null,
-                                warning = it.warning
-                            )
-                        }
+                val (ref, edge) = blockReferenceService.findBlockLink(block.id, meta)
+                val blockRef: Reference = meta.fetchPolicy.let {
+                    if (it == BlockReferenceFetchPolicy.LAZY || edge == null) return@let ref
 
-                        // Build BlockTree for referenced block
-                        buildNode(ref, mutableSetOf<UUID>()).run {
-                            Reference(
-                                id = it.id,
-                                entityType = it.entityType,
-                                entityId = it.entityId,
-                                entity = BlockTree(
-                                    root = this
-                                ),
-                                warning = it.warning
-                            )
-                        }
-                    }
+                    // Build block tree for EAGER fetch
+                    val tree = getBlock(ref.entityId)
+                    ref.copy(
+                        entity = tree,
+                        warning = null,
+                    )
                 }
-
 
                 visited.remove(block.id)
                 ReferenceNode(
                     block = block,
                     reference = BlockTreeReference(
-                        reference = refs
+                        reference = blockRef
                     )
                 )
             }

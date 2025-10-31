@@ -3,34 +3,72 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getInitials } from "@/lib/util/utils";
 import Link from "next/link";
-import { FC, ReactNode } from "react";
+import { FC } from "react";
+import { z } from "zod";
+import { RenderElementMetadata } from "../../util/block/block.registry";
 
-interface AccountSummary {
-    entityId: string;
-    name?: string;
-    domain?: string;
-}
+const schema = z
+    .object({
+        client: z
+            .object({
+                id: z.string().optional(),
+                name: z.string().optional(),
+                email: z.string().optional(), // Support flat email
+                phone: z.string().optional(), // Support flat phone
+                contact: z
+                    .object({
+                        email: z.string().optional(),
+                        phone: z.string().optional(),
+                    })
+                    .partial()
+                    .optional(),
+                company: z
+                    .union([
+                        z.string(), // Accept string
+                        z.object({
+                            name: z.string().optional(),
+                        }).partial(),
+                    ])
+                    .optional(),
+                archived: z.boolean().optional(),
+                type: z.string().optional(),
+                organisationId: z.string().optional(),
+            })
+            .passthrough()
+            .optional(),
+        accounts: z
+            .array(
+                z.object({
+                    entityId: z.string(),
+                    name: z.string().optional(),
+                    domain: z.string().optional(),
+                })
+            )
+            .optional(),
+        href: z.string().optional(),
+        avatarUrl: z.string().nullable().optional(),
+        avatarShape: z.enum(["circle", "square"]).optional(),
+        slots: z.record(z.any()).optional(),
+    })
+    .passthrough();
 
-interface Props {
+type Props = z.infer<typeof schema> & {
     client?: Pick<Client, "id" | "name" | "contact" | "company" | "archived" | "type"> & {
         organisationId?: string;
     };
-    accounts?: AccountSummary[];
-    href?: string;
-    avatarUrl?: string;
-    avatarShape?: "circle" | "square";
-    slots?: Record<string, ReactNode>;
-}
+};
 
-export const ContactCard: FC<Props> = ({ client, accounts, href, avatarUrl, avatarShape }) => {
+const Block: FC<Props> = ({ client, accounts, href, avatarUrl, avatarShape }) => {
     const name = client?.name ?? "Unnamed client";
-    const email = client?.contact?.email ?? "No email";
-    const phone = client?.contact?.phone;
-    const companyName = client?.company?.name;
+    const email = client?.contact?.email ?? client?.email ?? "No email";
+    const phone = client?.contact?.phone ?? client?.phone;
+    const companyName = typeof client?.company === "string"
+        ? client.company
+        : client?.company?.name;
     const account = accounts?.[0];
 
     const body = (
-        <Card className="transition-shadow duration-150 hover:shadow-lg">
+        <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar className={avatarShape === "square" ? "rounded-md" : "rounded-full"}>
                     <AvatarImage src={avatarUrl ?? undefined} alt={name} />
@@ -41,7 +79,7 @@ export const ContactCard: FC<Props> = ({ client, accounts, href, avatarUrl, avat
                     <CardDescription className="truncate">{email}</CardDescription>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <CardContent className="flex-1 space-y-3 text-sm text-muted-foreground">
                 {phone ? <div className="font-medium text-foreground">{phone}</div> : null}
                 {companyName ? (
                     <div>
@@ -82,4 +120,12 @@ export const ContactCard: FC<Props> = ({ client, accounts, href, avatarUrl, avat
     }
 
     return <div className="block">{body}</div>;
+};
+
+export const ContactCard: RenderElementMetadata<typeof schema> = {
+    type: "CONTACT_CARD",
+    name: "Contact card",
+    description: "Displays primary client information with linked account summary.",
+    schema,
+    component: Block as FC<z.infer<typeof schema>>,
 };

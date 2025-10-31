@@ -197,7 +197,7 @@ fun detachChildrenBySlot(parentId: UUID, slot: String) {
 
     val childIds = edges.map { it.childId }
     val children = blockRepository.findAllById(childIds)
-    
+
     // Delete edges
     edgeRepository.deleteAllInBatch(edges)
 }
@@ -256,7 +256,7 @@ blockReferenceService.upsertLinksFor(block, metadata)
 **Missing Implementation Requirements**:
 
 - Need to load block entity and verify it has `BlockReferenceMetadata` payload
-- Need to verify `request.item.type == EntityType.BLOCK`
+- Need to verify `request.item.type == EntityType.BLOCK_TREE`
 - Need to construct complete `BlockReferenceMetadata` from request
 
 **Suggested Approach**:
@@ -266,7 +266,7 @@ val block = blockRepository.findById(id).orElseThrow()
 require(block.payload is BlockReferenceMetadata) {
     "Block must have BlockReferenceMetadata payload"
 }
-require(request.item.type == EntityType.BLOCK) {
+require(request.item.type == EntityType.BLOCK_TREE) {
     "Item must have type BLOCK for block references"
 }
 

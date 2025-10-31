@@ -4,8 +4,7 @@ import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
 import okuri.core.models.block.Block
-import okuri.core.models.block.Referenceable
-import okuri.core.models.block.structure.Metadata
+import okuri.core.models.block.metadata.Metadata
 import org.hibernate.annotations.Type
 import java.util.*
 
@@ -32,19 +31,9 @@ data class BlockEntity(
     @Column(name = "payload", columnDefinition = "jsonb", nullable = false)
     var payload: Metadata,
 
-    @Column(name = "parent_id", columnDefinition = "uuid", nullable = true)
-    var parentId: UUID? = null,
-
     @Column(name = "archived", columnDefinition = "boolean default false")
     var archived: Boolean = false,
-) : AuditableEntity(), Referenceable<Block> {
-
-    /**
-     * Convert this entity into a lightweight Block reference that omits audit information.
-     *
-     * @return A Block representing this entity with id, organisationId, type, name, payload, and archived populated; audit fields (createdAt, updatedAt, createdBy, updatedBy) are omitted.
-     */
-    override fun toReference() = this.toModel(audit = false)
+) : AuditableEntity() {
 
     fun toModel(audit: Boolean = false): Block {
         val id = requireNotNull(this.id) { "BlockEntity ID cannot be null when converting to model" }

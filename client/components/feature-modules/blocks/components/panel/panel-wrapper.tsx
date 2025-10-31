@@ -5,8 +5,8 @@ import {
     pushSelection,
     removeSelection,
     updateSelection,
-} from "@/components/feature-modules/blocks/util/block.focus-manager";
-import { blockElements } from "@/components/feature-modules/blocks/util/block.registry";
+} from "@/components/feature-modules/blocks/util/block/block.focus-manager";
+import { blockElements } from "@/components/feature-modules/blocks/util/block/block.registry";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -379,25 +379,28 @@ export const PanelWrapper: React.FC<Props> = ({
                         className={cn(
                             allowInsert ? "pb-10" : "pb-4",
                             "pt-11",
-                            allowInsert ? "px-4" : "px-3"
+                            allowInsert ? "px-4" : "px-3",
+                            "flex flex-1 flex-col"
                         )}
                     >
                         <div
                             className={cn(
-                                "rounded-lg border bg-background/40 p-4",
+                                "rounded-lg border bg-background/40 p-4 flex flex-col flex-1",
                                 !allowInsert && "border-transparent bg-transparent p-0"
                             )}
                         >
                             <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 {modeLabel}
                             </div>
-                            {content ?? (
-                                <div className="text-sm text-muted-foreground">
-                                    {mode === "form"
-                                        ? "This block does not have a form configuration yet."
-                                        : "This block has no display content yet."}
-                                </div>
-                            )}
+                            <div className="flex-1 flex flex-col">
+                                {content ?? (
+                                    <div className="text-sm text-muted-foreground">
+                                        {mode === "form"
+                                            ? "This block does not have a form configuration yet."
+                                            : "This block has no display content yet."}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         {nested ? <div className="mt-6 space-y-6">{nested}</div> : null}
                     </section>

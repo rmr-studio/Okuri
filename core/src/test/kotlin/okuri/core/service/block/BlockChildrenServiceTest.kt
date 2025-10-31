@@ -1,9 +1,8 @@
 package okuri.core.service.block
 
 import okuri.core.entity.block.BlockChildEntity
-import okuri.core.entity.block.BlockEntity
 import okuri.core.enums.core.ComponentType
-import okuri.core.models.block.structure.BlockTypeNesting
+import okuri.core.models.block.display.BlockTypeNesting
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.service.util.factory.block.BlockFactory
@@ -393,7 +392,7 @@ class BlockChildrenServiceTest {
         val childId = UUID.randomUUID()
 
         val childType = BlockFactory.createType(orgId, key = "contact_card")
-        val child = BlockFactory.createBlock(childId, orgId, childType, parentId = oldParentId)
+        val child = BlockFactory.createBlock(childId, orgId, childType)
 
         val parentType = BlockFactory.createType(orgId)
         val newParent = BlockFactory.createBlock(newParentId, orgId, parentType)
@@ -428,11 +427,6 @@ class BlockChildrenServiceTest {
         verify(edgeRepository).save(argThat<BlockChildEntity> {
             this.parentId == newParentId && this.childId == childId && this.slot == "newSlot"
         })
-
-        // Verify parent pointer updated
-        verify(blockRepository).save(argThat<BlockEntity> {
-            this.id == childId && this.parentId == newParentId
-        })
     }
 
     // =============================================================================================
@@ -448,7 +442,7 @@ class BlockChildrenServiceTest {
         val edge = BlockChildEntity(UUID.randomUUID(), parentId, childId, "items", 0)
 
         val childType = BlockFactory.createType(orgId, key = "contact_card")
-        val child = BlockFactory.createBlock(childId, orgId, childType, parentId = parentId)
+        val child = BlockFactory.createBlock(childId, orgId, childType)
 
         whenever(edgeRepository.findByChildId(childId)).thenReturn(edge)
         whenever(edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, "items")).thenReturn(emptyList())
@@ -459,9 +453,6 @@ class BlockChildrenServiceTest {
         service.detachChild(childId)
 
         verify(edgeRepository).delete(edge)
-        verify(blockRepository).save(argThat<BlockEntity> {
-            this.id == childId && this.parentId == null
-        })
     }
 
     @Test
@@ -492,7 +483,7 @@ class BlockChildrenServiceTest {
         val edge3 = BlockChildEntity(UUID.randomUUID(), parentId, child3Id, "items", 2)
 
         val childType = BlockFactory.createType(orgId, key = "contact_card")
-        val child2 = BlockFactory.createBlock(child2Id, orgId, childType, parentId = parentId)
+        val child2 = BlockFactory.createBlock(child2Id, orgId, childType)
 
 
         whenever(edgeRepository.findByParentIdAndChildId(parentId, child2Id)).thenReturn(edge2)
@@ -520,7 +511,7 @@ class BlockChildrenServiceTest {
         val childId = UUID.randomUUID()
 
         val childType = BlockFactory.createType(orgId, key = "contact_card")
-        val child = BlockFactory.createBlock(childId, orgId, childType, parentId = parentId)
+        val child = BlockFactory.createBlock(childId, orgId, childType)
 
         val parentType = BlockFactory.createType(orgId)
         val parent = BlockFactory.createBlock(parentId, orgId, parentType)

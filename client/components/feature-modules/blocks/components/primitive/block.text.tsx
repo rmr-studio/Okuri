@@ -1,7 +1,7 @@
-import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { cn } from "@/lib/util/utils";
 import { FC, JSX } from "react";
 import { z } from "zod";
+import { createRenderElement } from "../../util/render/render-element.registry";
 
 interface Props {
     text?: string;
@@ -51,7 +51,6 @@ export const TextBlock = createRenderElement({
     type: "TEXT",
     name: "Text block",
     description: "Simple text display with styling options.",
-    category: "BLOCK",
     schema: Schema,
     component: Block,
 });

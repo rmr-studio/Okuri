@@ -44,7 +44,7 @@ export const TaskCard: FC<Props> = ({ task }) => {
     const formattedDue = formatDueDate(dueDate);
 
     return (
-        <Card className="transition-shadow duration-150 hover:shadow-md">
+        <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-md">
             <CardHeader className="flex flex-row items-start justify-between gap-2">
                 <div>
                     <CardTitle className="text-base font-semibold">{title ?? "Untitled task"}</CardTitle>
@@ -53,7 +53,7 @@ export const TaskCard: FC<Props> = ({ task }) => {
                 {status ? <Badge className={badgeClass}>{status.replace(/_/g, " ")}</Badge> : null}
             </CardHeader>
             {(formattedDue || task?.description) && (
-                <CardContent className="text-sm text-muted-foreground space-y-1">
+                <CardContent className="flex-1 text-sm text-muted-foreground space-y-1">
                     {formattedDue ? <div>Due {formattedDue}</div> : null}
                     {"description" in task && task.description ? (
                         <p className="text-foreground">{String(task.description)}</p>

@@ -1,8 +1,8 @@
-import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/util/utils";
 import { FC, ReactNode, useEffect, useRef } from "react";
 import { z } from "zod";
+import { RenderElementMetadata } from "../../util/block/block.registry";
 
 interface Props {
     title?: string;
@@ -57,7 +57,7 @@ export const Block: FC<Props> = ({
 
     if (variant === "plain") {
         return (
-            <div className={cn("h-full w-full", padded && "p-4", className)}>
+            <div className={cn("h-full w-full flex flex-col", padded && "p-4", className)}>
                 {title || description ? (
                     <div className="mb-4 space-y-1">
                         {title ? <h3 className="text-base font-semibold">{title}</h3> : null}
@@ -66,7 +66,7 @@ export const Block: FC<Props> = ({
                         ) : null}
                     </div>
                 ) : null}
-                <div ref={hostRef} className="h-full w-full">
+                <div ref={hostRef} className="flex-1 h-full w-full">
                     {children}
                 </div>
             </div>
@@ -76,7 +76,7 @@ export const Block: FC<Props> = ({
     return (
         <Card
             className={cn(
-                "h-full w-full transition-shadow duration-150 hover:shadow-lg",
+                "h-full w-full flex flex-col transition-shadow duration-150 hover:shadow-lg",
                 className
             )}
         >
@@ -88,18 +88,17 @@ export const Block: FC<Props> = ({
                     {description ? <CardDescription>{description}</CardDescription> : null}
                 </CardHeader>
             )}
-            <CardContent ref={hostRef} className={cn(!padded && "px-2 pb-2")}>
+            <CardContent ref={hostRef} className={cn("flex-1", !padded && "px-2 pb-2")}>
                 {children}
             </CardContent>
         </Card>
     );
 };
 
-export const LayoutContainerBlock = createRenderElement({
+export const LayoutContainerBlock: RenderElementMetadata<typeof Schema> = {
     type: "LAYOUT_CONTAINER",
     name: "Layout container",
     description: "Wrapper component that hosts a nested grid layout.",
-    category: "BLOCK",
     schema: Schema,
     component: Block,
-});
+};

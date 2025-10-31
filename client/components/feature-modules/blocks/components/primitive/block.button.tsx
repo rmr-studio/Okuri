@@ -1,9 +1,9 @@
-import { createRenderElement } from "@/components/feature-modules/render/util/render-element.registry";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util/utils";
 import Link from "next/link";
 import { FC } from "react";
 import { z } from "zod";
+import { createRenderElement } from "../../util/render/render-element.registry";
 
 type Props = z.infer<typeof BlockButtonSchema>;
 
@@ -44,7 +44,6 @@ export const ButtonBlock = createRenderElement({
     type: "BUTTON",
     name: "Button",
     description: "Action button that can link to another view.",
-    category: "BLOCK",
     schema: BlockButtonSchema,
     component: Block,
 });

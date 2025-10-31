@@ -7,9 +7,9 @@ import com.networknt.schema.SpecVersion
 import okuri.core.enums.block.BlockValidationScope
 import okuri.core.enums.core.DataFormat
 import okuri.core.enums.core.DataType
-import okuri.core.models.block.structure.BlockContentMetadata
-import okuri.core.models.block.structure.BlockSchema
-import okuri.core.models.block.structure.toJsonSchema
+import okuri.core.models.block.metadata.BlockContentMetadata
+import okuri.core.models.block.validation.BlockSchema
+import okuri.core.models.block.validation.toJsonSchema
 import org.springframework.stereotype.Service
 import java.net.URI
 import java.time.LocalDate
