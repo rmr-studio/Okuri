@@ -48,7 +48,7 @@ export const BlockDemo = () => {
     const blocks = useMemo(() => createDemoTrees(), []);
     return (
         <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={blocks}>
-            <div className="mx-auto max-w-6xl space-y-8 p-6">
+            <div className="mx-auto space-y-8 p-6">
                 <header className="space-y-2">
                     <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
                     <p className="max-w-3xl text-sm text-muted-foreground">
@@ -403,13 +403,50 @@ const GridStackWidgetSync: React.FC = () => {
         // Remove old widgets
         removedBlockIds.forEach((blockId) => {
             console.log(`Removing widget ${blockId} from GridStack`);
-            const node = gridStack.engine.nodes?.find((n) => String(n.id) === blockId);
-            const element =
-                (node?.el as HTMLElement | undefined) ??
-                (gridStack.el?.querySelector(`[gs-id='${blockId}']`) as HTMLElement | null);
 
-            if (element) {
-                gridStack.removeWidget(element, true);
+            // Find the node and its owning grid instance recursively
+            const findNodeAndGrid = (
+                nodes: Array<{
+                    id?: string;
+                    el?: HTMLElement;
+                    subGrid?: { engine?: { nodes?: unknown[] } } & { removeWidget?: unknown };
+                }>,
+                owningGrid: typeof gridStack
+            ): { node: unknown; grid: typeof gridStack } | null => {
+                for (const node of nodes) {
+                    if (String(node.id) === blockId) {
+                        return { node, grid: owningGrid };
+                    }
+                    if (node.subGrid?.engine?.nodes) {
+                        const found = findNodeAndGrid(
+                            node.subGrid.engine.nodes as Array<{
+                                id?: string;
+                                el?: HTMLElement;
+                                subGrid?: { engine?: { nodes?: unknown[] } } & {
+                                    removeWidget?: unknown;
+                                };
+                            }>,
+                            node.subGrid as unknown as typeof gridStack
+                        );
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const result = gridStack.engine.nodes
+                ? findNodeAndGrid(gridStack.engine.nodes, gridStack)
+                : null;
+
+            if (result) {
+                const { node, grid } = result;
+                const element = (node as { el?: HTMLElement }).el;
+                if (element && grid.removeWidget) {
+                    grid.removeWidget(element, true);
+                    console.log(`Successfully removed widget ${blockId} from its grid`);
+                }
+            } else {
+                console.warn(`Could not find widget ${blockId} in GridStack to remove`);
             }
 
             // Remove from rawWidgetMetaMap (descendants are handled by GridProvider's removeWidget)

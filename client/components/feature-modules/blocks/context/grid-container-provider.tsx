@@ -83,51 +83,6 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     const optionsRef = useRef<GridStackOptions>(initialOptions);
     const resizeObserverMap = useRef<Map<string, ResizeObserver>>(new Map());
 
-    const triggerResizeCascade = useCallback((startingElement: HTMLElement | null) => {
-        let currentItem: HTMLElement | null = startingElement;
-        let guard = 0;
-
-        while (currentItem && guard < 25) {
-            guard += 1;
-
-            const gridElement = currentItem.closest(".grid-stack") as
-                | (HTMLElement & { gridstack?: GridStack })
-                | null;
-            const owningGrid = gridElement?.gridstack;
-            if (owningGrid) {
-                owningGrid.resizeToContent(currentItem);
-            }
-
-            const parentContent = currentItem.parentElement?.closest(
-                ".grid-stack-item-content"
-            ) as HTMLElement | null;
-            if (!parentContent) {
-                break;
-            }
-
-            currentItem = parentContent.closest(".grid-stack-item") as HTMLElement | null;
-        }
-    }, []);
-
-    const registerResizeObserver = useCallback(
-        (widget: GridStackWidget, renderRoot: HTMLElement) => {
-            const id = widget.id;
-            if (!id || resizeObserverMap.current.has(id)) {
-                return;
-            }
-
-            const observer = new ResizeObserver(() => {
-                const itemElement = renderRoot.closest(".grid-stack-item") as HTMLElement | null;
-                if (!itemElement) return;
-                triggerResizeCascade(itemElement);
-            });
-
-            observer.observe(renderRoot);
-            resizeObserverMap.current.set(id, observer);
-        },
-        [triggerResizeCascade]
-    );
-
     const renderCBFn = useCallback(
         (element: HTMLElement, widget: GridStackWidget & { grid?: GridStack }) => {
             const closestGrid = element.closest(".grid-stack") as
@@ -135,8 +90,9 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 | null;
             const grid = widget.grid ?? closestGrid?.gridstack;
             if (widget.id && grid) {
-                const contentWrapper =
-                    element.querySelector<HTMLElement>(".grid-stack-item-content");
+                const contentWrapper = element.querySelector<HTMLElement>(
+                    ".grid-stack-item-content"
+                );
                 const renderRoot = contentWrapper
                     ? ensureRenderRoot(contentWrapper, widget)
                     : element;
@@ -152,10 +108,10 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 // Also update the local ref for backward compatibility
                 widgetContainersRef.current.set(widget.id, renderRoot);
 
-                registerResizeObserver(widget, renderRoot);
+                // registerResizeObserver(widget, renderRoot);
             }
         },
-        [registerResizeObserver]
+        []
     );
 
     const initGrid = useCallback(() => {

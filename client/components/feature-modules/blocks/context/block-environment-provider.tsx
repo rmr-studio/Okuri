@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 
-import { BlockNode, BlockTree, GridRect, isContentNode } from "../interface/block.interface";
+import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
     BlockEnvironmentContextValue,
     BlockEnvironmentProviderProps,
@@ -29,16 +29,6 @@ import {
 //todo. Maybe migrate to Zustand.
 
 export const BlockEnvironmentContext = createContext<BlockEnvironmentContextValue | null>(null);
-
-type LayoutLike = Partial<GridRect> & { w?: number; h?: number };
-
-const normaliseLayout = (layout: LayoutLike = {}): GridRect => ({
-    x: layout.x ?? 0,
-    y: layout.y ?? 0,
-    width: layout.width ?? layout.w ?? 1,
-    height: layout.height ?? layout.h ?? 1,
-    locked: layout.locked ?? false,
-});
 
 /**
  * Provides state and helpers for the block environment editor.
@@ -127,12 +117,11 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                     return prev;
                 }
 
-                const layout = normaliseLayout(block.block.layout ?? getCurrentDimensions(block));
                 const rootNode: BlockNode = {
                     ...block,
                     block: {
                         ...block.block,
-                        layout,
+                        layout: getCurrentDimensions(block),
                     },
                 };
 
@@ -146,7 +135,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 const hierarchy = new Map(prev.hierarchy);
                 const treeIndex = new Map(prev.treeIndex);
 
-                layouts.set(id, layout);
+                layouts.set(id, getCurrentDimensions(rootNode));
                 hierarchy.set(id, null);
                 treeIndex.set(id, id);
 
@@ -285,7 +274,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                           ...updatedContent,
                           block: {
                               ...updatedContent.block,
-                              layout: normaliseLayout(updatedContent.block.layout),
+                              layout: getCurrentDimensions(updatedContent),
                           },
                       }
                     : updatedContent;
