@@ -39,7 +39,13 @@ const TaskCardComponent = TaskCard.component as FC<any>;
 const InvoiceLineItemCardComponent = InvoiceLineItemCard.component as FC<any>;
 
 const componentMap: Record<string, Renderer> = {
-    ADDRESS_CARD: ({ data }) => <AddressCardComponent address={data} />,
+    ADDRESS_CARD: ({ data }) => (
+        <AddressCardComponent
+            address={data?.address}
+            title={data?.title}
+            description={data?.description}
+        />
+    ),
     PROJECT_TASK: ({ data }) => <TaskCardComponent task={data} />,
     INVOICE_LINE_ITEM: ({ data, context }) => (
         <InvoiceLineItemCardComponent item={data} currency={context.currency} />
@@ -72,8 +78,15 @@ export const Block: React.FC<Props> = ({
         ) : (
             <div className="grid gap-3">
                 {rows.map((ref: any, index: number) => {
-                    const data = ref?.entity?.payload?.data ?? ref;
-                    const key = ref?.entityId ?? index;
+                    // Support both BlockNode format and entity reference format
+                    const data =
+                        ref?.block?.payload?.data ?? // BlockNode format
+                        ref?.entity?.payload?.data ?? // Entity reference format
+                        ref; // Fallback to raw data
+                    const key =
+                        ref?.block?.id ?? // BlockNode ID
+                        ref?.entityId ?? // Entity reference ID
+                        index; // Fallback to index
                     return (
                         <Comp key={key} data={data} context={{ title, description, currency }} />
                     );
