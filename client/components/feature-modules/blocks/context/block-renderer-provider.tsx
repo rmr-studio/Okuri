@@ -2,13 +2,13 @@
 
 import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
-import { ProviderProps } from "../interface/render.interface";
 import { BlockStructureRenderer } from "../components/render/block-structure-renderer";
+import { isContentNode } from "../interface/block.interface";
+import { ProviderProps } from "../interface/render.interface";
 import { parseContent } from "../util/render/render.util";
+import { useBlockEnvironment } from "./block-environment-provider";
 import { useContainer } from "./grid-container-provider";
 import { useGrid } from "./grid-provider";
-import { useBlockEnvironment } from "./block-environment-provider";
-import { isContentNode } from "../interface/block.interface";
 
 export const RenderElementContext = createContext<{ widget: { id: string } } | null>(null);
 
@@ -45,8 +45,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({
                 if (!container) return null;
 
                 // Get render structure from the parsed content or from the block type
-                const renderStructure =
-                    raw.renderStructure || blockNode.block.type.display?.render;
+                const renderStructure = raw.renderStructure || blockNode.block.type.display?.render;
 
                 if (!renderStructure) {
                     console.warn(`No render structure found for block ${blockId}`);
@@ -84,7 +83,10 @@ export const RenderElementProvider: FC<ProviderProps> = ({
                 }
 
                 return (
-                    <RenderElementContext.Provider key={widgetId} value={{ widget: { id: widgetId } }}>
+                    <RenderElementContext.Provider
+                        key={widgetId}
+                        value={{ widget: { id: widgetId } }}
+                    >
                         {createPortal(rendered, container)}
                     </RenderElementContext.Provider>
                 );

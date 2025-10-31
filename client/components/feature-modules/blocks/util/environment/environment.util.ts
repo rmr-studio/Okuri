@@ -45,9 +45,7 @@ export const traverseTree = (
     parentId: string | null,
     treeId: string,
     hierarchy: Map<string, string | null>,
-    treeIndex: Map<string, string>,
-    layouts: Map<string, GridRect>,
-    skipExistingLayout = false
+    treeIndex: Map<string, string>
 ): void => {
     const blockId = node.block.id;
 
@@ -55,18 +53,12 @@ export const traverseTree = (
     hierarchy.set(blockId, parentId);
     treeIndex.set(blockId, treeId);
 
-    // Lazy initialise layout and UI metadata when absent.
-    if (!skipExistingLayout || !layouts.has(blockId)) {
-        const defaultLayout: GridRect = getCurrentDimensions(node);
-        layouts.set(blockId, layouts.get(blockId) ?? { ...defaultLayout });
-    }
-
     if (!isContentNode(node)) return;
     if (!allowChildren(node) || !node.children) return;
 
     Object.values(node.children).forEach((slotChildren) => {
         slotChildren.forEach((child) => {
-            traverseTree(child, blockId, treeId, hierarchy, treeIndex, layouts);
+            traverseTree(child, blockId, treeId, hierarchy, treeIndex);
         });
     });
 };
@@ -390,7 +382,6 @@ export function createEmptyEnvironment(organisationId: string): EditorEnvironmen
         trees: [],
         hierarchy: new Map(),
         treeIndex: new Map(),
-        layouts: new Map(),
         metadata: {
             name: "Untitled Environment",
             organisationId,
@@ -428,7 +419,7 @@ export const init = (organisationId: string, initialTrees: BlockTree[] = []): Ed
         Object.values(instance.root.children).forEach((slot: BlockNode[]) => {
             slot.forEach((child) => {
                 // Recursively traverse the tree
-                traverseTree(child, rootId, rootId, hierarchy, treeIndex, layouts);
+                traverseTree(child, rootId, rootId, hierarchy, treeIndex);
             });
         });
     });
@@ -437,7 +428,6 @@ export const init = (organisationId: string, initialTrees: BlockTree[] = []): Ed
         trees: initialTrees,
         hierarchy,
         treeIndex,
-        layouts,
         metadata: {
             name: "Untitled Environment",
             description: undefined,

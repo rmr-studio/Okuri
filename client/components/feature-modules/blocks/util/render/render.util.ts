@@ -2,6 +2,7 @@ import { GridStackWidget } from "gridstack";
 import { ParsedContent } from "../../interface/render.interface";
 
 export function parseContent(meta: GridStackWidget): ParsedContent | null {
+    console.log(meta);
     if (!meta.content) return null;
     try {
         const payload = JSON.parse(meta.content);
@@ -21,7 +22,7 @@ export function parseContent(meta: GridStackWidget): ParsedContent | null {
             return {
                 type: payload.type,
                 blockId: payload.blockId,
-                props: payload.props ?? payload
+                props: payload.props ?? payload,
             };
         }
     } catch (error) {

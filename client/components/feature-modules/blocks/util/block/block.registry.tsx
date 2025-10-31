@@ -8,10 +8,10 @@
 import { ComponentType as Component } from "react";
 import { z, ZodTypeAny } from "zod";
 import { AddressCard } from "../../components/bespoke/AddressCard";
+import { AttachmentBlock } from "../../components/bespoke/AttachmentBlock";
 import { ContactCard } from "../../components/bespoke/ContactCard";
 import { DataSummaryTable } from "../../components/bespoke/DataSummaryTable";
 import { FallbackBlock } from "../../components/bespoke/FallbackBlock";
-import { AttachmentBlock } from "../../components/bespoke/AttachmentBlock";
 import { ImageBlock } from "../../components/bespoke/ImageBlock";
 import { ButtonBlock } from "../../components/primitive/block.button";
 import { LayoutContainerBlock } from "../../components/primitive/block.container";
@@ -53,5 +53,9 @@ export const registry: Record<string, Component<any>> = componentKeys.reduce((ac
     acc[key] = baseBlockElements[key as keyof typeof baseBlockElements].component;
     return acc;
 }, {} as Record<string, Component<any>>);
+
+export const isValidBlockType = (type: string): type is ComponentType => {
+    return componentKeys.includes(type);
+};
 
 export const blockRenderRegistry = blockElements;

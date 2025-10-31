@@ -77,7 +77,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
     return (
         <>
             <GridProvider initialOptions={options} initialWidgetMap={widgetMap}>
-                <BlockEnvironmentGridSync  />
+                <BlockEnvironmentGridSync />
                 <WidgetEnvironmentSync />
                 <GridContainerProvider>
                     <BlockRenderer />
@@ -213,7 +213,6 @@ function formatEnvironment(environment: EditorEnvironment): string {
         trees: environment.trees,
         hierarchy: Array.from(environment.hierarchy.entries()),
         treeIndex: Array.from(environment.treeIndex.entries()),
-        layouts: Array.from(environment.layouts.entries()),
     };
 
     return JSON.stringify(serialisable, null, 2);

@@ -70,7 +70,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                     return prev;
                 }
 
-                const layouts = new Map(prev.layouts);
                 const hierarchy = new Map(prev.hierarchy);
                 const treeIndex = new Map(prev.treeIndex);
 
@@ -91,12 +90,11 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
 
                 const trees = updateTrees(prev, updatedTree);
 
-                traverseTree(child, parentId, parentTreeId, hierarchy, treeIndex, layouts, true);
+                traverseTree(child, parentId, parentTreeId, hierarchy, treeIndex);
 
                 return {
                     ...prev,
                     trees,
-                    layouts,
                     hierarchy,
                     treeIndex,
                     metadata: updateMetadata(prev.metadata),
@@ -144,18 +142,16 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 };
 
                 const trees = insertTree(prev, tree, index);
-                const layouts = new Map(prev.layouts);
                 const hierarchy = new Map(prev.hierarchy);
                 const treeIndex = new Map(prev.treeIndex);
 
-                layouts.set(id, getCurrentDimensions(rootNode));
                 hierarchy.set(id, null);
                 treeIndex.set(id, id);
 
                 if (isContentNode(rootNode) && rootNode.children) {
                     Object.values(rootNode.children).forEach((slotChildren) => {
                         slotChildren.forEach((child) => {
-                            traverseTree(child, id, id, hierarchy, treeIndex, layouts);
+                            traverseTree(child, id, id, hierarchy, treeIndex);
                         });
                     });
                 }
@@ -163,7 +159,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 return {
                     ...prev,
                     trees,
-                    layouts,
                     hierarchy,
                     treeIndex,
                     metadata: updateMetadata(prev.metadata),
@@ -200,12 +195,10 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             .map(([id]) => id);
 
         // Drop all children from the various maps
-        const layouts = new Map(environment.layouts);
         const hierarchy = new Map(environment.hierarchy);
         const treeIndex = new Map(environment.treeIndex);
 
         children.forEach((childId) => {
-            layouts.delete(childId);
             hierarchy.delete(childId);
             treeIndex.delete(childId);
         });
@@ -213,7 +206,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         return {
             ...environment,
             trees,
-            layouts,
             hierarchy,
             treeIndex,
             metadata: updateMetadata(environment.metadata),
@@ -248,12 +240,11 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         children.add(childId);
 
         // Drop all children from the various maps
-        const layouts = new Map(environment.layouts);
+
         const hierarchy = new Map(environment.hierarchy);
         const treeIndex = new Map(environment.treeIndex);
 
         children.forEach((id) => {
-            layouts.delete(id);
             hierarchy.delete(id);
             treeIndex.delete(id);
         });
@@ -261,7 +252,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         return {
             ...environment,
             trees,
-            layouts,
+
             hierarchy,
             treeIndex,
             metadata: updateMetadata(environment.metadata),
@@ -281,29 +272,12 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 return prev;
             }
 
-            const normalisedNode =
-                updatedContent.block.layout != null
-                    ? {
-                          ...updatedContent,
-                          block: {
-                              ...updatedContent.block,
-                              layout: getCurrentDimensions(updatedContent),
-                          },
-                      }
-                    : updatedContent;
-
-            const updatedTree = replaceNode(tree, normalisedNode);
+            const updatedTree = replaceNode(tree, updatedContent);
             const trees = updateTrees(prev, updatedTree);
-
-            const layouts = new Map(prev.layouts);
-            if (normalisedNode.block.layout) {
-                layouts.set(blockId, normalisedNode.block.layout);
-            }
 
             return {
                 ...prev,
                 trees,
-                layouts,
                 metadata: updateMetadata(prev.metadata),
             };
         });
@@ -411,24 +385,16 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 : updateManyTrees(environment, [updatedSourceTree, updatedTree]);
 
         // Update maps accordingly
-        const layouts = new Map(environment.layouts);
+
         const hierarchy = new Map(environment.hierarchy);
         const treeIndex = new Map(environment.treeIndex);
 
         // Update hierarchy and treeIndex for the moved node and its descendants
-        traverseTree(
-            detachedNode!,
-            targetParentId,
-            getTreeId(updatedTree),
-            hierarchy,
-            treeIndex,
-            layouts
-        );
+        traverseTree(detachedNode!, targetParentId, getTreeId(updatedTree), hierarchy, treeIndex);
 
         return {
             ...environment,
             trees,
-            layouts,
             hierarchy,
             treeIndex,
             metadata: updateMetadata(environment.metadata),
@@ -463,7 +429,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         const updatedTrees = updateManyTrees({ ...environment, trees }, [insertedTree]);
 
         // Update maps accordingly
-        const layouts = new Map(environment.layouts);
         const hierarchy = new Map(environment.hierarchy);
         const treeIndex = new Map(environment.treeIndex);
 
@@ -473,14 +438,12 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             targetParentId,
             getTreeId(insertedTree),
             hierarchy,
-            treeIndex,
-            layouts
+            treeIndex
         );
 
         return {
             ...environment,
             trees: updatedTrees,
-            layouts,
             hierarchy,
             treeIndex,
             metadata: updateMetadata(environment.metadata),
@@ -519,14 +482,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         if (isContentNode(detachedNode!) && detachedNode!.children) {
             Object.values(detachedNode!.children).forEach((slotChildren) => {
                 slotChildren.forEach((child) => {
-                    traverseTree(
-                        child,
-                        blockId,
-                        blockId,
-                        hierarchy,
-                        treeIndex,
-                        environment.layouts
-                    );
+                    traverseTree(child, blockId, blockId, hierarchy, treeIndex);
                 });
             });
         }

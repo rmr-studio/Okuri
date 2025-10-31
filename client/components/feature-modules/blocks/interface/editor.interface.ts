@@ -39,8 +39,6 @@ export interface EditorEnvironment {
     hierarchy: Map<string, string | null>;
     // Lookup for which tree a block belongs to
     treeIndex: Map<string, string>;
-    // Lookup for current block layouts in the editor
-    layouts: Map<string, GridRect>;
     metadata: EditorEnvironmentMetadata;
 }
 
