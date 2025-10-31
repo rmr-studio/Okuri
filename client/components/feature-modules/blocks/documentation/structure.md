@@ -238,7 +238,7 @@ Contact Overview
         {
             "prop": "rows",
             "source": {
-                "type": "ResolvedRefs",
+                "type": "RefSlot",
                 "path": "$.items"
             }
         },

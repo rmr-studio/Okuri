@@ -74,7 +74,20 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 const hierarchy = new Map(prev.hierarchy);
                 const treeIndex = new Map(prev.treeIndex);
 
-                const updatedTree = insertNode(parentTree, parentId, slotName, child, index);
+                const { success, payload: updatedTree } = insertNode(
+                    parentTree,
+                    parentId,
+                    slotName,
+                    child,
+                    index
+                );
+
+                if (!success) {
+                    console.warn(
+                        `Failed to insert block ${child.block.id} into parent ${parentId} at slot ${slotName}`
+                    );
+                    return prev;
+                }
 
                 const trees = updateTrees(prev, updatedTree);
 
@@ -221,8 +234,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         const detach = detachNode(tree, childId);
         if (!detach) return environment;
 
-        const { updatedTree, detachedNode } = detach;
-        if (!updatedTree) {
+        const { tree: updatedTree, detachedNode, success } = detach;
+        if (!success || !detachedNode) {
             return environment;
         }
 
@@ -369,13 +382,33 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     ): EditorEnvironment => {
         // Detach node from source tree, given that it is a child node.
         const detachResult = detachNode(sourceTree, blockId);
-        if (!detachResult) {
+        const { tree: updatedSourceTree, detachedNode, success } = detachResult;
+        if (!success || !detachedNode) {
             return environment;
         }
 
-        const { updatedTree: updatedSourceTree, detachedNode } = detachResult;
-        const insertedTree = insertNode(newTree, targetParentId, slotName, detachedNode);
-        const trees = updateManyTrees(environment, [updatedSourceTree, insertedTree]);
+        // If moving within the same tree, insert into the updated tree (after detach)
+        // Otherwise, insert into the target tree
+        const treeToInsertInto = sourceTree === newTree ? updatedSourceTree : newTree;
+        const { success: insertSuccess, payload: updatedTree } = insertNode(
+            treeToInsertInto,
+            targetParentId,
+            slotName,
+            detachedNode
+        );
+
+        // If the insertion method rejects an insertion. It should return the same reference to the tree.
+        if (!insertSuccess) {
+            // Insertion failed, return original environment
+            console.warn("Insertion failed, returning original environment");
+            return environment;
+        }
+
+        // If same tree, only update once; otherwise update both
+        const trees =
+            sourceTree === newTree
+                ? updateTrees(environment, updatedTree)
+                : updateManyTrees(environment, [updatedSourceTree, updatedTree]);
 
         // Update maps accordingly
         const layouts = new Map(environment.layouts);
@@ -386,7 +419,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         traverseTree(
             detachedNode!,
             targetParentId,
-            getTreeId(insertedTree),
+            getTreeId(updatedTree),
             hierarchy,
             treeIndex,
             layouts
@@ -412,7 +445,18 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         slotName: string = "main"
     ): EditorEnvironment => {
         // There is no need to detach, just insert the root node into the new tree
-        const insertedTree = insertNode(newTree, targetParentId, slotName, sourceTree.root);
+        const { success: insertSuccess, payload: insertedTree } = insertNode(
+            newTree,
+            targetParentId,
+            slotName,
+            sourceTree.root
+        );
+
+        if (!insertSuccess) {
+            return environment;
+        }
+
+        // Remove the source tree from the top-level list
         const trees = environment.trees.filter(
             (instance) => getTreeId(instance) !== getTreeId(sourceTree)
         );
@@ -454,7 +498,10 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         const detachResult = detachNode(tree, blockId);
         if (!detachResult) return environment;
 
-        const { updatedTree, detachedNode } = detachResult;
+        const { tree: updatedTree, success, detachedNode } = detachResult;
+        if (!success || !detachedNode) {
+            return environment;
+        }
 
         const hierarchy = new Map(environment.hierarchy);
         const treeIndex = new Map(environment.treeIndex);

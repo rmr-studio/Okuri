@@ -23,7 +23,7 @@ import { hasWildcardSlots } from "./binding.resolver";
  * @param widgetMap - Map to register all widgets (mutated by this function)
  * @returns The GridStack widget configuration for this node
  */
-export function buildWidgetTree(
+export function treeInit(
     node: BlockNode,
     widgetMap: Map<string, GridStackWidget>
 ): GridStackWidget {
@@ -76,7 +76,7 @@ export function buildWidgetTree(
             ([slotName, slotChildren]) => {
                 return slotChildren.map((child) => {
                     // Recursively build child widget
-                    return buildWidgetTree(child, widgetMap);
+                    return treeInit(child, widgetMap);
 
                     // Note: child is already added to widgetMap inside buildWidgetTree
                 });
@@ -100,14 +100,14 @@ export function buildWidgetTree(
  * @param trees - Array of block trees to convert
  * @returns Object containing GridStack options and complete widget map
  */
-export function buildGridEnvironmentWithWidgetMap(trees: { root: BlockNode }[]): {
+export function environmentInit(trees: { root: BlockNode }[]): {
     options: GridStackOptions;
     widgetMap: Map<string, GridStackWidget>;
 } {
     const widgetMap = new Map<string, GridStackWidget>();
 
     const rootWidgets = trees.map((tree) => {
-        return buildWidgetTree(tree.root, widgetMap);
+        return treeInit(tree.root, widgetMap);
     });
 
     return {

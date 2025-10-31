@@ -10,7 +10,6 @@ interface CreateRenderElementOptions<T extends ZodTypeAny> {
     type: string;
     name?: string;
     description?: string;
-    category?: string;
     icon?: ComponentType<any>;
     schema: T;
     component: ComponentType<z.infer<T>>;

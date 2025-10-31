@@ -70,20 +70,18 @@ export type GetBlockTypesResponse =
 /*                                 Type Guards                                */
 /* -------------------------------------------------------------------------- */
 
-export const CONTENT_KINDS = new Set(["content", "BlockContentMetadata"]);
-export const BLOCK_REFERENCE_KINDS = new Set(["block_reference", "BlockReferenceMetadata"]);
-export const ENTITY_REFERENCE_KINDS = new Set(["entity_reference", "EntityReferenceMetadata"]);
+
 
 export const isContentMetadata = (payload: Block["payload"]): payload is BlockContentMetadata =>
-    CONTENT_KINDS.has(String(payload?.type));
+    payload?.type === 'content'
 
 export const isBlockReferenceMetadata = (
     payload: Block["payload"]
-): payload is BlockReferenceMetadata => BLOCK_REFERENCE_KINDS.has(String(payload?.type));
+): payload is BlockReferenceMetadata => payload?.type === 'block_reference';
 
 export const isEntityReferenceMetadata = (
     payload: Block["payload"]
-): payload is EntityReferenceMetadata => ENTITY_REFERENCE_KINDS.has(String(payload?.type));
+): payload is EntityReferenceMetadata => payload?.type === 'entity_reference';
 
 export const isContentNode = (node: BlockNode): node is ContentNode =>
     !!node.block && node.type === "content_node";

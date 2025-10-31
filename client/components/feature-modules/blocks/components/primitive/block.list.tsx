@@ -102,7 +102,6 @@ export const ListBlock = createRenderElement({
     type: "LINE_ITEM",
     name: "Inline owned list",
     description: "Renders owned child block references inline.",
-    category: "BLOCK",
     schema: Schema,
     component: Block,
 });

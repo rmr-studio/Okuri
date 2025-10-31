@@ -77,11 +77,21 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
 
             items.forEach((item) => {
                 if (!item.content) return;
-                const payload = JSON.parse(item.content);
+                if (typeof item.content !== "string") {
+                    return;
+                }
+
+                let payload: Record<string, unknown>;
+                try {
+                    payload = JSON.parse(item.content) as Record<string, unknown>;
+                } catch (error) {
+                    console.error("[GridSync] Failed to parse grid item content", error);
+                    return;
+                }
 
                 const id = payload["blockId"];
 
-                if (!id) return;
+                if (!id || typeof id !== "string") return;
                 const currentParent = getParent(id);
                 const newParent = getNewParentId(item, gridStack);
 

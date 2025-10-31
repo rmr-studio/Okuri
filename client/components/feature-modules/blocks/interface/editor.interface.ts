@@ -14,6 +14,18 @@ export interface EditorEnvironmentMetadata {
     updatedAt: string;
 }
 
+export interface DetachResult {
+    success: boolean;
+    tree: BlockTree;
+    detachedNode: BlockNode | null;
+    slotName: string | null;
+}
+
+export interface InsertResult<T> {
+    payload: T;
+    success: boolean;
+}
+
 /**
  * Internal environment model used by the provider.
  * - `trees` holds each top-level block tree.

@@ -25,7 +25,7 @@ import {
 } from "../../../interface/block.interface";
 
 const createMeta = (overrides?: Partial<BlockMeta>): BlockMeta => ({
-    validationErrors: [],
+    validationErrors: overrides?.validationErrors ?? [],
     computedFields: overrides?.computedFields,
     lastValidatedVersion: overrides?.lastValidatedVersion,
 });

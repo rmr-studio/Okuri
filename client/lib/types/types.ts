@@ -424,26 +424,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/block/schema/lint": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Lint a block type
-         * @description Validates the schema and configuration of a block type to ensure it adheres to defined standards.
-         */
-        post: operations["lintBlockType"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/block/schema/": {
         parameters: {
             query?: never;
@@ -1001,7 +981,7 @@ export interface components {
         BlockComponentNode: {
             id: string;
             /** @enum {string} */
-            type: "CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT";
+            type: "CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT" | "FALLBACK";
             props: {
                 [key: string]: unknown;
             };
@@ -1113,7 +1093,7 @@ export interface components {
         BlockTypeNesting: {
             /** Format: int32 */
             max?: number;
-            allowedTypes: ("CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT")[];
+            allowedTypes: ("CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT" | "FALLBACK")[];
         };
         Client: {
             /**
@@ -1513,12 +1493,6 @@ export interface components {
             companyId?: string;
             companyRole?: string;
             contact: components["schemas"]["Contact"];
-        };
-        LintIssue: {
-            path: string;
-            /** @enum {string} */
-            level: "INFO" | "WARNING" | "ERROR";
-            message: string;
         };
         CreateBlockTypeRequest: {
             key: string;
@@ -2896,30 +2870,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Client"];
-                };
-            };
-        };
-    };
-    lintBlockType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BlockType"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["LintIssue"][];
                 };
             };
         };

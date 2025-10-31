@@ -1,5 +1,6 @@
 import { GridRect } from "@/lib/interfaces/common.interface";
 import { BlockNode, ContentNode } from "../../interface/block.interface";
+import { InsertResult } from "../../interface/editor.interface";
 
 // export function evalVisible(cond: Condition | undefined, ctx: TreeCtx): boolean {
 //     if (!cond) return true;
@@ -50,9 +51,12 @@ export const insertChild = (
     child: BlockNode,
     slotName: string,
     index: number | null = null
-): BlockNode => {
+): InsertResult<BlockNode> => {
     if (!allowChildren(parent)) {
-        return parent;
+        return {
+            payload: parent,
+            success: false,
+        };
     }
 
     const existingSlot = parent.children?.[slotName];
@@ -64,8 +68,11 @@ export const insertChild = (
         };
 
         return {
-            ...parent,
-            children: newChildren,
+            payload: {
+                ...parent,
+                children: newChildren,
+            },
+            success: true,
         };
     }
 
@@ -81,8 +88,11 @@ export const insertChild = (
     };
 
     return {
-        ...parent,
-        children: newChildren,
+        payload: {
+            ...parent,
+            children: newChildren,
+        },
+        success: true,
     };
 };
 
