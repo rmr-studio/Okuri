@@ -1003,6 +1003,7 @@ export interface components {
             data: {
                 [key: string]: unknown;
             };
+            listConfig?: components["schemas"]["BlockListConfiguration"];
         };
         BlockDisplay: {
             form: components["schemas"]["BlockFormStructure"];
@@ -1013,6 +1014,12 @@ export interface components {
                 [key: string]: components["schemas"]["FormWidgetConfig"];
             };
         };
+        BlockListConfiguration: {
+            allowedTypes?: string[];
+            allowDuplicates: boolean;
+            display: components["schemas"]["ListDisplayConfig"];
+            order: components["schemas"]["OrderingConfig"];
+        };
         BlockMeta: {
             validationErrors: string[];
             computedFields?: {
@@ -1021,10 +1028,7 @@ export interface components {
             /** Format: int32 */
             lastValidatedVersion?: number;
         };
-        BlockReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
-            /** @enum {string} */
-            fetchPolicy: "LAZY" | "EAGER";
-            path: string;
+        BlockReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
             /** Format: int32 */
             expandDepth: number;
             item: components["schemas"]["ReferenceItem"];
@@ -1187,17 +1191,13 @@ export interface components {
         EntityReference: WithRequired<components["schemas"]["ReferencePayload"], "type"> & {
             reference: components["schemas"]["Reference"][];
         };
-        EntityReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
-            /** @enum {string} */
-            fetchPolicy: "LAZY" | "EAGER";
-            path: string;
-            items: components["schemas"]["ReferenceItem"][];
+        EntityReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
             /** @enum {string} */
             presentation: "SUMMARY" | "ENTITY" | "TABLE" | "GRID";
-            projection?: components["schemas"]["Projection"];
-            sort?: components["schemas"]["SortSpec"];
-            filter?: components["schemas"]["FilterSpec"];
-            paging?: components["schemas"]["PagingSpec"];
+            items: components["schemas"]["ReferenceItem"][];
+            allowedTypes?: ("line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task")[];
+            display: components["schemas"]["ListDisplayConfig"];
+            order: components["schemas"]["OrderingConfig"];
             allowDuplicates: boolean;
         };
         FilterSpec: {
@@ -1285,6 +1285,13 @@ export interface components {
             layout: components["schemas"]["GridRect"];
             items: components["schemas"]["GridItem"][];
         };
+        ListDisplayConfig: {
+            /** Format: int32 */
+            itemSpacing: number;
+            showDragHandles: boolean;
+            emptyMessage: string;
+            paging?: components["schemas"]["PagingSpec"];
+        };
         Metadata: {
             /** @enum {string} */
             type: "content" | "entity_reference" | "block_reference";
@@ -1303,6 +1310,12 @@ export interface components {
             label: string;
             value: string;
         };
+        OrderingConfig: {
+            /** @enum {string} */
+            mode: "MANUAL" | "SORTED";
+            sort?: components["schemas"]["SortSpec"];
+            filters?: components["schemas"]["FilterSpec"][];
+        };
         PagingSpec: {
             /** Format: int32 */
             pageSize: number;
@@ -1312,11 +1325,6 @@ export interface components {
         } & (Omit<components["schemas"]["Operand"], "kind"> & {
             path: string;
         });
-        Projection: {
-            fields: string[];
-            /** Format: uuid */
-            templateId?: string;
-        };
         RefSlot: {
             type: "RefSlot";
         } & (Omit<components["schemas"]["BindingSource"], "type"> & {
@@ -1349,6 +1357,11 @@ export interface components {
             id: string;
             labelOverride?: string;
             badge?: string;
+        };
+        ReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
+            path: string;
+            /** @enum {string} */
+            fetchPolicy: "LAZY" | "EAGER";
         };
         ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
             reference: components["schemas"]["EntityReference"] | components["schemas"]["BlockTreeReference"];
