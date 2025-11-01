@@ -15,4 +15,4 @@ data class BlockReferenceMetadata(
     override val path: String = "\$.block",
     val expandDepth: Int = 1,
     val item: ReferenceItem
-) : Metadata, ReferenceMetadata
+) : ReferenceMetadata
