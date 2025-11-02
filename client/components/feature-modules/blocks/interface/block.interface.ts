@@ -15,6 +15,8 @@ export type BlockComponentNode = components["schemas"]["BlockComponentNode"];
 export type ComponentType = components["schemas"]["BlockComponentNode"]["type"];
 export type BlockMeta = components["schemas"]["BlockMeta"];
 export type BlockTypeNesting = components["schemas"]["BlockType"]["nesting"];
+export type BlockListConfiguration = components["schemas"]["BlockListConfiguration"];
+
 export type NodeType = components["schemas"]["Node"]["type"];
 
 /* -------------------------------------------------------------------------- */
@@ -70,18 +72,16 @@ export type GetBlockTypesResponse =
 /*                                 Type Guards                                */
 /* -------------------------------------------------------------------------- */
 
-
-
 export const isContentMetadata = (payload: Block["payload"]): payload is BlockContentMetadata =>
-    payload?.type === 'content'
+    payload?.type === "content";
 
 export const isBlockReferenceMetadata = (
     payload: Block["payload"]
-): payload is BlockReferenceMetadata => payload?.type === 'block_reference';
+): payload is BlockReferenceMetadata => payload?.type === "block_reference";
 
 export const isEntityReferenceMetadata = (
     payload: Block["payload"]
-): payload is EntityReferenceMetadata => payload?.type === 'entity_reference';
+): payload is EntityReferenceMetadata => payload?.type === "entity_reference";
 
 export const isContentNode = (node: BlockNode): node is ContentNode =>
     !!node.block && node.type === "content_node";

@@ -21,6 +21,8 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
     const { gridStack } = useGrid();
     const { getParent, moveBlock, environment, isInitialized } = useBlockEnvironment();
 
+    // TODO Record Layout changes to persist block positions and sizes
+
     useLayoutEffect(() => {
         if (!gridStack) return;
 
@@ -66,7 +68,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
          * Handles blocks being added to grid
          * This can happen when a widget is programmatically added or moved from another grid
          */
-        const handleBlockAdded = (event: Event, items: GridStackNode[]) => {
+        const handleBlockAdded = (_: Event, items: GridStackNode[]) => {
             console.log("[GridSync] handleBlockAdded triggered");
             console.log("isInitialized:", isInitialized);
             console.log("environment:", environment);
@@ -101,7 +103,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
                         `[GridSync] Block ${id} added to grid, updating parent to ${newParent}`
                     );
 
-                    moveBlock(id, newParent, "main");
+                    moveBlock(id, newParent);
                 }
             });
         };

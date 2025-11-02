@@ -3,7 +3,7 @@
 /* -------------------------------------------------------------------------- */
 
 import { ChildNodeProps } from "@/lib/interfaces/interface";
-import { BlockNode, BlockTree, GridRect } from "./block.interface";
+import { BlockNode, BlockTree } from "./block.interface";
 
 /** Metadata describing the environment itself. */
 export interface EditorEnvironmentMetadata {
@@ -16,9 +16,8 @@ export interface EditorEnvironmentMetadata {
 
 export interface DetachResult {
     success: boolean;
-    tree: BlockTree;
+    root: BlockNode;
     detachedNode: BlockNode | null;
-    slotName: string | null;
 }
 
 export interface InsertResult<T> {
@@ -59,14 +58,28 @@ export interface BlockEnvironmentContextValue {
     getBlock(blockId: string): BlockNode | undefined;
     getTrees(): BlockTree[];
 
-    insertBlock(child: BlockNode, parentId: string, slotName: string, index: number | null): string;
-    moveBlock(blockId: string, targetParentId: string | null, targetSlot?: string): void;
+    insertBlock(child: BlockNode, parentId: string, index: number | null): string;
+    moveBlock(blockId: string, targetParentId: string | null): void;
 
-    getParent(blockId: string): string | null;
-    getChildren(blockId: string, slotName?: string): string[];
+    // Parent Retrieval
+    getParentId(blockId: string): string | null;
+    /**
+     * Retrieves the parent block of a given block ID.
+     * Note: The children of the parent block will NOT be populated.
+     * @param blockId The ID of the block whose parent is to be retrieved.
+     * @returns The parent BlockNode, or null if it has no parent.
+     */
+    getParent(blockId: string): BlockNode | null;
+
+    // Children Retrieval
+    getChildren(blockId: string): string[];
     getDescendants(blockId: string): string[];
     isDescendantOf(blockId: string, ancestorId: string): boolean;
     updateHierarchy(blockId: string, newParentId: string | null): void;
+
+    moveBlockUp(blockId: string): void;
+    moveBlockDown(blockId: string): void;
+    reorderBlock(blockId: string, parentId: string, targetIndex: number): void;
 
     clear(): void;
 }

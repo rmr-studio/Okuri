@@ -9,10 +9,9 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import type { GridStackWidget } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { PlusIcon, TypeIcon } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "../../styles/gridstack-custom.css";
 
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
@@ -27,12 +26,13 @@ import {
 import { BlockNode, BlockTree } from "../../interface/block.interface";
 import { EditorEnvironment } from "../../interface/editor.interface";
 import {
-    createContactBlockNode,
     createLayoutContainerNode,
     createNoteNode,
+    createTaskListNode,
 } from "../../util/block/factory/mock.factory";
 import { environmentInit } from "../../util/render/render.tree";
-import { PanelWrapper, SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
+import { editorPanel } from "../panel/editor-panel";
+import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 import { BlockEnvironmentGridSync } from "../sync/action.sync";
 import { WidgetEnvironmentSync } from "../sync/widget.sync";
 
@@ -92,75 +92,12 @@ const BlockEnvironmentWorkspace: React.FC = () => {
  * Renders all blocks with proper wrapping (PanelWrapper for toolbar, slash menu, etc.)
  */
 const BlockRenderer: React.FC = () => {
-    const { getBlock, removeBlock, insertBlock } = useBlockEnvironment();
+    const { getBlock, removeBlock, insertBlock, getParent, moveBlockUp, moveBlockDown } =
+        useBlockEnvironment();
 
-    const wrapElement = useCallback(
-        ({
-            id,
-            raw,
-            element,
-            elementMeta,
-        }: {
-            id: string;
-            meta: GridStackWidget;
-            element: React.ReactNode;
-            elementMeta: any;
-            parsedProps: unknown;
-            raw: { type: string; props?: unknown; blockId?: string; componentId?: string } | null;
-        }) => {
-            const blockId = String(raw?.blockId ?? raw?.componentId ?? id);
-            const blockNode = getBlock(blockId);
+    const {wrapper} = editorPanel({getBlock, insertBlock, removeBlock, getParent, moveBlockUp, moveBlockDown});
 
-            if (!blockNode) {
-                return element;
-            }
-
-            const canNest = Boolean(blockNode.block.type.nesting);
-            const organisationId = blockNode.block.organisationId;
-
-            const handleDelete = () => removeBlock(blockId);
-            const handleInsert = (item: SlashMenuItem) => {
-                if (!canNest || !organisationId) return;
-                const newNode = createNodeFromSlashItem(item, organisationId);
-                if (!newNode) return;
-                insertBlock(newNode, blockId, "main", null);
-            };
-
-            const quickActions = [
-                {
-                    id: "delete",
-                    label: "Delete block",
-                    shortcut: "⌘⌫",
-                    onSelect: handleDelete,
-                },
-            ];
-
-            const title =
-                blockNode.block.type.name ??
-                blockNode.block.name ??
-                elementMeta?.name ??
-                "Untitled Block";
-            const description = blockNode.block.type.description ?? elementMeta?.description;
-
-            return (
-                <PanelWrapper
-                    id={blockId}
-                    title={title}
-                    description={description}
-                    slashItems={defaultSlashItems}
-                    quickActions={quickActions}
-                    allowInsert={canNest}
-                    onInsert={canNest ? handleInsert : undefined}
-                    onDelete={handleDelete}
-                >
-                    {element}
-                </PanelWrapper>
-            );
-        },
-        [getBlock, insertBlock, removeBlock]
-    );
-
-    return <RenderElementProvider wrapElement={wrapElement} />;
+    return <RenderElementProvider wrapElement={wrapper} />;
 };
 
 /**
@@ -168,8 +105,6 @@ const BlockRenderer: React.FC = () => {
  */
 function createNodeFromSlashItem(item: SlashMenuItem, organisationId: string): BlockNode | null {
     switch (item.id) {
-        case "CONTACT_CARD":
-            return createContactBlockNode(organisationId);
         case "LAYOUT_CONTAINER":
         case "LINE_ITEM":
             return createLayoutContainerNode(organisationId);
@@ -239,9 +174,6 @@ const AddBlockButton: React.FC = () => {
         setOpen(false);
 
         switch (item.id) {
-            case "CONTACT_CARD":
-                addBlock(createContactBlockNode(DEMO_ORG_ID));
-                break;
             case "LAYOUT_CONTAINER":
             case "LINE_ITEM":
                 addBlock(createLayoutContainerNode(DEMO_ORG_ID));
@@ -297,13 +229,6 @@ const AddBlockButton: React.FC = () => {
 // from util/render/render.tree.ts which recursively builds widgets for the entire tree
 
 function createDemoTrees(): BlockTree[] {
-    // Create a client overview block (demonstrates multi-component block)
-    const contactNode = createContactBlockNode(DEMO_ORG_ID);
-    const contactTree: BlockTree = {
-        type: "block_tree",
-        root: contactNode,
-    };
-
     // Create a layout container (demonstrates wildcard slots)
     const layoutNode = createLayoutContainerNode(DEMO_ORG_ID);
     const layoutTree: BlockTree = {
@@ -311,5 +236,12 @@ function createDemoTrees(): BlockTree[] {
         root: layoutNode,
     };
 
-    return [contactTree, layoutTree];
+    // Create a task list (demonstrates content block list with manual ordering)
+    const taskListNode = createTaskListNode(DEMO_ORG_ID);
+    const taskListTree: BlockTree = {
+        type: "block_tree",
+        root: taskListNode,
+    };
+
+    return [layoutTree, taskListTree];
 }

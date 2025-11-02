@@ -1,33 +1,27 @@
+import { ChildNodeProps } from "@/lib/interfaces/interface";
 import { GridStackWidget } from "gridstack";
 import { ReactNode } from "react";
-import { RenderElementMetadata } from "../util/block/block.registry";
-import { ComponentType } from "./block.interface";
 
 export interface ProviderProps {
-    transformProps?: (args: {
-        id: string;
-        meta: GridStackWidget;
-        element: RenderElementMetadata<any>;
-        parsedProps: unknown;
-        raw: ParsedContent | null;
-    }) => unknown;
-    onUnknownType?: (info: { id: string; raw: ParsedContent | null }) => void;
-    wrapElement?: (args: {
-        id: string;
-        meta: GridStackWidget;
-        element: ReactNode;
-        elementMeta: RenderElementMetadata<any>;
-        parsedProps: unknown;
-        raw: ParsedContent | null;
-    }) => ReactNode;
+    onUnknownType?: (args: CallbackProvider) => void;
+    wrapElement: (args: WrapElementProvider) => ReactNode;
 }
 
-export interface ParsedContent {
-    type: ComponentType | string;
-    props?: unknown;
-    componentId?: string;
-    slot?: string;
-    parentId?: string;
-    blockId?: string;
-    renderStructure?: any; // BlockRenderStructure
+/**
+ * Parsed content node structured derived from GridStackWidget JSON Payload
+ */
+export interface WidgetRenderStructure {
+    // The block ID this widget represents
+    id: string;
+    // The block type key
+    key: string;
+    renderType: "component" | "container" | "list";
+    blockType: "block" | "reference";
 }
+
+export interface CallbackProvider {
+    widget: GridStackWidget;
+    content: WidgetRenderStructure;
+}
+
+export interface WrapElementProvider extends CallbackProvider, ChildNodeProps {}

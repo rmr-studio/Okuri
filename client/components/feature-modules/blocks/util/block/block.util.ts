@@ -1,6 +1,14 @@
 import { GridRect } from "@/lib/interfaces/common.interface";
-import { BlockNode, ContentNode } from "../../interface/block.interface";
+import {
+    BlockNode,
+    ContentNode,
+    isContentMetadata,
+    isContentNode,
+    isEntityReferenceMetadata,
+    isReferenceNode,
+} from "../../interface/block.interface";
 import { InsertResult } from "../../interface/editor.interface";
+import { isList } from "../list/list.util";
 
 // export function evalVisible(cond: Condition | undefined, ctx: TreeCtx): boolean {
 //     if (!cond) return true;
@@ -49,7 +57,6 @@ export const allowChildren = (node: BlockNode): boolean => {
 export const insertChild = (
     parent: ContentNode,
     child: BlockNode,
-    slotName: string,
     index: number | null = null
 ): InsertResult<BlockNode> => {
     if (!allowChildren(parent)) {
@@ -59,41 +66,35 @@ export const insertChild = (
         };
     }
 
-    const existingSlot = parent.children?.[slotName];
-    if (!existingSlot) {
-        // Slot does not exist, create it
-        const newChildren = {
-            ...(parent.children ?? {}),
-            [slotName]: [child],
-        };
-
+    if (!parent.children || parent.children?.length === 0) {
         return {
             payload: {
                 ...parent,
-                children: newChildren,
+                children: [child],
             },
             success: true,
         };
     }
 
-    // Slot exists, append to it
-    const slotChildren =
+    // Either insert at specific index or append to end
+    const updatedChildren =
         index !== null
-            ? [...existingSlot.slice(0, index), child, ...existingSlot.slice(index)]
-            : [...existingSlot, child];
-
-    const newChildren = {
-        ...parent.children,
-        [slotName]: slotChildren,
-    };
+            ? [...parent.children.slice(0, index), child, ...parent.children.slice(index)]
+            : [...parent.children, child];
 
     return {
         payload: {
             ...parent,
-            children: newChildren,
+            children: updatedChildren,
         },
         success: true,
     };
+};
+
+export const getChildren = (node: BlockNode): BlockNode[] | undefined => {
+    if (!isContentNode(node) || !node.children) return undefined;
+
+    return node.children;
 };
 
 /**
@@ -104,4 +105,24 @@ export const insertChild = (
  */
 export const getCurrentDimensions = (node: BlockNode): GridRect => {
     return node.block.layout ?? node.block.type.display.render.layoutGrid.layout;
+};
+
+export const getTitle = (node: BlockNode): string => {
+    const { block } = node;
+    const { name, type } = block;
+    return type.name || name || "Untitled Block";
+};
+
+export const getAllowedChildTypes = (node: BlockNode): string[] => {
+    if (isList(node)) {
+        if (isReferenceNode(node) && isEntityReferenceMetadata(node.block.payload)) {
+            return node.block.payload.allowedTypes || [];
+        }
+
+        if (isContentNode(node) && isContentMetadata(node.block.payload)) {
+            return node.block.payload.listConfig?.allowedTypes || [];
+        }
+    }
+
+    return node.block.type.nesting?.allowedTypes || [];
 };

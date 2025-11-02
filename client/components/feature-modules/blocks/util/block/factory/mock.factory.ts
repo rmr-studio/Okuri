@@ -1,6 +1,6 @@
-import { nowIso, uniqueId } from "@/lib/util/utils";
 import {
     BlockComponentNode,
+    BlockListConfiguration,
     BlockNode,
     BlockRenderStructure,
     BlockType,
@@ -9,169 +9,10 @@ import { createBlockType, createContentNode } from "./block.factory";
 import {
     ALL_BLOCK_COMPONENT_TYPES,
     createBlockListBlockType,
+    createContentBlockListType,
     createLayoutContainerBlockType,
     DEFAULT_GRID_LAYOUT,
 } from "./type.factory";
-
-/**
- * ============================================================================
- * Block Nodes
- * ============================================================================
- */
-
-/**
- * Creates a rich client overview block with multiple components:
- * - Contact card (left)
- * - Address list (right)
- *
- * This demonstrates:
- * 1. Multiple components in one block (2-column layout)
- * 2. Data bindings from block payload
- * 3. RefSlot bindings for child blocks
- */
-export function createContactBlockNode(organisationId: string): BlockNode {
-    const addressType = createAddressBlockType(organisationId);
-
-    // Create address child blocks
-    const addressNodes = [
-        createContentNode({
-            organisationId,
-            type: addressType,
-            name: "Primary address",
-            data: {
-                title: "Headquarters",
-                description: "Billing address",
-                address: {
-                    street: "1 Collins St",
-                    city: "Melbourne",
-                    state: "VIC",
-                    postalCode: "3000",
-                    country: "Australia",
-                },
-            },
-        }),
-        createContentNode({
-            organisationId,
-            type: addressType,
-            name: "Service address",
-            data: {
-                title: "Customer success",
-                description: "Support location",
-                address: {
-                    street: "2 George St",
-                    city: "Sydney",
-                    state: "NSW",
-                    postalCode: "2000",
-                    country: "Australia",
-                },
-            },
-        }),
-    ];
-
-    // Create a BlockType with multiple components
-    const clientOverviewType: BlockType = {
-        id: uniqueId("type-client-overview"),
-        key: "client_overview_multi",
-        version: 1,
-        name: "Client Overview",
-        description: "Contact card with address list side-by-side",
-        organisationId,
-        archived: false,
-        strictness: "SOFT",
-        system: false,
-        schema: {
-            name: "ClientOverview",
-            type: "OBJECT",
-            required: true,
-            properties: {
-                name: { name: "Name", type: "STRING", required: true },
-                email: { name: "Email", type: "STRING", required: false },
-                phone: { name: "Phone", type: "STRING", required: false },
-                company: { name: "Company", type: "STRING", required: false },
-            },
-        },
-        display: {
-            form: { fields: {} },
-            render: {
-                version: 1,
-                layoutGrid: {
-                    layout: DEFAULT_GRID_LAYOUT,
-                    items: [
-                        // Contact card on left (cols 0-5)
-                        {
-                            id: "contact_card",
-                            sm: { x: 0, y: 0, width: 12, height: 8, locked: false },
-                            lg: { x: 0, y: 0, width: 6, height: 10, locked: false },
-                        },
-                        // Address list on right (cols 6-11)
-                        {
-                            id: "address_list",
-                            sm: { x: 0, y: 8, width: 12, height: 8, locked: false },
-                            lg: { x: 6, y: 0, width: 6, height: 10, locked: false },
-                        },
-                    ],
-                },
-                components: {
-                    contact_card: {
-                        id: "contact_card",
-                        type: "CONTACT_CARD",
-                        props: {
-                            avatarShape: "circle",
-                        },
-                        bindings: [
-                            {
-                                prop: "client",
-                                source: {
-                                    type: "DataPath",
-                                    path: "$.data",
-                                },
-                            },
-                        ],
-                        fetchPolicy: "LAZY",
-                    },
-                    address_list: {
-                        id: "address_list",
-                        type: "LINE_ITEM",
-                        props: {
-                            title: "Addresses",
-                            itemComponent: "ADDRESS_CARD",
-                            emptyMessage: "No addresses",
-                        },
-                        bindings: [
-                            {
-                                prop: "items",
-                                source: {
-                                    type: "RefSlot",
-                                    slot: "addresses",
-                                    presentation: "INLINE",
-                                    expandDepth: 1,
-                                },
-                            },
-                        ],
-                        fetchPolicy: "LAZY",
-                    },
-                },
-            },
-        },
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-    };
-
-    return createContentNode({
-        organisationId,
-        type: clientOverviewType,
-        name: "Jane Doe",
-        data: {
-            name: "Jane Doe",
-            email: "jane@acme.com",
-            phone: "+61 400 123 456",
-            company: "Acme Corporation",
-        },
-        children: {
-            addresses: addressNodes,
-        },
-    });
-}
 
 export function createProjectBlockNode(organisationId: string): BlockNode {
     const projectType = createProjectOverviewType(organisationId);
@@ -190,9 +31,7 @@ export function createProjectBlockNode(organisationId: string): BlockNode {
             description: "Tracked tasks for this project",
             emptyMessage: "Add a task",
         },
-        children: {
-            items: taskNodes,
-        },
+        children: taskNodes,
     });
 
     const layoutNode = createContentNode({
@@ -203,9 +42,7 @@ export function createProjectBlockNode(organisationId: string): BlockNode {
             title: "Project details",
             description: "Tasks and commentary",
         },
-        children: {
-            main: [taskListNode],
-        },
+        children: [taskListNode],
     });
 
     return createContentNode({
@@ -217,9 +54,7 @@ export function createProjectBlockNode(organisationId: string): BlockNode {
             status: "In progress",
             summary: "Reworking onboarding flows and portal UI for enterprise clients.",
         },
-        children: {
-            body: [layoutNode],
-        },
+        children: [layoutNode],
     });
 }
 
@@ -277,87 +112,9 @@ export function createLayoutContainerNode(organisationId: string): BlockNode {
             title: "Getting Started",
             description: "An introduction to block environments",
         },
-        children: {
-            main: nestedBlocks,
-        },
+        children: nestedBlocks,
     });
 }
-
-/**
- * ============================================================================
- * Block Types
- * ============================================================================
- */
-
-export const createContactBlockType = (organisationId: string): BlockType => {
-    const component: BlockComponentNode = {
-        id: "contactCard",
-        type: "CONTACT_CARD",
-        props: {
-            avatarShape: "circle",
-        },
-        bindings: [
-            {
-                prop: "client",
-                source: {
-                    type: "RefSlot",
-                    slot: "client",
-                    presentation: "SUMMARY",
-                    expandDepth: 1,
-                },
-            },
-            {
-                prop: "href",
-                source: { type: "DataPath", path: "$.data/profileUrl" },
-            },
-            {
-                prop: "avatarUrl",
-                source: { type: "DataPath", path: "$.data/avatarUrl" },
-            },
-        ],
-        fetchPolicy: "LAZY",
-    };
-
-    const render: BlockRenderStructure = {
-        version: 1,
-        layoutGrid: {
-            layout: DEFAULT_GRID_LAYOUT,
-            items: [
-                {
-                    id: component.id,
-                    sm: { x: 0, y: 0, width: 12, height: 8, locked: false },
-                    lg: { x: 0, y: 0, width: 12, height: 8, locked: false },
-                },
-            ],
-        },
-        components: {
-            [component.id]: component,
-        },
-    };
-
-    return createBlockType({
-        key: "contact_overview",
-        name: "Contact Overview",
-        description: "Displays client summary with linked account data.",
-        organisationId,
-        schema: {
-            name: "ContactOverview",
-            type: "OBJECT",
-            required: true,
-            properties: {
-                name: { name: "Name", type: "STRING", required: true },
-                email: { name: "Email", type: "STRING", required: false, format: "EMAIL" },
-                phone: { name: "Phone", type: "STRING", required: false },
-                profileUrl: { name: "Profile URL", type: "STRING", required: false },
-            },
-        },
-        render,
-        nesting: {
-            max: undefined,
-            allowedTypes: ALL_BLOCK_COMPONENT_TYPES,
-        },
-    });
-};
 
 const createAddressBlockType = (organisationId: string): BlockType => {
     const component: BlockComponentNode = {
@@ -602,3 +359,85 @@ const createTaskNodes = (organisationId: string, taskType: BlockType) => {
         })
     );
 };
+
+/**
+ * Creates a content block list containing task items
+ * Demonstrates manual ordering mode with drag-to-reorder
+ */
+export function createTaskListNode(organisationId: string): BlockNode {
+    const listType = createContentBlockListType(organisationId);
+    const taskType = createTaskBlockType(organisationId);
+
+    // Create task items
+    const tasks = [
+        createContentNode({
+            organisationId,
+            type: taskType,
+            data: {
+                title: "Design wireframes",
+                assignee: "Jane Doe",
+                status: "IN_PROGRESS",
+                dueDate: "2024-12-15",
+            },
+            name: "Design wireframes",
+        }),
+        createContentNode({
+            organisationId,
+            type: taskType,
+            data: {
+                title: "Implement authentication",
+                assignee: "John Smith",
+                status: "NOT_STARTED",
+                dueDate: "2024-12-20",
+            },
+            name: "Implement authentication",
+        }),
+        createContentNode({
+            organisationId,
+            type: taskType,
+            data: {
+                title: "Write documentation",
+                assignee: "Alice Johnson",
+                status: "NOT_STARTED",
+                dueDate: "2024-12-25",
+            },
+            name: "Write documentation",
+        }),
+    ];
+
+    // Create list with manual ordering configuration
+    const listConfig: BlockListConfiguration = {
+        allowedTypes: ["project_task"],
+        allowDuplicates: false,
+        display: {
+            itemSpacing: 12,
+            showDragHandles: true,
+            emptyMessage: "No tasks yet. Add one to get started!",
+        },
+        order: {
+            mode: "MANUAL",
+        },
+    };
+
+    return createContentNode({
+        organisationId,
+        type: listType,
+        name: "Project Tasks",
+        data: {
+            title: "Project Tasks",
+            description: "Drag to reorder tasks",
+        },
+        children: tasks,
+
+        // Override payload to include listConfig
+        payloadOverride: {
+            type: "content",
+            meta: { validationErrors: [] },
+            data: {
+                title: "Project Tasks",
+                description: "Drag to reorder tasks",
+            },
+            listConfig,
+        },
+    });
+}

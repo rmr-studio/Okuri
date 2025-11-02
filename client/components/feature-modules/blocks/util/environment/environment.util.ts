@@ -8,31 +8,15 @@ import {
 } from "../../interface/editor.interface";
 import { allowChildren, getCurrentDimensions, insertChild } from "../block/block.util";
 
-/**
- * Builds a new block tree instance from an existing node. Where that node becomes
- * the root of a new tree.
- *
- * @param node
- * @returns [BlockTree] the new tree instance
- */
-function buildTreeFromNode(node: BlockNode): BlockTree {
-    return {
-        type: "block_tree",
-        root: node,
-    };
-}
-
 /** Collect descendant ids for a node (used when removing or re-indexing). */
 export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void => {
     if (!isContentNode(node) || !node.children) {
         return;
     }
 
-    Object.values(node.children).forEach((slotChildren) => {
-        slotChildren.forEach((child) => {
-            acc.add(child.block.id);
-            collectDescendantIds(child, acc);
-        });
+    node.children.forEach((child) => {
+        acc.add(child.block.id);
+        collectDescendantIds(child, acc);
     });
 };
 
@@ -56,10 +40,8 @@ export const traverseTree = (
     if (!isContentNode(node)) return;
     if (!allowChildren(node) || !node.children) return;
 
-    Object.values(node.children).forEach((slotChildren) => {
-        slotChildren.forEach((child) => {
-            traverseTree(child, blockId, treeId, hierarchy, treeIndex);
-        });
+    node.children.forEach((child) => {
+        traverseTree(child, blockId, treeId, hierarchy, treeIndex);
     });
 };
 
@@ -73,16 +55,15 @@ export const findNodeById = (curr: BlockNode, targetId: string): BlockNode | und
         return undefined;
     }
 
-    for (const slotChildren of Object.values(curr.children)) {
-        for (const child of slotChildren) {
-            const match = findNodeById(child, targetId);
-            if (match) {
-                return match;
-            }
+    let result: BlockNode | undefined = undefined;
+    curr.children.forEach((child) => {
+        const match = findNodeById(child, targetId);
+        if (match) {
+            result = match;
         }
-    }
+    });
 
-    return undefined;
+    return result;
 };
 
 export const insertTree = (
@@ -125,91 +106,61 @@ export const findTree = (environment: EditorEnvironment, treeId: string): BlockT
  * Remove a node from a tree and return both the updated tree and the extracted node.
  * Root removal is handled by callers, so we bail out when the requested id is the root.
  */
-export const detachNode = (tree: BlockTree, blockId: string): DetachResult => {
-    if (tree.root.block.id === blockId) {
+export const detachNode = (curr: BlockNode, blockId: string): DetachResult => {
+    if (curr.block.id === blockId) {
         return {
             success: false,
-            tree,
+            root: curr,
             detachedNode: null,
-            slotName: null,
         };
     }
 
-    const rootNode = tree.root;
-    if (!isContentNode(rootNode) || !rootNode.children) {
+    if (!isContentNode(curr) || !curr.children) {
         return {
             success: false,
-            tree,
+            root: curr,
             detachedNode: null,
-            slotName: null,
         };
     }
 
     // Try to find the node as an immediate child first.
-    for (const [slotName, nodes] of Object.entries(rootNode.children)) {
-        const index = nodes.findIndex((node) => node.block.id === blockId);
-        if (index >= 0) {
-            const newNodes = [...nodes];
-            const [detachedNode] = newNodes.splice(index, 1);
-
-            const updatedChildren = { ...rootNode.children };
-            if (newNodes.length > 0) {
-                updatedChildren[slotName] = newNodes;
-            } else {
-                delete updatedChildren[slotName];
-            }
-
-            return {
-                success: true,
-                tree: {
-                    ...tree,
-                    root: {
-                        ...rootNode,
-                        children: updatedChildren,
-                    },
-                },
-                detachedNode,
-                slotName,
-            };
-        }
+    const index = curr.children.findIndex((child) => child.block.id === blockId);
+    if (index >= 0) {
+        const newChildren = [...curr.children];
+        const [detachedNode] = newChildren.splice(index, 1);
+        return {
+            success: true,
+            root: {
+                ...curr,
+                children: newChildren,
+            },
+            detachedNode,
+        };
     }
 
-    // Otherwise recurse into descendants.
-    for (const [slotName, nodes] of Object.entries(rootNode.children)) {
-        const newNodes = [...nodes];
-        for (let i = 0; i < newNodes.length; i += 1) {
-            const child = newNodes[i];
-            if (!isContentNode(child)) {
-                continue;
-            }
+    // Recurse into children to find and detach the node.
+    let success = false;
+    let detachedNode: BlockNode | null = null;
 
-            const result = detachNode({ ...tree, root: child }, blockId);
-            if (!result) {
-                continue;
-            }
+    const updatedChildren = curr.children.map((child) => {
+        if (!isContentNode(child)) return child;
 
-            newNodes[i] = result.tree.root;
-            const updatedChildren = { ...rootNode.children, [slotName]: newNodes };
-            return {
-                success: true,
-                tree: {
-                    ...tree,
-                    root: {
-                        ...rootNode,
-                        children: updatedChildren,
-                    },
-                },
-                detachedNode: result.detachedNode,
-                slotName: result.slotName,
-            };
+        const result = detachNode(child, blockId);
+        if (result.success) {
+            success = true;
+            detachedNode = result.detachedNode;
+            return result.root;
         }
-    }
+        return child;
+    });
 
     return {
-        success: false,
-        tree,
-        detachedNode: null,
-        slotName: null,
+        success,
+        root: {
+            ...curr,
+            children: updatedChildren,
+        },
+        detachedNode,
     };
 };
 
@@ -222,145 +173,109 @@ export const getTreeId = (tree: BlockTree) => {
     return tree.root.block.id;
 };
 
-/** Insert a node beneath a specific parent/slot, returning a fresh tree instance. */
+/** Insert a node beneath a specific parent, returning a fresh node instance. */
 export const insertNode = (
-    tree: BlockTree,
+    node: BlockNode,
     parentId: string,
-    slotName: string,
     nodeToInsert: BlockNode,
     index: number | null = null
-): InsertResult<BlockTree> => {
+): InsertResult<BlockNode> => {
     // Handle insertion at root level
-    if (tree.root.block.id === parentId) {
+    if (node.block.id === parentId) {
         // Reject insertion if root is not a content node
-        if (!isContentNode(tree.root)) {
+        if (!isContentNode(node)) {
             return {
                 success: false,
-                payload: tree,
+                payload: node,
             };
         }
 
         // Insert directly under root
-        const { success, payload: node } = insertChild(tree.root, nodeToInsert, slotName, index);
+        const { success, payload: updatedNode } = insertChild(node, nodeToInsert, index);
 
         if (!success) {
             return {
                 success: false,
-                payload: tree,
+                payload: node,
             };
         }
 
         return {
             success: true,
-            payload: {
-                ...tree,
-                root: node,
-            },
+            payload: node,
         };
     }
 
-    // We need to recurse into children
-    const rootNode = tree.root;
-
     // If root is not a content node, there is no possibility of recursion. Bail out.
-    if (!isContentNode(rootNode) || !rootNode.children) {
+    if (!isContentNode(node) || !node.children) {
         return {
             success: false,
-            payload: tree,
+            payload: node,
         };
     }
 
     // Recurse into children to find parentId
     let success = false;
 
-    const updatedChildren: Record<string, BlockNode[]> = {};
-    Object.entries(rootNode.children).forEach(([slot, nodes]) => {
-        updatedChildren[slot] = nodes.map((child) => {
-            // If we arrive at the parent, perform insertion
-            if (child.block.id === parentId) {
-                if (!isContentNode(child)) {
-                    return child;
-                }
-
-                const { success: insertSuccess, payload: node } = insertChild(
-                    child,
-                    nodeToInsert,
-                    slotName,
-                    index
-                );
-                success = insertSuccess;
-                return node;
-            }
-
+    const updatedChildren = node.children.map((child) => {
+        // If we arrive at the parent, perform insertion
+        if (child.block.id === parentId) {
             if (!isContentNode(child)) {
                 return child;
             }
 
-            // Recurse further down the tree
-
-            const result = insertNode(
-                { ...tree, root: child },
-                parentId,
-                slotName,
+            const { success: insertSuccess, payload: node } = insertChild(
+                child,
                 nodeToInsert,
                 index
             );
-            if (result.success) {
-                success = true;
-            }
-            // Update the new root node
-            return result.payload.root;
-        });
+            success = insertSuccess;
+            return node;
+        }
+
+        if (!isContentNode(child)) {
+            return child;
+        }
+
+        // Recurse further down the tree
+
+        const result = insertNode(child, parentId, nodeToInsert, index);
+        if (result.success) {
+            success = true;
+        }
+        // Update the new root node
+        return result.payload;
     });
 
     return {
         success,
         payload: {
-            ...tree,
-            root: {
-                ...rootNode,
-                children: updatedChildren,
-            },
+            ...node,
+            children: updatedChildren,
         },
     };
 };
 
-export const insertNodeAux = () => {};
-
 /** Replace a node in-place, returning a new tree. */
-export const replaceNode = (tree: BlockTree, replacement: BlockNode): BlockTree => {
+export const replaceNode = (curr: BlockNode, replacement: BlockNode): BlockNode => {
     const blockId = replacement.block.id;
-    if (tree.root.block.id === blockId) {
-        return {
-            ...tree,
-            root: replacement,
-        };
+    if (curr.block.id === blockId) {
+        return replacement;
     }
 
-    const rootNode = tree.root;
-    if (!isContentNode(rootNode) || !rootNode.children) {
-        return tree;
+    if (!isContentNode(curr) || !curr.children) {
+        return curr;
     }
 
-    const updatedChildren: Record<string, BlockNode[]> = {};
-    Object.entries(rootNode.children).forEach(([slot, nodes]) => {
-        updatedChildren[slot] = nodes.map((child) => {
-            if (child.block.id === blockId) {
-                return replacement;
-            }
-            if (!isContentNode(child)) {
-                return child;
-            }
-            return replaceNode({ ...tree, root: child }, replacement).root;
-        });
+    const updatedChildren = curr.children.map((child) => {
+        if (child.block.id === blockId) return replacement;
+        if (!isContentNode(child)) return child;
+        return replaceNode(child, replacement);
     });
 
     return {
-        ...tree,
-        root: {
-            ...rootNode,
-            children: updatedChildren,
-        },
+        ...curr,
+        children: updatedChildren,
     };
 };
 
@@ -415,12 +330,9 @@ export const init = (organisationId: string, initialTrees: BlockTree[] = []): Ed
         if (!isContentNode(instance.root)) return;
         if (!allowChildren(instance.root) || !instance.root.children) return;
 
-        // Traverse children
-        Object.values(instance.root.children).forEach((slot: BlockNode[]) => {
-            slot.forEach((child) => {
-                // Recursively traverse the tree
-                traverseTree(child, rootId, rootId, hierarchy, treeIndex);
-            });
+        instance.root.children.forEach((child) => {
+            // Recursively traverse the tree
+            traverseTree(child, rootId, rootId, hierarchy, treeIndex);
         });
     });
 

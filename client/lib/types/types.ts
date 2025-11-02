@@ -451,18 +451,22 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get all children of a parent
+         * @description Returns the ordered list of child block edges for a parent block.
+         */
+        get: operations["getChildren"];
         put?: never;
         /**
          * Add a child block to a parent
-         * @description Creates a parent-child relationship by adding a block to a parent's slot. Validates organisation ownership, slot compatibility, and type nesting rules. Rejects cycles and enforces child_id uniqueness (a block can only have one parent).
+         * @description Creates a parent-child relationship by adding a block to a parent. Validates organisation ownership and type nesting rules. Rejects cycles and enforces child_id uniqueness (a block can only have one parent).
          */
         post: operations["addChild"];
         /**
-         * Clear all children from a slot
-         * @description Removes all children from the specified slot. Child blocks remain in the system as top-level blocks. This is a bulk detachment operation.
+         * Clear all children from a parent
+         * @description Removes all children from the parent. Child blocks remain in the system as top-level blocks. This is a bulk detachment operation.
          */
-        delete: operations["clearSlot"];
+        delete: operations["clearAllChildren"];
         options?: never;
         head?: never;
         patch?: never;
@@ -478,8 +482,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Add multiple children to a parent slot
-         * @description Bulk operation to add multiple blocks to a parent's slot. The service normalizes order indices to 0..n-1. All children must pass the same validation as single child addition.
+         * Add multiple children to a parent
+         * @description Bulk operation to add multiple blocks to a parent. The service normalizes order indices to 0..n-1. All children must pass the same validation as single child addition.
          */
         post: operations["addChildrenBulk"];
         delete?: never;
@@ -522,8 +526,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Move a child block internally to a different position or slot
-         * @description Moves a child block within the same parent. Can reorder within same slot or move to a different slot. Source slot is inferred from current edge. Renumbers both affected slots automatically.
+         * Move a child block to a different position
+         * @description Moves a child block within the same parent to a new index position. Renumbers affected children automatically.
          */
         patch: operations["moveChild"];
         trace?: never;
@@ -542,8 +546,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Reorder children within a single slot
-         * @description Reorders all children in a slot according to the provided order list. Validates set equality (all existing children must be in the order list). Normalizes indices to 0..n-1.
+         * Reorder all children within a parent
+         * @description Reorders all children in a parent according to the provided order list. Validates set equality (all existing children must be in the order list). Normalizes indices to 0..n-1.
          */
         patch: operations["reorderChildren"];
         trace?: never;
@@ -828,7 +832,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a child from a parent
-         * @description Removes the parent-child relationship without deleting the child block. The child block remains in the system as a top-level block. Automatically renumbers remaining children in the affected slot.
+         * @description Removes the parent-child relationship without deleting the child block. The child block remains in the system as a top-level block. Automatically renumbers remaining children.
          */
         delete: operations["removeChild"];
         options?: never;
@@ -976,12 +980,12 @@ export interface components {
         };
         BlockBinding: {
             prop: string;
-            source: components["schemas"]["Computed"] | components["schemas"]["DataPath"] | components["schemas"]["RefSlot"];
+            source: components["schemas"]["Computed"] | components["schemas"]["DataPath"];
         };
         BlockComponentNode: {
             id: string;
             /** @enum {string} */
-            type: "CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT" | "FALLBACK";
+            type: "LAYOUT_CONTAINER" | "LIST" | "CONTACT_CARD" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "IMAGE" | "BUTTON" | "ATTACHMENT" | "TEXT" | "FALLBACK";
             props: {
                 [key: string]: unknown;
             };
@@ -1097,7 +1101,7 @@ export interface components {
         BlockTypeNesting: {
             /** Format: int32 */
             max?: number;
-            allowedTypes: ("CONTACT_CARD" | "LAYOUT_CONTAINER" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "TEXT" | "IMAGE" | "BUTTON" | "ATTACHMENT" | "FALLBACK")[];
+            allowedTypes: string[];
         };
         Client: {
             /**
@@ -1179,9 +1183,7 @@ export interface components {
             };
         };
         ContentNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
-            children?: {
-                [key: string]: components["schemas"]["Node"][];
-            };
+            children?: components["schemas"]["Node"][];
         };
         DataPath: {
             type: "DataPath";
@@ -1193,8 +1195,9 @@ export interface components {
         };
         EntityReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
             /** @enum {string} */
-            presentation: "SUMMARY" | "ENTITY" | "TABLE" | "GRID";
+            presentation: "SUMMARY" | "ENTITY" | "TABLE" | "GRID" | "INLINE";
             items: components["schemas"]["ReferenceItem"][];
+            projection: components["schemas"]["Projection"];
             allowedTypes?: ("line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task")[];
             display: components["schemas"]["ListDisplayConfig"];
             order: components["schemas"]["OrderingConfig"];
@@ -1325,16 +1328,11 @@ export interface components {
         } & (Omit<components["schemas"]["Operand"], "kind"> & {
             path: string;
         });
-        RefSlot: {
-            type: "RefSlot";
-        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
-            slot: string;
-            /** @enum {string} */
-            presentation: "SUMMARY" | "INLINE";
-            fields?: string[];
-            /** Format: int32 */
-            expandDepth?: number;
-        });
+        Projection: {
+            fields: string[];
+            /** Format: uuid */
+            templateId?: string;
+        };
         Reference: {
             /** Format: uuid */
             id?: string;
@@ -1521,7 +1519,6 @@ export interface components {
         AddChildRequest: {
             /** Format: uuid */
             childId: string;
-            slot: string;
             /** Format: int32 */
             orderIndex?: number;
         };
@@ -1532,12 +1529,10 @@ export interface components {
             parentId: string;
             /** Format: uuid */
             childId: string;
-            slot: string;
             /** Format: int32 */
             orderIndex: number;
         };
         AddChildrenBulkRequest: {
-            slot: string;
             children: components["schemas"]["ChildOrderItem"][];
         };
         ChildOrderItem: {
@@ -1558,18 +1553,15 @@ export interface components {
             payload: unknown;
             /** Format: uuid */
             parentId?: string;
-            slot?: string;
             parentNesting?: components["schemas"]["BlockTypeNesting"];
             /** Format: int32 */
             orderIndex?: number;
         };
         MoveChildRequest: {
-            toSlot: string;
             /** Format: int32 */
             toIndex: number;
         };
         ReorderChildrenRequest: {
-            slot: string;
             order: string[];
         };
     };
@@ -2929,6 +2921,46 @@ export interface operations {
             };
         };
     };
+    getChildren: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Children retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"][];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"][];
+                };
+            };
+            /** @description Parent block not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockChildEntity"][];
+                };
+            };
+        };
+    };
     addChild: {
         parameters: {
             query?: never;
@@ -2991,11 +3023,9 @@ export interface operations {
             };
         };
     };
-    clearSlot: {
+    clearAllChildren: {
         parameters: {
-            query: {
-                slot: string;
-            };
+            query?: never;
             header?: never;
             path: {
                 parentId: string;
@@ -3004,15 +3034,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Slot cleared successfully */
+            /** @description All children cleared successfully */
             204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Slot parameter is required */
-            400: {
                 headers: {
                     [name: string]: unknown;
                 };

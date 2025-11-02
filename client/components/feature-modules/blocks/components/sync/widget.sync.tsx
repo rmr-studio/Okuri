@@ -2,9 +2,10 @@ import { GridStackWidget } from "gridstack";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
-import { isContentNode } from "../../interface/block.interface";
+import { isContentNode, isEntityReferenceMetadata } from "../../interface/block.interface";
 import { getCurrentDimensions } from "../../util/block/block.util";
 import { findNodeById, getTreeId } from "../../util/environment/environment.util";
+import { isList } from "../../util/list/list.util";
 import { hasWildcardSlots } from "../../util/render/binding.resolver";
 
 /**
@@ -18,7 +19,7 @@ import { hasWildcardSlots } from "../../util/render/binding.resolver";
  */
 export const WidgetEnvironmentSync: React.FC = () => {
     const { gridStack, _rawWidgetMetaMap } = useGrid();
-    const { getTrees, getParent, environment, isInitialized, setIsInitialized } =
+    const { getTrees, getParentId, environment, isInitialized, setIsInitialized } =
         useBlockEnvironment();
 
     // Track ALL block IDs in the environment (not just top-level)
@@ -87,7 +88,8 @@ export const WidgetEnvironmentSync: React.FC = () => {
             if (!blockNode) return;
 
             const layout = blockNode.block.layout ?? getCurrentDimensions(blockNode);
-            const parentId = getParent(blockId);
+            const parentId = getParentId(blockId);
+            const type = isEntityReferenceMetadata(blockNode.block.payload) ? "reference" : "block";
 
             const widgetConfig: GridStackWidget = {
                 id: blockId,
@@ -96,10 +98,26 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 w: layout.width,
                 h: layout.height,
                 content: JSON.stringify({
-                    type: blockNode.block.type.key,
-                    blockId: blockId,
+                    id: blockId,
+                    key: blockNode.block.type.key,
+                    renderType: "component",
+                    blockType: type,
                 }),
             };
+
+            // Special handling for list blocks => We render them differently
+            if (isList(blockNode)) {
+                return {
+                    ...widgetConfig,
+                    // Update Content to include list renderType
+                    content: JSON.stringify({
+                        id: blockId,
+                        key: blockNode.block.type.key,
+                        renderType: "list",
+                        blockType: type,
+                    }),
+                };
+            }
 
             // Check if this block should have a subgrid (for blocks with wildcard slots)
             const renderStructure = blockNode.block.type.display.render;
@@ -108,6 +126,12 @@ export const WidgetEnvironmentSync: React.FC = () => {
             );
 
             if (hasWildcards && isContentNode(blockNode)) {
+                widgetConfig.content = JSON.stringify({
+                    id: blockId,
+                    key: blockNode.block.type.key,
+                    renderType: "container",
+                    blockType: type,
+                });
                 // Add subgrid configuration - children will be added separately by the sync logic
                 widgetConfig.subGridOpts = {
                     column: 12,
@@ -133,7 +157,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                     nodes: Array<{ id?: string; subGrid?: { engine?: { nodes?: unknown[] } } }>
                 ): { id?: string; subGrid?: unknown } | null => {
                     for (const node of nodes) {
-                        if (String(node.id) === parentId) {
+                        if (node.id === parentId) {
                             return node;
                         }
                         if (node.subGrid?.engine?.nodes) {
@@ -244,7 +268,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
         gridStack,
         allBlockIds,
         environment,
-        getParent,
+        getParentId,
         _rawWidgetMetaMap,
         isInitialized,
         setIsInitialized,

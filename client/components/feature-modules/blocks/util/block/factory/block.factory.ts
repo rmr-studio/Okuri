@@ -128,13 +128,15 @@ export const createContentNode = ({
     name,
     id,
     children,
+    payloadOverride,
 }: {
     organisationId: string;
     type: BlockType;
-    data: Record<string, unknown>;
+    data?: Record<string, unknown>;
     name?: string;
     id?: string;
-    children?: Record<string, BlockNode[]>;
+    children?: BlockNode[];
+    payloadOverride?: Metadata;
 }): BlockNode => ({
     type: "content_node",
     block: createBlockBase({
@@ -142,7 +144,7 @@ export const createContentNode = ({
         organisationId,
         type,
         name,
-        payload: createContentMetadata(data),
+        payload: payloadOverride ?? createContentMetadata(data ?? {}),
     }),
     children,
     warnings: [],

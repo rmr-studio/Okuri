@@ -1,78 +1,89 @@
-import { ChildNodeProps } from "@/lib/interfaces/interface";
-import { useCallback } from "react";
-import { useBlockEnvironment } from "../../context/block-environment-provider";
-import { Block, BlockNode } from "../../interface/block.interface";
+import { ReactNode, useCallback } from "react";
+import { BlockNode } from "../../interface/block.interface";
+import { WrapElementProvider } from "../../interface/render.interface";
+import { getAllowedChildTypes, getTitle } from "../../util/block/block.util";
 import {
-    createContactBlockNode,
     createLayoutContainerNode,
     createNoteNode,
     createProjectBlockNode,
 } from "../../util/block/factory/mock.factory";
-import { PanelWrapper, QuickActionItem, SlashMenuItem, defaultSlashItems } from "./panel-wrapper";
+import { PanelWrapper, SlashMenuItem, defaultSlashItems } from "./panel-wrapper";
 
-interface Props extends ChildNodeProps {
-    block: Block;
+interface EditorPanelCallackProps {
+    getBlock: (id: string) => BlockNode | undefined;
+    insertBlock: (node: BlockNode, parentId: string, index: number | null) => void;
+    removeBlock: (id: string) => void;
+    getParent: (id: string) => BlockNode | null;
+    moveBlockUp: (id: string) => void;
+    moveBlockDown: (id: string) => void;
 }
 
-const BlockPanel: React.FC<Props> = ({ block, children }) => {
-    const { id, type } = block;
+export const editorPanel = ({
+    getBlock,
+    insertBlock,
+    removeBlock,
+    getParent,
+    moveBlockUp,
+    moveBlockDown,
+}: EditorPanelCallackProps) => {
+    const wrapper = useCallback(
+        ({ children, content, widget }: WrapElementProvider): ReactNode => {
+            // Get associated node from block environment
+            const node = getBlock(content.id);
+            if (!node) return children;
 
-    const { getBlock, removeBlock, insertBlock } = useBlockEnvironment();
-    const blockNode = getBlock(id);
+            const { block } = node;
+            const { id, organisationId, type } = block;
 
-    const canNest = Boolean(blockNode?.block.type.nesting);
-    const organisationId = blockNode?.block.organisationId;
+            // Create callback handlers for block toolbar
+            const handleDelete = () => removeBlock(id);
 
-    const handleDelete = useCallback(() => {
-        removeBlock(id);
-    }, [id, removeBlock]);
+            const handleInsert = (item: SlashMenuItem) => {
+                if (!type.nesting || !organisationId) return;
+                const newNode = createNodeFromSlashItem(item, organisationId);
+                if (!newNode) return;
+                insertBlock(newNode, id, null);
+            };
 
-    const handleInsertNested = useCallback(
-        (item: SlashMenuItem) => {
-            if (!canNest || !organisationId) return;
+            // Check if this block is inside a list
+            const parent = getParent(id);
 
-            const newNode = createNodeFromSlashItem(item, organisationId);
-            if (!newNode) return;
+            const quickActions = [
+                {
+                    id: "delete",
+                    label: "Delete block",
+                    shortcut: "⌘⌫",
+                    onSelect: handleDelete,
+                },
+            ];
 
-            insertBlock(newNode, id, "main", null);
+            const title = getTitle(node);
+
+            // Todo: Implement Loading Slash items from Organisation generated block types + System Items
+            const restrictedChildTypes = getAllowedChildTypes(node);
+            const availableItems = restrictedChildTypes
+                ? defaultSlashItems.filter((item) => restrictedChildTypes.includes(item.id))
+                : defaultSlashItems;
+
+            return (
+                <PanelWrapper
+                    id={id}
+                    title={title}
+                    description={type.description}
+                    slashItems={availableItems}
+                    quickActions={quickActions}
+                    allowInsert={!!type.nesting}
+                    onInsert={handleInsert}
+                    onDelete={handleDelete}
+                >
+                    {children}
+                </PanelWrapper>
+            );
         },
-        [id, canNest, insertBlock, organisationId]
+        [getBlock, insertBlock, removeBlock, getParent, moveBlockUp, moveBlockDown]
     );
 
-    if (!blockNode) {
-        return (
-            <div className="rounded border border-dashed p-4 text-sm text-muted-foreground">
-                Block {id} not found
-            </div>
-        );
-    }
-
-    const title = blockNode.block.type.name ?? blockNode.block.name ?? "Untitled Block";
-    const description = blockNode.block.type.description;
-
-    const quickActions: QuickActionItem[] = [
-        {
-            id: "delete",
-            label: "Delete block",
-            shortcut: "⌘⌫",
-            onSelect: handleDelete,
-        },
-    ];
-
-    return (
-        <PanelWrapper
-            id={id}
-            title={title}
-            description={description}
-            slashItems={defaultSlashItems}
-            quickActions={quickActions}
-            allowInsert={canNest}
-            onInsert={canNest ? handleInsertNested : undefined}
-            onDelete={handleDelete}
-        >
-            {children}
-        </PanelWrapper>
-    );
+    return { wrapper };
 };
 
 export function createNodeFromSlashItem(
@@ -80,8 +91,6 @@ export function createNodeFromSlashItem(
     organisationId: string
 ): BlockNode | null {
     switch (item.id) {
-        case "CONTACT_CARD":
-            return createContactBlockNode(organisationId);
         case "LAYOUT_CONTAINER":
         case "LINE_ITEM":
             return createLayoutContainerNode(organisationId);
