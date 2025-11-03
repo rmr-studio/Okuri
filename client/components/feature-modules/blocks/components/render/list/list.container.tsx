@@ -49,9 +49,9 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
 
     // Todo: Implement Loading Slash items from Organisation generated block types + System Items
     const restrictedChildTypes = getAllowedChildTypes(node);
-    const availableItems = defaultSlashItems.filter((item) =>
-        restrictedChildTypes.includes(item.id)
-    );
+    const availableItems = !!restrictedChildTypes.length
+        ? defaultSlashItems.filter((item) => restrictedChildTypes.includes(item.id))
+        : defaultSlashItems;
 
     return (
         <PanelWrapper

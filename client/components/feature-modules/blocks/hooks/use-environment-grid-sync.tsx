@@ -69,9 +69,6 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
          * This can happen when a widget is programmatically added or moved from another grid
          */
         const handleBlockAdded = (_: Event, items: GridStackNode[]) => {
-            console.log("[GridSync] handleBlockAdded triggered");
-            console.log("isInitialized:", isInitialized);
-            console.log("environment:", environment);
             // Skip if environment is not initialized
             if (!isInitialized) return;
 
@@ -115,7 +112,7 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
         // gridStack.on("dropped", handleBlockMoved);
         gridStack.on("added", handleBlockAdded);
 
-        // Cleanup
+        // Cleanup5
         return () => {
             // gridStack.off("change");
             // gridStack.off("dragstop");

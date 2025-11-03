@@ -8,6 +8,7 @@ import { getCurrentDimensions } from "../../util/block/block.util";
 import { findNodeById, getTreeId } from "../../util/environment/environment.util";
 import { isList } from "../../util/list/list.util";
 import { hasWildcardSlots } from "../../util/render/binding.resolver";
+import { parseContent } from "../../util/render/render.util";
 
 /**
  * Synchronizes GridStack widgets when blocks change at any level of the tree.
@@ -141,6 +142,16 @@ export const WidgetEnvironmentSync: React.FC = () => {
             if (!querySuccess || !parent) {
                 console.warn(
                     `Parent widget ${parentId} not found for child ${id}. Widget not added.`
+                );
+                return;
+            }
+
+            // Dont render list item widgets directly - they are part of the list's rendering
+            const parsedParentMeta = parseContent(parent);
+            if (!parsedParentMeta) return;
+            if (parsedParentMeta.renderType === "list") {
+                console.log(
+                    `Parent widget ${parentId} is a list item. Child widget ${id} will be rendered as part of the list.`
                 );
                 return;
             }

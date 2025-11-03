@@ -15,7 +15,7 @@ export interface WidgetRenderStructure {
     id: string;
     // The block type key
     key: string;
-    renderType: "component" | "container" | "list";
+    renderType: "component" | "container" | "list" | "list-item";
     blockType: "block" | "reference";
 }
 

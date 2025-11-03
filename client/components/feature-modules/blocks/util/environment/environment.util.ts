@@ -1,12 +1,12 @@
 import { nowIso } from "@/lib/util/utils";
-import { BlockNode, BlockTree, GridRect, isContentNode } from "../../interface/block.interface";
+import { BlockNode, BlockTree, isContentNode } from "../../interface/block.interface";
 import {
     DetachResult,
     EditorEnvironment,
     EditorEnvironmentMetadata,
     InsertResult,
 } from "../../interface/editor.interface";
-import { allowChildren, getCurrentDimensions, insertChild } from "../block/block.util";
+import { allowChildren, insertChild } from "../block/block.util";
 
 /** Collect descendant ids for a node (used when removing or re-indexing). */
 export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void => {
@@ -317,15 +317,12 @@ export const init = (organisationId: string, initialTrees: BlockTree[] = []): Ed
 
     const hierarchy = new Map<string, string | null>();
     const treeIndex = new Map<string, string>();
-    const layouts = new Map<string, GridRect>();
 
     initialTrees.forEach((instance, index) => {
         const rootId = instance.root.block.id;
-        const rootLayout = generateTreeLayout(instance.root, index);
 
         hierarchy.set(rootId, null);
         treeIndex.set(rootId, rootId);
-        layouts.set(rootId, rootLayout);
 
         if (!isContentNode(instance.root)) return;
         if (!allowChildren(instance.root) || !instance.root.children) return;
@@ -347,19 +344,6 @@ export const init = (organisationId: string, initialTrees: BlockTree[] = []): Ed
             createdAt: nowIso(),
             updatedAt: nowIso(),
         },
-    };
-};
-
-export const generateTreeLayout = (node: BlockNode, index: number = 1): GridRect => {
-    // If we have already generated a layout for this node, return it
-    if (node.block.layout) return node.block.layout;
-    console.log("Generating layout for node", node.block.id);
-
-    // Otherwise, generate a default layout based on index and existing layout config
-    const defaultLayout: GridRect = getCurrentDimensions(node);
-    return {
-        ...defaultLayout,
-        y: index * (defaultLayout.height + 1), // Stack vertically with spacing
     };
 };
 
