@@ -176,6 +176,7 @@ const ComponentInstance: FC<{
     }
 
     const Component = elementMeta.component as FC<any>;
+
     return <Component {...(validatedProps as any)} />;
 };
 

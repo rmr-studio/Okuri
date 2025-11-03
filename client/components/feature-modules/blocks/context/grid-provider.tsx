@@ -8,7 +8,8 @@ import {
 } from "../interface/grid.interface";
 import { WidgetRenderStructure } from "../interface/render.interface";
 import { generatePath } from "../util/environment/environment.util";
-import { createWidgetMetadata, init } from "../util/grid/grid.util";
+import { createWidgetMetadata } from "../util/grid/grid.util";
+import { useBlockEnvironment } from "./block-environment-provider";
 
 export const GridStackContext = createContext<GridstackContextValue | null>(null);
 
@@ -31,130 +32,14 @@ export const GridStackContext = createContext<GridstackContextValue | null>(null
  * @param initialWidgetMap - Optional pre-built widget map containing all widgets (roots + descendants).
  *   When provided, this overrides the automatic map building from initialOptions.children.
  */
-export const GridProvider: FC<GridProviderProps> = ({
-    initialOptions,
-    initialWidgetMap,
-    children,
-}) => {
+export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }) => {
+    const { environment: blockEnvironment } = useBlockEnvironment();
     const [gridStack, setGridStack] = useState<GridStack | null>(null);
-    const [environment, setEnvironment] = useState<GridEnvironment>(() =>
-        init(initialOptions, initialWidgetMap)
-    );
+    const [environment, setEnvironment] = useState<GridEnvironment>(() => ({
+        widgetMetaMap: new Map<string, GridStackWidget>(),
+        addedWidgets: new Set<string>(),
+    }));
     // Track list of node IDs to help with re-renders when nodes are added/removed
-
-    const addWidget = useCallback(
-        (
-            widget: GridStackWidget,
-            meta: WidgetRenderStructure,
-            parent?: GridStackNode
-        ): GridActionResult => {
-            if (!gridStack) return { success: false, node: null };
-            const id = widget.id;
-            if (!id) return { success: false, node: null };
-            // Embeds both dedicated drag handle, and widget rendering metadata into widget
-
-            const createdWidget: GridStackWidget = {
-                ...widget,
-                content: createWidgetMetadata(meta),
-            };
-
-            if (parent) {
-                // If parent doesnt have necessities to support child grid item. Reject
-                const parentId = parent.id;
-                if (!parent.subGrid || !parentId) return { success: false, node: null };
-
-                // Also assert we have the metadata to support linkage
-                const root = environment.treeIndex.get(parentId);
-                if (!root) return { success: false, node: null };
-
-                parent.subGrid.addWidget(createdWidget);
-                setEnvironment((prev) => {
-                    const newTreeIndex = new Map(prev.treeIndex);
-                    const newHierarchy = new Map(prev.hierarchy);
-                    const newMetaMap = new Map(prev.widgetMetaMap);
-
-                    newTreeIndex.set(id, root);
-                    newHierarchy.set(id, parentId);
-                    newMetaMap.set(id, widget);
-                    return {
-                        ...prev,
-                        treeIndex: newTreeIndex,
-                        widgetMetaMap: newMetaMap,
-                        hierarchy: newHierarchy,
-                    };
-                });
-
-                return findWidget(id);
-            }
-
-            gridStack.addWidget(widget);
-            setEnvironment((prev) => {
-                const newTreeIndex = new Map(prev.treeIndex);
-                const newHierarchy = new Map(prev.hierarchy);
-                const newMetaMap = new Map(prev.widgetMetaMap);
-
-                newTreeIndex.set(id, id);
-                newHierarchy.set(id, null);
-                newMetaMap.set(id, widget);
-                return {
-                    ...prev,
-                    treeIndex: newTreeIndex,
-                    hierarchy: newHierarchy,
-                    widgetMetaMap: newMetaMap,
-                };
-            });
-
-            return findWidget(id);
-        },
-        [gridStack, environment]
-    );
-
-    const removeWidget = useCallback(
-        (id: string) => {
-            if (!gridStack) return;
-
-            // Find the widget element in the DOM
-            const element: HTMLElement | null = gridStack.el?.querySelector(`[gs-id='${id}']`);
-            if (!element) return;
-
-            // Also find and remove any descendant widgets
-            const descendantIds = Array.from(element.querySelectorAll<HTMLElement>("[gs-id]"))
-                .map((el) => el.getAttribute("gs-id"))
-                .filter(Boolean) as string[];
-
-            gridStack.removeWidget(element, true);
-
-            // Update environment metadata
-            setEnvironment((prev) => {
-                const newTreeIndex = new Map(prev.treeIndex);
-                const newHierarchy = new Map(prev.hierarchy);
-                const newMetaMap = new Map(prev.widgetMetaMap);
-                // Remove target and descendants from treeIndex and hierarchy
-
-                newMetaMap.delete(id);
-                newTreeIndex.delete(id);
-                newHierarchy.delete(id);
-                descendantIds.forEach((did) => {
-                    newMetaMap.delete(id);
-                    newTreeIndex.delete(did);
-                    newHierarchy.delete(did);
-                });
-
-                return {
-                    ...prev,
-                    treeIndex: newTreeIndex,
-                    hierarchy: newHierarchy,
-                    widgetMetaMap: newMetaMap,
-                };
-            });
-        },
-        [gridStack]
-    );
-
-    function findNodeById(nodes: GridStackNode[], id: string): GridStackNode | null {
-        const found = nodes.find((n) => n.id === id);
-        return found ?? null;
-    }
 
     /**
      * Provides direct navigation through the gridstack engine by first performing a bottom up
@@ -162,11 +47,11 @@ export const GridProvider: FC<GridProviderProps> = ({
      * down the gridstack nodes to find the target widget's GridStackNode.
      */
     const findWidget = useCallback(
-        (id: string): GridActionResult => {
+        (id: string): GridActionResult<GridStackNode> => {
             if (!gridStack) return { success: false, node: null };
 
             // Generate a queue of IDs from root to target (inclusive)
-            const path = generatePath(environment, id);
+            const path = generatePath(blockEnvironment, id);
             if (!path || path.length === 0) return { success: false, node: null };
 
             // 1) Start at the root in the top-level engine
@@ -201,12 +86,161 @@ export const GridProvider: FC<GridProviderProps> = ({
         [gridStack, environment]
     );
 
+    const addWidget = useCallback(
+        (
+            widget: GridStackWidget,
+            meta: WidgetRenderStructure,
+            parent?: GridStackNode
+        ): GridActionResult<GridStackNode> => {
+            if (!gridStack) return { success: false, node: null };
+            const id = widget.id;
+            if (!id) return { success: false, node: null };
+            // Embeds both dedicated drag handle, and widget rendering metadata into widget
+
+            const createdWidget: GridStackWidget = {
+                ...widget,
+                content: createWidgetMetadata(meta),
+            };
+
+            if (parent) {
+                // If parent doesnt have necessities to support child grid item. Reject
+                const parentId = parent.id;
+                if (!parent.subGrid || !parentId) return { success: false, node: null };
+
+                // Also assert we have the metadata to support linkage
+                const root = blockEnvironment.treeIndex.get(parentId);
+                if (!root) return { success: false, node: null };
+
+                const element = parent.subGrid.addWidget(createdWidget);
+                setEnvironment((prev) => {
+                    const newMetaMap = new Map(prev.widgetMetaMap);
+                    const newWidgetSet = new Set(prev.addedWidgets);
+
+                    newWidgetSet.add(id);
+                    newMetaMap.set(id, createdWidget);
+                    return {
+                        ...prev,
+                        widgetMetaMap: newMetaMap,
+                        addedWidgets: newWidgetSet,
+                    };
+                });
+
+                return {
+                    node: {
+                        ...createdWidget,
+                        el: element,
+                    },
+                    success: true,
+                };
+            }
+
+            const element = gridStack.addWidget(createdWidget);
+            setEnvironment((prev) => {
+                const newWidgetSet = new Set(prev.addedWidgets);
+                const newMetaMap = new Map(prev.widgetMetaMap);
+
+                newWidgetSet.add(id);
+                newMetaMap.set(id, createdWidget);
+                return {
+                    ...prev,
+                    addedWidgets: newWidgetSet,
+                    widgetMetaMap: newMetaMap,
+                };
+            });
+
+            return {
+                node: {
+                    ...createdWidget,
+                    el: element,
+                },
+                success: true,
+            };
+        },
+        [gridStack, environment]
+    );
+
+    const removeWidget = useCallback(
+        (id: string) => {
+            if (!gridStack) return;
+            const parentId = blockEnvironment.treeIndex.get(id);
+            if (!parentId) return;
+
+            const { success, node } = findWidget(id);
+            if (!success || !node?.el) return;
+
+            // Also find and remove any descendant widgets
+            const descendantIds = Array.from(node.el.querySelectorAll<HTMLElement>("[gs-id]"))
+                .map((el) => el.getAttribute("gs-id"))
+                .filter(Boolean) as string[];
+
+            // Deleting Top Level Node
+            if (parentId === id) {
+                gridStack.removeWidget(node.el, true);
+
+                // Update environment metadata
+                setEnvironment((prev) => {
+                    const newWidgetSet = new Set(prev.addedWidgets);
+                    const newMetaMap = new Map(prev.widgetMetaMap);
+                    // Remove target and descendants from treeIndex and hierarchy
+
+                    newMetaMap.delete(id);
+                    newWidgetSet.delete(id);
+
+                    descendantIds.forEach((did) => {
+                        newMetaMap.delete(id);
+                        newWidgetSet.delete(did);
+                    });
+
+                    return {
+                        ...prev,
+                        addedWidgets: newWidgetSet,
+                        widgetMetaMap: newMetaMap,
+                    };
+                });
+                return;
+            }
+
+            // Deleting Child Node
+            const { success: queryParentSuccess, node: queryParent } = findWidget(parentId);
+
+            if (!queryParentSuccess || !queryParent?.subGrid) return;
+            queryParent.subGrid.removeWidget(node.el, true);
+
+            // Update environment metadata
+            setEnvironment((prev) => {
+                const newWidgetSet = new Set(prev.addedWidgets);
+                const newMetaMap = new Map(prev.widgetMetaMap);
+
+                newMetaMap.delete(id);
+                newWidgetSet.delete(id);
+
+                descendantIds.forEach((did) => {
+                    newMetaMap.delete(id);
+                    newWidgetSet.delete(did);
+                });
+
+                return {
+                    ...prev,
+                    addedWidgets: newWidgetSet,
+                    widgetMetaMap: newMetaMap,
+                };
+            });
+            return;
+        },
+        [gridStack, findWidget]
+    );
+
+    function findNodeById(nodes: GridStackNode[], id: string): GridStackNode | null {
+        const found = nodes.find((n) => n.id === id);
+        return found ?? null;
+    }
+
     /**
      * Checks if a widget with the given ID exists in the environments
      */
     const widgetExists = useCallback(
         (id: string) => {
-            return environment.treeIndex.has(id);
+            return environment.addedWidgets.has(id);
         },
         [environment]
     );

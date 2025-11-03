@@ -2,14 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
-import {
-    CommandIcon,
-    GripVerticalIcon,
-    InfoIcon,
-    LayoutDashboardIcon,
-    ListIcon,
-    PlusIcon,
-} from "lucide-react";
+import { CommandIcon, InfoIcon, LayoutDashboardIcon, ListIcon, PlusIcon } from "lucide-react";
 import { FC, RefObject } from "react";
 import type { Mode, QuickActionItem, SlashMenuItem } from "../panel-wrapper";
 import PanelActions from "./panel-actions";
@@ -80,19 +73,6 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     <Button
                         variant="ghost"
                         size="icon"
-                        aria-label="Drag block"
-                        className={cn("block-drag-handle cursor-grab", toolbarButtonClass)}
-                    >
-                        <GripVerticalIcon className="size-3.5" />
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent>Drag panel</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
                         aria-label={mode === "display" ? "Switch to form" : "Switch to display"}
                         className={toolbarButtonClass}
                         onClick={onToggleMode}
@@ -132,10 +112,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
             onSelectItem &&
             onShowAllOptions &&
             onOpenQuickActionsFromInline ? (
-                <Popover
-                    open={inlineMenuOpen ?? false}
-                    onOpenChange={onInlineMenuOpenChange}
-                >
+                <Popover open={inlineMenuOpen ?? false} onOpenChange={onInlineMenuOpenChange}>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <PopoverTrigger asChild>

@@ -19,6 +19,7 @@ import { GridContainerProvider } from "@/components/feature-modules/blocks/conte
 import { GridProvider } from "@/components/feature-modules/blocks/context/grid-provider";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GridStackOptions } from "gridstack";
 import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
@@ -30,7 +31,6 @@ import {
     createNoteNode,
     createTaskListNode,
 } from "../../util/block/factory/mock.factory";
-import { environmentInit } from "../../util/render/render.tree";
 import { editorPanel } from "../panel/editor-panel";
 import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
 import { BlockEnvironmentGridSync } from "../sync/action.sync";
@@ -68,7 +68,18 @@ export const BlockDemo = () => {
 
 const BlockEnvironmentWorkspace: React.FC = () => {
     const { getTrees, environment } = useBlockEnvironment();
-    const { options, widgetMap } = useMemo(() => environmentInit(getTrees()), [getTrees]);
+
+    const options: GridStackOptions = {
+        resizable: {
+            handles: "all",
+        },
+        draggable: {
+            cancel: ".block-no-drag",
+        },
+        margin: 12,
+        animate: true,
+        acceptWidgets: true,
+    };
 
     useEffect(() => {
         console.log(environment);
@@ -76,7 +87,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
 
     return (
         <>
-            <GridProvider initialOptions={options} initialWidgetMap={widgetMap}>
+            <GridProvider initialOptions={options}>
                 <BlockEnvironmentGridSync />
                 <WidgetEnvironmentSync />
                 <GridContainerProvider>
@@ -95,7 +106,14 @@ const BlockRenderer: React.FC = () => {
     const { getBlock, removeBlock, insertBlock, getParent, moveBlockUp, moveBlockDown } =
         useBlockEnvironment();
 
-    const {wrapper} = editorPanel({getBlock, insertBlock, removeBlock, getParent, moveBlockUp, moveBlockDown});
+    const { wrapper } = editorPanel({
+        getBlock,
+        insertBlock,
+        removeBlock,
+        getParent,
+        moveBlockUp,
+        moveBlockDown,
+    });
 
     return <RenderElementProvider wrapElement={wrapper} />;
 };

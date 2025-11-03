@@ -117,10 +117,10 @@ export const useEnvironmentGridSync = (parentId: string | null = null) => {
 
         // Cleanup
         return () => {
-            gridStack.off("change");
-            gridStack.off("dragstop");
-            gridStack.off("resizestop");
-            gridStack.off("dropped");
+            // gridStack.off("change");
+            // gridStack.off("dragstop");
+            // gridStack.off("resizestop");
+            // gridStack.off("dropped");
             gridStack.off("added");
         };
     }, [gridStack, parentId, isInitialized, getParent, moveBlock, environment]);

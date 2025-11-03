@@ -28,7 +28,7 @@ export const RenderElementContext = createContext<{ widget: { id: string } } | n
  * The BlockStructureRenderer handles rendering all components and resolving bindings.
  */
 export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapElement }) => {
-    const { _rawWidgetMetaMap } = useGrid();
+    const { environment } = useGrid();
     const { getWidgetContainer } = useContainer();
     const { getBlock } = useBlockEnvironment();
 
@@ -78,7 +78,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
 
     return (
         <>
-            {Array.from(_rawWidgetMetaMap.value.entries()).map(([widgetId, meta]) => {
+            {Array.from(environment.widgetMetaMap.entries()).map(([widgetId, meta]) => {
                 // Extract Node's render structure from widget content
                 const nodeData = parseContent(meta);
                 if (!nodeData) return null;

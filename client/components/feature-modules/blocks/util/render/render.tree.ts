@@ -124,35 +124,3 @@ interface EnvironmentInitResult {
     widgetMap: Map<string, GridStackWidget>;
 }
 
-/**
- * Builds the complete GridStack configuration from an array of block trees.
- *
- * @param trees - Array of block trees to convert
- * @returns Object containing GridStack options and complete widget map
- */
-export const environmentInit = (trees: BlockTree[]): EnvironmentInitResult => {
-    const widgetMap = new Map<string, GridStackWidget>();
-
-    const rootWidgets = trees.map((tree) => {
-        return treeInit(tree.root, widgetMap);
-    });
-
-    return {
-        options: {
-            handle: ".block-drag-handle",
-            draggable: {
-                handle: ".block-drag-handle", // Only allow dragging via the drag handle
-                appendTo: "body",
-                scroll: true,
-            },
-            resizable: {
-                handles: "all",
-            },
-            margin: 12,
-            animate: true,
-            acceptWidgets: true,
-            children: rootWidgets,
-        },
-        widgetMap, // Contains ALL widgets (roots + all descendants)
-    };
-};

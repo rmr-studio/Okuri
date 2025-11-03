@@ -4,7 +4,6 @@ import {
     DetachResult,
     EditorEnvironment,
     EditorEnvironmentMetadata,
-    Environment,
     InsertResult,
 } from "../../interface/editor.interface";
 import { allowChildren, getCurrentDimensions, insertChild } from "../block/block.util";
@@ -370,7 +369,7 @@ export const generateTreeLayout = (node: BlockNode, index: number = 1): GridRect
  *
  * If a path cannot be constructed (due to missing links), returns undefined.
  */
-export const generatePath = (env: Environment, targetId: string): string[] | undefined => {
+export const generatePath = (env: EditorEnvironment, targetId: string): string[] | undefined => {
     const { hierarchy, treeIndex } = env;
 
     // Collect upward from the target

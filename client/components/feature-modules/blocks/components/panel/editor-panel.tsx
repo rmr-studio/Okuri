@@ -45,9 +45,6 @@ export const editorPanel = ({
                 insertBlock(newNode, id, null);
             };
 
-            // Check if this block is inside a list
-            const parent = getParent(id);
-
             const quickActions = [
                 {
                     id: "delete",

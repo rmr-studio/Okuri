@@ -50,7 +50,7 @@ export const ListItem = <T extends unknown>({
         <div
             ref={setNodeRef}
             style={style}
-            className="relative flex items-start gap-2 rounded-lg border border-border bg-background transition-shadow hover:shadow-md"
+            className="relative flex items-start gap-2 rounded-lg border border-border bg-background transition-shadow hover:shadow-md block-no-drag"
         >
             {/* Drag handle - only shown if draggable and configured */}
             {showDragHandle && (
