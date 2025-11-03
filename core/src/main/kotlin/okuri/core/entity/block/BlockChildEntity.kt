@@ -11,7 +11,8 @@ import java.util.*
 @Table(
     name = "block_children",
     uniqueConstraints = [
-        UniqueConstraint(columnNames = ["child_id"])
+        UniqueConstraint(columnNames = ["child_id"]),
+        UniqueConstraint(columnNames = ["parent_id", "order_index"])
     ],
     indexes = [
         Index(name = "idx_block_children_parent_id", columnList = "parent_id"),
@@ -31,8 +32,6 @@ data class BlockChildEntity(
     @Column(name = "child_id", nullable = false, columnDefinition = "uuid")
     val childId: UUID,
 
-    @Column(name = "slot", nullable = false)
-    val slot: String,
 
     @Column(name = "order_index", nullable = false)
     var orderIndex: Int

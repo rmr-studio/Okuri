@@ -41,7 +41,6 @@ class BlockService(
     fun createBlock(request: CreateBlockRequest): Block {
         // If we are creating a child. Ensure parent exists, and appropriate metadata has been supplied
         request.parentId?.run {
-            requireNotNull(request.slot) { "Slot must be provided when creating a child block" }
             requireNotNull(request.orderIndex) { "Order index must be provided when creating a child block" }
             requireNotNull(request.parentNesting) { "Parent nesting must be provided when creating a child block" }
         }
@@ -93,10 +92,9 @@ class BlockService(
             request.parentId?.let {
                 blockRepository.findById(it).orElseThrow()
                 blockChildrenService.addChild(
-                    parentId = it,
                     child = this,
+                    parentId = it,
                     // Parent Metadata was previously validated for not null at the start of this method
-                    slot = request.slot!!,
                     index = request.orderIndex!!,
                     nesting = request.parentNesting!!
                 )
@@ -251,16 +249,17 @@ class BlockService(
 
             is BlockContentMetadata -> {
                 // Pull owned children via BlockChildrenService
-                val edgesBySlot: Map<String, List<BlockChildEntity>> =
-                    blockChildrenService.listChildrenGrouped(block.id)
-                val childNodes: Map<String, List<Node>> = edgesBySlot.mapValues { (_, links) ->
+                val edges: List<BlockChildEntity> = blockChildrenService.listChildren(block.id)
+                val childNodes: List<Node> = if (edges.isNotEmpty()) {
                     // batch fetch children
-                    val ids = links.map { it.childId }.toSet()
+                    val ids = edges.map { it.childId }.toSet()
                     val childrenById = blockRepository.findAllById(ids).associateBy { it.id!! }
-                    links.sortedBy { it.orderIndex }.mapNotNull { link ->
+                    edges.sortedBy { it.orderIndex }.mapNotNull { link ->
                         val child = childrenById[link.childId] ?: return@mapNotNull null
                         buildNode(child.toModel(), visited)
                     }
+                } else {
+                    emptyList()
                 }
                 visited.remove(block.id)
                 ContentNode(block = block, children = childNodes)

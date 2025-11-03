@@ -6,19 +6,11 @@ import org.springframework.data.jpa.repository.Query
 import java.util.*
 
 interface BlockChildrenRepository : JpaRepository<BlockChildEntity, UUID> {
-    fun findByParentIdOrderBySlotAscOrderIndexAsc(parentId: UUID): List<BlockChildEntity>
-
-    fun findByParentIdAndSlotOrderByOrderIndexAsc(parentId: UUID, slot: String): List<BlockChildEntity>
-
+    fun findByParentIdOrderByOrderIndexAsc(parentId: UUID): List<BlockChildEntity>
     fun findByParentIdAndChildId(parentId: UUID, childId: UUID): BlockChildEntity?
-
     fun findByChildId(childId: UUID): BlockChildEntity?
-
-    fun deleteAllByParentIdAndSlot(parentId: UUID, slot: String)
-
     fun deleteAllByParentId(parentId: UUID)
-
-    fun countByParentIdAndSlot(parentId: UUID, slot: String): Int
+    fun countByParentId(parentId: UUID): Int
 
     @Query(
         """

@@ -19,7 +19,7 @@ data class ContentNode(
     override val block: Block,
     override val warnings: List<String> = emptyList(),
     // All child blocks, given a block and its associated block type supports nesting
-    val children: Map<String, List<Node>>? = null,
+    val children: List<Node>? = null,
 ) : Node
 
 

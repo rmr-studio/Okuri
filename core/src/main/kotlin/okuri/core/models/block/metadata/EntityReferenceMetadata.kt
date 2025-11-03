@@ -16,6 +16,7 @@ data class EntityReferenceMetadata(
     // How the referenced entities should be presented
     val presentation: Presentation = Presentation.SUMMARY,
     val items: List<ReferenceItem>,
+    val projection: Projection = Projection(),
     override val allowedTypes: List<EntityType>? = null,
     override val display: ListDisplayConfig = ListDisplayConfig(),
     override val order: OrderingConfig = OrderingConfig(),

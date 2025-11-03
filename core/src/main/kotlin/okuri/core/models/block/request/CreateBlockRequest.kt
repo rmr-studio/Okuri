@@ -25,17 +25,13 @@ data class CreateBlockRequest(
 
     // Reference to the parent block and storage requirement if attaching as a child
     val parentId: UUID? = null,
-    val slot: String? = null,
     val parentNesting: BlockTypeNesting? = null,
     val orderIndex: Int? = null,
 
     ) {
     init {
         require(typeId != null || typeKey != null) { "Either typeId or typeKey must be provided" }
-
-        if (parentId != null) {
-            require(slot != null) { "slot must be provided when parentId is specified" }
-        }
+        
         if (orderIndex != null) {
             require(orderIndex >= 0) { "orderIndex must be >= 0" }
         }

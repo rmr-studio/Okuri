@@ -1,14 +1,22 @@
 package okuri.core.enums.core
 
 enum class ComponentType {
-    CONTACT_CARD,
+    // Containers
     LAYOUT_CONTAINER,
+    LIST,
+
+    // Bespoke Components
+    CONTACT_CARD,
     ADDRESS_CARD,
     LINE_ITEM,
+
+    // Primitive Components
     TABLE,
-    TEXT,
     IMAGE,
     BUTTON,
     ATTACHMENT,
-    FALLBACK
+    TEXT,
+
+    // Error Handling
+    FALLBACK,
 }
