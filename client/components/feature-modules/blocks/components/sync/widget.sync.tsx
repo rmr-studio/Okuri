@@ -18,14 +18,25 @@ import { hasWildcardSlots } from "../../util/render/binding.resolver";
  * - Maintaining 1:1 widget-to-block mapping
  */
 export const WidgetEnvironmentSync: React.FC = () => {
-    const { gridStack, _rawWidgetMetaMap } = useGrid();
-    const { getTrees, getParentId, environment, isInitialized, setIsInitialized } =
-        useBlockEnvironment();
+    const {
+        gridStack,
+        environment: gridEnvironment,
+        addWidget,
+        widgetExists,
+        findWidget,
+    } = useGrid();
+    const {
+        getTrees,
+        getParentId,
+        environment: blockEnvironment,
+        isInitialized,
+        setIsInitialized,
+    } = useBlockEnvironment();
 
     // Track ALL block IDs in the environment (not just top-level)
     const allBlockIds = useMemo(() => {
-        return new Set(environment.treeIndex.keys());
-    }, [environment.treeIndex]);
+        return new Set(blockEnvironment.treeIndex.keys());
+    }, [blockEnvironment.treeIndex]);
 
     // Track previous state
     const prevBlockIdsRef = useRef(new Set<string>());
@@ -49,35 +60,12 @@ export const WidgetEnvironmentSync: React.FC = () => {
 
         // Add new widgets
         addedBlockIds.forEach((blockId) => {
-            // Check if widget already exists in GridStack (including subgrids)
-            const checkNodeExists = (
-                nodes: Array<{ id?: string; subGrid?: { engine?: { nodes?: unknown[] } } }>
-            ): boolean => {
-                return nodes.some((node) => {
-                    if (String(node.id) === blockId) return true;
-                    // Recursively check subgrids
-                    if (node.subGrid?.engine?.nodes) {
-                        return checkNodeExists(
-                            node.subGrid.engine.nodes as Array<{
-                                id?: string;
-                                subGrid?: { engine?: { nodes?: unknown[] } };
-                            }>
-                        );
-                    }
-                    return false;
-                });
-            };
-
-            const alreadyInGrid = gridStack.engine.nodes
-                ? checkNodeExists(gridStack.engine.nodes)
-                : false;
-
-            if (alreadyInGrid) {
+            if (widgetExists(blockId)) {
                 return;
             }
 
             // Find the block tree containing this block
-            const treeId = environment.treeIndex.get(blockId);
+            const treeId = blockEnvironment.treeIndex.get(blockId);
             if (!treeId) return;
 
             const tree = getTrees().find((t) => getTreeId(t) === treeId);
@@ -134,6 +122,10 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 });
                 // Add subgrid configuration - children will be added separately by the sync logic
                 widgetConfig.subGridOpts = {
+                    handle: ".block-drag-handle",
+                    draggable: {
+                        handle: ".block-drag-handle", // Only allow dragging via the drag handle
+                    },
                     column: 12,
                     cellHeight: 40,
                     margin: 8,
@@ -147,11 +139,20 @@ export const WidgetEnvironmentSync: React.FC = () => {
             if (!parentId) {
                 // Top-level block - add to main grid
                 console.log(`Adding top-level widget ${blockId} to GridStack`);
-                gridStack.addWidget(widgetConfig);
+                addWidget(widgetConfig);
             } else {
                 // Nested block - add to parent's subgrid
                 // Need to search recursively through subgrids to find the parent
+                const { success, node: parent } = findWidget(parentId);
+                if (!success || !parent) {
+                    console.warn(
+                        `Parent widget ${parentId} not found for child ${blockId}. Widget not added.`
+                    );
+                    return;
+                }
+
                 console.log(`Adding nested widget ${blockId} to parent ${parentId} subgrid`);
+                addWidget(widgetConfig, parent);
 
                 const findNodeRecursively = (
                     nodes: Array<{ id?: string; subGrid?: { engine?: { nodes?: unknown[] } } }>
@@ -276,3 +277,5 @@ export const WidgetEnvironmentSync: React.FC = () => {
 
     return null;
 };
+
+const findGridstackNode = () => {};

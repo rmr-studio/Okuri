@@ -117,9 +117,7 @@ const ComponentRenderer: FC<{
                 <ComponentWithWildcardSlot
                     component={component}
                     props={finalProps}
-                    wildcardSlot={wildcardSlot}
                     children={children}
-                    renderChildBlock={renderChildBlock}
                 />
             </div>
         );

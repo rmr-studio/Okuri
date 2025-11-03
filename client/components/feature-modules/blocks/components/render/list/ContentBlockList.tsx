@@ -25,13 +25,14 @@ import {
 import { ReactNode, useCallback } from "react";
 import { useBlockEnvironment } from "../../../context/block-environment-provider";
 import { BlockListConfiguration, BlockNode } from "../../../interface/block.interface";
-import { ContentBlockListItem } from "./list.item";
+import { ListPanel } from "./list.container";
+import { ListItem } from "./list.item";
 
 interface ContentBlockListProps {
     id: string;
     config: BlockListConfiguration;
     children: BlockNode[] | undefined;
-    renderChildBlock?: (node: BlockNode) => ReactNode;
+    render: (node: BlockNode) => ReactNode;
 }
 
 /**
@@ -41,7 +42,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     id,
     config,
     children = [],
-    renderChildBlock,
+    render,
 }) => {
     const { reorderBlock } = useBlockEnvironment();
 
@@ -82,53 +83,52 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     const isManualMode = config.order.mode === "MANUAL";
     const isEmpty = children.length === 0;
 
-    // Empty state
-    if (isEmpty) {
-        return (
-            <div className="flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-8">
-                <p className="text-sm text-muted-foreground">
-                    {config.display.emptyMessage || "No items yet. Add one to get started!"}
-                </p>
-            </div>
-        );
-    }
-
-    // Sorted mode - no drag and drop
-    if (!isManualMode) {
-        return (
-            <div className="flex flex-col gap-3">
-                {children.map((child) => (
-                    <ContentBlockListItem
-                        key={child.block.id}
-                        node={child}
-                        listConfig={config}
-                        isDraggable={false}
-                        renderChildBlock={renderChildBlock}
-                    />
-                ))}
-            </div>
-        );
-    }
-
-    // Manual mode - with drag and drop
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext
-                items={children.map((child) => child.block.id)}
-                strategy={verticalListSortingStrategy}
-            >
+        <ListPanel blockId={id}>
+            {isEmpty && (
+                <div className="p-4 text-sm text-muted-foreground">
+                    No items yet. Add one to get started!
+                </div>
+            )}
+
+            {isManualMode ? (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={children.map((child) => child.block.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <div className="flex flex-col gap-3">
+                            {children.map((child) => (
+                                <ListItem
+                                    key={child.block.id}
+                                    id={child.block.id}
+                                    item={child}
+                                    config={config}
+                                    isDraggable={true}
+                                    render={render}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
+            ) : (
                 <div className="flex flex-col gap-3">
                     {children.map((child) => (
-                        <ContentBlockListItem
+                        <ListItem
                             key={child.block.id}
-                            node={child}
-                            listConfig={config}
-                            isDraggable={true}
-                            renderChildBlock={renderChildBlock}
+                            id={child.block.id}
+                            item={child}
+                            config={config}
+                            isDraggable={false}
+                            render={render}
                         />
                     ))}
                 </div>
-            </SortableContext>
-        </DndContext>
+            )}
+        </ListPanel>
     );
 };

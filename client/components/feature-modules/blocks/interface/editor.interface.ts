@@ -25,6 +25,13 @@ export interface InsertResult<T> {
     success: boolean;
 }
 
+export interface Environment {
+    // Lookup for parent IDs (null for top-level)
+    hierarchy: Map<string, string | null>;
+    // Lookup for which root a node belongs to
+    treeIndex: Map<string, string>;
+}
+
 /**
  * Internal environment model used by the provider.
  * - `trees` holds each top-level block tree.
@@ -32,12 +39,8 @@ export interface InsertResult<T> {
  * - `treeIndex` maps blockId -> owning tree root id.
  * - `layouts` and `uiMetadata` store per-block editor state.
  */
-export interface EditorEnvironment {
+export interface EditorEnvironment extends Environment {
     trees: BlockTree[];
-    // Lookup for parent block IDs (null for top-level)
-    hierarchy: Map<string, string | null>;
-    // Lookup for which tree a block belongs to
-    treeIndex: Map<string, string>;
     metadata: EditorEnvironmentMetadata;
 }
 

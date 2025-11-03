@@ -47,7 +47,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                     id={node.block.id}
                     config={config}
                     children={node.children}
-                    renderChildBlock={renderNode}
+                    render={renderNode}
                 />
             );
         }

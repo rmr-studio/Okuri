@@ -4,6 +4,7 @@ import {
     DetachResult,
     EditorEnvironment,
     EditorEnvironmentMetadata,
+    Environment,
     InsertResult,
 } from "../../interface/editor.interface";
 import { allowChildren, getCurrentDimensions, insertChild } from "../block/block.util";
@@ -202,7 +203,7 @@ export const insertNode = (
 
         return {
             success: true,
-            payload: node,
+            payload: updatedNode,
         };
     }
 
@@ -361,4 +362,53 @@ export const generateTreeLayout = (node: BlockNode, index: number = 1): GridRect
         ...defaultLayout,
         y: index * (defaultLayout.height + 1), // Stack vertically with spacing
     };
+};
+
+/**
+ * Returns the node IDs from the root to the given targetId (inclusive).
+ * Bottom-up collection (following parents) + reverse to get root → … → target.
+ *
+ * If a path cannot be constructed (due to missing links), returns undefined.
+ */
+export const generatePath = (env: Environment, targetId: string): string[] | undefined => {
+    const { hierarchy, treeIndex } = env;
+
+    // Collect upward from the target
+    const visited = new Set<string>();
+    const upward: string[] = [];
+
+    const root = treeIndex.get(targetId);
+
+    // Begin Traversal from targetId to root
+    traversePath(targetId, hierarchy, visited, upward);
+
+    // `upward` is [target, ..., root], so reverse to get [root, ..., target].
+    const path = upward.reverse();
+    if (path.length === 0) return undefined;
+
+    // Assert that the path is valid (ie. starts with root and ends with targetId)
+    if (path[path.length - 1] !== targetId) return undefined;
+    if (path[0] !== root) return undefined;
+
+    return path;
+};
+
+export const traversePath = (
+    curr: string,
+    hierarchy: Map<string, string | null>,
+    visited: Set<string>,
+    path: string[]
+) => {
+    if (visited.has(curr)) {
+        throw new Error(`Cycle detected while traversing parents (at "${curr}")`);
+    }
+    visited.add(curr);
+    path.push(curr);
+
+    const parent = hierarchy.has(curr) ? hierarchy.get(curr)! : null;
+
+    // Base case: if no parent, we're at the root
+    if (parent === null) return;
+
+    traversePath(parent, hierarchy, visited, path);
 };

@@ -1,9 +1,15 @@
 import { GridStackWidget } from "gridstack";
 import { WidgetRenderStructure } from "../../interface/render.interface";
-export function parseContent(meta: GridStackWidget): WidgetRenderStructure | null {
-    if (!meta.content) return null;
+export function parseContent(widget: GridStackWidget): WidgetRenderStructure | null {
     try {
-        const payload = JSON.parse(meta.content);
+        const content = widget.content;
+        if (!content) return null;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(content, "text/html");
+        const script = doc.querySelector<HTMLScriptElement>("script[data-block-meta='true']");
+
+        if (!script?.textContent) return null;
+        const payload = JSON.parse(script.textContent);
         if (!payload) return null;
         return {
             id: payload["id"],

@@ -81,8 +81,12 @@ export function treeInit(
             column: 12,
             cellHeight: 40,
             margin: 8,
+            handle: ".block-drag-handle",
             acceptWidgets: true,
             animate: true,
+            draggable: {
+                handle: ".block-drag-handle", // Only allow dragging via the drag handle
+            },
             class: "grid-stack-subgrid",
         };
 
@@ -135,6 +139,15 @@ export const environmentInit = (trees: BlockTree[]): EnvironmentInitResult => {
 
     return {
         options: {
+            handle: ".block-drag-handle",
+            draggable: {
+                handle: ".block-drag-handle", // Only allow dragging via the drag handle
+                appendTo: "body",
+                scroll: true,
+            },
+            resizable: {
+                handles: "all",
+            },
             margin: 12,
             animate: true,
             acceptWidgets: true,

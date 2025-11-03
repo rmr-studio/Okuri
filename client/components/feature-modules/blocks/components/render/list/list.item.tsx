@@ -10,10 +10,11 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import { ReactNode, useId } from "react";
+import { ReactNode } from "react";
 import { BlockListConfiguration } from "../../../interface/block.interface";
 
 interface Props<T> {
+    id: string;
     item: T;
     config: BlockListConfiguration;
     isDraggable: boolean;
@@ -24,14 +25,13 @@ interface Props<T> {
  * A single sortable item in a content block list.
  * Renders the block content with optional drag handle and drag feedback.
  */
-export const ContentBlockListItem = <T extends unknown>({
+export const ListItem = <T extends unknown>({
+    id,
     item,
     config,
     isDraggable,
     render,
 }: Props<T>) => {
-    const id = useId();
-
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id,
         disabled: !isDraggable,
