@@ -5,7 +5,6 @@
 import {
     BlockListConfiguration,
     BlockNode,
-    ContentNode,
     isContentMetadata,
     isContentNode,
     isEntityReferenceMetadata,
@@ -20,7 +19,7 @@ import {
  * @param node
  * @returns
  */
-export const isList = (node: ContentNode): Boolean => {
+export const isList = (node: BlockNode): boolean => {
     return (
         (isReferenceNode(node) && isEntityReferenceMetadata(node.block.payload)) ||
         (isContentNode(node) &&

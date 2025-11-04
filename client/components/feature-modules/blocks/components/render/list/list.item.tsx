@@ -9,9 +9,10 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useCallback, useMemo } from "react";
+import { useBlockEnvironment } from "../../../context/block-environment-provider";
 import { BlockListConfiguration } from "../../../interface/block.interface";
+import { PanelWrapper } from "../../panel/panel-wrapper";
 
 interface Props<T> {
     id: string;
@@ -32,10 +33,25 @@ export const ListItem = <T extends unknown>({
     isDraggable,
     render,
 }: Props<T>) => {
+    const { removeBlock } = useBlockEnvironment();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id,
         disabled: !isDraggable,
     });
+
+    const handleDelete = useCallback(() => removeBlock(id), [removeBlock, id]);
+
+    const quickActions = useMemo(
+        () => [
+            {
+                id: "delete",
+                label: "Delete block",
+                shortcut: "⌘⌫",
+                onSelect: handleDelete,
+            },
+        ],
+        [handleDelete]
+    );
 
     // Apply drag transform and transition
     const style = {
@@ -47,25 +63,22 @@ export const ListItem = <T extends unknown>({
     const showDragHandle = isDraggable && config.display.showDragHandles;
 
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className="relative flex items-start gap-2 rounded-lg border border-border bg-background transition-shadow hover:shadow-md block-no-drag"
-        >
-            {/* Drag handle - only shown if draggable and configured */}
-            {showDragHandle && (
-                <div
-                    {...attributes}
-                    {...listeners}
-                    className="flex cursor-grab items-center justify-center p-2 text-muted-foreground hover:text-foreground active:cursor-grabbing"
-                    title="Drag to reorder"
-                >
-                    <GripVertical className="size-4" />
-                </div>
-            )}
+        <div ref={setNodeRef} style={style} className="relative block-no-drag">
+            <PanelWrapper
+                showResizeHandles={false}
+                className="w-full relative flex-row items-center gap-2 "
+                id={id}
+                quickActions={quickActions}
+                allowInsert={false}
+                onDelete={handleDelete}
+            >
+             
 
-            {/* Block content */}
-            <div className="flex-1 overflow-hidden">{render(item)}</div>
+                {/* Block content */}
+                <div className="flex-1 overflow-hidden" {...attributes} {...listeners}>
+                    {render(item)}
+                </div>
+            </PanelWrapper>
         </div>
     );
 };

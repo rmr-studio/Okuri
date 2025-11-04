@@ -2,17 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
-import { CommandIcon, InfoIcon, LayoutDashboardIcon, ListIcon, PlusIcon } from "lucide-react";
+import { CommandIcon, InfoIcon, PlusIcon } from "lucide-react";
 import { FC, RefObject } from "react";
-import type { Mode, QuickActionItem, SlashMenuItem } from "../panel-wrapper";
+
+import { QuickActionItem, SlashMenuItem } from "../../../interface/panel.interface";
 import PanelActions from "./panel-actions";
 import PanelDetails from "./panel-details";
 import PanelQuickInsert from "./panel-quick-insert";
 
 interface PanelToolbarProps {
     visible: boolean;
-    mode: Mode;
-    onToggleMode: () => void;
     onQuickActionsClick: () => void;
     allowInsert: boolean;
     onInlineInsertClick?: () => void;
@@ -39,8 +38,6 @@ const toolbarButtonClass =
 
 const PanelToolbar: FC<PanelToolbarProps> = ({
     visible,
-    mode,
-    onToggleMode,
     onQuickActionsClick,
     allowInsert,
     onInlineInsertClick,
@@ -64,12 +61,12 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     return (
         <div
             className={cn(
-                "absolute left-3 top-3 z-30 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity",
+                "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[100] border-red-500",
                 visible ? "opacity-100 pointer-events-auto" : "pointer-events-none opacity-0"
             )}
         >
             <Tooltip>
-                <TooltipTrigger asChild>
+                {/* <TooltipTrigger asChild>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -86,7 +83,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                 </TooltipTrigger>
                 <TooltipContent>
                     {mode === "display" ? "Switch to form view" : "Switch to display view"}
-                </TooltipContent>
+                </TooltipContent> */}
             </Tooltip>
             <Tooltip>
                 <TooltipTrigger asChild>

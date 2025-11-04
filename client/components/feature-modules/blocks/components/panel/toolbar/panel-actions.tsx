@@ -1,4 +1,4 @@
-import type { QuickActionItem } from "../panel-wrapper";
+
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -9,6 +9,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MoreHorizontalIcon } from "lucide-react";
 import { FC } from "react";
+import { QuickActionItem } from "../../../interface/panel.interface";
 
 interface PanelActionsProps {
     menuActions: QuickActionItem[];

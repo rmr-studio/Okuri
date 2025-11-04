@@ -142,17 +142,28 @@ export const detachNode = (curr: BlockNode, blockId: string): DetachResult => {
     let success = false;
     let detachedNode: BlockNode | null = null;
 
-    const updatedChildren = curr.children.map((child) => {
-        if (!isContentNode(child)) return child;
+    const updatedChildren: BlockNode[] = [];
+    for (const child of curr.children) {
+        if (success) {
+            updatedChildren.push(child);
+            continue;
+        }
+
+        if (!isContentNode(child)) {
+            updatedChildren.push(child);
+            continue;
+        }
 
         const result = detachNode(child, blockId);
         if (result.success) {
             success = true;
             detachedNode = result.detachedNode;
-            return result.root;
+            updatedChildren.push(result.root);
+            continue;
         }
-        return child;
-    });
+
+        updatedChildren.push(child);
+    }
 
     return {
         success,
@@ -217,35 +228,40 @@ export const insertNode = (
     // Recurse into children to find parentId
     let success = false;
 
-    const updatedChildren = node.children.map((child) => {
-        // If we arrive at the parent, perform insertion
+    const updatedChildren: BlockNode[] = [];
+    for (const child of node.children) {
+        if (success) {
+            updatedChildren.push(child);
+            continue;
+        }
+
         if (child.block.id === parentId) {
             if (!isContentNode(child)) {
-                return child;
+                updatedChildren.push(child);
+                continue;
             }
 
-            const { success: insertSuccess, payload: node } = insertChild(
+            const { success: insertSuccess, payload: updatedChild } = insertChild(
                 child,
                 nodeToInsert,
                 index
             );
             success = insertSuccess;
-            return node;
+            updatedChildren.push(updatedChild);
+            continue;
         }
 
         if (!isContentNode(child)) {
-            return child;
+            updatedChildren.push(child);
+            continue;
         }
-
-        // Recurse further down the tree
 
         const result = insertNode(child, parentId, nodeToInsert, index);
         if (result.success) {
             success = true;
         }
-        // Update the new root node
-        return result.payload;
-    });
+        updatedChildren.push(result.payload);
+    }
 
     return {
         success,

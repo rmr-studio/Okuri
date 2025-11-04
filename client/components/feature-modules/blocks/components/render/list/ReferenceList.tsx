@@ -38,7 +38,7 @@ export const ReferenceList: React.FC<ReferenceListProps> = ({
         return (
             <div className="flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-8">
                 <p className="text-sm text-muted-foreground">
-                    {listConfig.display.emptyMessage || "No references yet."}
+                    {listConfig.display?.emptyMessage || "No references yet."}
                 </p>
             </div>
         );

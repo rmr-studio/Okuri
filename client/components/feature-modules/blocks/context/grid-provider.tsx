@@ -8,7 +8,6 @@ import {
 } from "../interface/grid.interface";
 import { WidgetRenderStructure } from "../interface/render.interface";
 import { generatePath } from "../util/environment/environment.util";
-import { createWidgetMetadata } from "../util/grid/grid.util";
 import { useBlockEnvironment } from "./block-environment-provider";
 
 export const GridStackContext = createContext<GridstackContextValue | null>(null);
@@ -83,7 +82,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
             // If we consumed the path but didn't match id, something's inconsistent
             return { success: false, node: null };
         },
-        [gridStack, environment]
+        [gridStack, environment, blockEnvironment]
     );
 
     const addWidget = useCallback(
@@ -99,7 +98,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
 
             const createdWidget: GridStackWidget = {
                 ...widget,
-                content: createWidgetMetadata(meta),
+                content: JSON.stringify(meta),
             };
 
             if (parent) {
@@ -156,7 +155,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                 success: true,
             };
         },
-        [gridStack, environment]
+        [gridStack, environment, blockEnvironment]
     );
 
     const removeWidget = useCallback(
@@ -187,7 +186,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                     newWidgetSet.delete(id);
 
                     descendantIds.forEach((did) => {
-                        newMetaMap.delete(id);
+                        newMetaMap.delete(did);
                         newWidgetSet.delete(did);
                     });
 
@@ -215,7 +214,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                 newWidgetSet.delete(id);
 
                 descendantIds.forEach((did) => {
-                    newMetaMap.delete(id);
+                    newMetaMap.delete(did);
                     newWidgetSet.delete(did);
                 });
 
@@ -227,7 +226,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
             });
             return;
         },
-        [gridStack, findWidget]
+        [gridStack, findWidget, blockEnvironment]
     );
 
     function findNodeById(nodes: GridStackNode[], id: string): GridStackNode | null {

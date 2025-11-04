@@ -32,6 +32,10 @@
     flex-direction: column !important;
 }
 
+.grid-stack-item-content {
+    overflow: visible !important;
+}
+
 /* Ensure GridStack items don't show drag cursor everywhere */
 .grid-stack-item:not(.ui-draggable-dragging) {
     cursor: default !important;

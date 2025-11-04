@@ -1,9 +1,10 @@
 import { ChildNodeProps } from "@/lib/interfaces/interface";
 import { FC } from "react";
 import { useBlockEnvironment } from "../../../context/block-environment-provider";
+import { SlashMenuItem } from "../../../interface/panel.interface";
 import { getAllowedChildTypes, getTitle } from "../../../util/block/block.util";
 import { createNodeFromSlashItem } from "../../panel/editor-panel";
-import { defaultSlashItems, PanelWrapper, SlashMenuItem } from "../../panel/panel-wrapper";
+import { defaultSlashItems, PanelWrapper } from "../../panel/panel-wrapper";
 
 interface Props extends ChildNodeProps {
     blockId: string;
@@ -55,6 +56,7 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
 
     return (
         <PanelWrapper
+            className="p-4 h-full"
             id={blockId}
             title={title}
             description={type.description}
@@ -63,6 +65,7 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
             allowInsert={!!type.nesting}
             onInsert={handleInsert}
             onDelete={handleDelete}
+            showResizeHandles={true}
         >
             {children}
         </PanelWrapper>

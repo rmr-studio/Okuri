@@ -1,5 +1,6 @@
 import { ReactNode, useCallback } from "react";
 import { BlockNode } from "../../interface/block.interface";
+import { SlashMenuItem } from "../../interface/panel.interface";
 import { WrapElementProvider } from "../../interface/render.interface";
 import { getAllowedChildTypes, getTitle } from "../../util/block/block.util";
 import {
@@ -7,7 +8,7 @@ import {
     createNoteNode,
     createProjectBlockNode,
 } from "../../util/block/factory/mock.factory";
-import { PanelWrapper, SlashMenuItem, defaultSlashItems } from "./panel-wrapper";
+import { PanelWrapper, defaultSlashItems } from "./panel-wrapper";
 
 interface EditorPanelCallackProps {
     getBlock: (id: string) => BlockNode | undefined;
@@ -72,6 +73,7 @@ export const editorPanel = ({
                     allowInsert={!!type.nesting}
                     onInsert={handleInsert}
                     onDelete={handleDelete}
+                    showResizeHandles={true}
                 >
                     {children}
                 </PanelWrapper>

@@ -9,7 +9,6 @@
 import type { GridStackOptions, GridStackWidget } from "gridstack";
 import {
     BlockNode,
-    BlockTree,
     isContentNode,
     isEntityReferenceMetadata,
 } from "../../interface/block.interface";
@@ -58,7 +57,7 @@ export function treeInit(
 
     // Special handling for list blocks => We render them differently
     if (isList(node)) {
-        return {
+        const listWidget = {
             ...widget,
             // Update Content to include list renderType
             content: JSON.stringify({
@@ -68,6 +67,9 @@ export function treeInit(
                 blockType: type,
             }),
         };
+
+        widgetMap.set(blockId, listWidget); // Update map with list info
+        return listWidget;
     }
 
     // Handle container and layout nodes with children
@@ -123,4 +125,3 @@ interface EnvironmentInitResult {
     options: GridStackOptions;
     widgetMap: Map<string, GridStackWidget>;
 }
-
