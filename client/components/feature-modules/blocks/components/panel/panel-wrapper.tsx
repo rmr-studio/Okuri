@@ -16,6 +16,7 @@ import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
 import PanelResizeHandler from "./action/panel-resize-handler";
+import { usePanelAutoResize } from "./action/use-panel-auto-resize";
 import PanelToolbar from "./toolbar/panel-toolbar";
 
 interface Props extends ChildNodeProps, ClassNameProps {
@@ -68,6 +69,7 @@ export const PanelWrapper = React.forwardRef<HTMLDivElement, Props>(
 
         const panelId = useId();
         const surfaceId = id ?? panelId;
+        const autoResizeRef = usePanelAutoResize(surfaceId);
         const [isSelected, setIsSelected] = useState(false);
         const [isSlashOpen, setSlashOpen] = useState(false);
         const [isQuickOpen, setQuickOpen] = useState(false);
@@ -249,11 +251,23 @@ export const PanelWrapper = React.forwardRef<HTMLDivElement, Props>(
             pushSelection({ type: "panel", id: surfaceId, onDelete });
         }, [allowInsert, setInlineMenuOpen, setQuickOpen, surfaceId, onDelete]);
 
+        const handleRef = useCallback(
+            (node: HTMLDivElement | null) => {
+                autoResizeRef(node);
+                if (typeof ref === "function") {
+                    ref(node);
+                } else if (ref) {
+                    (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+                }
+            },
+            [autoResizeRef, ref]
+        );
+
         return (
             <>
                 <PanelActionContextMenu id={id} actions={menuActions} onDelete={onDelete}>
                     <div
-                        ref={ref}
+                        ref={handleRef}
                         className={cn(
                             "group flex relative flex-col rounded-xl border text-card-foreground transition-colors h-full",
                             allowInsert
@@ -350,10 +364,7 @@ export const PanelWrapper = React.forwardRef<HTMLDivElement, Props>(
 
                         {/* Custom Resize Handles */}
                         {showResizeHandles && (
-                            <PanelResizeHandler
-                                visible={toolbarVisible}
-                                positions={["ne", "se", "nw", "sw"]}
-                            />
+                            <PanelResizeHandler visible={toolbarVisible} positions={["se", "sw"]} />
                         )}
                     </div>
                 </PanelActionContextMenu>

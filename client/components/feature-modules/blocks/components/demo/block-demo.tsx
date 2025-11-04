@@ -71,7 +71,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
 
     const options: GridStackOptions = {
         resizable: {
-            handles: "ne, nw, se, sw", // Only corner handles for cleaner appearance
+            handles: "se, sw", // Only corner handles for cleaner appearance
         },
         draggable: {
             cancel: ".block-no-drag",
