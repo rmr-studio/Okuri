@@ -24,7 +24,7 @@ interface BlockStructureRendererProps {
     blockId: string;
     renderStructure: BlockRenderStructure;
     payload: Metadata;
-    childBlocks: Record<string, BlockNode[]>;
+    children: BlockNode[] | undefined;
     renderChildBlock?: (node: BlockNode) => ReactNode;
 }
 
@@ -35,7 +35,7 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
     blockId,
     renderStructure,
     payload,
-    childBlocks,
+    children,
     renderChildBlock,
 }) => {
     const { layoutGrid, components } = renderStructure;
@@ -78,7 +78,7 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
                         component={component}
                         layoutItem={layoutItem}
                         payload={payload}
-                        childBlocks={childBlocks}
+                        children={children}
                         renderChildBlock={renderChildBlock}
                     />
                 );
@@ -94,11 +94,11 @@ const ComponentRenderer: FC<{
     component: BlockComponentNode;
     layoutItem: any;
     payload: Metadata;
-    childBlocks: Record<string, BlockNode[]>;
+    children: BlockNode[] | undefined;
     renderChildBlock?: (node: BlockNode) => ReactNode;
-}> = ({ component, layoutItem, payload, childBlocks, renderChildBlock }) => {
+}> = ({ component, layoutItem, payload, children, renderChildBlock }) => {
     // Resolve bindings to get component props
-    const resolvedProps = resolveBindings(component.bindings || [], payload, childBlocks);
+    const resolvedProps = resolveBindings(component.bindings || [], payload);
     const finalProps = { ...component.props, ...resolvedProps };
 
     // Check if this component has wildcard slots
@@ -117,9 +117,7 @@ const ComponentRenderer: FC<{
                 <ComponentWithWildcardSlot
                     component={component}
                     props={finalProps}
-                    wildcardSlot={wildcardSlot}
-                    childBlocks={childBlocks}
-                    renderChildBlock={renderChildBlock}
+                    children={children}
                 />
             </div>
         );
@@ -178,6 +176,7 @@ const ComponentInstance: FC<{
     }
 
     const Component = elementMeta.component as FC<any>;
+
     return <Component {...(validatedProps as any)} />;
 };
 
@@ -187,12 +186,8 @@ const ComponentInstance: FC<{
 const ComponentWithWildcardSlot: FC<{
     component: BlockComponentNode;
     props: Record<string, unknown>;
-    wildcardSlot: string;
-    childBlocks: Record<string, BlockNode[]>;
-    renderChildBlock?: (node: BlockNode) => ReactNode;
-}> = ({ component, props, wildcardSlot, childBlocks, renderChildBlock }) => {
-    const childBlockNodes = childBlocks[wildcardSlot] || [];
-
+    children: BlockNode[] | undefined;
+}> = ({ component, props, children }) => {
     const elementMeta = blockRenderRegistry[component.type];
     if (!elementMeta) {
         return (
@@ -204,22 +199,6 @@ const ComponentWithWildcardSlot: FC<{
 
     const Component = elementMeta.component as FC<any>;
 
-    // Render the component with child blocks as children
-    return (
-        <Component {...props}>
-            <>
-                {childBlockNodes.map((childNode) => {
-                    if (renderChildBlock) {
-                        return renderChildBlock(childNode);
-                    }
-                    // Fallback if no renderChildBlock provided
-                    return (
-                        <div key={childNode.block.id} className="border border-dashed p-2">
-                            Child block: {childNode.block.id}
-                        </div>
-                    );
-                })}
-            </>
-        </Component>
-    );
+    // The subgrid environment initialisation will handle rendering child blocks into the wildcard slot
+    return <Component {...props} />;
 };

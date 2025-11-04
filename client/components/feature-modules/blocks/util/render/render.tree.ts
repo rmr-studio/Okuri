@@ -7,8 +7,13 @@
  */
 
 import type { GridStackOptions, GridStackWidget } from "gridstack";
-import { BlockNode, isContentNode } from "../../interface/block.interface";
+import {
+    BlockNode,
+    isContentNode,
+    isEntityReferenceMetadata,
+} from "../../interface/block.interface";
 import { getCurrentDimensions } from "../block/block.util";
+import { isList } from "../list/list.util";
 import { hasWildcardSlots } from "./binding.resolver";
 
 /**
@@ -30,6 +35,7 @@ export function treeInit(
     const blockId = node.block.id;
     const layout = node.block.layout ?? getCurrentDimensions(node);
     const renderStructure = node.block.type.display.render;
+    const type = isEntityReferenceMetadata(node.block.payload) ? "reference" : "block";
 
     // ONE widget for this ONE block node (even if it has multiple components)
     const widget: GridStackWidget = {
@@ -39,17 +45,34 @@ export function treeInit(
         w: layout.width,
         h: layout.height,
         content: JSON.stringify({
-            blockId: blockId,
-            blockTypeKey: node.block.type.key,
-            renderStructure: renderStructure, // Full component definition
-            // Don't include payload - will be fetched from BlockEnvironment
+            id: blockId,
+            key: node.block.type.key,
+            renderType: "component",
+            blockType: type,
         }),
     };
 
     // Register this widget in the map immediately
     widgetMap.set(blockId, widget);
 
-    // Check if ANY component in this block has wildcard slots
+    // Special handling for list blocks => We render them differently
+    if (isList(node)) {
+        const listWidget = {
+            ...widget,
+            // Update Content to include list renderType
+            content: JSON.stringify({
+                id: blockId,
+                key: node.block.type.key,
+                renderType: "list",
+                blockType: type,
+            }),
+        };
+
+        widgetMap.set(blockId, listWidget); // Update map with list info
+        return listWidget;
+    }
+
+    // Handle container and layout nodes with children
     const hasWildcards = Object.values(renderStructure.components || {}).some((component) =>
         hasWildcardSlots(component)
     );
@@ -60,8 +83,12 @@ export function treeInit(
             column: 12,
             cellHeight: 40,
             margin: 8,
+            handle: ".block-drag-handle",
             acceptWidgets: true,
             animate: true,
+            draggable: {
+                handle: ".block-drag-handle", // Only allow dragging via the drag handle
+            },
             class: "grid-stack-subgrid",
         };
 
@@ -72,16 +99,16 @@ export function treeInit(
         }
 
         // Process each slot's children
-        const children: GridStackWidget[] = Object.entries(node.children).flatMap(
-            ([slotName, slotChildren]) => {
-                return slotChildren.map((child) => {
-                    // Recursively build child widget
-                    return treeInit(child, widgetMap);
-
-                    // Note: child is already added to widgetMap inside buildWidgetTree
-                });
-            }
+        const children: GridStackWidget[] = node.children.map((child) =>
+            treeInit(child, widgetMap)
         );
+
+        widget.content = JSON.stringify({
+            id: blockId,
+            key: node.block.type.key,
+            renderType: "container",
+            blockType: type,
+        });
 
         widget.subGridOpts = {
             ...subgridOpt,
@@ -94,29 +121,7 @@ export function treeInit(
     return widget;
 }
 
-/**
- * Builds the complete GridStack configuration from an array of block trees.
- *
- * @param trees - Array of block trees to convert
- * @returns Object containing GridStack options and complete widget map
- */
-export function environmentInit(trees: { root: BlockNode }[]): {
+interface EnvironmentInitResult {
     options: GridStackOptions;
     widgetMap: Map<string, GridStackWidget>;
-} {
-    const widgetMap = new Map<string, GridStackWidget>();
-
-    const rootWidgets = trees.map((tree) => {
-        return treeInit(tree.root, widgetMap);
-    });
-
-    return {
-        options: {
-            margin: 12,
-            animate: true,
-            acceptWidgets: true,
-            children: rootWidgets,
-        },
-        widgetMap, // Contains ALL widgets (roots + all descendants)
-    };
 }

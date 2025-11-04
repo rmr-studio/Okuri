@@ -1,8 +1,7 @@
 package okuri.core.models.block.display
 
-import okuri.core.enums.core.ComponentType
-
 data class BlockTypeNesting(
     val max: Int?,
-    val allowedTypes: List<ComponentType>,
+    // List of allowed block type keys
+    val allowedTypes: List<String>,
 )

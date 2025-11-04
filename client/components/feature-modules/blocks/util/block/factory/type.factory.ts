@@ -154,15 +154,6 @@ const listComponent: BlockComponentNode = {
         { prop: "title", source: { type: "DataPath", path: "$.data/title" } },
         { prop: "description", source: { type: "DataPath", path: "$.data/description" } },
         { prop: "emptyMessage", source: { type: "DataPath", path: "$.data/emptyMessage" } },
-        {
-            prop: "items",
-            source: {
-                type: "RefSlot",
-                slot: "items",
-                presentation: "INLINE",
-                expandDepth: 1,
-            },
-        },
     ],
     fetchPolicy: "LAZY",
 };
@@ -287,4 +278,59 @@ export const createEntityReferenceListType = (organisationId?: string): BlockTyp
         schema: entityReferenceSchema,
         display: createBaseDisplay(entityReferenceComponent),
         nesting: null,
+    });
+
+const contentBlockListComponent: BlockComponentNode = {
+    id: "contentList",
+    type: "LAYOUT_CONTAINER",
+    props: {
+        variant: "list",
+        padded: false,
+    },
+    bindings: [
+        {
+            prop: "title",
+            source: { type: "DataPath", path: "$.data/title" },
+        },
+        {
+            prop: "description",
+            source: { type: "DataPath", path: "$.data/description" },
+        },
+    ],
+    slots: {
+        items: ["*"], // Wildcard slot for dynamic list items
+    },
+    fetchPolicy: "LAZY",
+};
+
+const contentBlockListSchema: BlockSchema = {
+    name: "ContentBlockList",
+    type: "OBJECT",
+    required: true,
+    properties: {
+        title: {
+            name: "Title",
+            type: "STRING",
+            required: false,
+        },
+        description: {
+            name: "Description",
+            type: "STRING",
+            required: false,
+        },
+    },
+};
+
+export const createContentBlockListType = (organisationId?: string): BlockType =>
+    createBaseBlockType({
+        key: "content_block_list",
+        name: "Content Block List",
+        description: "Ordered list of content blocks with configurable ordering.",
+        organisationId,
+        schema: contentBlockListSchema,
+        display: createBaseDisplay(contentBlockListComponent),
+        nesting: {
+            max: undefined,
+            allowedTypes: ALL_BLOCK_COMPONENT_TYPES, // Default, overridden by listConfig
+        },
     });

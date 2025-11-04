@@ -12,7 +12,6 @@ sealed interface ReferenceMetadata : Metadata {
     val path: String
 }
 
-
 data class ReferenceItem(
     val type: EntityType,               // CLIENT | COMPANY | BLOCK | ...
     val id: UUID,
@@ -21,7 +20,7 @@ data class ReferenceItem(
 //    val actions: List<ActionRef>? = null
 )
 
-enum class Presentation { SUMMARY, ENTITY, TABLE, GRID }
+enum class Presentation { SUMMARY, ENTITY, TABLE, GRID, INLINE }
 
 data class Projection(
     val fields: List<String> = emptyList(), // e.g., ["name","domain","contact.email"]

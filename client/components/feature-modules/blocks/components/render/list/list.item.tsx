@@ -1,0 +1,102 @@
+/**
+ * ContentBlockListItem - Individual sortable item within a ContentBlockList.
+ *
+ * Wraps a block node with drag-and-drop functionality using dnd-kit's useSortable hook.
+ * Displays an optional drag handle and applies visual feedback during drag operations.
+ */
+
+"use client";
+
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ReactNode, useCallback, useMemo } from "react";
+import { useBlockEnvironment } from "../../../context/block-environment-provider";
+import { BlockListConfiguration } from "../../../interface/block.interface";
+import { PanelWrapper } from "../../panel/panel-wrapper";
+
+interface Props<T> {
+    id: string;
+    item: T;
+    config: BlockListConfiguration;
+    isDraggable: boolean;
+    render: (item: T) => ReactNode;
+}
+
+/**
+ * A single sortable item in a content block list.
+ * Renders the block content with optional drag handle and drag feedback.
+ */
+export const ListItem = <T extends unknown>({
+    id,
+    item,
+    config,
+    isDraggable,
+    render,
+}: Props<T>) => {
+    const { removeBlock } = useBlockEnvironment();
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id,
+        disabled: !isDraggable,
+    });
+
+    const handleDelete = useCallback(() => removeBlock(id), [removeBlock, id]);
+
+    const quickActions = useMemo(
+        () => [
+            {
+                id: "delete",
+                label: "Delete block",
+                shortcut: "⌘⌫",
+                onSelect: handleDelete,
+            },
+        ],
+        [handleDelete]
+    );
+
+    // Apply drag transform and transition
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    const showDragHandle = isDraggable && config.display.showDragHandles;
+
+    return (
+        <div ref={setNodeRef} style={style} className="relative block-no-drag">
+            <PanelWrapper
+                showResizeHandles={false}
+                className="w-full relative flex-row items-center gap-2 "
+                id={id}
+                quickActions={quickActions}
+                allowInsert={false}
+                onDelete={handleDelete}
+            >
+             
+
+                {/* Block content */}
+                <div className="flex-1 overflow-hidden" {...attributes} {...listeners}>
+                    {render(item)}
+                </div>
+            </PanelWrapper>
+        </div>
+    );
+};
+
+// TODO Give each list item a dedicated editor panel
+//  if (canMoveUp(parent, id)) {
+//             quickActions.unshift({
+//                 id: "move-up",
+//                 label: "Move up",
+//                 shortcut: "⌘↑",
+//                 onSelect: () => moveBlockUp(id),
+//             });
+//         }
+//         if (canMoveDown(parent, id)) {
+//             quickActions.splice(1, 0, {
+//                 id: "move-down",
+//                 label: "Move down",
+//                 shortcut: "⌘↓",
+//                 onSelect: () => moveBlockDown(id),
+//             });
+//         }

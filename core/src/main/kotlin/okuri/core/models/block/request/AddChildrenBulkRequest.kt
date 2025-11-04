@@ -4,12 +4,9 @@ import jakarta.validation.constraints.NotNull
 import java.util.*
 
 /**
- * Request to add multiple children to a parent's slot at once.
+ * Request to add multiple children to a parent at once.
  */
 data class AddChildrenBulkRequest(
-    @field:NotNull
-    val slot: String,
-
     @field:NotNull
     val children: List<ChildOrderItem>
 )

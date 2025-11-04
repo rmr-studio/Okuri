@@ -10,6 +10,7 @@ import {
     useMemo,
     useRef,
 } from "react";
+
 import isEqual from "react-fast-compare";
 import { useGrid } from "./grid-provider";
 
@@ -73,10 +74,7 @@ const ensureRenderRoot = (wrapper: HTMLElement, widget: GridStackWidget): HTMLEl
  * @returns A React element wrapping children with GridStackRenderContext.
  */
 export function GridContainerProvider({ children }: PropsWithChildren) {
-    const {
-        _gridStack: { value: gridStack, set: setGridStack },
-        initialOptions,
-    } = useGrid();
+    const { gridStack, setGridStack, initialOptions } = useGrid();
 
     const widgetContainersRef = useRef<Map<string, HTMLElement>>(new Map());
     const containerRef = useRef<HTMLDivElement>(null);
@@ -172,7 +170,8 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
         try {
             if (!gridStack) {
-                setGridStack(initGrid());
+                const newGrid = initGrid();
+                setGridStack(newGrid);
             }
             if (!GridStack.renderCB) {
                 GridStack.renderCB = renderCBFn;
@@ -181,7 +180,7 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
         } catch (e) {
             console.error("Error initializing gridstack", e);
         }
-    }, [gridStack, initGrid, renderCBFn, setGridStack]);
+    }, [gridStack, initGrid, renderCBFn, setGridStack, initialOptions]);
 
     useLayoutEffect(() => {
         const observersSnapshot = resizeObserverMap.current;

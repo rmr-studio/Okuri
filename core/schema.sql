@@ -5,20 +5,20 @@ commit;
 -- Organisations
 CREATE TABLE IF NOT EXISTS "organisations"
 (
-    "id"                UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
-    "name"              VARCHAR(100)     NOT NULL UNIQUE,
-    "plan"              VARCHAR          NOT NULL DEFAULT 'FREE' CHECK (plan IN ('FREE', 'STARTUP', 'SCALE', 'ENTERPRISE')),
-    "default_currency"  VARCHAR(3)       NOT NULL DEFAULT 'AUD',
-    "address"           jsonb,
-    "avatar_url"        TEXT,
-    "business_number"   TEXT,
-    "tax_id"            TEXT,
-    "payment_details"   jsonb,
-    "member_count"      INTEGER          NOT NULL DEFAULT 0,
-    "created_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"        TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
-    "created_by"        UUID,
-    "updated_by"        UUID
+    "id"               UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
+    "name"             VARCHAR(100)     NOT NULL UNIQUE,
+    "plan"             VARCHAR          NOT NULL DEFAULT 'FREE' CHECK (plan IN ('FREE', 'STARTUP', 'SCALE', 'ENTERPRISE')),
+    "default_currency" VARCHAR(3)       NOT NULL DEFAULT 'AUD',
+    "address"          jsonb,
+    "avatar_url"       TEXT,
+    "business_number"  TEXT,
+    "tax_id"           TEXT,
+    "payment_details"  jsonb,
+    "member_count"     INTEGER          NOT NULL DEFAULT 0,
+    "created_at"       TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"       TIMESTAMP WITH TIME ZONE  DEFAULT CURRENT_TIMESTAMP,
+    "created_by"       UUID,
+    "updated_by"       UUID
 );
 
 CREATE TABLE IF NOT EXISTS "organisation_members"
@@ -266,17 +266,18 @@ CREATE TABLE public.block_children
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     "parent_id"   uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
     "child_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
-    "slot"        text    NOT NULL, -- e.g. "header", "items", "footer"
-    "order_index" integer NOT NULL DEFAULT 0,
+    "order_index" integer NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_block_children_parent ON block_children (parent_id);
 CREATE INDEX IF NOT EXISTS idx_block_children_child ON public.block_children (child_id);
-CREATE INDEX IF NOT EXISTS idx_block_children_parent_slot_order ON public.block_children (parent_id, slot, order_index);
 
 -- A block can only be the child of a singular parent block. Ensure no blocks are shared when looking at direct children
 alter table public.block_children
     add constraint uq_block_child unique (child_id);
+
+alter table public.block_children
+    add constraint uq_parent_order_index unique (parent_id, order_index);
 
 
 -- Mapping an entity (client, line item, etc) to the parent level blocks it should display

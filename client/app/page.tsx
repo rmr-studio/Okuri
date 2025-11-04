@@ -11,6 +11,7 @@ import FAQSection from "@/components/feature-modules/landing/components/faq";
 import DocumentationSection from "@/components/feature-modules/landing/components/Features";
 import FooterSection from "@/components/feature-modules/landing/components/Footer";
 import PricingSection from "@/components/feature-modules/landing/components/pricing";
+import { SkylineHero } from "@/components/feature-modules/landing/components/skyline-hero";
 import TestimonialsSection from "@/components/feature-modules/landing/components/testimonials";
 import { ModeToggle } from "@/components/ui/themeToggle";
 import { useEffect, useRef, useState } from "react";
@@ -98,16 +99,19 @@ export default function LandingPage() {
 
     return (
         <div className="w-full min-h-screen relative bg-page-background overflow-x-hidden flex flex-col justify-start items-center">
-            <div className="relative flex flex-col justify-start items-center w-full">
+            {/* Z-10 */}
+            <SkylineHero />
+            {/* Z-20 */}
+            <div className="relative flex flex-col justify-start items-center w-full z-20">
                 {/* Main container with proper margins */}
                 <div className="w-full max-w-none px-4 sm:px-6 md:px-8 lg:px-0 lg:max-w-[1060px] lg:w-[1060px] relative flex flex-col justify-start items-start min-h-screen">
                     {/* Left vertical line */}
-                    <div className="w-[1px] h-full absolute left-4 sm:left-6 md:left-8 lg:left-0 top-0 bg-page-border-solid shadow-[1px_0px_0px_white] dark:shadow-[1px_0px_0px_rgba(26,24,22,0.5)] z-0"></div>
+                    <div className="w-[1px] h-full absolute left-4 sm:left-6 md:left-8 lg:left-0 top-0 bg-page-border-solid shadow-[1px_0px_0px_white] dark:shadow-[1px_0px_0px_rgba(26,24,22,0.5)] z-20"></div>
 
                     {/* Right vertical line */}
-                    <div className="w-[1px] h-full absolute right-4 sm:right-6 md:right-8 lg:right-0 top-0 bg-page-border-solid shadow-[1px_0px_0px_white] dark:shadow-[1px_0px_0px_rgba(26,24,22,0.5)] z-0"></div>
+                    <div className="w-[1px] h-full absolute right-4 sm:right-6 md:right-8 lg:right-0 top-0 bg-page-border-solid shadow-[1px_0px_0px_white] dark:shadow-[1px_0px_0px_rgba(26,24,22,0.5)] z-20"></div>
 
-                    <div className="self-stretch pt-[9px] overflow-hidden border-b border-page-border-solid flex flex-col justify-center items-center gap-4 sm:gap-6 md:gap-8 lg:gap-[66px] relative z-10">
+                    <div className="self-stretch pt-[9px] overflow-hidden border-b border-page-border-solid flex flex-col justify-center items-center gap-4 sm:gap-6 md:gap-8 lg:gap-[66px] relative z-20">
                         {/* Navigation */}
                         <div className="w-full h-12 sm:h-14 md:h-16 lg:h-[84px] absolute left-0 top-0 flex justify-center items-center z-20 px-6 sm:px-8 md:px-12 lg:px-0">
                             <div className="w-full h-0 absolute left-0 top-6 sm:top-7 md:top-8 lg:top-[42px] border-t border-page-border-solid shadow-[0px_1px_0px_white] dark:shadow-[0px_1px_0px_rgba(26,24,22,0.5)]"></div>

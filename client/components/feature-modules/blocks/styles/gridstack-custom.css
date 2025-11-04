@@ -31,3 +31,22 @@
     display: flex !important;
     flex-direction: column !important;
 }
+
+.grid-stack-item-content {
+    overflow: visible !important;
+}
+
+/* Ensure GridStack items don't show drag cursor everywhere */
+.grid-stack-item:not(.ui-draggable-dragging) {
+    cursor: default !important;
+}
+
+/* Only show grab cursor on the designated drag handle */
+.grid-stack-item .block-drag-handle {
+    cursor: grab !important;
+}
+
+.grid-stack-item .block-drag-handle:active,
+.grid-stack-item.ui-draggable-dragging .block-drag-handle {
+    cursor: grabbing !important;
+}

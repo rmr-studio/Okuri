@@ -223,7 +223,7 @@ class BlockServiceTest {
         val savedCaptor = argumentCaptor<BlockEntity>()
         whenever(blockRepository.save(savedCaptor.capture())).thenAnswer { saved(savedCaptor.firstValue) }
 
-        val nesting = BlockTypeNesting(max = null, allowedTypes = listOf(ComponentType.CONTACT_CARD))
+        val nesting = BlockTypeNesting(max = null, allowedTypes = listOf("contact_card"))
 
         val req = CreateBlockRequest(
             typeId = type.id,
@@ -233,7 +233,6 @@ class BlockServiceTest {
             name = "Child Block",
             payload = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
             parentId = parentId,
-            slot = "items",
             orderIndex = 0,
             parentNesting = nesting
         )
@@ -244,7 +243,6 @@ class BlockServiceTest {
         verify(blockChildrenService).addChild(
             child = any(),
             parentId = eq(parentId),
-            slot = eq("items"),
             index = eq(0),
             nesting = eq(nesting)
         )
@@ -551,14 +549,12 @@ class BlockServiceTest {
         whenever(blockRepository.findById(rootId)).thenReturn(Optional.of(root))
         whenever(blockRepository.findAllById(setOf(child1Id, child2Id))).thenReturn(listOf(child1, child2))
 
-        val edges = mapOf(
-            "items" to listOf(
-                BlockChildEntity(UUID.randomUUID(), rootId, child1Id, "items", 0),
-                BlockChildEntity(UUID.randomUUID(), rootId, child2Id, "items", 1)
-            )
+        val edges = listOf(
+            BlockChildEntity(UUID.randomUUID(), rootId, child1Id, 0),
+            BlockChildEntity(UUID.randomUUID(), rootId, child2Id, 1)
         )
 
-        whenever(blockChildrenService.listChildrenGrouped(rootId)).thenReturn(edges)
+        whenever(blockChildrenService.listChildren(rootId)).thenReturn(edges)
 
         val tree = service.getBlock(rootId)
 
@@ -567,9 +563,7 @@ class BlockServiceTest {
         val contentNode = tree.root as ContentNode
         assertEquals("Root", contentNode.block.name)
         assertNotNull(contentNode.children)
-        assertEquals(1, contentNode.children!!.size)
-        assertTrue(contentNode.children!!.containsKey("items"))
-        assertEquals(2, contentNode.children!!["items"]!!.size)
+        assertEquals(2, contentNode.children!!.size)
     }
 
     @Test
@@ -593,22 +587,19 @@ class BlockServiceTest {
         whenever(blockRepository.findAllById(setOf(blockId))).thenReturn(listOf(block))
 
         // Simulate cycle: block has itself as a child
-        val edges = mapOf(
-            "self" to listOf(
-                BlockChildEntity(UUID.randomUUID(), blockId, blockId, "self", 0)
-            )
+        val edges = listOf(
+            BlockChildEntity(UUID.randomUUID(), blockId, blockId, 0)
         )
 
-        whenever(blockChildrenService.listChildrenGrouped(blockId)).thenReturn(edges)
+        whenever(blockChildrenService.listChildren(blockId)).thenReturn(edges)
 
         val tree = service.getBlock(blockId)
 
         // Should detect cycle
         val contentNode = tree.root as ContentNode
         assertNotNull(contentNode.children)
-        assertNotNull(contentNode.children!!["self"])
-        assertTrue(contentNode.children!!["self"]!!.isNotEmpty())
-        val selfChild = contentNode.children!!["self"]!![0] as ContentNode
+        assertTrue(contentNode.children!!.isNotEmpty())
+        val selfChild = contentNode.children!![0] as ContentNode
         assertTrue(selfChild.warnings.isNotEmpty())
         assertTrue(selfChild.warnings.any { it.contains("Cycle detected") })
     }

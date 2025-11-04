@@ -3,7 +3,6 @@
  *
  * Resolves bindings from BlockComponentNode to extract props from:
  * - Block payload data (DataPath bindings)
- * - Child blocks (RefSlot bindings)
  * - Component slots (Slot bindings)
  */
 
@@ -20,13 +19,12 @@ import { BlockBinding, BlockNode, Metadata, isContentNode } from "../../interfac
  */
 export function resolveBindings(
     bindings: BlockBinding[],
-    payload: Metadata,
-    childBlocks: Record<string, BlockNode[]>
+    payload: Metadata
 ): Record<string, unknown> {
     const props: Record<string, unknown> = {};
 
     bindings.forEach((binding) => {
-        const value = resolveBinding(binding, payload, childBlocks);
+        const value = resolveBinding(binding, payload);
         if (value !== undefined) {
             props[binding.prop] = value;
         }
@@ -38,18 +36,10 @@ export function resolveBindings(
 /**
  * Resolves a single binding.
  */
-function resolveBinding(
-    binding: BlockBinding,
-    payload: Metadata,
-    childBlocks: Record<string, BlockNode[]>
-): unknown {
+function resolveBinding(binding: BlockBinding, payload: Metadata): unknown {
     switch (binding.source.type) {
         case "DataPath":
             return resolveDataPath(binding.source.path, payload);
-
-        case "RefSlot":
-            return resolveRefSlot(binding.source, childBlocks);
-
         default:
             console.warn(`Unknown binding source type:`, binding.source);
             return undefined;
@@ -115,18 +105,6 @@ function resolveRefSlot(
             // Default to returning child blocks
             return slotChildren;
     }
-}
-
-/**
- * Resolves ResolvedRefs binding (for entity references).
- */
-function resolveResolvedRefs(
-    source: { path: string },
-    payload: Metadata,
-    childBlocks: Record<string, BlockNode[]>
-): unknown {
-    // Extract resolved references from payload
-    return resolveDataPath(source.path, payload);
 }
 
 /**

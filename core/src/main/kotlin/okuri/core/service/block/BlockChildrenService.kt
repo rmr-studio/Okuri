@@ -29,47 +29,40 @@ class BlockChildrenService(
      * Public read operations
      * ========================= */
 
-    /** Returns children grouped by slot, ordered by orderIndex within each slot. */
-    fun listChildrenGrouped(parentId: UUID): Map<String, List<BlockChildEntity>> =
-        edgeRepository.findByParentIdOrderBySlotAscOrderIndexAsc(parentId)
-            .groupBy { it.slot }
-
     /** Returns the ordered list of children in a single slot. */
-    fun listChildren(parentId: UUID, slot: String): List<BlockChildEntity> =
-        edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
+    fun listChildren(parentId: UUID): List<BlockChildEntity> =
+        edgeRepository.findByParentIdOrderByOrderIndexAsc(parentId)
 
-    /** Convenience: a lightweight "edges" map for tree building. */
-    fun getChildEdges(parentId: UUID): Map<String, List<BlockChildEntity>> =
-        listChildrenGrouped(parentId)
+
+    /* =========================
+     * Helpers / Validation
+     * ========================= */
+
+    private fun load(id: UUID): BlockEntity =
+        blockRepository.findById(id).orElseThrow { NoSuchElementException("Block $id not found") }
 
     /* =========================
      * Mutations
      * ========================= */
 
-    /**
-     * Add a child under a parent at the given slot.
-     * If the slot does not exist, it is created.
-     * If this is a list parent, the index parameter determines the position within the slot.
-     */
     @Transactional
     fun addChild(
         child: BlockEntity,
         parentId: UUID,
-        slot: String,
         index: Int,
         nesting: BlockTypeNesting
     ): BlockChildEntity {
         val childId = requireNotNull(child.id)
 
         val parent = load(parentId)
-        validateAttach(parent, child, slot, nesting)
+        validateAttach(parent, child, nesting)
 
         // Ensure this block is not already a child elsewhere (child_id is globally unique)
         edgeRepository.findByChildId(childId)?.let {
             throw IllegalStateException("Block $childId already exists as a child of parent ${it.parentId}")
         }
 
-        val siblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
+        val siblings = edgeRepository.findByParentIdOrderByOrderIndexAsc(parentId)
         val insertAt = index.coerceIn(0, siblings.size)
 
         // Shift down indexes >= insertAt
@@ -84,7 +77,6 @@ class BlockChildrenService(
                 id = null,
                 parentId = parentId,
                 childId = childId,
-                slot = slot,
                 orderIndex = insertAt
             )
         )
@@ -93,79 +85,13 @@ class BlockChildrenService(
     }
 
     /**
-     * Replace a slot with exactly this ordered list of child IDs (delta upsert).
-     * - Inserts new edges
-     * - Deletes missing edges
-     * - Reorders everything to 0..n-1
-     * - Auto-reparents children if they're currently children of other parents
-     */
-    @Transactional
-    fun replaceSlot(
-        parentId: UUID,
-        slot: String,
-        orderedChildIds: List<UUID>,
-        nesting: BlockTypeNesting
-    ) {
-        require(orderedChildIds.distinct().size == orderedChildIds.size) {
-            "Duplicate child IDs not allowed in slot '$slot' for parent $parentId"
-        }
-        val parent = load(parentId)
-        // Preload and validate each child type/org
-        val children = blockRepository.findAllById(orderedChildIds.toSet())
-        val byId = children.associateBy { it.id!! }
-        orderedChildIds.forEach { id ->
-            val child = byId[id] ?: throw NoSuchElementException("Child $id not found")
-            validateAttach(parent, child, slot, nesting)
-
-            // If child is already a child of another parent, detach it first
-            edgeRepository.findByChildId(id)?.let { existingEdge ->
-                if (existingEdge.parentId != parentId || existingEdge.slot != slot) {
-                    edgeRepository.delete(existingEdge)
-                    // Clean up old parent's slot ordering
-                    val oldSiblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(
-                        existingEdge.parentId,
-                        existingEdge.slot
-                    )
-                    renumber(existingEdge.parentId, existingEdge.slot, oldSiblings)
-                }
-            }
-        }
-
-        val existing = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
-        val existingByChild = existing.associateBy { it.childId }
-
-        // Deletes
-        val desiredIds = orderedChildIds.toSet()
-        val toDelete = existing.filter { it.childId !in desiredIds }
-        if (toDelete.isNotEmpty()) edgeRepository.deleteAllInBatch(toDelete)
-
-        // Inserts & reorder
-        orderedChildIds.forEachIndexed { idx, id ->
-            val row = existingByChild[id]
-            if (row == null) {
-                edgeRepository.save(
-                    BlockChildEntity(
-                        id = null,
-                        parentId = parentId,
-                        childId = id,
-                        slot = slot,
-                        orderIndex = idx
-                    )
-                )
-            } else if (row.orderIndex != idx) {
-                edgeRepository.save(row.copy(orderIndex = idx))
-            }
-        }
-    }
-
-    /**
      * Move a child to a new absolute index within the same slot.
      */
     @Transactional
-    fun reorderWithinSlot(parentId: UUID, slot: String, childId: UUID, newIndex: Int) {
-        val siblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
+    fun reorderChildren(parentId: UUID, childId: UUID, newIndex: Int) {
+        val siblings = edgeRepository.findByParentIdOrderByOrderIndexAsc(parentId)
         val row = siblings.find { it.childId == childId }
-            ?: throw NoSuchElementException("Child $childId not found in slot '$slot' of parent $parentId")
+            ?: throw NoSuchElementException("Child $childId not found in parent $parentId")
 
         val bounded = newIndex.coerceIn(0, siblings.size - 1)
         if (row.orderIndex == bounded) return
@@ -176,52 +102,9 @@ class BlockChildrenService(
             .toMutableList()
 
         reordered.add(bounded, row.copy(orderIndex = bounded))
-        renumber(parentId, slot, reordered)
+        renumber(parentId, reordered)
     }
 
-    /**
-     * Move a child to a different slot (same parent), optionally specifying a position.
-     */
-    @Transactional
-    fun moveChildToSlot(
-        parentId: UUID,
-        childId: UUID,
-        fromSlot: String,
-        toSlot: String,
-        index: Int? = null,
-        nesting: BlockTypeNesting
-    ) {
-        val row = edgeRepository.findByParentIdAndChildId(parentId, childId)
-            ?: throw NoSuchElementException("Child $childId not attached to parent $parentId")
-        require(row.slot == fromSlot) {
-            "Child $childId is in slot '${row.slot}', not '$fromSlot'"
-        }
-
-        if (row.slot == toSlot) {
-            // same slot -> use reorder
-            reorderWithinSlot(parentId, toSlot, childId, index ?: row.orderIndex)
-            return
-        }
-
-        val parent = load(parentId)
-        val child = load(childId)
-        validateAttach(parent, child, toSlot, nesting)
-
-        // Remove from old slot (compact using actual slot)
-        val fromSiblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, row.slot)
-        val remaining = fromSiblings.filter { it.childId != childId }
-        renumber(parentId, row.slot, remaining)
-
-        // Insert into new slot
-        val toSiblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, toSlot)
-        val insertAt = index?.coerceIn(0, toSiblings.size) ?: toSiblings.size
-        toSiblings.asReversed().forEach { s ->
-            if (s.orderIndex >= insertAt) {
-                edgeRepository.save(s.copy(orderIndex = s.orderIndex + 1))
-            }
-        }
-        edgeRepository.save(row.copy(slot = toSlot, orderIndex = insertAt))
-    }
 
     /**
      * Reparent a child under a new parent/slot/index.
@@ -232,27 +115,25 @@ class BlockChildrenService(
     fun reparentChild(
         childId: UUID,
         newParentId: UUID,
-        newSlot: String,
         index: Int? = null,
         nesting: BlockTypeNesting
     ) {
         val child = load(childId)
         val newParent = load(newParentId)
-        validateAttach(newParent, child, newSlot, nesting)
+        validateAttach(newParent, child, nesting)
 
         // Remove any existing edge (child_id is globally unique, so at most one edge exists)
         edgeRepository.findByChildId(childId)?.let { existingEdge ->
             edgeRepository.delete(existingEdge)
             // Compact old parent's slot
-            val oldSiblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(
+            val oldSiblings = edgeRepository.findByParentIdOrderByOrderIndexAsc(
                 existingEdge.parentId,
-                existingEdge.slot
             )
-            renumber(existingEdge.parentId, existingEdge.slot, oldSiblings)
+            renumber(existingEdge.parentId, oldSiblings)
         }
 
         // Insert new edge
-        val siblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(newParentId, newSlot)
+        val siblings = edgeRepository.findByParentIdOrderByOrderIndexAsc(newParentId)
         val insertAt = index?.coerceIn(0, siblings.size) ?: siblings.size
 
         // Shift siblings
@@ -267,7 +148,6 @@ class BlockChildrenService(
                 id = null,
                 parentId = newParentId,
                 childId = childId,
-                slot = newSlot,
                 orderIndex = insertAt
             )
         )
@@ -281,8 +161,8 @@ class BlockChildrenService(
         edgeRepository.findByChildId(childId)?.let { edge ->
             edgeRepository.delete(edge)
             // Compact the parent's slot
-            val siblings = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(edge.parentId, edge.slot)
-            renumber(edge.parentId, edge.slot, siblings)
+            val siblings = edgeRepository.findByParentIdOrderByOrderIndexAsc(edge.parentId)
+            renumber(edge.parentId, siblings)
         }
     }
 
@@ -290,30 +170,22 @@ class BlockChildrenService(
      * Remove a specific child from a specific parent slot.
      */
     @Transactional
-    fun removeChild(parentId: UUID, slot: String, childId: UUID) {
+    fun removeChild(parentId: UUID, childId: UUID) {
         val row = edgeRepository.findByParentIdAndChildId(parentId, childId)
             ?: return
-        if (row.slot != slot) return
 
         edgeRepository.delete(row)
         // compact the slot
-        val remaining = edgeRepository.findByParentIdAndSlotOrderByOrderIndexAsc(parentId, slot)
-        renumber(parentId, slot, remaining)
+        val remaining = edgeRepository.findByParentIdOrderByOrderIndexAsc(parentId)
+        renumber(parentId, remaining)
     }
-
-    /* =========================
-     * Helpers / Validation
-     * ========================= */
-
-    private fun load(id: UUID): BlockEntity =
-        blockRepository.findById(id).orElseThrow { NoSuchElementException("Block $id not found") }
 
 
     /**
      * Validates org, nesting rules, and max children constraint.
      * Since child_id is globally unique, cycles are impossible in a strict tree.
      */
-    private fun validateAttach(parent: BlockEntity, child: BlockEntity, slot: String, nesting: BlockTypeNesting) {
+    private fun validateAttach(parent: BlockEntity, child: BlockEntity, nesting: BlockTypeNesting) {
         // 1. Same organisation check
         require(parent.organisationId == child.organisationId) {
             "Cannot attach child from different organisation (parent: ${parent.organisationId}, child: ${child.organisationId})"
@@ -327,20 +199,16 @@ class BlockChildrenService(
         requireNotNull(child.id)
 
         // 2. Nesting rules: check if child's type is allowed
-        val childType = child.type.key
-        val allowedTypes = nesting.allowedTypes
-        // Convert child type key to ComponentType enum name format for comparison
-        // e.g., "contact" -> "CONTACT", "contact-card" -> "CONTACT_CARD"
-        val normalizedChildType = childType.uppercase().replace("-", "_")
-        require(allowedTypes.any { it.name == normalizedChildType }) {
-            "Child type '$childType' (normalized: '$normalizedChildType') is not allowed in parent's nesting rules. Allowed types: ${allowedTypes.map { it.name }}"
+
+        require(nesting.allowedTypes.any { it == child.type.key }) {
+            "Child type '$child.type.key'  is not allowed in parent's nesting rules. Allowed types: ${nesting.allowedTypes.joinToString()}}"
         }
 
         // 3. Max children constraint
         nesting.max?.let { maxChildren ->
-            val currentCount = edgeRepository.countByParentIdAndSlot(parentId, slot)
+            val currentCount = edgeRepository.countByParentId(parentId)
             require(currentCount < maxChildren) {
-                "Parent block ${parent.id} has reached maximum children ($maxChildren) in slot '$slot'"
+                "Parent block ${parent.id} has reached maximum children ($maxChildren)"
             }
         }
 
@@ -349,7 +217,7 @@ class BlockChildrenService(
     }
 
     /** Persist contiguous orderIndex = 0..n-1 for provided rows (already filtered to a slot). */
-    private fun renumber(parentId: UUID, slot: String, rows: List<BlockChildEntity>) {
+    private fun renumber(parentId: UUID, rows: List<BlockChildEntity>) {
         rows.forEachIndexed { idx, r ->
             if (r.orderIndex != idx) edgeRepository.save(r.copy(orderIndex = idx))
         }

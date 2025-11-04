@@ -35,7 +35,7 @@ object BlockFactory {
         archived: Boolean = false,
         nesting: BlockTypeNesting = BlockTypeNesting(
             max = null,
-            allowedTypes = listOf(ComponentType.CONTACT_CARD)
+            allowedTypes = listOf("contact_card")
         )
     ): BlockTypeEntity = BlockTypeEntity(
         id = UUID.randomUUID(),

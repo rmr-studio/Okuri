@@ -3,8 +3,17 @@
 import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
 import { BlockStructureRenderer } from "../components/render/block-structure-renderer";
-import { isContentNode } from "../interface/block.interface";
+import { ContentBlockList } from "../components/render/list/ContentBlockList";
+import {
+    BlockNode,
+    ContentNode,
+    isContentMetadata,
+    isContentNode,
+    isEntityReferenceMetadata,
+    isReferenceNode,
+} from "../interface/block.interface";
 import { ProviderProps } from "../interface/render.interface";
+import { isList } from "../util/list/list.util";
 import { parseContent } from "../util/render/render.util";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useContainer } from "./grid-container-provider";
@@ -18,69 +27,83 @@ export const RenderElementContext = createContext<{ widget: { id: string } } | n
  * Each widget corresponds to one block, which may contain multiple components.
  * The BlockStructureRenderer handles rendering all components and resolving bindings.
  */
-export const RenderElementProvider: FC<ProviderProps> = ({
-    transformProps,
-    onUnknownType,
-    wrapElement,
-}) => {
-    const { _rawWidgetMetaMap } = useGrid();
+export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapElement }) => {
+    const { environment } = useGrid();
     const { getWidgetContainer } = useContainer();
     const { getBlock } = useBlockEnvironment();
 
+    const renderList = (node: BlockNode): ReactNode => {
+        // Determine List rendering component (Content v Reference Lists)
+        if (isReferenceNode(node) && isEntityReferenceMetadata(node.block.payload)) {
+            // TODO: Support Entity Reference Listss
+            return <>Ill deal with this soon</>;
+        }
+
+        if (isContentNode(node) && isContentMetadata(node.block.payload)) {
+            const config = node.block.payload.listConfig;
+            if (!config) return null;
+            return (
+                <ContentBlockList
+                    id={node.block.id}
+                    config={config}
+                    children={node.children}
+                    render={renderNode}
+                />
+            );
+        }
+    };
+
+    const renderNode = (node: ContentNode): ReactNode => {
+        const childRenderStructure = node.block.type.display?.render;
+
+        if (!childRenderStructure) {
+            return (
+                <div className="p-4 text-sm text-muted-foreground">
+                    No render structure for {node.block.id}
+                </div>
+            );
+        }
+
+        const children = isContentNode(node) ? node.children : undefined;
+
+        return (
+            <BlockStructureRenderer
+                blockId={node.block.id}
+                renderStructure={childRenderStructure}
+                payload={node.block.payload}
+                children={children}
+            />
+        );
+    };
+
     return (
         <>
-            {Array.from(_rawWidgetMetaMap.value.entries()).map(([widgetId, meta]) => {
-                const raw = parseContent(meta);
-                if (!raw) return null;
+            {Array.from(environment.widgetMetaMap.entries()).map(([widgetId, meta]) => {
+                // Extract Node's render structure from widget content
+                const nodeData = parseContent(meta);
+                if (!nodeData) return null;
 
-                const blockId = raw.blockId || widgetId;
-                const blockNode = getBlock(blockId);
+                const { id, blockType, renderType } = nodeData;
+                const blockNode = getBlock(id);
 
                 if (!blockNode) {
-                    console.warn(`Block ${blockId} not found in environment`);
+                    console.warn(`Block ${id} not found in environment`);
                     return null;
                 }
 
                 const container = getWidgetContainer(widgetId);
                 if (!container) return null;
 
-                // Get render structure from the parsed content or from the block type
-                const renderStructure = raw.renderStructure || blockNode.block.type.display?.render;
-
-                if (!renderStructure) {
-                    console.warn(`No render structure found for block ${blockId}`);
-                    return null;
-                }
-
-                // Get child blocks if this is a content node
-                const childBlocks = isContentNode(blockNode) ? blockNode.children || {} : {};
-
-                // Render the block structure with all its components
-                let rendered: ReactNode = (
-                    <BlockStructureRenderer
-                        blockId={blockId}
-                        renderStructure={renderStructure}
-                        payload={blockNode.block.payload}
-                        childBlocks={childBlocks}
-                        renderChildBlock={(childNode) => {
-                            // Recursively render child blocks
-                            // This will be handled by the GridStack subgrid
-                            return null;
-                        }}
-                    />
-                );
-
-                // Wrap the entire block structure if wrapElement is provided
-                if (wrapElement) {
-                    rendered = wrapElement({
-                        id: widgetId,
-                        meta,
-                        element: rendered,
-                        elementMeta: null as any,
-                        parsedProps: {},
-                        raw,
-                    });
-                }
+                // Compute the rendered components based on provided block metadata
+                const rendered: ReactNode = isList(blockNode)
+                    ? // Special rendering for List blocks
+                      renderList(blockNode)
+                    : // Wrap each rendered block inside an editor portal for interactivity
+                      wrapElement({
+                          children: renderNode(blockNode),
+                          widget: meta,
+                          content: nodeData,
+                      });
 
                 return (
                     <RenderElementContext.Provider
