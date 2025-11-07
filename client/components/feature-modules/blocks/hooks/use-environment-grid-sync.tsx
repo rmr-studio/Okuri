@@ -56,6 +56,16 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
 
     const listenersRef = useRef<Map<GridStackLike, () => void>>(new Map());
     const initializedRef = useRef(isInitialized);
+    const hoverIntentRef = useRef<
+        Map<
+            GridStackLike,
+            {
+                timer: number | null;
+                node: GridStackNode | null;
+                active: boolean;
+            }
+        >
+    >(new Map());
 
     useLayoutEffect(() => {
         initializedRef.current = isInitialized;
@@ -78,6 +88,21 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
         },
         [updateLayouts]
     );
+
+    const clearHoverState = useCallback((grid: GridStackLike) => {
+        const state = hoverIntentRef.current.get(grid);
+        if (!state) return;
+        if (state.timer !== null) {
+            window.clearTimeout(state.timer);
+        }
+        state.timer = null;
+        state.node = null;
+        state.active = false;
+        const gs = grid as GridStack & {
+            placeholder?: { remove?: () => void };
+        };
+        gs.placeholder?.remove?.();
+    }, []);
 
     const attachListeners = useCallback(
         (grid: GridStackLike | null | undefined, root: GridStack) => {
@@ -105,11 +130,19 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 });
             };
 
+            // const handleDragStop = (_event: Event, node: GridStackNode) => {
+            //     if (node?.grid) {
+            //         clearHoverState(node.grid);
+            //     }
+            // };
+
             grid.on("change", handleLayoutEvent);
             grid.on("dragstop", handleLayoutEvent);
             grid.on("resizestop", handleLayoutEvent);
             grid.on("dropped", handleLayoutEvent);
             grid.on("added", handleBlockAdded);
+
+            // grid.on("dragstop", handleDragStop);
 
             listenersRef.current.set(grid, () => {
                 grid.off("change", handleLayoutEvent);
@@ -117,9 +150,11 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 grid.off("resizestop", handleLayoutEvent);
                 grid.off("dropped", handleLayoutEvent);
                 grid.off("added", handleBlockAdded);
+
+                // grid.off("dragstop", handleDragStop);
             });
         },
-        [getParentId, moveBlock, processLayouts]
+        [getParentId, moveBlock, processLayouts, clearHoverState]
     );
 
     useLayoutEffect(() => {
@@ -130,6 +165,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
         return () => {
             listenersRef.current.forEach((cleanup) => cleanup());
             listenersRef.current.clear();
+            hoverIntentRef.current.clear();
         };
     }, [gridStack, attachListeners]);
 

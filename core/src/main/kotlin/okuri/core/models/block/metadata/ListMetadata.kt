@@ -1,6 +1,6 @@
 package okuri.core.models.block.metadata
 
-import okuri.core.enums.block.BlockListOrderingMode
+import okuri.core.enums.block.structure.BlockListOrderingMode
 
 interface ListMetadata<T> {
     val order: OrderingConfig

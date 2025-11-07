@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion
-import okuri.core.enums.block.BlockValidationScope
+import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.core.DataFormat
 import okuri.core.enums.core.DataType
 import okuri.core.models.block.metadata.BlockContentMetadata

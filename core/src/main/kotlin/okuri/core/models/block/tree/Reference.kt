@@ -2,7 +2,7 @@ package okuri.core.models.block.tree
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import io.swagger.v3.oas.annotations.media.Schema
-import okuri.core.enums.block.ReferenceType
+import okuri.core.enums.block.node.ReferenceType
 import okuri.core.models.block.Reference
 
 

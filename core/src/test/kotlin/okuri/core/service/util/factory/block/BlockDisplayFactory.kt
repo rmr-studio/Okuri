@@ -33,8 +33,8 @@ object BlockDisplayFactory {
     fun lg(x: Int, y: Int, w: Int, h: Int, locked: Boolean = false) =
         GridRect(x = x, y = y, width = w, height = h, locked = locked, margin = null)
 
-    fun item(id: String, rect: GridRect, sm: GridRect? = null) =
-        GridItem(id = id, lg = rect, sm = sm)
+    fun item(rect: GridRect, sm: GridRect? = null, md: GridRect? = null) =
+        GridItem(lg = rect, sm = sm, md = md)
 
     fun theme(
         variant: String? = null,
@@ -76,7 +76,10 @@ object BlockDisplayFactory {
         )
         return BlockRenderStructure(
             version = 1,
-            layoutGrid = LayoutGrid(items = listOf(item("c_card", lg(0, 0, 6, 6)))),
+            layoutGrid = LayoutGrid(
+                layout = item(lg(0, 0, 12, 12)),
+                items = listOf(item(lg(0, 0, 6, 6)))
+            ),
             components = components
         )
     }

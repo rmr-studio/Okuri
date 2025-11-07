@@ -86,6 +86,8 @@ describe("useEnvironmentGridSync", () => {
         expect(gridStackMock.on).toHaveBeenCalledWith("resizestop", expect.any(Function));
         expect(gridStackMock.on).toHaveBeenCalledWith("dropped", expect.any(Function));
         expect(gridStackMock.on).toHaveBeenCalledWith("added", expect.any(Function));
+        expect(gridStackMock.on).toHaveBeenCalledWith("dropover", expect.any(Function));
+        expect(gridStackMock.on).toHaveBeenCalledWith("dropout", expect.any(Function));
     });
 
     it("coalesces layout changes and forwards to updateLayouts", () => {
@@ -123,5 +125,45 @@ describe("useEnvironmentGridSync", () => {
         expect(updateLayouts).toHaveBeenCalledWith({
             "block-1": { x: 1, y: 2, width: 3, height: 4, locked: false },
         });
+    });
+
+    it("delays nested drop preview until hover timer elapses", () => {
+        jest.useFakeTimers();
+
+        renderHook(() => useEnvironmentGridSync(null));
+
+        const dropoverHandler = listeners["dropover"];
+        const dropoutHandler = listeners["dropout"];
+        expect(dropoverHandler).toBeDefined();
+        expect(dropoutHandler).toBeDefined();
+
+        const placeholder = {
+            remove: jest.fn(),
+            update: jest.fn(),
+        };
+
+        const subGrid = {
+            placeholder,
+            on: jest.fn(),
+            off: jest.fn(),
+        };
+
+        const node = createNode({ grid: subGrid });
+
+        dropoverHandler?.({}, createNode(), node);
+
+        expect(placeholder.remove).toHaveBeenCalledTimes(1);
+        expect(placeholder.update).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(300);
+        expect(placeholder.update).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(60);
+        expect(placeholder.update).toHaveBeenCalledWith(node);
+
+        dropoutHandler?.({}, node);
+        expect(placeholder.remove).toHaveBeenCalledTimes(2);
+
+        jest.useRealTimers();
     });
 });

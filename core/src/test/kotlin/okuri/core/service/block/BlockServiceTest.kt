@@ -4,10 +4,9 @@ import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockReferenceEntity
-import okuri.core.enums.block.BlockReferenceFetchPolicy
-import okuri.core.enums.block.BlockReferenceWarning
-import okuri.core.enums.block.BlockValidationScope
-import okuri.core.enums.core.ComponentType
+import okuri.core.enums.block.node.BlockReferenceWarning
+import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
+import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Block
 import okuri.core.models.block.Reference

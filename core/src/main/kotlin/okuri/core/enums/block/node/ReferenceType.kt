@@ -1,4 +1,4 @@
-package okuri.core.enums.block
+package okuri.core.enums.block.node
 
 import com.fasterxml.jackson.annotation.JsonValue
 

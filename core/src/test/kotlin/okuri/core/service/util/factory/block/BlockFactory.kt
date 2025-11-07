@@ -2,7 +2,7 @@ package okuri.core.service.util.factory.block
 
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
-import okuri.core.enums.block.BlockValidationScope
+import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.core.ComponentType
 import okuri.core.models.block.display.BlockComponentNode
 import okuri.core.models.block.display.BlockDisplay
@@ -12,6 +12,8 @@ import okuri.core.models.block.metadata.BlockContentMetadata
 import okuri.core.models.block.metadata.BlockMeta
 import okuri.core.models.block.validation.BlockFormStructure
 import okuri.core.models.block.validation.BlockSchema
+import okuri.core.models.common.grid.GridItem
+import okuri.core.models.common.grid.GridRect
 import okuri.core.models.common.grid.LayoutGrid
 import java.util.*
 
@@ -52,7 +54,19 @@ object BlockFactory {
             form = BlockFormStructure(emptyMap()),
             render = BlockRenderStructure(
                 version = 1,
-                layoutGrid = LayoutGrid(items = emptyList()),
+                layoutGrid = LayoutGrid(
+                    layout = GridItem(
+                        lg = GridRect(
+                            x = 0,
+                            y = 0,
+                            width = 12,
+                            height = 12,
+                            locked = false,
+                            margin = null
+                        )
+                    ),
+                    items = emptyList()
+                ),
                 components = emptyMap()
             )
         ),

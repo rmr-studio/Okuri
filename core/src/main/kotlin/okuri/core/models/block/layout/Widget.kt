@@ -1,0 +1,38 @@
+package okuri.core.models.block.layout
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
+
+/**
+ * Represents a single node/widget in the Gridstack layout
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Widget(
+    // Unique identifier for this widget (typically block ID)
+    val id: String,
+
+    // Position and dimensions
+    val x: Int,
+    val y: Int,
+    val w: Int,  // width in grid columns
+    val h: Int,  // height in grid rows
+
+    // Optional constraints
+    val minW: Int? = null,
+    val minH: Int? = null,
+    val maxW: Int? = null,
+    val maxH: Int? = null,
+
+    // Widget behavior
+    val autoPosition: Boolean? = null,
+    val locked: Boolean? = null,
+    val noResize: Boolean? = null,
+    val noMove: Boolean? = null,
+
+    // Content - typically serialized block metadata
+    val content: RenderContent? = null,
+
+    // Nested grid configuration (for container blocks)
+    val subGridOpts: TreeLayout? = null
+)

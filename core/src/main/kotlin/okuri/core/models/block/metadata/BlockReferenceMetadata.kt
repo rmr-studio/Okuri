@@ -1,8 +1,8 @@
 package okuri.core.models.block.metadata
 
 import com.fasterxml.jackson.annotation.JsonTypeName
-import okuri.core.enums.block.BlockMetadataType
-import okuri.core.enums.block.BlockReferenceFetchPolicy
+import okuri.core.enums.block.structure.BlockMetadataType
+import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
 
 /**
  * Metadata when a block is referencing an external block.

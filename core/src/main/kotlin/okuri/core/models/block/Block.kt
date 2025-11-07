@@ -7,7 +7,6 @@ import okuri.core.models.block.metadata.BlockContentMetadata
 import okuri.core.models.block.metadata.BlockReferenceMetadata
 import okuri.core.models.block.metadata.EntityReferenceMetadata
 import okuri.core.models.block.metadata.Metadata
-import okuri.core.models.common.grid.GridRect
 import java.io.Serializable
 import java.time.ZonedDateTime
 import java.util.*
@@ -51,9 +50,6 @@ data class Block(
     val name: String?,
     val organisationId: UUID,
     val type: BlockType,
-    // Current layout positioning of this block within a grid
-    val layout: GridRect? = null,
-
     @field:Schema(
         oneOf = [EntityReferenceMetadata::class, BlockReferenceMetadata::class, BlockContentMetadata::class],
         discriminatorProperty = "type",

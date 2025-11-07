@@ -1,4 +1,4 @@
-package okuri.core.enums.block
+package okuri.core.enums.block.structure
 
 enum class BlockFormWidgetType {
     TEXT_INPUT,

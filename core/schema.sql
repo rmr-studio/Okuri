@@ -342,25 +342,31 @@ CREATE POLICY "block_refs_write_by_org" ON public.block_references
                               (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
 
 
--- Templates
-
-CREATE TABLE IF NOT EXISTS template
+create table public.block_tree_layouts
 (
-    id              UUID PRIMARY KEY,
-    user_id         UUID         NULL,
-    organisation_id UUID         NULL,
-    name            VARCHAR(255) NOT NULL,
-    description     TEXT         NULL,
-    type            VARCHAR(255) NOT NULL,
-    structure       JSONB        NOT NULL,
-    is_default      BOOLEAN      NOT NULL    DEFAULT FALSE,
-    is_premade      BOOLEAN      NOT NULL    DEFAULT FALSE,
-    created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_owner FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    id              uuid primary key         default uuid_generate_v4(),
+    organisation_id uuid        not null references organisations (id) on delete cascade,
+    layout          jsonb       not null,
+    entity_id       uuid        not null, -- id of client, line item, etc,
+    entity_type     varchar(50) not null, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
+    scope           varchar(50) not null, -- e.g. "ORGANISATION", "TEAM", "USER"
+    owner_id        uuid,                 -- null for organisation-wide, team id for team, user id for user
+    created_at      timestamp with time zone default current_timestamp,
+    updated_at      timestamp with time zone default current_timestamp,
+    "created_by"    uuid        references public.users (id) ON DELETE SET NULL,
+    "updated_by"    uuid        references public.users (id) ON DELETE SET NULL
 );
 
-CREATE INDEX idx_template_organisation_id ON template (organisation_id);
+create index if not exists idx_block_tree_layouts_entity_id_entity_type
+    on public.block_tree_layouts (entity_id, entity_type);
+
+create index if not exists idx_block_tree_layouts_organisation_id
+    on public.block_tree_layouts (organisation_id);
+
+alter table public.block_tree_layouts
+    add constraint uq_block_tree_layouts_entity_scope_owner unique (entity_id, scope, owner_id);
+
+
 
 drop table if exists public.companies cascade;
 create table if not exists public.companies

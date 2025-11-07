@@ -1,3 +1,3 @@
-package okuri.core.enums.block
+package okuri.core.enums.block.structure
 
 enum class BlockReferenceFetchPolicy { LAZY, EAGER }

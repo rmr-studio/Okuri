@@ -3,8 +3,8 @@ package okuri.core.service.block
 import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
-import okuri.core.enums.block.BlockReferenceFetchPolicy
-import okuri.core.enums.block.isStrict
+import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
+import okuri.core.enums.block.structure.isStrict
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.Block
 import okuri.core.models.block.Reference
