@@ -3,7 +3,6 @@
 /* -------------------------------------------------------------------------- */
 
 import { ChildNodeProps } from "@/lib/interfaces/interface";
-import { GridRect } from "@/lib/interfaces/common.interface";
 import { BlockNode, BlockTree } from "./block.interface";
 
 /** Metadata describing the environment itself. */
@@ -76,8 +75,6 @@ export interface BlockEnvironmentContextValue {
     getChildren(blockId: string): string[];
     getDescendants(blockId: string): string[];
     isDescendantOf(blockId: string, ancestorId: string): boolean;
-    updateLayout(blockId: string, layout: GridRect): void;
-    updateLayouts(layouts: Record<string, GridRect>): void;
     updateHierarchy(blockId: string, newParentId: string | null): void;
 
     moveBlockUp(blockId: string): void;

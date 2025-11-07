@@ -2,7 +2,7 @@ import { GridStackWidget } from "gridstack";
 import { useEffect, useMemo, useRef } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
-import { isContentNode, isEntityReferenceMetadata } from "../../interface/block.interface";
+import { isContentNode } from "../../interface/block.interface";
 import { WidgetRenderStructure } from "../../interface/render.interface";
 import { getCurrentDimensions } from "../../util/block/block.util";
 import { findNodeById, getTreeId } from "../../util/environment/environment.util";
@@ -79,7 +79,6 @@ export const WidgetEnvironmentSync: React.FC = () => {
 
             const layout = blockNode.block.layout ?? getCurrentDimensions(blockNode);
             const parentId = getParentId(id);
-            const type = isEntityReferenceMetadata(blockNode.block.payload) ? "reference" : "block";
 
             let meta: WidgetRenderStructure;
             const widgetConfig: GridStackWidget = {
@@ -95,7 +94,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 id: id,
                 key: blockNode.block.type.key,
                 renderType: "component",
-                blockType: type,
+                blockType: blockNode.type,
             };
 
             // Special handling for list/container blocks blocks => We render them differently
@@ -114,6 +113,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                     widgetConfig.subGridOpts = {
                         draggable: {
                             cancel: ".block-no-drag",
+                            pause: 200,
                         },
                         column: 12,
                         cellHeight: 40,
@@ -189,6 +189,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
     }, [
         gridStack,
         allBlockIds,
+        blockEnvironment,
         gridEnvironment,
         getParentId,
         isInitialized,

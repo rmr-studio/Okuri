@@ -1,8 +1,14 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 
-import { GridRect } from "@/lib/interfaces/common.interface";
 import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
     BlockEnvironmentContextValue,
@@ -26,6 +32,7 @@ import {
     updateMetadata,
     updateTrees,
 } from "../util/environment/environment.util";
+import { useGridLayout } from "./grid-layout-provider";
 
 //todo. Maybe migrate to Zustand.
 
@@ -39,10 +46,25 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     initialTrees,
     children,
 }) => {
-    const [environment, setEnvironment] = useState<EditorEnvironment>(() =>
-        init(organisationId, initialTrees)
+    const { setLayouts } = useGridLayout();
+
+    const initialEnvironment = useMemo(
+        () => init(organisationId, initialTrees),
+        [organisationId, initialTrees]
     );
+
+    const { environment: initialEnvState, layouts: initialLayouts } = initialEnvironment;
+
+    const [environment, setEnvironment] = useState<EditorEnvironment>(initialEnvState);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    useEffect(() => {
+        setEnvironment(initialEnvState);
+    }, [initialEnvState]);
+
+    useEffect(() => {
+        setLayouts(new Map(initialLayouts));
+    }, [initialLayouts, setLayouts]);
 
     /**
      * Inserts a block under the specified parent/slot, updating all relevant environment maps.
@@ -308,42 +330,39 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     /**
      * Core move operation handling promotions, demotions, and cross-tree moves.
      */
-    const moveBlock = useCallback(
-        (blockId: string, targetParentId: string | null) => {
-            setEnvironment((prev) => {
-                const treeId = prev.treeIndex.get(blockId);
-                if (!treeId) {
-                    return prev;
-                }
+    const moveBlock = useCallback((blockId: string, targetParentId: string | null) => {
+        setEnvironment((prev) => {
+            const treeId = prev.treeIndex.get(blockId);
+            if (!treeId) {
+                return prev;
+            }
 
-                // If no parent has been given. Promote to top-level
-                if (targetParentId === null) {
-                    return moveBlockToTopLevel(prev, blockId, treeId);
-                }
+            // If no parent has been given. Promote to top-level
+            if (targetParentId === null) {
+                return moveBlockToTopLevel(prev, blockId, treeId);
+            }
 
-                const targetTreeId = prev.treeIndex.get(targetParentId);
+            const targetTreeId = prev.treeIndex.get(targetParentId);
 
-                if (!targetTreeId) {
-                    return prev;
-                }
+            if (!targetTreeId) {
+                return prev;
+            }
 
-                const sourceTree = findTree(prev, treeId);
-                const targetTree = findTree(prev, targetTreeId);
+            const sourceTree = findTree(prev, treeId);
+            const targetTree = findTree(prev, targetTreeId);
 
-                if (!sourceTree || !targetTree) {
-                    return prev;
-                }
-                const currentParent = prev.hierarchy.get(blockId) ?? null;
+            if (!sourceTree || !targetTree) {
+                return prev;
+            }
+            const currentParent = prev.hierarchy.get(blockId) ?? null;
 
-                // This node is the root of a tree. Demote entire tree and move into a new parent as a child node.
-                if (currentParent == null) {
-                    return moveTreeToNewParent(prev, sourceTree, targetTree, targetParentId);
-                }
-                return moveChildBlock(prev, sourceTree, targetTree, blockId, targetParentId);
-            });
-        },
-        []
-    );
+            // This node is the root of a tree. Demote entire tree and move into a new parent as a child node.
+            if (currentParent == null) {
+                return moveTreeToNewParent(prev, sourceTree, targetTree, targetParentId);
+            }
+            return moveChildBlock(prev, sourceTree, targetTree, blockId, targetParentId);
+        });
+    }, []);
 
     //TODO: Move block with accordance to updated rendering index position
 
@@ -571,43 +590,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         [environment]
     );
 
-    const updateLayouts = useCallback((layouts: Record<string, GridRect>) => {
-        const entries = Object.entries(layouts);
-        if (entries.length === 0) return;
-
-        setEnvironment((prev) => {
-            const layoutMap = new Map(entries);
-            let hasMutations = false;
-
-            const trees = prev.trees.map((tree) => {
-                const { node: updatedRoot, changed } = applyLayoutUpdates(tree.root, layoutMap);
-                if (!changed) return tree;
-                hasMutations = true;
-                return {
-                    ...tree,
-                    root: updatedRoot,
-                };
-            });
-
-            if (!hasMutations) {
-                return prev;
-            }
-
-            return {
-                ...prev,
-                trees,
-                metadata: updateMetadata(prev.metadata),
-            };
-        });
-    }, []);
-
-    const updateLayout = useCallback(
-        (blockId: string, layout: GridRect) => {
-            updateLayouts({ [blockId]: layout });
-        },
-        [updateLayouts]
-    );
-
     /** Manually adjust the hierarchy map (used by grid-sync logic). */
     const updateHierarchy = useCallback((blockId: string, newParentId: string | null) => {
         setEnvironment((prev) => {
@@ -652,8 +634,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             getChildren,
             getDescendants,
             isDescendantOf,
-            updateLayout,
-            updateLayouts,
             updateHierarchy,
             moveBlockUp,
             moveBlockDown,
@@ -675,8 +655,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             getChildren,
             getDescendants,
             isDescendantOf,
-            updateLayout,
-            updateLayouts,
             updateHierarchy,
             moveBlockUp,
             moveBlockDown,
@@ -690,48 +668,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             {children}
         </BlockEnvironmentContext.Provider>
     );
-};
-
-const applyLayoutUpdates = (
-    node: BlockNode,
-    layoutMap: Map<string, GridRect>
-): { node: BlockNode; changed: boolean } => {
-    let nextNode: BlockNode = node;
-    let changed = false;
-
-    const nextLayout = layoutMap.get(node.block.id);
-    if (nextLayout) {
-        nextNode = {
-            ...nextNode,
-            block: {
-                ...nextNode.block,
-                layout: nextLayout,
-            },
-        };
-        changed = true;
-    }
-
-    if (isContentNode(node) && node.children && node.children.length > 0) {
-        let childChanged = false;
-        const nextChildren = node.children.map((child) => {
-            const result = applyLayoutUpdates(child, layoutMap);
-            if (result.changed) {
-                childChanged = true;
-                return result.node;
-            }
-            return child;
-        });
-
-        if (childChanged) {
-            nextNode = {
-                ...nextNode,
-                children: nextChildren,
-            };
-            changed = true;
-        }
-    }
-
-    return { node: nextNode, changed };
 };
 
 /** Hook wrapper for the context. */

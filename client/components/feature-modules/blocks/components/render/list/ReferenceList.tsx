@@ -8,11 +8,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import {
-    BlockListConfiguration,
-    EntityReferenceMetadata,
-    ReferenceItem,
-} from "../../../interface/block.interface";
+import { BlockListConfiguration, ReferenceItem } from "../../../interface/block.interface";
 
 interface ReferenceListProps {
     blockId: string;

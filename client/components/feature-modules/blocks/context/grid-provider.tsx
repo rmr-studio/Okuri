@@ -1,4 +1,10 @@
-import type { GridStack, GridStackNode, GridStackWidget } from "gridstack";
+import type {
+    GridStack,
+    GridStackNode,
+    GridStackOptions,
+    GridStackWidget,
+    SaveFcn,
+} from "gridstack";
 import { createContext, FC, useCallback, useContext, useMemo, useState } from "react";
 import {
     GridActionResult,
@@ -39,6 +45,14 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
         addedWidgets: new Set<string>(),
     }));
     // Track list of node IDs to help with re-renders when nodes are added/removed
+
+    const save = (): GridStackOptions | undefined => {
+        if (!gridStack) return;
+
+        const cb: SaveFcn = (node: GridStackNode) => {};
+
+        return gridStack.save(true, true, cb) as GridStackOptions;
+    };
 
     /**
      * Provides direct navigation through the gridstack engine by first performing a bottom up
@@ -254,6 +268,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                 () => ({
                     initialOptions,
                     gridStack,
+                    save,
                     environment,
                     setGridStack,
                     addWidget,
@@ -262,7 +277,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                     removeWidget,
                     saveOptions,
                 }),
-                [initialOptions, gridStack, addWidget, removeWidget, saveOptions, environment]
+                [initialOptions, gridStack, addWidget, removeWidget, saveOptions, environment, save]
             )}
         >
             {children}

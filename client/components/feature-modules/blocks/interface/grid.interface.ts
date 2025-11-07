@@ -19,6 +19,7 @@ export interface GridActionResult<T extends GridStackWidget> {
 export interface GridstackContextValue {
     initialOptions: GridStackOptions;
     environment: GridEnvironment;
+    save: () => GridstackOptions;
     gridStack: GridStack | null;
     setGridStack: React.Dispatch<React.SetStateAction<GridStack | null>>;
     addWidget: (

@@ -30,7 +30,7 @@ export interface RenderElementMetadata<T extends ZodTypeAny> {
 
 type BlockElementMap = Record<string, RenderElementMetadata<ZodTypeAny>>;
 
-const baseBlockElements: Record<ComponentType, RenderElementMetadata<ZodTypeAny>> = {
+const baseBlockElements: Record<ComponentType, RenderElementMetadata<ZodTypeAny>> = {   
     CONTACT_CARD: ContactCard,
     ADDRESS_CARD: AddressCard,
     LINE_ITEM: ListBlock,

@@ -10,13 +10,13 @@ import {
     CommandList,
 } from "@/components/ui/command";
 import "gridstack/dist/gridstack.css";
-import { PlusIcon, TypeIcon } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import { PlusIcon, SaveIcon, TypeIcon } from "lucide-react";
+import React, { FC, Fragment, useEffect, useMemo, useState } from "react";
 import "../../styles/gridstack-custom.css";
 
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
-import { GridProvider } from "@/components/feature-modules/blocks/context/grid-provider";
+import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GridStackOptions } from "gridstack";
@@ -24,16 +24,18 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
+import { GridLayoutProvider } from "../../context/grid-layout-provider";
+import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import { BlockNode, BlockTree } from "../../interface/block.interface";
 import { EditorEnvironment } from "../../interface/editor.interface";
+import { SlashMenuItem } from "../../interface/panel.interface";
 import {
     createLayoutContainerNode,
     createNoteNode,
     createTaskListNode,
 } from "../../util/block/factory/mock.factory";
 import { editorPanel } from "../panel/editor-panel";
-import { SlashMenuItem, defaultSlashItems } from "../panel/panel-wrapper";
-import { BlockEnvironmentGridSync } from "../sync/action.sync";
+import { defaultSlashItems } from "../panel/panel-wrapper";
 import { WidgetEnvironmentSync } from "../sync/widget.sync";
 
 const DEMO_ORG_ID = "demo-org-12345";
@@ -45,20 +47,21 @@ const DEMO_ORG_ID = "demo-org-12345";
 export const BlockDemo = () => {
     const blocks = useMemo(() => createDemoTrees(), []);
     return (
-        <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={blocks}>
-            <div className="mx-auto space-y-8 p-6">
-                <header className="space-y-2">
-                    <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
-                    <p className="max-w-3xl text-sm text-muted-foreground">
-                        Block environment with real-time hierarchy tracking. Drag, resize, and nest
-                        blocks. Use the slash menu inside panels to add nested blocks.
-                    </p>
-                </header>
+        <GridLayoutProvider organisationId={DEMO_ORG_ID}>
+            <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={blocks}>
+                <div className="mx-auto space-y-8 p-6">
+                    <header className="space-y-2">
+                        <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
+                        <p className="max-w-3xl text-sm text-muted-foreground">
+                            Block environment with real-time hierarchy tracking. Drag, resize, and
+                            nest blocks. Use the slash menu inside panels to add nested blocks.
+                        </p>
+                    </header>
 
-                <AddBlockButton />
-                <BlockEnvironmentWorkspace />
-            </div>
-        </BlockEnvironmentProvider>
+                    <BlockEnvironmentWorkspace />
+                </div>
+            </BlockEnvironmentProvider>
+        </GridLayoutProvider>
     );
 };
 
@@ -66,8 +69,25 @@ export const BlockDemo = () => {
 /*                          Workspace Component                               */
 /* -------------------------------------------------------------------------- */
 
+const WorkspaceToolbar: FC = () => {
+    const { save } = useGrid();
+    const handleSave = () => {
+        const result = save();
+        console.log("Saved grid options:", result);
+    };
+    return (
+        <section className="mb flex">
+            <Button onClick={handleSave}>
+                <SaveIcon className="size-4" />
+                Save
+            </Button>
+            <AddBlockButton />
+        </section>
+    );
+};
+
 const BlockEnvironmentWorkspace: React.FC = () => {
-    const { getTrees, environment } = useBlockEnvironment();
+    const { environment } = useBlockEnvironment();
 
     const options: GridStackOptions = {
         resizable: {
@@ -76,7 +96,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
         draggable: {
             cancel: ".block-no-drag",
         },
-        margin: 12,
+        margin: 8,
         animate: true,
         acceptWidgets: true,
     };
@@ -88,6 +108,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
     return (
         <>
             <GridProvider initialOptions={options}>
+                <WorkspaceToolbar />
                 <BlockEnvironmentGridSync />
                 <WidgetEnvironmentSync />
                 <GridContainerProvider>
@@ -207,7 +228,7 @@ const AddBlockButton: React.FC = () => {
     };
 
     return (
-        <div className="flex justify-center">
+        <Fragment>
             <Button variant="outline" size="sm" className="gap-1" onClick={() => setOpen(true)}>
                 <PlusIcon className="size-4" />
                 Add block
@@ -235,7 +256,7 @@ const AddBlockButton: React.FC = () => {
                     </CommandGroup>
                 </CommandList>
             </CommandDialog>
-        </div>
+        </Fragment>
     );
 };
 
