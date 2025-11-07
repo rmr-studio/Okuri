@@ -204,7 +204,9 @@ class BlockService(
     fun getBlock(blockId: UUID): BlockTree {
         val root = blockRepository.findById(blockId).orElseThrow()
         val node = buildNode(root.toModel(), visited = mutableSetOf())
-        return BlockTree(root = node)
+        return BlockTree(
+            root = node
+        )
     }
 
     private fun buildNode(block: Block, visited: MutableSet<UUID>): Node {

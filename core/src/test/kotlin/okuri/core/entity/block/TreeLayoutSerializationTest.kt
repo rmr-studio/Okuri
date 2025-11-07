@@ -3,12 +3,16 @@ package okuri.core.entity.block
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import okuri.core.enums.block.layout.RenderType
+import okuri.core.enums.block.node.NodeType
+import okuri.core.models.block.layout.RenderContent
 import okuri.core.models.block.layout.TreeLayout
 import okuri.core.models.block.layout.Widget
 import okuri.core.models.block.layout.options.DraggableOptions
 import okuri.core.models.block.layout.options.ResizableOptions
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.util.*
 
 class TreeLayoutSerializationTest {
 
@@ -33,15 +37,15 @@ class TreeLayoutSerializationTest {
             "acceptWidgets": true,
             "children": [
                 {
-                    "id": "block-6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6",
+                    "id": "6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6",
                     "x": 0,
                     "y": 0,
                     "w": 12,
                     "h": 4,
-                    "content": "{\"id\":\"block-6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6\",\"key\":\"content_block_list\",\"renderType\":\"list\",\"blockType\":\"block\"}"
+                    "content": "{\"id\":\"6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6\",\"key\":\"content_block_list\",\"renderType\":\"list\",\"blockType\":\"content_node\"}"
                 },
                 {
-                    "id": "block-7885d99e-0ef7-4077-9b83-f1fb75cda3ab",
+                    "id": "7885d99e-0ef7-4077-9b83-f1fb75cda3ab",
                     "x": 0,
                     "y": 4,
                     "w": 12,
@@ -62,24 +66,24 @@ class TreeLayoutSerializationTest {
                         "cellHeight": 40,
                         "children": [
                             {
-                                "id": "block-0b720c22-dfe0-46ad-b440-fc2ed39be364",
+                                "id": "0b720c22-dfe0-46ad-b440-fc2ed39be364",
                                 "x": 0,
                                 "y": 0,
                                 "w": 12,
                                 "h": 4,
-                                "content": "{\"id\":\"block-0b720c22-dfe0-46ad-b440-fc2ed39be364\",\"key\":\"note\",\"renderType\":\"component\",\"blockType\":\"block\"}"
+                                "content": "{\"id\":\"0b720c22-dfe0-46ad-b440-fc2ed39be364\",\"key\":\"note\",\"renderType\":\"component\",\"blockType\":\"content_node\"}"
                             },
                             {
-                                "id": "block-373bc593-7e21-4877-a34f-e967085062a1",
+                                "id": "373bc593-7e21-4877-a34f-e967085062a1",
                                 "x": 0,
                                 "y": 4,
                                 "w": 12,
                                 "h": 4,
-                                "content": "{\"id\":\"block-373bc593-7e21-4877-a34f-e967085062a1\",\"key\":\"note\",\"renderType\":\"component\",\"blockType\":\"block\"}"
+                                "content": "{\"id\":\"373bc593-7e21-4877-a34f-e967085062a1\",\"key\":\"note\",\"renderType\":\"component\",\"blockType\":\"content_node\"}"
                             }
                         ]
                     },
-                    "content": "{\"id\":\"block-7885d99e-0ef7-4077-9b83-f1fb75cda3ab\",\"key\":\"layout_container\",\"renderType\":\"container\",\"blockType\":\"block\"}"
+                    "content": "{\"id\":\"7885d99e-0ef7-4077-9b83-f1fb75cda3ab\",\"key\":\"layout_container\",\"renderType\":\"container\",\"blockType\":\"content_node\"}"
                 }
             ]
         }
@@ -105,7 +109,7 @@ class TreeLayoutSerializationTest {
         // Validate first child (simple block list)
         val firstChild = treeLayout.children?.get(0)
         assertNotNull(firstChild)
-        assertEquals("block-6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6", firstChild?.id)
+        assertEquals("6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6", firstChild?.id)
         assertEquals(0, firstChild?.x)
         assertEquals(0, firstChild?.y)
         assertEquals(12, firstChild?.w)
@@ -116,7 +120,7 @@ class TreeLayoutSerializationTest {
         // Validate second child (nested container with sub-grid)
         val secondChild = treeLayout.children?.get(1)
         assertNotNull(secondChild)
-        assertEquals("block-7885d99e-0ef7-4077-9b83-f1fb75cda3ab", secondChild?.id)
+        assertEquals("7885d99e-0ef7-4077-9b83-f1fb75cda3ab", secondChild?.id)
         assertEquals(0, secondChild?.x)
         assertEquals(4, secondChild?.y)
         assertEquals(12, secondChild?.w)
@@ -143,7 +147,7 @@ class TreeLayoutSerializationTest {
 
         // Validate first nested child
         val firstNestedChild = nestedChildren?.get(0)
-        assertEquals("block-0b720c22-dfe0-46ad-b440-fc2ed39be364", firstNestedChild?.id)
+        assertEquals("0b720c22-dfe0-46ad-b440-fc2ed39be364", firstNestedChild?.id)
         assertEquals(0, firstNestedChild?.x)
         assertEquals(0, firstNestedChild?.y)
         assertEquals(12, firstNestedChild?.w)
@@ -151,7 +155,7 @@ class TreeLayoutSerializationTest {
 
         // Validate second nested child
         val secondNestedChild = nestedChildren?.get(1)
-        assertEquals("block-373bc593-7e21-4877-a34f-e967085062a1", secondNestedChild?.id)
+        assertEquals("373bc593-7e21-4877-a34f-e967085062a1", secondNestedChild?.id)
         assertEquals(0, secondNestedChild?.x)
         assertEquals(4, secondNestedChild?.y)
         assertEquals(12, secondNestedChild?.w)
@@ -165,6 +169,10 @@ class TreeLayoutSerializationTest {
     @Test
     fun `should serialize and deserialize TreeLayout maintaining data integrity`() {
         // Create a complex TreeLayout programmatically
+        val widget1Id = UUID.randomUUID().toString()
+        val widget2Id = UUID.randomUUID().toString()
+        val nestedWidgetId = UUID.randomUUID().toString()
+
         val originalLayout = TreeLayout(
             resizable = ResizableOptions(handles = "se, sw", autoHide = true),
             draggable = DraggableOptions(cancel = ".no-drag", pause = 100),
@@ -174,31 +182,46 @@ class TreeLayoutSerializationTest {
             layout = "list",
             children = listOf(
                 Widget(
-                    id = "widget-1",
+                    id = widget1Id,
                     x = 0,
                     y = 0,
                     w = 6,
                     h = 3,
-                    content = """{"type":"text"}""",
+                    content = RenderContent(
+                        id = widget1Id,
+                        key = "widget_content_1",
+                        renderType = RenderType.COMPONENT,
+                        blockType = NodeType.CONTENT
+                    ),
                     locked = false
                 ),
                 Widget(
-                    id = "widget-2",
+                    id = widget2Id,
                     x = 6,
                     y = 0,
                     w = 6,
                     h = 3,
-                    content = """{"type":"container"}""",
+                    content = RenderContent(
+                        id = widget2Id,
+                        key = "widget_content_2",
+                        renderType = RenderType.CONTAINER,
+                        blockType = NodeType.CONTENT
+                    ),
                     subGridOpts = TreeLayout(
                         margin = 5,
                         children = listOf(
                             Widget(
-                                id = "nested-1",
+                                id = nestedWidgetId,
                                 x = 0,
                                 y = 0,
                                 w = 12,
                                 h = 2,
-                                content = """{"type":"nested-content"}"""
+                                content = RenderContent(
+                                    id = nestedWidgetId,
+                                    key = "nested_widget_1",
+                                    renderType = RenderType.COMPONENT,
+                                    blockType = NodeType.CONTENT
+                                )
                             )
                         )
                     )
@@ -209,8 +232,8 @@ class TreeLayoutSerializationTest {
         // Serialize to JSON (simulating save to database)
         val json = objectMapper.writeValueAsString(originalLayout)
         assertNotNull(json)
-        assertTrue(json.contains("widget-1"))
-        assertTrue(json.contains("nested-1"))
+        assertTrue(json.contains("widget_content_1"))
+        assertTrue(json.contains("nested_widget_1"))
 
         // Deserialize back (simulating load from database)
         val deserializedLayout: TreeLayout = objectMapper.readValue(json)
@@ -227,14 +250,16 @@ class TreeLayoutSerializationTest {
         assertEquals(2, deserializedLayout.children?.size)
 
         val firstChild = deserializedLayout.children?.get(0)
-        assertEquals("widget-1", firstChild?.id)
+        assertEquals(widget1Id, firstChild?.id)
         assertEquals(6, firstChild?.w)
+        assertEquals("widget_content_1", firstChild?.content?.key)
 
         val secondChild = deserializedLayout.children?.get(1)
-        assertEquals("widget-2", secondChild?.id)
+        assertEquals(widget2Id, secondChild?.id)
         assertNotNull(secondChild?.subGridOpts)
         assertEquals(1, secondChild?.subGridOpts?.children?.size)
-        assertEquals("nested-1", secondChild?.subGridOpts?.children?.get(0)?.id)
+        assertEquals(nestedWidgetId, secondChild?.subGridOpts?.children?.get(0)?.id)
+        assertEquals("nested_widget_1", secondChild?.subGridOpts?.children?.get(0)?.content?.key)
     }
 
     /**

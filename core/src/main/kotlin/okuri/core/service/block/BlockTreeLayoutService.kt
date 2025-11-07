@@ -1,7 +1,6 @@
 package okuri.core.service.block
 
 import okuri.core.entity.block.BlockTreeLayoutEntity
-import okuri.core.enums.block.layout.LayoutScope
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.layout.TreeLayout
 import okuri.core.repository.block.BlockTreeLayoutRepository
@@ -42,52 +41,7 @@ class BlockTreeLayoutService(
         entityId: UUID,
         entityType: EntityType,
     ): TreeLayout? {
-        // Try user-specific layout first
-        val userLayout = layoutRepository.findUserLayout(blockId, userId)
-        if (userLayout != null) {
-            return userLayout.layout
-        }
-
-        // Fall back to organization default
-        val orgLayout = layoutRepository.findOrganizationLayout(blockId)
-        return orgLayout?.layout
-    }
-
-    /**
-     * Batch resolves layouts for multiple blocks.
-     *
-     * This is highly optimized for loading layouts alongside a block tree,
-     * using a single query with priority ordering.
-     *
-     * @param blockIds Set of block IDs to find layouts for
-     * @param organisationId The organization context
-     * @param userId The user requesting the layouts
-     * @return Map of blockId to resolved layout
-     */
-    fun resolveLayoutsForBlocks(
-        blockIds: Set<UUID>,
-        organisationId: UUID,
-        userId: UUID
-    ): Map<UUID, TreeLayout> {
-        if (blockIds.isEmpty()) return emptyMap()
-
-        val layouts = layoutRepository.findLayoutsForBlocks(blockIds, organisationId, userId)
-
-        return layouts.associate { it.blockId to it.layout }
-    }
-
-    /**
-     * Batch resolves organization default layouts only (no user context).
-     *
-     * Useful for public-facing views or when user is not authenticated.
-     */
-    fun resolveOrganizationLayoutsForBlocks(
-        blockIds: Set<UUID>
-    ): Map<UUID, TreeLayout> {
-        if (blockIds.isEmpty()) return emptyMap()
-
-        val layouts = layoutRepository.findOrganizationLayoutsForBlocks(blockIds)
-        return layouts.associate { it.blockId to it.layout }
+        TODO()
     }
 
     /**
@@ -104,72 +58,29 @@ class BlockTreeLayoutService(
         organisationId: UUID,
         layout: TreeLayout
     ): BlockTreeLayoutEntity {
-        val existing = layoutRepository.findOrganizationLayout(blockId)
-
-        return if (existing != null) {
-            // Update existing
-            existing.layout = layout
-            existing.version += 1
-            layoutRepository.save(existing)
-        } else {
-            // Create new
-            val newLayout = BlockTreeLayoutEntity.createOrganizationLayout(
-                blockId = blockId,
-                organisationId = organisationId,
-                layout = layout
-            )
-            layoutRepository.save(newLayout)
-        }
+        TODO()
     }
 
     /**
      * Saves or updates a user-specific personalized layout.
      *
-     * @param blockId The block to save layout for
-     * @param organisationId The organization context
-     * @param userId The user who owns this layout
+     * @param entityId The page to save layout for
+     * @param entityType The type of entity
      * @param layout The Gridstack layout to save
      * @return The saved layout entity
      */
     @Transactional
     fun saveUserLayout(
-        blockId: UUID,
-        organisationId: UUID,
-        userId: UUID,
+        entityId: UUID,
+        entityType: EntityType,
         layout: TreeLayout
     ): BlockTreeLayoutEntity {
-        val existing = layoutRepository.findUserLayout(blockId, userId)
-
-        return if (existing != null) {
-            // Update existing
-            existing.layout = layout
-            existing.version += 1
-            layoutRepository.save(existing)
-        } else {
-            // Create new
-            val newLayout = BlockTreeLayoutEntity.createUserLayout(
-                blockId = blockId,
-                organisationId = organisationId,
-                userId = userId,
-                layout = layout
-            )
-            layoutRepository.save(newLayout)
-        }
+        TODO()
     }
 
-    /**
-     * Resets a user's personalized layout, falling back to organization default.
-     *
-     * @param blockId The block to reset layout for
-     * @param userId The user whose layout to reset
-     */
     @Transactional
-    fun resetUserLayout(entityId: UUID, entityType: EntityType, userId: UUID) {
-        layoutRepository.deleteByBlockIdAndScopeAndOwnerId(
-            blockId = blockId,
-            scope = LayoutScope.USER,
-            ownerId = userId
-        )
+    fun resetUserLayout(entityId: UUID, entityType: EntityType) {
+        TODO()
     }
 
     /**
@@ -177,7 +88,7 @@ class BlockTreeLayoutService(
      * Useful for admin/debugging purposes.
      */
     fun getAllLayoutsForPage(blockId: UUID): List<BlockTreeLayoutEntity> {
-        return layoutRepository.findByBlockId(blockId)
+        TODO()
     }
 
     /**
@@ -186,7 +97,7 @@ class BlockTreeLayoutService(
      */
     @Transactional
     fun deleteAllLayoutsForPage(id: UUID, type: EntityType) {
-        layoutRepository.deleteByBlockId(blockId)
+        TODO()
     }
 
     /**

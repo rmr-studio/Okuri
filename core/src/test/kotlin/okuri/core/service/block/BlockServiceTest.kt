@@ -24,7 +24,6 @@ import okuri.core.service.schema.SchemaService
 import okuri.core.service.schema.SchemaValidationException
 import okuri.core.service.util.WithUserPersona
 import okuri.core.service.util.factory.block.BlockFactory
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.*
@@ -35,6 +34,11 @@ import org.springframework.context.annotation.Import
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
 
 /**
  * Comprehensive test suite for BlockService.
@@ -595,12 +599,17 @@ class BlockServiceTest {
         val tree = service.getBlock(blockId)
 
         // Should detect cycle
-        val contentNode = tree.root as ContentNode
-        assertNotNull(contentNode.children)
-        assertTrue(contentNode.children!!.isNotEmpty())
-        val selfChild = contentNode.children!![0] as ContentNode
-        assertTrue(selfChild.warnings.isNotEmpty())
-        assertTrue(selfChild.warnings.any { it.contains("Cycle detected") })
+
+        assertNotNull(tree).run {
+            assertIs<ContentNode>(this.root).run {
+                assertNotNull(this.children).run {
+                    assertTrue(this.isNotEmpty())
+                    val selfChild = this[0] as ContentNode
+                    assertTrue(selfChild.warnings.isNotEmpty())
+                    assertTrue(selfChild.warnings.any { it.contains("Cycle detected") })
+                }
+            }
+        }
     }
 
     // =============================================================================================
@@ -966,12 +975,15 @@ class BlockServiceTest {
             .thenReturn(blockRef to edge)
 
         val tree = service.getBlock(blockId)
+        assertNotNull(tree).run {
+            this.root.run {
+                assertIs<ReferenceNode>(this).run {
+                    assertIs<BlockTreeReference>(this.reference).run {
+                        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, this.reference.warning)
+                    }
 
-        assertNotNull(tree)
-        assertTrue(tree.root is ReferenceNode)
-        val refNode = tree.root as ReferenceNode
-        assertTrue(refNode.reference is BlockTreeReference)
-        val blockTreeRef = refNode.reference as BlockTreeReference
-        assertEquals(BlockReferenceWarning.REQUIRES_LOADING, blockTreeRef.reference.warning)
+                }
+            }
+        }
     }
 }
