@@ -126,7 +126,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                         },
                         sizeToContent: true,
                         column: 12,
-                        cellHeight: 40,
+                        cellHeight: 50,
                         margin: 8,
                         acceptWidgets: true,
                         animate: true,

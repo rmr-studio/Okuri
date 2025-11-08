@@ -1,6 +1,12 @@
 "use client";
 
-import { GridItemHTMLElement, GridStack, GridStackOptions, GridStackWidget } from "gridstack";
+import {
+    GridItemHTMLElement,
+    GridStack,
+    GridStackNode,
+    GridStackOptions,
+    GridStackWidget,
+} from "gridstack";
 import {
     createContext,
     PropsWithChildren,
@@ -88,8 +94,11 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
         if (!gridItem) return;
 
         // Get the individual cell height per row in the grid instance
-        const node = gridItem.gridstackNode;
+        const node = gridItem.gridstackNode as
+            | (GridStackNode & { _moving?: boolean; _resizing?: boolean })
+            | undefined;
         if (!node) return;
+        if (node._moving || node._resizing) return;
         const grid = node.grid;
         if (!grid) return;
         const cellHeight = grid.getCellHeight(true);
@@ -129,9 +138,7 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
             const observer = new ResizeObserver((entries) => {
                 entries.forEach((entry) => {
-                    // Use borderBoxSize for more accurate measurements
-                    const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-                    syncElementToGrid(entry.target as HTMLElement, height);
+                    syncElementToGrid(entry.target as HTMLElement);
                 });
             });
 
@@ -144,10 +151,7 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                     resizeObserverMap.current.set(widgetId, observer);
 
                     // Initial sync after content is available
-                    syncElementToGrid(
-                        renderedComponent,
-                        renderedComponent.getBoundingClientRect().height
-                    );
+                    syncElementToGrid(renderedComponent);
                 }
             });
         },
