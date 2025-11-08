@@ -249,7 +249,7 @@ export const PanelWrapper: FC<Props> = ({
             <PanelActionContextMenu id={id} actions={menuActions} onDelete={onDelete}>
                 <div
                     className={cn(
-                        "group flex relative flex-col rounded-xl border text-card-foreground transition-colors h-full",
+                        "group flex relative flex-col rounded-xl border text-card-foreground transition-colors w-full",
                         allowInsert
                             ? shouldHighlight
                                 ? "border-primary ring-2 ring-primary/30 bg-card shadow-sm"

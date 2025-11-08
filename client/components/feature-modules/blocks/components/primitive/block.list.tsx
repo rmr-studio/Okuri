@@ -96,7 +96,7 @@ export const Block: React.FC<Props> = ({
 
     if (title || description) {
         return (
-            <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-lg">
+            <Card className="flex flex-col transition-shadow duration-150 hover:shadow-lg">
                 <CardHeader>
                     {title ? (
                         <CardTitle className="text-base font-semibold">{title}</CardTitle>
@@ -108,7 +108,7 @@ export const Block: React.FC<Props> = ({
         );
     }
 
-    return <div className="h-full flex flex-col">{content}</div>;
+    return <div className="flex flex-col">{content}</div>;
 };
 
 export const ListBlock = createRenderElement({

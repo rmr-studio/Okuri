@@ -57,7 +57,7 @@ export const Block: FC<Props> = ({
 
     if (variant === "plain") {
         return (
-            <div className={cn("h-full w-full flex flex-col", padded && "p-4", className)}>
+            <div className={cn("w-full flex flex-col", padded && "p-4", className)}>
                 {title || description ? (
                     <div className="mb-4 space-y-1">
                         {title ? <h3 className="text-base font-semibold">{title}</h3> : null}
@@ -66,7 +66,7 @@ export const Block: FC<Props> = ({
                         ) : null}
                     </div>
                 ) : null}
-                <div ref={hostRef} className="flex-1 h-full w-full">
+                <div ref={hostRef} className="flex-1 w-full">
                     {children}
                 </div>
             </div>
@@ -76,7 +76,7 @@ export const Block: FC<Props> = ({
     return (
         <Card
             className={cn(
-                "h-full w-full flex flex-col transition-shadow duration-150 hover:shadow-lg",
+                "w-full flex flex-col transition-shadow duration-150 hover:shadow-lg",
                 className
             )}
         >

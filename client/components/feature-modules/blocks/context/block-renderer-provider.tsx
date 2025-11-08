@@ -19,7 +19,15 @@ import { useBlockEnvironment } from "./block-environment-provider";
 import { useContainer } from "./grid-container-provider";
 import { useGrid } from "./grid-provider";
 
-export const RenderElementContext = createContext<{ widget: { id: string } } | null>(null);
+type RenderElementContextValue = {
+    widget: {
+        id: string;
+        container: HTMLElement | null;
+        requestResize: () => void;
+    };
+};
+
+export const RenderElementContext = createContext<RenderElementContextValue | null>(null);
 
 /**
  * This provider renders blocks using their BlockRenderStructure.
@@ -29,7 +37,7 @@ export const RenderElementContext = createContext<{ widget: { id: string } } | n
  */
 export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapElement }) => {
     const { environment } = useGrid();
-    const { getWidgetContainer } = useContainer();
+    const { getWidgetContainer, resizeWidgetToContent } = useContainer();
     const { getBlock } = useBlockEnvironment();
 
     const renderList = (node: BlockNode): ReactNode => {
@@ -108,7 +116,13 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                 return (
                     <RenderElementContext.Provider
                         key={widgetId}
-                        value={{ widget: { id: widgetId } }}
+                        value={{
+                            widget: {
+                                id: widgetId,
+                                container,
+                                requestResize: () => resizeWidgetToContent(widgetId),
+                            },
+                        }}
                     >
                         {createPortal(rendered, container)}
                     </RenderElementContext.Provider>

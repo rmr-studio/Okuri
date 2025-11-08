@@ -55,7 +55,7 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
 
     return (
         <div
-            className="block-structure-grid h-full w-full"
+            className="block-structure-grid w-full"
             style={{
                 display: "grid",
                 gridTemplateColumns: `repeat(${maxCol}, 1fr)`,
@@ -114,7 +114,7 @@ const ComponentRenderer: FC<{
     if (wildcardSlot) {
         // Component has wildcard slot - render with child blocks
         return (
-            <div style={gridStyle} className="relative h-full flex flex-col">
+            <div style={gridStyle} className="relative flex flex-col">
                 <ComponentWithWildcardSlot
                     component={component}
                     props={finalProps}
@@ -126,7 +126,7 @@ const ComponentRenderer: FC<{
 
     // Regular component - render directly
     return (
-        <div style={gridStyle} className="relative h-full flex flex-col">
+        <div style={gridStyle} className="relative flex flex-col">
             <ComponentInstance component={component} props={finalProps} />
         </div>
     );

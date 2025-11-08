@@ -7,33 +7,28 @@
 
 /* Make GridStack item content fill the entire item height */
 .grid-stack-item-content {
-    height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
 }
 
-/* Make the render root fill the content container */
+/* Make the render root flex without forcing height */
 .grid-render-root {
-    height: 100%;
     width: 100%;
     display: flex;
     flex-direction: column;
 }
 
-/* Ensure subgrids also fill their container height */
+/* Ensure subgrids size intrinsically with their content */
 .grid-stack-subgrid {
-    height: 100% !important;
+    height: auto !important;
 }
 
-/* Make nested grid items also fill height */
 .grid-stack-subgrid .grid-stack-item-content {
-    height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-}
-
-.grid-stack-item-content {
-    overflow: visible !important;
+    height: auto !important;
 }
 
 /* Ensure GridStack items don't show drag cursor everywhere */

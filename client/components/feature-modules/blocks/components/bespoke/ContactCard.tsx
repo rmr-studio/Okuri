@@ -68,7 +68,7 @@ const Block: FC<Props> = ({ client, accounts, href, avatarUrl, avatarShape }) =>
     const account = accounts?.[0];
 
     const body = (
-        <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-lg">
+        <Card className="flex flex-col transition-shadow duration-150 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar className={avatarShape === "square" ? "rounded-md" : "rounded-full"}>
                     <AvatarImage src={avatarUrl ?? undefined} alt={name} />
