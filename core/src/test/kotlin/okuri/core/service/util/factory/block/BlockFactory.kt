@@ -12,7 +12,6 @@ import okuri.core.models.block.metadata.BlockContentMetadata
 import okuri.core.models.block.metadata.BlockMeta
 import okuri.core.models.block.validation.BlockFormStructure
 import okuri.core.models.block.validation.BlockSchema
-import okuri.core.models.common.grid.GridItem
 import okuri.core.models.common.grid.GridRect
 import okuri.core.models.common.grid.LayoutGrid
 import java.util.*
@@ -55,15 +54,13 @@ object BlockFactory {
             render = BlockRenderStructure(
                 version = 1,
                 layoutGrid = LayoutGrid(
-                    layout = GridItem(
-                        lg = GridRect(
-                            x = 0,
-                            y = 0,
-                            width = 12,
-                            height = 12,
-                            locked = false,
-                            margin = null
-                        )
+                    layout = GridRect(
+                        x = 0,
+                        y = 0,
+                        width = 12,
+                        height = 12,
+                        locked = false,
+                        margin = null
                     ),
                     items = emptyList()
                 ),
