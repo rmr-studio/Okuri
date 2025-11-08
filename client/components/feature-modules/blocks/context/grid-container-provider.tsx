@@ -140,21 +140,27 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
             const observer = new ResizeObserver((entries) => {
                 entries.forEach((entry) => {
-                    // Access the rendered component inside the grid item, if it has been rendered
-                    const component: Element | null = entry.target.firstElementChild;
-                    if (component) {
-                        // Sync to the size of the rendered component
-                        syncElementToGrid(component as HTMLElement, component.clientHeight);
-                    } else {
-                        // Fallback to syncing the grid item itself
-                        syncElementToGrid(entry.target as HTMLElement, entry.contentRect.height);
-                    }
+                    // Use borderBoxSize for more accurate measurements
+                    const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+                    syncElementToGrid(entry.target as HTMLElement, height);
                 });
             });
 
-            observer.observe(target);
-            resizeObserverMap.current.set(widgetId, observer);
-            syncElementToGrid(target);
+            // Wait for the next frame to ensure content is rendered
+            requestAnimationFrame(() => {
+                const renderedComponent = target.firstElementChild as HTMLElement;
+                if (renderedComponent) {
+                    // Observe the actual rendered component
+                    observer.observe(renderedComponent);
+                    resizeObserverMap.current.set(widgetId, observer);
+
+                    // Initial sync after content is available
+                    syncElementToGrid(
+                        renderedComponent,
+                        renderedComponent.getBoundingClientRect().height
+                    );
+                }
+            });
         },
         [syncElementToGrid]
     );

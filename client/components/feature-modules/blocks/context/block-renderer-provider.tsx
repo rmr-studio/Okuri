@@ -4,6 +4,7 @@ import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
 import { BlockStructureRenderer } from "../components/render/block-structure-renderer";
 import { ContentBlockList } from "../components/render/list/ContentBlockList";
+import { PortalContentWrapper } from "../components/render/portal-wrapper";
 import {
     BlockNode,
     ContentNode,
@@ -124,7 +125,23 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                             },
                         }}
                     >
-                        {createPortal(rendered, container)}
+                        {createPortal(
+                            <PortalContentWrapper
+                                widgetId={widgetId}
+                                onMount={() => {
+                                    console.log(
+                                        `[PortalContentWrapper] Content mounted for widget ${widgetId}, triggering resize`
+                                    );
+                                    // Trigger resize after portal content is fully rendered
+                                    requestAnimationFrame(() => {
+                                        resizeWidgetToContent(widgetId);
+                                    });
+                                }}
+                            >
+                                {rendered}
+                            </PortalContentWrapper>,
+                            container
+                        )}
                     </RenderElementContext.Provider>
                 );
             })}

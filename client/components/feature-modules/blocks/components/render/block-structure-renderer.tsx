@@ -49,22 +49,8 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
         );
     }
 
-    // Calculate grid size from layout items
-    const maxCol = Math.max(...layoutGrid.items.map((item) => item.rect.x + item.rect.width), 12);
-    const maxRow = Math.max(...layoutGrid.items.map((item) => item.rect.y + item.rect.height), 1);
-
     return (
-        <div
-            className="block-structure-grid w-full"
-            style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${maxCol}, 1fr)`,
-                gridTemplateRows: `repeat(${maxRow}, minmax(${
-                    layoutGrid.layout.height || 40
-                }px, auto))`,
-                gap: `${layoutGrid.layout.margin || 8}px`,
-            }}
-        >
+        <div className="h-full w-full">
             {layoutGrid.items.map((layoutItem) => {
                 const component = components[layoutItem.id];
 
