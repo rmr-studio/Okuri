@@ -109,7 +109,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
                 },
             ],
         },
-        // cellHeight: 50,
+        cellHeight: 40,
         margin: 8,
         animate: true,
         acceptWidgets: true,

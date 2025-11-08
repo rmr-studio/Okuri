@@ -17,5 +17,5 @@ export const PortalContentWrapper: FC<{
         }
     }, [onMount]);
 
-    return <>{children}</>;
+    return <div className="grid-render-root">{children}</div>;
 };

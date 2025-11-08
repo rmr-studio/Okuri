@@ -81,38 +81,27 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     const optionsRef = useRef<GridStackOptions>(initialOptions);
     const resizeObserverMap = useRef<Map<string, ResizeObserver>>(new Map());
 
-    const syncElementToGrid = useCallback((element: HTMLElement, measuredHeight?: number) => {
+    const syncElementToGrid = useCallback((element: HTMLElement) => {
+        if (!element || element.children.length == 0) return;
+
         const gridItem = element.closest(".grid-stack-item") as GridItemHTMLElement | null;
         if (!gridItem) return;
+
+        // Get the individual cell height per row in the grid instance
         const node = gridItem.gridstackNode;
         if (!node) return;
         const grid = node.grid;
         if (!grid) return;
         const cellHeight = grid.getCellHeight(true);
+
         if (!cellHeight) return;
-        const contentHeight = Math.ceil(
-            typeof measuredHeight === "number"
-                ? measuredHeight
-                : element.getBoundingClientRect().height
-        );
-        const contentWrapper = element.closest(".grid-stack-item-content") as HTMLElement | null;
-        const contentChrome =
-            contentWrapper && contentWrapper !== element
-                ? Math.max(
-                      0,
-                      Math.ceil(contentWrapper.getBoundingClientRect().height) - contentHeight
-                  )
-                : 0;
-        const widgetChrome =
-            contentWrapper && gridItem
-                ? Math.max(
-                      0,
-                      Math.ceil(gridItem.getBoundingClientRect().height) -
-                          Math.ceil(contentWrapper.getBoundingClientRect().height)
-                  )
-                : 0;
-        const desiredHeightPx = contentHeight + contentChrome + widgetChrome;
-        const desiredRows = Math.max(1, Math.round(desiredHeightPx / cellHeight));
+
+        const component = element.firstElementChild as HTMLElement;
+        if (!component) return;
+
+        const desiredHeightPx = component.getBoundingClientRect().height;
+
+        const desiredRows = Math.max(1, Math.ceil(desiredHeightPx / cellHeight));
         if (desiredRows !== node.h) {
             grid.update(gridItem, { h: desiredRows });
         }

@@ -115,9 +115,18 @@ export const WidgetEnvironmentSync: React.FC = () => {
                             cancel: ".block-no-drag",
                             pause: 200,
                         },
+                        columnOpts: {
+                            breakpoints: [
+                                //md
+                                {
+                                    w: 1024,
+                                    c: 1,
+                                },
+                            ],
+                        },
                         sizeToContent: true,
                         column: 12,
-                        // cellHeight: 40,
+                        cellHeight: 40,
                         margin: 8,
                         acceptWidgets: true,
                         animate: true,
