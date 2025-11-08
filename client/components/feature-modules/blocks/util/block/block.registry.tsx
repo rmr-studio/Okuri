@@ -21,7 +21,7 @@ import { ComponentType } from "../../interface/block.interface";
 
 export interface RenderElementMetadata<T extends ZodTypeAny> {
     type: string;
-    name?: string;
+    name?: string;w
     description?: string;
     icon?: Component<any>;
     schema: T;

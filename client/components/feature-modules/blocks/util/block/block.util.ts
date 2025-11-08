@@ -103,8 +103,8 @@ export const getChildren = (node: BlockNode): BlockNode[] | undefined => {
  * @param node The block node to get dimensions for.
  * @returns The GridRect representing the block's dimensions.
  */
-export const getCurrentDimensions = (node: BlockNode): GridRect => {
-    return node.block.layout ?? node.block.type.display.render.layoutGrid.layout;
+export const getDefaultDimensions = (node: BlockNode): GridRect => {
+    return node.block.type.display.render.layoutGrid.layout
 };
 
 export const getTitle = (node: BlockNode): string => {

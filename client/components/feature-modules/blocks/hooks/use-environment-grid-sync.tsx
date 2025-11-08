@@ -69,16 +69,10 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 });
             };
 
-            grid.on("change", handleLayoutEvent);
             grid.on("added", handleBlockAdded);
-            grid.on("dragstop", handleLayoutAction);
-            grid.on("resizestop", handleLayoutAction);
 
             listenersRef.current.set(grid, () => {
-                grid.off("change");
                 grid.off("added");
-                grid.off("dragstop");
-                grid.off("resizestop");
             });
         },
         [getParentId, moveBlock]

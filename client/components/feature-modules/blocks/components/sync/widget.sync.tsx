@@ -4,7 +4,7 @@ import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
 import { isContentNode } from "../../interface/block.interface";
 import { WidgetRenderStructure } from "../../interface/render.interface";
-import { getCurrentDimensions } from "../../util/block/block.util";
+import { getDefaultDimensions } from "../../util/block/block.util";
 import { findNodeById, getTreeId } from "../../util/environment/environment.util";
 import { isList } from "../../util/list/list.util";
 import { hasWildcardSlots } from "../../util/render/binding.resolver";
@@ -77,16 +77,16 @@ export const WidgetEnvironmentSync: React.FC = () => {
             const blockNode = findNodeById(tree.root, id);
             if (!blockNode) return;
 
-            const layout = blockNode.block.layout ?? getCurrentDimensions(blockNode);
+            const { x, y, width, height } = getDefaultDimensions(blockNode);
             const parentId = getParentId(id);
 
             let meta: WidgetRenderStructure;
             const widgetConfig: GridStackWidget = {
                 id: id,
-                x: layout.x,
-                y: layout.y,
-                w: layout.width,
-                h: layout.height,
+                x: x,
+                y: y,
+                w: width,
+                h: height,
             };
 
             // Base definition for widget metadata
@@ -115,6 +115,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                             cancel: ".block-no-drag",
                             pause: 200,
                         },
+                        sizeToContent: true,
                         column: 12,
                         cellHeight: 40,
                         margin: 8,

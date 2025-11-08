@@ -1,13 +1,6 @@
 "use client";
 
-import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
@@ -15,7 +8,6 @@ import {
     BlockEnvironmentProviderProps,
     EditorEnvironment,
 } from "../interface/editor.interface";
-import { getCurrentDimensions } from "../util/block/block.util";
 import {
     collectDescendantIds,
     createEmptyEnvironment,
@@ -32,7 +24,6 @@ import {
     updateMetadata,
     updateTrees,
 } from "../util/environment/environment.util";
-import { useGridLayout } from "./grid-layout-provider";
 
 //todo. Maybe migrate to Zustand.
 
@@ -46,8 +37,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     initialTrees,
     children,
 }) => {
-    const { setLayouts } = useGridLayout();
-
     const initialEnvironment = useMemo(
         () => init(organisationId, initialTrees),
         [organisationId, initialTrees]
@@ -61,10 +50,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     useEffect(() => {
         setEnvironment(initialEnvState);
     }, [initialEnvState]);
-
-    useEffect(() => {
-        setLayouts(new Map(initialLayouts));
-    }, [initialLayouts, setLayouts]);
 
     /**
      * Inserts a block under the specified parent/slot, updating all relevant environment maps.
@@ -144,17 +129,9 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                     return prev;
                 }
 
-                const rootNode: BlockNode = {
-                    ...block,
-                    block: {
-                        ...block.block,
-                        layout: getCurrentDimensions(block),
-                    },
-                };
-
                 const tree: BlockTree = {
                     type: "block_tree",
-                    root: rootNode,
+                    root: block,
                 };
 
                 const trees = insertTree(prev, tree, index);
@@ -165,8 +142,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 treeIndex.set(id, id);
 
                 // Traverse children to re-link hierarchy and treeIndex
-                if (isContentNode(rootNode) && rootNode.children) {
-                    rootNode.children.forEach((child) => {
+                if (isContentNode(block) && block.children) {
+                    block.children.forEach((child) => {
                         traverseTree(child, id, id, hierarchy, treeIndex);
                     });
                 }

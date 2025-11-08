@@ -6,7 +6,7 @@ import {
     EditorEnvironmentMetadata,
     InsertResult,
 } from "../../interface/editor.interface";
-import { allowChildren, getCurrentDimensions, insertChild } from "../block/block.util";
+import { allowChildren, getDefaultDimensions, insertChild } from "../block/block.util";
 
 /** Collect descendant ids for a node (used when removing or re-indexing). */
 export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void => {
@@ -42,7 +42,7 @@ export const traverseTree = (
     if (!allowChildren(node) || !node.children) return;
 
     if (layouts) {
-        layouts.set(blockId, getCurrentDimensions(node));
+        layouts.set(blockId, getDefaultDimensions(node));
     }
 
     node.children.forEach((child) => {
@@ -355,7 +355,7 @@ export const init = (
     initialTrees.forEach((instance) => {
         const rootId = instance.root.block.id;
 
-        layouts.set(rootId, getCurrentDimensions(instance.root));
+        layouts.set(rootId, getDefaultDimensions(instance.root));
 
         hierarchy.set(rootId, null);
         treeIndex.set(rootId, rootId);

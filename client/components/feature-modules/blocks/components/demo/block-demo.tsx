@@ -24,7 +24,6 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
-import { GridLayoutProvider } from "../../context/grid-layout-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import { BlockNode, BlockTree } from "../../interface/block.interface";
 import { EditorEnvironment } from "../../interface/editor.interface";
@@ -47,21 +46,19 @@ const DEMO_ORG_ID = "demo-org-12345";
 export const BlockDemo = () => {
     const blocks = useMemo(() => createDemoTrees(), []);
     return (
-        <GridLayoutProvider organisationId={DEMO_ORG_ID}>
-            <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={blocks}>
-                <div className="mx-auto space-y-8 p-6">
-                    <header className="space-y-2">
-                        <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
-                        <p className="max-w-3xl text-sm text-muted-foreground">
-                            Block environment with real-time hierarchy tracking. Drag, resize, and
-                            nest blocks. Use the slash menu inside panels to add nested blocks.
-                        </p>
-                    </header>
+        <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={blocks}>
+            <div className="mx-auto space-y-8 p-6">
+                <header className="space-y-2">
+                    <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
+                    <p className="max-w-3xl text-sm text-muted-foreground">
+                        Block environment with real-time hierarchy tracking. Drag, resize, and nest
+                        blocks. Use the slash menu inside panels to add nested blocks.
+                    </p>
+                </header>
 
-                    <BlockEnvironmentWorkspace />
-                </div>
-            </BlockEnvironmentProvider>
-        </GridLayoutProvider>
+                <BlockEnvironmentWorkspace />
+            </div>
+        </BlockEnvironmentProvider>
     );
 };
 
@@ -90,12 +87,29 @@ const BlockEnvironmentWorkspace: React.FC = () => {
     const { environment } = useBlockEnvironment();
 
     const options: GridStackOptions = {
+        sizeToContent: true,
         resizable: {
             handles: "se, sw", // Only corner handles for cleaner appearance
         },
         draggable: {
             cancel: ".block-no-drag",
+            pause: 200,
         },
+        columnOpts: {
+            breakpoints: [
+                //md
+                {
+                    w: 1024,
+                    c: 6,
+                },
+                //sm
+                {
+                    w: 768,
+                    c: 1,
+                },
+            ],
+        },
+        cellHeight: 50,
         margin: 8,
         animate: true,
         acceptWidgets: true,
@@ -282,5 +296,11 @@ function createDemoTrees(): BlockTree[] {
         root: taskListNode,
     };
 
-    return [layoutTree, taskListTree];
+    const noteNode = createNoteNode(DEMO_ORG_ID, "Standalone note block");
+    const noteTree: BlockTree = {
+        type: "block_tree",
+        root: noteNode,
+    };
+
+    return [layoutTree, taskListTree, noteTree];
 }

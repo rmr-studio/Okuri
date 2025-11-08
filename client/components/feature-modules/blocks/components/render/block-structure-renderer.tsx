@@ -17,6 +17,7 @@ import {
     BlockRenderStructure,
     Metadata,
 } from "../../interface/block.interface";
+import { LayoutGridItem } from "../../interface/layout.interface";
 import { blockRenderRegistry } from "../../util/block/block.registry";
 import { getWildcardSlotName, resolveBindings } from "../../util/render/binding.resolver";
 
@@ -49,8 +50,8 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
     }
 
     // Calculate grid size from layout items
-    const maxCol = Math.max(...layoutGrid.items.map((item) => item.lg.x + item.lg.width), 12);
-    const maxRow = Math.max(...layoutGrid.items.map((item) => item.lg.y + item.lg.height), 1);
+    const maxCol = Math.max(...layoutGrid.items.map((item) => item.rect.x + item.rect.width), 12);
+    const maxRow = Math.max(...layoutGrid.items.map((item) => item.rect.y + item.rect.height), 1);
 
     return (
         <div
@@ -92,7 +93,7 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
  */
 const ComponentRenderer: FC<{
     component: BlockComponentNode;
-    layoutItem: any;
+    layoutItem: LayoutGridItem;
     payload: Metadata;
     children: BlockNode[] | undefined;
     renderChildBlock?: (node: BlockNode) => ReactNode;
@@ -106,8 +107,8 @@ const ComponentRenderer: FC<{
 
     // Position within grid
     const gridStyle = {
-        gridColumn: `${layoutItem.lg.x + 1} / span ${layoutItem.lg.w}`,
-        gridRow: `${layoutItem.lg.y + 1} / span ${layoutItem.lg.h}`,
+        gridColumn: `${layoutItem.rect.x + 1} / span ${layoutItem.rect.width}`,
+        gridRow: `${layoutItem.rect.y + 1} / span ${layoutItem.rect.height}`,
     };
 
     if (wildcardSlot) {

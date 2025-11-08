@@ -1,6 +1,6 @@
 "use client";
 
-import { GridStack, GridStackOptions, GridStackWidget } from "gridstack";
+import { GridItemHTMLElement, GridStack, GridStackOptions, GridStackWidget } from "gridstack";
 import {
     createContext,
     PropsWithChildren,
@@ -112,17 +112,34 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
         []
     );
 
+    const resizeToContentCBFn = useCallback((el: GridItemHTMLElement) => {
+        if (!el) return;
+        el.classList.remove("size-to-content-max");
+        if (!el.clientHeight) return; // 0 when hidden, skip
+        const n = el.gridstackNode;
+        if (!n) return;
+        const grid = n.grid;
+        if (!grid || el.parentElement !== grid.el) return; // skip if we are not inside a grid
+        const cell = grid.getCellHeight(true);
+        if (!cell) return;
+        let height = n.h ? n.h * cell : el.clientHeight; // getBoundingClientRect().height seem to flicker back and forth
+        let item: Element | null = null;
+        if (n.resizeToContentParent) item = el.querySelector(n.resizeToContentParent);
+        if (!item) item = el.querySelector(GridStack.resizeToContentParent);
+        if (!item) return;
+
+        console.log(item, item.innerHTML);
+        // console.log(item, content);
+        // Nothing has been rendered yet
+        // if (!content) return;
+
+        // const padding = el.clientHeight - item.clientHeight; // full - available height to our child (minus border, padding...)
+    }, []);
+
     const initGrid = useCallback(() => {
         if (containerRef.current) {
             GridStack.renderCB = renderCBFn;
             return GridStack.init(optionsRef.current, containerRef.current);
-            // ! Change event not firing on nested grids (resize, move...) https://github.com/gridstack/gridstack.js/issues/2671
-            // .on("change", () => {
-            //   console.log("changed");
-            // })
-            // .on("resize", () => {
-            //   console.log("resize");
-            // })
         }
         return null;
     }, [renderCBFn]);
@@ -150,13 +167,6 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 gridStack.cellHeight(initialOptions.cellHeight);
             }
 
-            // if (Array.isArray(initialOptions.children)) {
-            //     gridStack.removeAll(false);
-            //     widgetContainersRef.current.clear();
-            //     gridWidgetContainersMap.set(gridStack, new Map());
-            //     gridStack.load(initialOptions.children);
-            // }
-
             gridStack.commit();
         } catch (e) {
             console.error("Error updating gridstack options", e);
@@ -173,14 +183,20 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 const newGrid = initGrid();
                 setGridStack(newGrid);
             }
+
+            if (!GridStack.resizeToContentCB) {
+                GridStack.resizeToContentCB = resizeToContentCBFn;
+            }
+
             if (!GridStack.renderCB) {
                 GridStack.renderCB = renderCBFn;
             }
+
             hasInitialisedRef.current = true;
         } catch (e) {
             console.error("Error initializing gridstack", e);
         }
-    }, [gridStack, initGrid, renderCBFn, setGridStack, initialOptions]);
+    }, [gridStack, initGrid, renderCBFn, resizeToContentCBFn, setGridStack, initialOptions]);
 
     useLayoutEffect(() => {
         const observersSnapshot = resizeObserverMap.current;

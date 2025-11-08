@@ -25,8 +25,7 @@ const createBaseDisplay = (component: BlockComponentNode): BlockDisplay => ({
             items: [
                 {
                     id: component.id,
-                    sm: { x: 0, y: 0, width: 12, height: 8, locked: false },
-                    lg: { x: 0, y: 0, width: 12, height: 8, locked: false },
+                    rect: { x: 0, y: 0, width: 12, height: 8, locked: false },
                 },
             ],
         },
