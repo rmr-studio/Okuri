@@ -73,14 +73,11 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
             );
         }
 
-        const children = isContentNode(node) ? node.children : undefined;
-
         return (
             <BlockStructureRenderer
                 blockId={node.block.id}
                 renderStructure={childRenderStructure}
                 payload={node.block.payload}
-                children={children}
             />
         );
     };

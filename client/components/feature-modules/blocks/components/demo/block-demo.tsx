@@ -45,6 +45,7 @@ export const DEFAULT_WIDGET_OPTIONS: GridStackOptions = {
     },
     draggable: {
         cancel: ".block-no-drag",
+        pause: 30,
     },
     column: 23,
     columnOpts: {
