@@ -205,7 +205,6 @@ class BlockService(
         val root = blockRepository.findById(blockId).orElseThrow()
         val node = buildNode(root.toModel(), visited = mutableSetOf())
         return BlockTree(
-            layouts = listOf(),
             root = node
         )
     }
