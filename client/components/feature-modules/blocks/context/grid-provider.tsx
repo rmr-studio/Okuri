@@ -69,7 +69,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
 
             // 1) Start at the root in the top-level engine
             const rootId = path.shift()!;
-            let curr = findNodeById(gridStack.engine.nodes, rootId);
+            let curr = findChildNodeById(gridStack.engine.nodes, rootId);
             if (!curr) return { success: false, node: null };
 
             // Quick success if the root *is* the target
@@ -81,7 +81,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                 if (!curr.subGrid) return { success: false, node: null };
 
                 const nextId = path.shift()!;
-                const next = findNodeById(curr.subGrid.engine.nodes, nextId);
+                const next = findChildNodeById(curr.subGrid.engine.nodes, nextId);
                 if (!next) return { success: false, node: null };
 
                 // Advance
@@ -172,11 +172,13 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
         [gridStack, environment, blockEnvironment]
     );
 
+    /**
+     * As we delete a block. Its element has already been removed from the BlockEnvironment. So we need
+     * to manually locate the block within the grid engine, and also remove all descendant widgets.
+     */
     const removeWidget = useCallback(
         (id: string) => {
             if (!gridStack) return;
-            const parentId = blockEnvironment.treeIndex.get(id);
-            if (!parentId) return;
 
             const { success, node } = findWidget(id);
             if (!success || !node?.el) return;
@@ -240,10 +242,22 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
             });
             return;
         },
-        [gridStack, findWidget, blockEnvironment]
+        [gridStack]
     );
 
-    function findNodeById(nodes: GridStackNode[], id: string): GridStackNode | null {
+    // Walk down the engine nodes to find a child by ID
+    function findNodeById(node: GridStackNode, id: string): GridStackNode | null {
+        if (node.id === id) return node;
+
+        if (node.subGrid) {
+            
+            
+        }
+
+        return null;
+    }
+    
+    function findChildNodeById(nodes: GridStackNode[], id: string): GridStackNode | null {
         const found = nodes.find((n) => n.id === id);
         return found ?? null;
     }

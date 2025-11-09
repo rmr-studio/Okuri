@@ -15,7 +15,6 @@ import { QuickActionItem, SlashMenuItem } from "../../interface/panel.interface"
 import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
-import PanelResizeHandler from "./action/panel-resize-handler";
 import PanelToolbar from "./toolbar/panel-toolbar";
 
 interface Props extends ChildNodeProps, ClassNameProps {
@@ -32,7 +31,7 @@ interface Props extends ChildNodeProps, ClassNameProps {
     onInsert?: (item: SlashMenuItem) => void;
     onInsertSibling?: (item: SlashMenuItem) => void;
     onDelete?: () => void;
-    showResizeHandles?: boolean;
+
     resizeHandleIcon?: React.ReactNode;
 }
 
@@ -58,7 +57,6 @@ export const PanelWrapper: FC<Props> = ({
     onDelete,
     className,
     allowInsert = false,
-    showResizeHandles = false,
 }) => {
     // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
 
@@ -249,7 +247,7 @@ export const PanelWrapper: FC<Props> = ({
             <PanelActionContextMenu id={id} actions={menuActions} onDelete={onDelete}>
                 <div
                     className={cn(
-                        "group flex relative flex-col rounded-xl border text-card-foreground transition-colors w-full",
+                        "group flex relative flex-col rounded-sm border text-card-foreground transition-colors w-full p-4",
                         allowInsert
                             ? shouldHighlight
                                 ? "border-primary ring-2 ring-primary/30 bg-card shadow-sm"
@@ -341,11 +339,6 @@ export const PanelWrapper: FC<Props> = ({
                         actions={actions}
                         allowInsert={allowInsert}
                     />
-
-                    {/* Custom Resize Handles */}
-                    {showResizeHandles && (
-                        <PanelResizeHandler visible={toolbarVisible} positions={["se", "sw"]} />
-                    )}
                 </div>
             </PanelActionContextMenu>
         </>

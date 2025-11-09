@@ -24,7 +24,6 @@ import { useGrid } from "./grid-provider";
 export const gridWidgetContainersMap = new WeakMap<GridStack, Map<string, HTMLElement>>();
 
 const RENDER_META_ATTR = "data-render-meta";
-const DEFAULT_RENDER_ROOT_CLASS = "grid-render-root";
 
 const extractAttribute = (html: string, attribute: string): string | undefined => {
     const match = html.match(new RegExp(`${attribute}="([^"]*)"`, "i"));
@@ -44,7 +43,6 @@ const ensureRenderRoot = (wrapper: HTMLElement, widget: GridStackWidget): HTMLEl
     }
 
     const renderRoot = wrapper.ownerDocument.createElement("div");
-    renderRoot.className = DEFAULT_RENDER_ROOT_CLASS;
 
     const content = widget.content;
     if (typeof content === "string") {
@@ -88,7 +86,14 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     const resizeObserverMap = useRef<Map<string, ResizeObserver>>(new Map());
 
     const syncElementToGrid = useCallback((element: HTMLElement) => {
-        if (!element || element.children.length == 0) return;
+        if (!element) return;
+
+        const component = element.firstElementChild as HTMLElement;
+        if (!component) return;
+
+        const desiredHeightPx = component.getBoundingClientRect().height;
+        // Only skip if there's no visible content to measure
+        if (desiredHeightPx === 0) return;
 
         const gridItem = element.closest(".grid-stack-item") as GridItemHTMLElement | null;
         if (!gridItem) return;
@@ -105,12 +110,7 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
         if (!cellHeight) return;
 
-        const component = element.firstElementChild as HTMLElement;
-        if (!component) return;
-
-        const desiredHeightPx = component.getBoundingClientRect().height;
-
-        const desiredRows = Math.max(1, Math.ceil(desiredHeightPx / cellHeight));
+        const desiredRows = Math.max(1, Math.ceil(desiredHeightPx / cellHeight) + 1);
         if (desiredRows !== node.h) {
             grid.update(gridItem, { h: desiredRows });
         }
@@ -119,7 +119,6 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     const resizeWidgetToContent = useCallback(
         (widgetId: string) => {
             const target = widgetContainersRef.current.get(widgetId);
-            console.log(widgetId, target);
             if (!target) return;
             syncElementToGrid(target);
         },
@@ -180,7 +179,6 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 }
                 containers.set(widget.id, renderRoot);
 
-                console.log("Registered widget container", widget.id, renderRoot);
                 // Also update the local ref for backward compatibility
                 widgetContainersRef.current.set(widget.id, renderRoot);
 
@@ -194,7 +192,6 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
         (el: GridItemHTMLElement) => {
             if (!el) return;
             const node = el.gridstackNode;
-            console.log(node);
             if (!node?.id) return;
             resizeWidgetToContent(node.id);
         },

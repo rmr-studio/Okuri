@@ -73,7 +73,6 @@ export const editorPanel = ({
                     allowInsert={!!type.nesting}
                     onInsert={handleInsert}
                     onDelete={handleDelete}
-                    showResizeHandles={true}
                 >
                     {children}
                 </PanelWrapper>

@@ -38,6 +38,33 @@ import { defaultSlashItems } from "../panel/panel-wrapper";
 import { WidgetEnvironmentSync } from "../sync/widget.sync";
 
 const DEMO_ORG_ID = "demo-org-12345";
+export const DEFAULT_WIDGET_OPTIONS: GridStackOptions = {
+    sizeToContent: true,
+    resizable: {
+        handles: "se, sw", // Only corner handles for cleaner appearance
+    },
+    draggable: {
+        cancel: ".block-no-drag",
+    },
+    column: 23,
+    columnOpts: {
+        breakpoints: [
+            //md
+            {
+                w: 1024,
+                c: 12,
+            },
+            //sm
+            {
+                w: 768,
+                c: 1,
+            },
+        ],
+    },
+    cellHeight: 25,
+    animate: true,
+    acceptWidgets: true,
+};
 
 /* -------------------------------------------------------------------------- */
 /*                           Demo Component                                   */
@@ -86,42 +113,13 @@ const WorkspaceToolbar: FC = () => {
 const BlockEnvironmentWorkspace: React.FC = () => {
     const { environment } = useBlockEnvironment();
 
-    const options: GridStackOptions = {
-        sizeToContent: true,
-        resizable: {
-            handles: "se, sw", // Only corner handles for cleaner appearance
-        },
-        draggable: {
-            cancel: ".block-no-drag",
-            pause: 200,
-        },
-        columnOpts: {
-            breakpoints: [
-                //md
-                {
-                    w: 1024,
-                    c: 6,
-                },
-                //sm
-                {
-                    w: 768,
-                    c: 1,
-                },
-            ],
-        },
-        cellHeight: 40,
-        margin: 8,
-        animate: true,
-        acceptWidgets: true,
-    };
-
     useEffect(() => {
         console.log(environment);
     }, [environment]);
 
     return (
         <>
-            <GridProvider initialOptions={options}>
+            <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
                 <WorkspaceToolbar />
                 <BlockEnvironmentGridSync />
                 <WidgetEnvironmentSync />

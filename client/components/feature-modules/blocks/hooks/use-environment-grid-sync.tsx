@@ -50,7 +50,9 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
              * This event listener will observe when a user completes a layout action (drag/resize).
              * This is to detect when a purposeful action has been made, so we can flush layout changes to the backend
              */
-            const handleLayoutAction = (_: Event, _1: GridItemHTMLElement) => {};
+            const handleLayoutAction = (_: Event, element: GridItemHTMLElement) => {
+                console.log(element);
+            };
 
             const handleBlockAdded = (_event: Event, items: GridStackNode[] = []) => {
                 // processLayouts(items);
@@ -70,6 +72,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             };
 
             grid.on("added", handleBlockAdded);
+            grid.on("dragstart", handleLayoutEvent);
 
             listenersRef.current.set(grid, () => {
                 grid.off("added");

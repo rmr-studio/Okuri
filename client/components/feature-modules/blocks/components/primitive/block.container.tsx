@@ -66,8 +66,9 @@ export const Block: FC<Props> = ({
                         ) : null}
                     </div>
                 ) : null}
-                <div ref={hostRef} className="flex-1 w-full">
-                    {children}
+                <div className="flex-1 w-full">
+                    <div ref={hostRef} data-grid-host className="w-full min-h-12" />
+                    {children ? <div className="mt-4">{children}</div> : null}
                 </div>
             </div>
         );
@@ -76,20 +77,21 @@ export const Block: FC<Props> = ({
     return (
         <Card
             className={cn(
-                "w-full flex flex-col transition-shadow duration-150 hover:shadow-lg",
+                "w-full flex flex-col transition-shadow duration-150 border-0 shadow-none m-0 p-0 gap-y-0",
                 className
             )}
         >
             {(title || description) && (
-                <CardHeader className={padded ? undefined : "pb-2"}>
+                <CardHeader>
                     {title ? (
                         <CardTitle className="text-base font-semibold">{title}</CardTitle>
                     ) : null}
                     {description ? <CardDescription>{description}</CardDescription> : null}
                 </CardHeader>
             )}
-            <CardContent ref={hostRef} className={cn("flex-1", !padded && "px-2 pb-2")}>
-                {children}
+            <CardContent className={cn("flex-1", !padded && "px-2 pb-2")}>
+                <div ref={hostRef} data-grid-host className="w-full min-h-12" />
+                {children ? <div className="mt-4">{children}</div> : null}
             </CardContent>
         </Card>
     );
