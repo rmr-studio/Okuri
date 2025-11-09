@@ -965,7 +965,6 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
             type: components["schemas"]["BlockType"];
-            layout?: components["schemas"]["GridRect"];
             payload: components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["BlockContentMetadata"];
             archived: boolean;
             validationErrors?: string[];
@@ -1217,12 +1216,6 @@ export interface components {
             placeholder?: string;
             options?: components["schemas"]["Option"][];
         };
-        GridItem: {
-            id: string;
-            sm?: components["schemas"]["GridRect"];
-            md?: components["schemas"]["GridRect"];
-            lg: components["schemas"]["GridRect"];
-        };
         GridRect: {
             /** Format: int32 */
             x: number;
@@ -1286,7 +1279,11 @@ export interface components {
         };
         LayoutGrid: {
             layout: components["schemas"]["GridRect"];
-            items: components["schemas"]["GridItem"][];
+            items: components["schemas"]["LayoutGridItem"][];
+        };
+        LayoutGridItem: {
+            id: string;
+            rect: components["schemas"]["GridRect"];
         };
         ListDisplayConfig: {
             /** Format: int32 */

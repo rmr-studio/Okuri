@@ -6,9 +6,9 @@ import okuri.core.models.block.validation.BlockFormStructure
 import okuri.core.models.common.Condition
 import okuri.core.models.common.Op
 import okuri.core.models.common.Operand
-import okuri.core.models.common.grid.GridItem
 import okuri.core.models.common.grid.GridRect
 import okuri.core.models.common.grid.LayoutGrid
+import okuri.core.models.common.grid.LayoutGridItem
 import okuri.core.models.common.theme.ThemeTokens
 
 /**
@@ -29,12 +29,6 @@ object BlockDisplayFactory {
 
     fun conditionExists(path: String): Condition =
         Condition(op = Op.EXISTS, left = Operand.Path(path))
-
-    fun lg(x: Int, y: Int, w: Int, h: Int, locked: Boolean = false) =
-        GridRect(x = x, y = y, width = w, height = h, locked = locked, margin = null)
-
-    fun item(id: String, rect: GridRect, sm: GridRect? = null) =
-        GridItem(id = id, lg = rect, sm = sm)
 
     fun theme(
         variant: String? = null,
@@ -76,7 +70,29 @@ object BlockDisplayFactory {
         )
         return BlockRenderStructure(
             version = 1,
-            layoutGrid = LayoutGrid(items = listOf(item("c_card", lg(0, 0, 6, 6)))),
+            layoutGrid = LayoutGrid(
+                layout = GridRect(
+                    x = 0,
+                    y = 0,
+                    width = 12,
+                    height = 12,
+                    locked = false,
+                    margin = null
+                ),
+                items = listOf(
+                    LayoutGridItem(
+                        id = "c_card",
+                        rect = GridRect(
+                            x = 0,
+                            y = 0,
+                            width = 6,
+                            height = 6,
+                            locked = false,
+                            margin = null
+                        )
+                    )
+                )
+            ),
             components = components
         )
     }

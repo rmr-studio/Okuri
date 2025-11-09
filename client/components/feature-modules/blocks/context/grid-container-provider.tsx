@@ -1,6 +1,12 @@
 "use client";
 
-import { GridStack, GridStackOptions, GridStackWidget } from "gridstack";
+import {
+    GridItemHTMLElement,
+    GridStack,
+    GridStackNode,
+    GridStackOptions,
+    GridStackWidget,
+} from "gridstack";
 import {
     createContext,
     PropsWithChildren,
@@ -18,7 +24,6 @@ import { useGrid } from "./grid-provider";
 export const gridWidgetContainersMap = new WeakMap<GridStack, Map<string, HTMLElement>>();
 
 const RENDER_META_ATTR = "data-render-meta";
-const DEFAULT_RENDER_ROOT_CLASS = "grid-render-root";
 
 const extractAttribute = (html: string, attribute: string): string | undefined => {
     const match = html.match(new RegExp(`${attribute}="([^"]*)"`, "i"));
@@ -38,7 +43,6 @@ const ensureRenderRoot = (wrapper: HTMLElement, widget: GridStackWidget): HTMLEl
     }
 
     const renderRoot = wrapper.ownerDocument.createElement("div");
-    renderRoot.className = DEFAULT_RENDER_ROOT_CLASS;
 
     const content = widget.content;
     if (typeof content === "string") {
@@ -81,6 +85,78 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     const optionsRef = useRef<GridStackOptions>(initialOptions);
     const resizeObserverMap = useRef<Map<string, ResizeObserver>>(new Map());
 
+    const syncElementToGrid = useCallback((element: HTMLElement) => {
+        if (!element) return;
+
+        const component = element.firstElementChild as HTMLElement;
+        if (!component) return;
+
+        const desiredHeightPx = component.getBoundingClientRect().height;
+        // Only skip if there's no visible content to measure
+        if (desiredHeightPx === 0) return;
+
+        const gridItem = element.closest(".grid-stack-item") as GridItemHTMLElement | null;
+        if (!gridItem) return;
+
+        // Get the individual cell height per row in the grid instance
+        const node = gridItem.gridstackNode as
+            | (GridStackNode & { _moving?: boolean; _resizing?: boolean })
+            | undefined;
+        if (!node) return;
+        if (node._moving || node._resizing) return;
+        const grid = node.grid;
+        if (!grid) return;
+        const cellHeight = grid.getCellHeight(true);
+
+        if (!cellHeight) return;
+
+        const desiredRows = Math.max(1, Math.ceil(desiredHeightPx / cellHeight) + 1);
+        if (desiredRows !== node.h) {
+            grid.update(gridItem, { h: desiredRows });
+        }
+    }, []);
+
+    const resizeWidgetToContent = useCallback(
+        (widgetId: string) => {
+            const target = widgetContainersRef.current.get(widgetId);
+            if (!target) return;
+            syncElementToGrid(target);
+        },
+        [syncElementToGrid]
+    );
+
+    const registerResizeObserver = useCallback(
+        (widgetId: string, target: HTMLElement) => {
+            if (typeof ResizeObserver === "undefined") return;
+
+            const existing = resizeObserverMap.current.get(widgetId);
+            if (existing) {
+                existing.disconnect();
+                resizeObserverMap.current.delete(widgetId);
+            }
+
+            const observer = new ResizeObserver((entries) => {
+                entries.forEach((entry) => {
+                    syncElementToGrid(entry.target as HTMLElement);
+                });
+            });
+
+            // Wait for the next frame to ensure content is rendered
+            requestAnimationFrame(() => {
+                const renderedComponent = target.firstElementChild as HTMLElement;
+                if (renderedComponent) {
+                    // Observe the actual rendered component
+                    observer.observe(renderedComponent);
+                    resizeObserverMap.current.set(widgetId, observer);
+
+                    // Initial sync after content is available
+                    syncElementToGrid(renderedComponent);
+                }
+            });
+        },
+        [syncElementToGrid]
+    );
+
     const renderCBFn = useCallback(
         (element: HTMLElement, widget: GridStackWidget & { grid?: GridStack }) => {
             const closestGrid = element.closest(".grid-stack") as
@@ -106,23 +182,26 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 // Also update the local ref for backward compatibility
                 widgetContainersRef.current.set(widget.id, renderRoot);
 
-                // registerResizeObserver(widget, renderRoot);
+                registerResizeObserver(widget.id, renderRoot);
             }
         },
-        []
+        [registerResizeObserver]
+    );
+
+    const resizeToContentCBFn = useCallback(
+        (el: GridItemHTMLElement) => {
+            if (!el) return;
+            const node = el.gridstackNode;
+            if (!node?.id) return;
+            resizeWidgetToContent(node.id);
+        },
+        [resizeWidgetToContent]
     );
 
     const initGrid = useCallback(() => {
         if (containerRef.current) {
             GridStack.renderCB = renderCBFn;
             return GridStack.init(optionsRef.current, containerRef.current);
-            // ! Change event not firing on nested grids (resize, move...) https://github.com/gridstack/gridstack.js/issues/2671
-            // .on("change", () => {
-            //   console.log("changed");
-            // })
-            // .on("resize", () => {
-            //   console.log("resize");
-            // })
         }
         return null;
     }, [renderCBFn]);
@@ -150,13 +229,6 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 gridStack.cellHeight(initialOptions.cellHeight);
             }
 
-            // if (Array.isArray(initialOptions.children)) {
-            //     gridStack.removeAll(false);
-            //     widgetContainersRef.current.clear();
-            //     gridWidgetContainersMap.set(gridStack, new Map());
-            //     gridStack.load(initialOptions.children);
-            // }
-
             gridStack.commit();
         } catch (e) {
             console.error("Error updating gridstack options", e);
@@ -173,14 +245,20 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
                 const newGrid = initGrid();
                 setGridStack(newGrid);
             }
+
+            if (!GridStack.resizeToContentCB) {
+                GridStack.resizeToContentCB = resizeToContentCBFn;
+            }
+
             if (!GridStack.renderCB) {
                 GridStack.renderCB = renderCBFn;
             }
+
             hasInitialisedRef.current = true;
         } catch (e) {
             console.error("Error initializing gridstack", e);
         }
-    }, [gridStack, initGrid, renderCBFn, setGridStack, initialOptions]);
+    }, [gridStack, initGrid, renderCBFn, resizeToContentCBFn, setGridStack, initialOptions]);
 
     useLayoutEffect(() => {
         const observersSnapshot = resizeObserverMap.current;
@@ -203,22 +281,22 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
     return (
         <GridStackRenderContext.Provider
-            value={useMemo(
-                () => ({
-                    getWidgetContainer: (widgetId: string) => {
-                        // First try to get from the current grid instance's map
-                        if (gridStack) {
-                            const containers = gridWidgetContainersMap.get(gridStack);
-                            if (containers?.has(widgetId)) {
-                                return containers.get(widgetId) || null;
-                            }
+            value={useMemo(() => {
+                const getWidgetContainer = (widgetId: string) => {
+                    if (gridStack) {
+                        const containers = gridWidgetContainersMap.get(gridStack);
+                        if (containers?.has(widgetId)) {
+                            return containers.get(widgetId) || null;
                         }
-                        // Fallback to local ref for backward compatibility
-                        return widgetContainersRef.current.get(widgetId) || null;
-                    },
-                }),
-                [gridStack]
-            )}
+                    }
+                    return widgetContainersRef.current.get(widgetId) || null;
+                };
+
+                return {
+                    getWidgetContainer,
+                    resizeWidgetToContent,
+                };
+            }, [gridStack, resizeWidgetToContent])}
         >
             <div ref={containerRef}>{gridStack ? children : null}</div>
         </GridStackRenderContext.Provider>
@@ -227,13 +305,15 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
 export const GridStackRenderContext = createContext<{
     getWidgetContainer: (widgetId: string) => HTMLElement | null;
+    resizeWidgetToContent: (widgetId: string) => void;
 } | null>(null);
 
 /**
  * React hook to access the GridStack render context exposing widget container lookup.
  *
  * Returns the context object provided by GridContainerProvider, which includes
- * getWidgetContainer(widgetId: string): HTMLElement | null.
+ * getWidgetContainer(widgetId: string): HTMLElement | null and
+ * resizeWidgetToContent(widgetId: string): void.
  *
  * @returns The GridStack render context with `getWidgetContainer`.
  *

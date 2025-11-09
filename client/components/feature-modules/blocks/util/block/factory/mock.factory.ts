@@ -139,8 +139,7 @@ const createAddressBlockType = (organisationId: string): BlockType => {
             items: [
                 {
                     id: component.id,
-                    sm: { x: 0, y: 0, width: 12, height: 6, locked: false },
-                    lg: { x: 0, y: 0, width: 12, height: 6, locked: false },
+                    rect: { x: 0, y: 0, width: 12, height: 6, locked: false },
                 },
             ],
         },
@@ -201,8 +200,7 @@ const createTaskBlockType = (organisationId: string): BlockType => {
             items: [
                 {
                     id: component.id,
-                    sm: { x: 0, y: 0, width: 12, height: 4, locked: false },
-                    lg: { x: 0, y: 0, width: 12, height: 4, locked: false },
+                    rect: { x: 0, y: 0, width: 12, height: 4, locked: false },
                 },
             ],
         },
@@ -248,8 +246,7 @@ const createNoteBlockType = (organisationId: string): BlockType => {
             items: [
                 {
                     id: component.id,
-                    sm: { x: 0, y: 0, width: 12, height: 6, locked: false },
-                    lg: { x: 0, y: 0, width: 12, height: 6, locked: false },
+                    rect: { x: 0, y: 0, width: 12, height: 4, locked: false },
                 },
             ],
         },
@@ -297,8 +294,7 @@ const createProjectOverviewType = (organisationId: string): BlockType => {
             items: [
                 {
                     id: component.id,
-                    sm: { x: 0, y: 0, width: 12, height: 6, locked: false },
-                    lg: { x: 0, y: 0, width: 12, height: 6, locked: false },
+                    rect: { x: 0, y: 0, width: 12, height: 6, locked: false },
                 },
             ],
         },

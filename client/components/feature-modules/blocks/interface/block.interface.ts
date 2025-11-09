@@ -90,5 +90,3 @@ export const isReferenceNode = (node: BlockNode): node is ReferenceNode =>
     !!node.block && node.type === "reference_node";
 
 /* -------------------------------------------------------------------------- */
-
-export * from "@/lib/interfaces/common.interface";

@@ -1,4 +1,10 @@
-import type { GridStack, GridStackNode, GridStackWidget } from "gridstack";
+import type {
+    GridStack,
+    GridStackNode,
+    GridStackOptions,
+    GridStackWidget,
+    SaveFcn,
+} from "gridstack";
 import { createContext, FC, useCallback, useContext, useMemo, useState } from "react";
 import {
     GridActionResult,
@@ -39,6 +45,14 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
         addedWidgets: new Set<string>(),
     }));
     // Track list of node IDs to help with re-renders when nodes are added/removed
+
+    const save = (): GridStackOptions | undefined => {
+        if (!gridStack) return;
+
+        const cb: SaveFcn = (node: GridStackNode) => {};
+
+        return gridStack.save(true, true, cb) as GridStackOptions;
+    };
 
     /**
      * Provides direct navigation through the gridstack engine by first performing a bottom up
@@ -158,57 +172,31 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
         [gridStack, environment, blockEnvironment]
     );
 
-    const removeWidget = useCallback(
-        (id: string) => {
-            if (!gridStack) return;
-            const parentId = blockEnvironment.treeIndex.get(id);
-            if (!parentId) return;
+    /**
+     * Walk through the grid engine to find and delete the target widget and its descendants.
+     * If it does not exist on the current level, find all associated subgrids and walk down
+     * @param engine
+     * @param targetId
+     */
+    const deleteWidgetFromSubgrid = (engine: GridStackNode, targetId: string) => {
+        if (!engine.subGrid) return;
 
-            const { success, node } = findWidget(id);
-            if (!success || !node?.el) return;
+        const node = findNodeById(engine.subGrid.engine.nodes, targetId);
+        if (node) {
+            const element = node.el;
+            const id = node.id;
+            if (!element || !id) return;
+            engine.subGrid.removeWidget(element, true);
 
             // Also find and remove any descendant widgets
-            const descendantIds = Array.from(node.el.querySelectorAll<HTMLElement>("[gs-id]"))
+            const descendantIds = Array.from(element.querySelectorAll<HTMLElement>("[gs-id]"))
                 .map((el) => el.getAttribute("gs-id"))
                 .filter(Boolean) as string[];
 
-            // Deleting Top Level Node
-            if (parentId === id) {
-                gridStack.removeWidget(node.el, true);
-
-                // Update environment metadata
-                setEnvironment((prev) => {
-                    const newWidgetSet = new Set(prev.addedWidgets);
-                    const newMetaMap = new Map(prev.widgetMetaMap);
-                    // Remove target and descendants from treeIndex and hierarchy
-
-                    newMetaMap.delete(id);
-                    newWidgetSet.delete(id);
-
-                    descendantIds.forEach((did) => {
-                        newMetaMap.delete(did);
-                        newWidgetSet.delete(did);
-                    });
-
-                    return {
-                        ...prev,
-                        addedWidgets: newWidgetSet,
-                        widgetMetaMap: newMetaMap,
-                    };
-                });
-                return;
-            }
-
-            // Deleting Child Node
-            const { success: queryParentSuccess, node: queryParent } = findWidget(parentId);
-
-            if (!queryParentSuccess || !queryParent?.subGrid) return;
-            queryParent.subGrid.removeWidget(node.el, true);
-
-            // Update environment metadata
             setEnvironment((prev) => {
                 const newWidgetSet = new Set(prev.addedWidgets);
                 const newMetaMap = new Map(prev.widgetMetaMap);
+                // Remove target and descendants from treeIndex and hierarchy
 
                 newMetaMap.delete(id);
                 newWidgetSet.delete(id);
@@ -225,8 +213,124 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                 };
             });
             return;
+        }
+
+        engine.subGrid.engine.nodes.forEach((child) => {
+            deleteWidgetFromSubgrid(child, targetId);
+        });
+    };
+
+    /**
+     * As we delete a block. Its element has already been removed from the BlockEnvironment. So we need
+     * to manually locate the block within the grid engine, and also remove all descendant widgets.
+     */
+    const removeWidget = useCallback(
+        (id: string) => {
+            if (!gridStack) return;
+
+            // Check first level
+            const node = findNodeById(gridStack.engine.nodes, id);
+            if (node) {
+                const element = node.el;
+                const nodeId = node.id;
+                if (!element || !nodeId) return;
+                gridStack.removeWidget(element, true);
+
+                // Also find and remove any descendant widgets
+                const descendantIds = Array.from(element.querySelectorAll<HTMLElement>("[gs-id]"))
+                    .map((el) => el.getAttribute("gs-id"))
+                    .filter(Boolean) as string[];
+
+                setEnvironment((prev) => {
+                    const newWidgetSet = new Set(prev.addedWidgets);
+                    const newMetaMap = new Map(prev.widgetMetaMap);
+                    // Remove target and descendants from treeIndex and hierarchy
+
+                    newMetaMap.delete(nodeId);
+                    newWidgetSet.delete(nodeId);
+
+                    descendantIds.forEach((did) => {
+                        newMetaMap.delete(did);
+                        newWidgetSet.delete(did);
+                    });
+
+                    return {
+                        ...prev,
+                        addedWidgets: newWidgetSet,
+                        widgetMetaMap: newMetaMap,
+                    };
+                });
+                return;
+            }
+
+            // Recurse into subgrids
+            gridStack.engine.nodes.forEach((engineNode) => {
+                deleteWidgetFromSubgrid(engineNode, id);
+            });
+
+            // const { success, node } = findWidget(id);
+            // if (!success || !node?.el) return;
+
+            // // Also find and remove any descendant widgets
+            // const descendantIds = Array.from(node.el.querySelectorAll<HTMLElement>("[gs-id]"))
+            //     .map((el) => el.getAttribute("gs-id"))
+            //     .filter(Boolean) as string[];
+
+            // // Deleting Top Level Node
+            // if (parentId === id) {
+            //     gridStack.removeWidget(node.el, true);
+
+            //     // Update environment metadata
+            //     setEnvironment((prev) => {
+            //         const newWidgetSet = new Set(prev.addedWidgets);
+            //         const newMetaMap = new Map(prev.widgetMetaMap);
+            //         // Remove target and descendants from treeIndex and hierarchy
+
+            //         newMetaMap.delete(id);
+            //         newWidgetSet.delete(id);
+
+            //         descendantIds.forEach((did) => {
+            //             newMetaMap.delete(did);
+            //             newWidgetSet.delete(did);
+            //         });
+
+            //         return {
+            //             ...prev,
+            //             addedWidgets: newWidgetSet,
+            //             widgetMetaMap: newMetaMap,
+            //         };
+            //     });
+            //     return;
+            // }
+
+            // // Deleting Child Node
+            // const { success: queryParentSuccess, node: queryParent } = findWidget(parentId);
+
+            // if (!queryParentSuccess || !queryParent?.subGrid) return;
+            // queryParent.subGrid.removeWidget(node.el, true);
+
+            // // Update environment metadata
+            // setEnvironment((prev) => {
+            //     const newWidgetSet = new Set(prev.addedWidgets);
+            //     const newMetaMap = new Map(prev.widgetMetaMap);
+
+            //     newMetaMap.delete(id);
+            //     newWidgetSet.delete(id);
+
+            //     descendantIds.forEach((did) => {
+            //         newMetaMap.delete(did);
+            //         newWidgetSet.delete(did);
+            //     });
+
+            //     return {
+            //         ...prev,
+            //         addedWidgets: newWidgetSet,
+            //         widgetMetaMap: newMetaMap,
+            //     };
+            // });
+            // return;
         },
-        [gridStack, findWidget, blockEnvironment]
+        [gridStack]
     );
 
     function findNodeById(nodes: GridStackNode[], id: string): GridStackNode | null {
@@ -254,6 +358,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                 () => ({
                     initialOptions,
                     gridStack,
+                    save,
                     environment,
                     setGridStack,
                     addWidget,
@@ -262,7 +367,7 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                     removeWidget,
                     saveOptions,
                 }),
-                [initialOptions, gridStack, addWidget, removeWidget, saveOptions, environment]
+                [initialOptions, gridStack, addWidget, removeWidget, saveOptions, environment, save]
             )}
         >
             {children}

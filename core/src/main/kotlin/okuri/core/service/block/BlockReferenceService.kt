@@ -3,8 +3,8 @@ package okuri.core.service.block
 import jakarta.transaction.Transactional
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockReferenceEntity
-import okuri.core.enums.block.BlockReferenceFetchPolicy
-import okuri.core.enums.block.BlockReferenceWarning
+import okuri.core.enums.block.node.BlockReferenceWarning
+import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Reference
 import okuri.core.models.block.metadata.BlockReferenceMetadata

@@ -1,126 +1,95 @@
 "use client";
 
 import { useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
-import { GridStackNode } from "gridstack";
-import { useLayoutEffect } from "react";
+import { GridItemHTMLElement, GridStack, GridStackNode } from "gridstack";
+import { FC, useCallback, useLayoutEffect, useRef } from "react";
 import { useBlockEnvironment } from "../context/block-environment-provider";
 import { getNewParentId } from "../util/grid/grid.util";
 
-/**
- * Synchronizes BlockEnvironment state with GridStack layout changes
- *
- * This hook:
- * 1. Listens to GridStack layout events (change, dragstop, resizestop)
- * 2. Updates block layouts in BlockEnvironment when positions change
- * 3. Detects when blocks are moved between parents (nested ↔ top-level)
- * 4. Promotes blocks to top-level when dragged out of nested grids
- *
- * @param parentId - The parent block ID if this is a nested grid, null for top-level
- */
-export const useEnvironmentGridSync = (parentId: string | null = null) => {
-    const { gridStack } = useGrid();
-    const { getParent, moveBlock, environment, isInitialized } = useBlockEnvironment();
+type GridStackLike = Pick<GridStack, "on" | "off">;
 
-    // TODO Record Layout changes to persist block positions and sizes
+export const BlockEnvironmentGridSync: FC = () => {
+    useEnvironmentGridSync(null);
+    return null;
+};
+
+/**
+ * Synchronizes BlockEnvironment state with GridStack layout changes.
+ *
+ * - Updates block layouts when GridStack nodes move or resize
+ * - Detects parent changes when widgets enter/leave nested grids
+ */
+export const useEnvironmentGridSync = (_parentId: string | null = null) => {
+    const { gridStack } = useGrid();
+    const { getParentId, moveBlock, isInitialized } = useBlockEnvironment();
+
+    const listenersRef = useRef<Map<GridStackLike, () => void>>(new Map());
+    const initializedRef = useRef(isInitialized);
+
+    useLayoutEffect(() => {
+        initializedRef.current = isInitialized;
+    }, [isInitialized]);
+
+    const attachListeners = useCallback(
+        (grid: GridStackLike | null | undefined, root: GridStack) => {
+            if (!grid || listenersRef.current.has(grid)) return;
+
+            /**
+             * This event listener will observe all layout changes (move/resize) within the grid.
+             * This will only fire when a change has been committed (via the `change` event) so it won't spam updates during drag/resize.
+             * @param event -> The layout change event
+             * @param el -> The grid item element(s) that were changed (ie. Repositioned, Resized, etc)
+             */
+            const handleLayoutEvent = (_: Event, el: GridItemHTMLElement) => {
+                console.log(el);
+                // const nodes = collectNodesFromArgs(args);
+                // processLayouts(nodes);
+            };
+
+            /**
+             * This event listener will observe when a user completes a layout action (drag/resize).
+             * This is to detect when a purposeful action has been made, so we can flush layout changes to the backend
+             */
+            const handleLayoutAction = (_: Event, element: GridItemHTMLElement) => {
+                console.log(element);
+            };
+
+            const handleBlockAdded = (_event: Event, items: GridStackNode[] = []) => {
+                // processLayouts(items);
+
+                if (!initializedRef.current) return;
+
+                items.forEach((item) => {
+                    if (item.id === undefined || item.id === null) return;
+                    const blockId = String(item.id);
+                    const currentParent = getParentId(blockId);
+                    const newParent = getNewParentId(item, root);
+
+                    if (currentParent !== newParent) {
+                        moveBlock(blockId, newParent);
+                    }
+                });
+            };
+
+            grid.on("added", handleBlockAdded);
+
+            listenersRef.current.set(grid, () => {
+                grid.off("added");
+            });
+        },
+        [getParentId, moveBlock]
+    );
 
     useLayoutEffect(() => {
         if (!gridStack) return;
 
-        /**
-         * Handles layout changes from GridStack (drag, resize, etc.)
-         */
-        // const handleLayoutChange = (event: Event, nodes: GridStackNode[]) => {
-        //     if (!nodes || nodes.length === 0) return;
+        attachListeners(gridStack, gridStack);
 
-        //     nodes.forEach((node) => {
-        //         const blockId = String(node.id);
-        //         if (!blockId) return;
-
-        //         // Update layout when block is resized or repositioned
-        //         const layout = {
-        //             x: node.x ?? 0,
-        //             y: node.y ?? 0,
-        //             width: node.w ?? 1,
-        //             height: node.h ?? 1,
-        //             locked: false,
-        //         };
-
-        //         updateLayout(blockId, layout);
-        //     });
-        // };
-
-        /**
-         * Handles blocks being dropped/moved
-         * This should only look at positional moves, as parental changes are handled in `handleBlockAdded`
-         * This will detect moves within the same grid only and adjust order indexing
-         
-         */
-        const handleBlockMoved = (
-            event: Event,
-            prevWidget: GridStackNode,
-            newWidget: GridStackNode
-        ) => {
-            // Skip if environment is not initialized
-            if (!isInitialized) return;
-        };
-
-        /**
-         * Handles blocks being added to grid
-         * This can happen when a widget is programmatically added or moved from another grid
-         */
-        const handleBlockAdded = (_: Event, items: GridStackNode[]) => {
-            // Skip if environment is not initialized
-            if (!isInitialized) return;
-
-            if (!items || items.length === 0) return;
-
-            items.forEach((item) => {
-                if (!item.content) return;
-                if (typeof item.content !== "string") {
-                    return;
-                }
-
-                let payload: Record<string, unknown>;
-                try {
-                    payload = JSON.parse(item.content) as Record<string, unknown>;
-                } catch (error) {
-                    console.error("[GridSync] Failed to parse grid item content", error);
-                    return;
-                }
-
-                const id = payload["blockId"];
-
-                if (!id || typeof id !== "string") return;
-                const currentParent = getParent(id);
-                const newParent = getNewParentId(item, gridStack);
-
-                // If block was added to this grid and parent doesn't match
-                if (currentParent !== newParent) {
-                    console.log(
-                        `[GridSync] Block ${id} added to grid, updating parent to ${newParent}`
-                    );
-
-                    moveBlock(id, newParent);
-                }
-            });
-        };
-
-        // Register event listeners
-        // gridStack.on("change", handleLayoutChange);
-        // gridStack.on("dragstop", handleLayoutChange);
-        // gridStack.on("resizestop", handleLayoutChange);
-        // gridStack.on("dropped", handleBlockMoved);
-        gridStack.on("added", handleBlockAdded);
-
-        // Cleanup5
         return () => {
-            // gridStack.off("change");
-            // gridStack.off("dragstop");
-            // gridStack.off("resizestop");
-            // gridStack.off("dropped");
-            gridStack.off("added");
+            listenersRef.current.forEach((cleanup) => cleanup());
+            listenersRef.current.clear();
         };
-    }, [gridStack, parentId, isInitialized, getParent, moveBlock, environment]);
+    }, [gridStack, attachListeners]);
 
     return null;
 };

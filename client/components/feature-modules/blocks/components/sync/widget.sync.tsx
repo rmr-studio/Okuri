@@ -1,14 +1,15 @@
-import { GridStackWidget } from "gridstack";
-import { useEffect, useMemo, useRef } from "react";
+import { GridItemHTMLElement, GridStackWidget } from "gridstack";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
-import { isContentNode, isEntityReferenceMetadata } from "../../interface/block.interface";
+import { isContentNode } from "../../interface/block.interface";
 import { WidgetRenderStructure } from "../../interface/render.interface";
-import { getCurrentDimensions } from "../../util/block/block.util";
+import { getDefaultDimensions } from "../../util/block/block.util";
 import { findNodeById, getTreeId } from "../../util/environment/environment.util";
 import { isList } from "../../util/list/list.util";
 import { hasWildcardSlots } from "../../util/render/binding.resolver";
 import { parseContent } from "../../util/render/render.util";
+import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
 
 /**
  * Synchronizes GridStack widgets when blocks change at any level of the tree.
@@ -45,6 +46,16 @@ export const WidgetEnvironmentSync: React.FC = () => {
     const prevBlockIdsRef = useRef(new Set<string>());
     const hasInitiallyLoadedRef = useRef(false);
 
+    const triggerSubgridResize = useCallback((element?: HTMLElement | null) => {
+        const gridItem = element as GridItemHTMLElement | null;
+        const subGrid = gridItem?.gridstackNode?.subGrid;
+        if (!subGrid) return;
+        requestAnimationFrame(() => {
+            if (!gridItem?.isConnected) return;
+            subGrid.onResize();
+        });
+    }, []);
+
     useEffect(() => {
         if (!gridStack) return;
 
@@ -62,6 +73,11 @@ export const WidgetEnvironmentSync: React.FC = () => {
         );
 
         const addNewWidget = (id: string) => {
+            // Ignore placeholder widgets used to keep subgrids active when empty
+            if (id.endsWith("-placeholder")) {
+                return;
+            }
+
             if (widgetExists(id)) {
                 return;
             }
@@ -77,17 +93,16 @@ export const WidgetEnvironmentSync: React.FC = () => {
             const blockNode = findNodeById(tree.root, id);
             if (!blockNode) return;
 
-            const layout = blockNode.block.layout ?? getCurrentDimensions(blockNode);
+            const { x, y, width, height } = getDefaultDimensions(blockNode);
             const parentId = getParentId(id);
-            const type = isEntityReferenceMetadata(blockNode.block.payload) ? "reference" : "block";
 
             let meta: WidgetRenderStructure;
             const widgetConfig: GridStackWidget = {
                 id: id,
-                x: layout.x,
-                y: layout.y,
-                w: layout.width,
-                h: layout.height,
+                x: x,
+                y: y,
+                w: width,
+                h: height,
             };
 
             // Base definition for widget metadata
@@ -95,7 +110,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 id: id,
                 key: blockNode.block.type.key,
                 renderType: "component",
-                blockType: type,
+                blockType: blockNode.type,
             };
 
             // Special handling for list/container blocks blocks => We render them differently
@@ -111,17 +126,33 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 if (hasWildcards && isContentNode(blockNode)) {
                     meta.renderType = "container";
                     // Add subgrid configuration - children will be added separately by the sync logic
+                    // Include a placeholder widget to keep the subgrid active when empty
+                    // This prevents GridStack from collapsing/destroying empty subgrids
                     widgetConfig.subGridOpts = {
-                        draggable: {
-                            cancel: ".block-no-drag",
-                        },
-                        column: 12,
-                        cellHeight: 40,
-                        margin: 8,
-                        acceptWidgets: true,
-                        animate: true,
+                        ...DEFAULT_WIDGET_OPTIONS,
                         class: "grid-stack-subgrid",
-                        children: [],
+                        column: "auto",
+                        columnOpts: {
+                            breakpointForWindow: true,
+                            breakpoints: [
+                                {
+                                    w: 732,
+                                    c: 1,
+                                },
+                            ],
+                        },
+                        children: [
+                            {
+                                id: `${id}-placeholder`,
+                                x: 0,
+                                y: 0,
+                                w: 12,
+                                h: 1,
+                                locked: true,
+                                noMove: true,
+                                noResize: true,
+                            },
+                        ],
                     };
                 }
             }
@@ -130,8 +161,9 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 // Top-level block - add to main grid
                 console.log(`Adding top-level widget ${id} to GridStack`);
                 const { success, node } = addWidget(widgetConfig, meta);
-                if (!success) {
+                if (!success || !node?.el) {
                     console.warn(`Failed to add widget ${id} to GridStack`);
+                    return;
                 }
                 return;
             }
@@ -159,9 +191,11 @@ export const WidgetEnvironmentSync: React.FC = () => {
             console.log(`Adding nested widget ${id} to parent ${parentId} subgrid`);
             const { success: insertionSuccess, node } = addWidget(widgetConfig, meta, parent);
 
-            if (!insertionSuccess) {
+            if (!insertionSuccess || !node?.el) {
                 console.warn(`Failed to add widget ${id} to parent ${parentId} subgrid`);
+                return;
             }
+
             return;
         };
 
@@ -189,6 +223,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
     }, [
         gridStack,
         allBlockIds,
+        blockEnvironment,
         gridEnvironment,
         getParentId,
         isInitialized,
@@ -196,6 +231,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
         removeWidget,
         findWidget,
         addWidget,
+        triggerSubgridResize,
     ]);
 
     return null;

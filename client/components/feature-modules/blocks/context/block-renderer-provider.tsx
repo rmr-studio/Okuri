@@ -4,6 +4,7 @@ import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
 import { BlockStructureRenderer } from "../components/render/block-structure-renderer";
 import { ContentBlockList } from "../components/render/list/ContentBlockList";
+import { PortalContentWrapper } from "../components/render/portal-wrapper";
 import {
     BlockNode,
     ContentNode,
@@ -19,7 +20,15 @@ import { useBlockEnvironment } from "./block-environment-provider";
 import { useContainer } from "./grid-container-provider";
 import { useGrid } from "./grid-provider";
 
-export const RenderElementContext = createContext<{ widget: { id: string } } | null>(null);
+type RenderElementContextValue = {
+    widget: {
+        id: string;
+        container: HTMLElement | null;
+        requestResize: () => void;
+    };
+};
+
+export const RenderElementContext = createContext<RenderElementContextValue | null>(null);
 
 /**
  * This provider renders blocks using their BlockRenderStructure.
@@ -29,7 +38,7 @@ export const RenderElementContext = createContext<{ widget: { id: string } } | n
  */
 export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapElement }) => {
     const { environment } = useGrid();
-    const { getWidgetContainer } = useContainer();
+    const { getWidgetContainer, resizeWidgetToContent } = useContainer();
     const { getBlock } = useBlockEnvironment();
 
     const renderList = (node: BlockNode): ReactNode => {
@@ -108,9 +117,31 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                 return (
                     <RenderElementContext.Provider
                         key={widgetId}
-                        value={{ widget: { id: widgetId } }}
+                        value={{
+                            widget: {
+                                id: widgetId,
+                                container,
+                                requestResize: () => resizeWidgetToContent(widgetId),
+                            },
+                        }}
                     >
-                        {createPortal(rendered, container)}
+                        {createPortal(
+                            <PortalContentWrapper
+                                widgetId={widgetId}
+                                onMount={() => {
+                                    console.log(
+                                        `[PortalContentWrapper] Content mounted for widget ${widgetId}, triggering resize`
+                                    );
+                                    // Trigger resize after portal content is fully rendered
+                                    requestAnimationFrame(() => {
+                                        resizeWidgetToContent(widgetId);
+                                    });
+                                }}
+                            >
+                                {rendered}
+                            </PortalContentWrapper>,
+                            container
+                        )}
                     </RenderElementContext.Provider>
                 );
             })}

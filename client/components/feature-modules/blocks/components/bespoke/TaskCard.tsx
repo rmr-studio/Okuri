@@ -44,7 +44,7 @@ export const TaskCard: FC<Props> = ({ task }) => {
     const formattedDue = formatDueDate(dueDate);
 
     return (
-        <Card className="h-full flex flex-col transition-shadow duration-150 hover:shadow-md">
+        <Card className="flex flex-col transition-shadow duration-150 hover:shadow-md">
             <CardHeader className="flex flex-row items-start justify-between gap-2">
                 <div>
                     <CardTitle className="text-base font-semibold">{title ?? "Untitled task"}</CardTitle>

@@ -56,7 +56,7 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
 
     return (
         <PanelWrapper
-            className="p-4 h-full"
+            className="p-4"
             id={blockId}
             title={title}
             description={type.description}

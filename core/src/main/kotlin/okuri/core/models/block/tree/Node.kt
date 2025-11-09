@@ -3,7 +3,7 @@ package okuri.core.models.block.tree
 import com.fasterxml.jackson.annotation.JsonTypeName
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
-import okuri.core.enums.block.NodeType
+import okuri.core.enums.block.node.NodeType
 import okuri.core.models.block.Block
 
 @Schema(hidden = true)

@@ -1,7 +1,7 @@
 package okuri.core.models.block.metadata
 
 import io.swagger.v3.oas.annotations.media.Schema
-import okuri.core.enums.block.BlockReferenceFetchPolicy
+import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
 import okuri.core.enums.core.EntityType
 import java.util.*
 

@@ -40,7 +40,7 @@ export const InvoiceLineItemCard: FC<Props> = ({ item, currency }) => {
     if (!item) return null;
     const { description, quantity, unit, unitPrice, total } = item;
     return (
-        <Card className="h-full flex flex-col border-border/60">
+        <Card className="flex flex-col border-border/60">
             <CardHeader>
                 <CardTitle className="text-base font-medium">
                     {description ?? "Line item"}

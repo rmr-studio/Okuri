@@ -1,4 +1,4 @@
-package okuri.core.enums.block
+package okuri.core.enums.block.structure
 
 enum class BlockValidationScope {
     SOFT,
@@ -12,6 +12,7 @@ enum class BlockValidationScope {
  * @return `true` if the receiver is `SOFT`, `false` otherwise.
  */
 fun BlockValidationScope.isSoft(): Boolean = this == BlockValidationScope.SOFT
+
 /**
  * Determines whether the validation scope is strict.
  *

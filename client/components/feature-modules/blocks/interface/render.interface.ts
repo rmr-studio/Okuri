@@ -1,6 +1,7 @@
 import { ChildNodeProps } from "@/lib/interfaces/interface";
 import { GridStackWidget } from "gridstack";
 import { ReactNode } from "react";
+import { NodeType } from "./block.interface";
 
 export interface ProviderProps {
     onUnknownType?: (args: CallbackProvider) => void;
@@ -15,8 +16,8 @@ export interface WidgetRenderStructure {
     id: string;
     // The block type key
     key: string;
-    renderType: "component" | "container" | "list" | "list-item";
-    blockType: "block" | "reference";
+    renderType: "component" | "container" | "list";
+    blockType: NodeType;
 }
 
 export interface CallbackProvider {

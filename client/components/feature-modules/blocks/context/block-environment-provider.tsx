@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
@@ -8,7 +8,6 @@ import {
     BlockEnvironmentProviderProps,
     EditorEnvironment,
 } from "../interface/editor.interface";
-import { getCurrentDimensions } from "../util/block/block.util";
 import {
     collectDescendantIds,
     createEmptyEnvironment,
@@ -38,10 +37,19 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     initialTrees,
     children,
 }) => {
-    const [environment, setEnvironment] = useState<EditorEnvironment>(() =>
-        init(organisationId, initialTrees)
+    const initialEnvironment = useMemo(
+        () => init(organisationId, initialTrees),
+        [organisationId, initialTrees]
     );
+
+    const { environment: initialEnvState, layouts: initialLayouts } = initialEnvironment;
+
+    const [environment, setEnvironment] = useState<EditorEnvironment>(initialEnvState);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    useEffect(() => {
+        setEnvironment(initialEnvState);
+    }, [initialEnvState]);
 
     /**
      * Inserts a block under the specified parent/slot, updating all relevant environment maps.
@@ -121,17 +129,9 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                     return prev;
                 }
 
-                const rootNode: BlockNode = {
-                    ...block,
-                    block: {
-                        ...block.block,
-                        layout: getCurrentDimensions(block),
-                    },
-                };
-
                 const tree: BlockTree = {
                     type: "block_tree",
-                    root: rootNode,
+                    root: block,
                 };
 
                 const trees = insertTree(prev, tree, index);
@@ -142,8 +142,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 treeIndex.set(id, id);
 
                 // Traverse children to re-link hierarchy and treeIndex
-                if (isContentNode(rootNode) && rootNode.children) {
-                    rootNode.children.forEach((child) => {
+                if (isContentNode(block) && block.children) {
+                    block.children.forEach((child) => {
                         traverseTree(child, id, id, hierarchy, treeIndex);
                     });
                 }
@@ -307,42 +307,39 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     /**
      * Core move operation handling promotions, demotions, and cross-tree moves.
      */
-    const moveBlock = useCallback(
-        (blockId: string, targetParentId: string | null) => {
-            setEnvironment((prev) => {
-                const treeId = prev.treeIndex.get(blockId);
-                if (!treeId) {
-                    return prev;
-                }
+    const moveBlock = useCallback((blockId: string, targetParentId: string | null) => {
+        setEnvironment((prev) => {
+            const treeId = prev.treeIndex.get(blockId);
+            if (!treeId) {
+                return prev;
+            }
 
-                // If no parent has been given. Promote to top-level
-                if (targetParentId === null) {
-                    return moveBlockToTopLevel(prev, blockId, treeId);
-                }
+            // If no parent has been given. Promote to top-level
+            if (targetParentId === null) {
+                return moveBlockToTopLevel(prev, blockId, treeId);
+            }
 
-                const targetTreeId = prev.treeIndex.get(targetParentId);
+            const targetTreeId = prev.treeIndex.get(targetParentId);
 
-                if (!targetTreeId) {
-                    return prev;
-                }
+            if (!targetTreeId) {
+                return prev;
+            }
 
-                const sourceTree = findTree(prev, treeId);
-                const targetTree = findTree(prev, targetTreeId);
+            const sourceTree = findTree(prev, treeId);
+            const targetTree = findTree(prev, targetTreeId);
 
-                if (!sourceTree || !targetTree) {
-                    return prev;
-                }
-                const currentParent = prev.hierarchy.get(blockId) ?? null;
+            if (!sourceTree || !targetTree) {
+                return prev;
+            }
+            const currentParent = prev.hierarchy.get(blockId) ?? null;
 
-                // This node is the root of a tree. Demote entire tree and move into a new parent as a child node.
-                if (currentParent == null) {
-                    return moveTreeToNewParent(prev, sourceTree, targetTree, targetParentId);
-                }
-                return moveChildBlock(prev, sourceTree, targetTree, blockId, targetParentId);
-            });
-        },
-        []
-    );
+            // This node is the root of a tree. Demote entire tree and move into a new parent as a child node.
+            if (currentParent == null) {
+                return moveTreeToNewParent(prev, sourceTree, targetTree, targetParentId);
+            }
+            return moveChildBlock(prev, sourceTree, targetTree, blockId, targetParentId);
+        });
+    }, []);
 
     //TODO: Move block with accordance to updated rendering index position
 

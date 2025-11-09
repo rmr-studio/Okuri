@@ -3,7 +3,7 @@ package okuri.core.entity.block
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
-import okuri.core.enums.block.BlockValidationScope
+import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.display.BlockDisplay
 import okuri.core.models.block.display.BlockTypeNesting

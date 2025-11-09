@@ -1,7 +1,7 @@
 package okuri.core.models.block.display
 
 import io.swagger.v3.oas.annotations.media.Schema
-import okuri.core.enums.block.BlockFetchPolicy
+import okuri.core.enums.block.node.BlockFetchPolicy
 import okuri.core.enums.core.ComponentType
 import okuri.core.models.common.Condition
 import okuri.core.models.common.grid.LayoutGrid

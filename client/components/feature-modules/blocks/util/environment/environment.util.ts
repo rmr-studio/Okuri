@@ -1,12 +1,12 @@
 import { nowIso } from "@/lib/util/utils";
-import { BlockNode, BlockTree, isContentNode } from "../../interface/block.interface";
+import { BlockNode, BlockTree, GridRect, isContentNode } from "../../interface/block.interface";
 import {
     DetachResult,
     EditorEnvironment,
     EditorEnvironmentMetadata,
     InsertResult,
 } from "../../interface/editor.interface";
-import { allowChildren, insertChild } from "../block/block.util";
+import { allowChildren, getDefaultDimensions, insertChild } from "../block/block.util";
 
 /** Collect descendant ids for a node (used when removing or re-indexing). */
 export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void => {
@@ -22,14 +22,15 @@ export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void =>
 
 /**
  * Registers the entire subtree inside the hierarchy, tree index, layout, and UI maps.
- * `skipExistingLayout` lets callers keep a precomputed layout for the root node.
+ * If a layout map is provided, the node's current dimensions will be recorded.
  */
 export const traverseTree = (
     node: BlockNode,
     parentId: string | null,
     treeId: string,
     hierarchy: Map<string, string | null>,
-    treeIndex: Map<string, string>
+    treeIndex: Map<string, string>,
+    layouts?: Map<string, GridRect>
 ): void => {
     const blockId = node.block.id;
 
@@ -40,8 +41,12 @@ export const traverseTree = (
     if (!isContentNode(node)) return;
     if (!allowChildren(node) || !node.children) return;
 
+    if (layouts) {
+        layouts.set(blockId, getDefaultDimensions(node));
+    }
+
     node.children.forEach((child) => {
-        traverseTree(child, blockId, treeId, hierarchy, treeIndex);
+        traverseTree(child, blockId, treeId, hierarchy, treeIndex, layouts);
     });
 };
 
@@ -326,16 +331,31 @@ export function createEmptyEnvironment(organisationId: string): EditorEnvironmen
 /**
  * Hydrate an environment from a set of top-level tree instances supplied by callers.
  */
-export const init = (organisationId: string, initialTrees: BlockTree[] = []): EditorEnvironment => {
+export interface EnvironmentInitResult {
+    environment: EditorEnvironment;
+    layouts: Map<string, GridRect>;
+}
+
+export const init = (
+    organisationId: string,
+    initialTrees: BlockTree[] = []
+): EnvironmentInitResult => {
+    const layouts = new Map<string, GridRect>();
+
     if (!initialTrees || initialTrees.length === 0) {
-        return createEmptyEnvironment(organisationId);
+        return {
+            environment: createEmptyEnvironment(organisationId),
+            layouts,
+        };
     }
 
     const hierarchy = new Map<string, string | null>();
     const treeIndex = new Map<string, string>();
 
-    initialTrees.forEach((instance, index) => {
+    initialTrees.forEach((instance) => {
         const rootId = instance.root.block.id;
+
+        layouts.set(rootId, getDefaultDimensions(instance.root));
 
         hierarchy.set(rootId, null);
         treeIndex.set(rootId, rootId);
@@ -345,21 +365,24 @@ export const init = (organisationId: string, initialTrees: BlockTree[] = []): Ed
 
         instance.root.children.forEach((child) => {
             // Recursively traverse the tree
-            traverseTree(child, rootId, rootId, hierarchy, treeIndex);
+            traverseTree(child, rootId, rootId, hierarchy, treeIndex, layouts);
         });
     });
 
     return {
-        trees: initialTrees,
-        hierarchy,
-        treeIndex,
-        metadata: {
-            name: "Untitled Environment",
-            description: undefined,
-            organisationId,
-            createdAt: nowIso(),
-            updatedAt: nowIso(),
+        environment: {
+            trees: initialTrees,
+            hierarchy,
+            treeIndex,
+            metadata: {
+                name: "Untitled Environment",
+                description: undefined,
+                organisationId,
+                createdAt: nowIso(),
+                updatedAt: nowIso(),
+            },
         },
+        layouts,
     };
 };
 

@@ -1,6 +1,6 @@
 package okuri.core.models.block.validation
 
-import okuri.core.enums.block.BlockFormWidgetType
+import okuri.core.enums.block.structure.BlockFormWidgetType
 
 /**
  * Defines per-field widget configuration for a form.
