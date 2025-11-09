@@ -8,6 +8,7 @@ import okuri.core.models.common.Op
 import okuri.core.models.common.Operand
 import okuri.core.models.common.grid.GridRect
 import okuri.core.models.common.grid.LayoutGrid
+import okuri.core.models.common.grid.LayoutGridItem
 import okuri.core.models.common.theme.ThemeTokens
 
 /**
@@ -79,13 +80,16 @@ object BlockDisplayFactory {
                     margin = null
                 ),
                 items = listOf(
-                    GridRect(
-                        x = 0,
-                        y = 0,
-                        width = 6,
-                        height = 6,
-                        locked = false,
-                        margin = null
+                    LayoutGridItem(
+                        id = "c_card",
+                        rect = GridRect(
+                            x = 0,
+                            y = 0,
+                            width = 6,
+                            height = 6,
+                            locked = false,
+                            margin = null
+                        )
                     )
                 )
             ),

@@ -5,16 +5,14 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 /**
  * Custom deserializer for Widget that handles the stringified content field from Gridstack.
  * Gridstack stores the content as a JSON string, so we need to parse it twice.
  */
-class WidgetDeserializer : JsonDeserializer<Widget>() {
-    private val mapper: ObjectMapper = jacksonObjectMapper()
-
+class WidgetDeserializer() : JsonDeserializer<Widget>() {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Widget {
+        val mapper: ObjectMapper = p.codec as ObjectMapper
         val node: JsonNode = p.codec.readTree(p)
 
         // Parse standard fields
