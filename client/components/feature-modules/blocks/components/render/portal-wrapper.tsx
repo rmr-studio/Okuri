@@ -17,5 +17,9 @@ export const PortalContentWrapper: FC<{
         }
     }, [onMount]);
 
-    return <div className="grid-render-root">{children}</div>;
+    return (
+        <div className="grid-render-root" data-widget-id={widgetId}>
+            {children}
+        </div>
+    );
 };

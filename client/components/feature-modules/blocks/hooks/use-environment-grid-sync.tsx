@@ -72,7 +72,6 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             };
 
             grid.on("added", handleBlockAdded);
-            grid.on("dragstart", handleLayoutEvent);
 
             listenersRef.current.set(grid, () => {
                 grid.off("added");

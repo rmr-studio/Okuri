@@ -10,7 +10,7 @@ import { blockElements } from "@/components/feature-modules/blocks/util/block/bl
 import { ChildNodeProps, ClassNameProps } from "@/lib/interfaces/interface";
 import { cn } from "@/lib/util/utils";
 import { TypeIcon } from "lucide-react";
-import React, { FC, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QuickActionItem, SlashMenuItem } from "../../interface/panel.interface";
 import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
@@ -31,8 +31,6 @@ interface Props extends ChildNodeProps, ClassNameProps {
     onInsert?: (item: SlashMenuItem) => void;
     onInsertSibling?: (item: SlashMenuItem) => void;
     onDelete?: () => void;
-
-    resizeHandleIcon?: React.ReactNode;
 }
 
 export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).map((meta) => ({
@@ -60,8 +58,6 @@ export const PanelWrapper: FC<Props> = ({
 }) => {
     // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
 
-    const panelId = useId();
-    const surfaceId = id ?? panelId;
     const [isSelected, setIsSelected] = useState(false);
     const [isSlashOpen, setSlashOpen] = useState(false);
     const [isQuickOpen, setQuickOpen] = useState(false);
@@ -100,25 +96,25 @@ export const PanelWrapper: FC<Props> = ({
 
     useEffect(() => {
         const unsubscribe = focusSubscribe((selection) => {
-            setIsSelected(selection?.type === "panel" && selection.id === surfaceId);
+            setIsSelected(selection?.type === "panel" && selection.id === id);
         });
         return () => {
             if (typeof unsubscribe === "function") {
                 unsubscribe();
             }
         };
-    }, [surfaceId]);
+    }, [id]);
 
     useEffect(() => {
         if (!isSelected) return;
-        updateSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [isSelected, onDelete, surfaceId]);
+        updateSelection({ type: "panel", id: id, onDelete });
+    }, [isSelected, onDelete, id]);
 
     useEffect(() => {
         return () => {
-            removeSelection("panel", surfaceId);
+            removeSelection("panel", id);
         };
-    }, [surfaceId]);
+    }, [id]);
 
     useEffect(() => {
         setDraftTitle(title ?? "");
@@ -151,7 +147,7 @@ export const PanelWrapper: FC<Props> = ({
                 if (isInput) return;
                 event.preventDefault();
                 setInsertContext("nested");
-                pushSelection({ type: "panel", id: surfaceId, onDelete });
+                pushSelection({ type: "panel", id: id, onDelete });
                 setInlineMenuOpen(true);
             }
 
@@ -164,18 +160,18 @@ export const PanelWrapper: FC<Props> = ({
                 event.preventDefault();
                 if (allowInsert && actions.length === 0) {
                     setInsertContext("nested");
-                    pushSelection({ type: "panel", id: surfaceId, onDelete });
+                    pushSelection({ type: "panel", id: id, onDelete });
                     setInlineMenuOpen(true);
                 } else {
                     setQuickOpen(true);
-                    pushSelection({ type: "panel", id: surfaceId, onDelete });
+                    pushSelection({ type: "panel", id: id, onDelete });
                 }
             }
         };
 
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [allowInsert, actions.length, isSelected, surfaceId, onDelete]);
+    }, [allowInsert, actions.length, isSelected, id, onDelete]);
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
@@ -185,8 +181,8 @@ export const PanelWrapper: FC<Props> = ({
         if (!allowInsert) return;
         setInlineMenuOpen(false);
         setSlashOpen(true);
-        pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [allowInsert, setInlineMenuOpen, setSlashOpen, surfaceId, onDelete]);
+        pushSelection({ type: "panel", id: id, onDelete });
+    }, [allowInsert, setInlineMenuOpen, setSlashOpen, id, onDelete]);
 
     const handleSelect = useCallback(
         (item: SlashMenuItem) => {
@@ -216,31 +212,31 @@ export const PanelWrapper: FC<Props> = ({
             setQuickOpen(false);
             item.onSelect(id);
         },
-        [setQuickOpen]
+        [id, setQuickOpen]
     );
 
     const handleMenuAction = useCallback((item: QuickActionItem) => {
         item.onSelect(id);
-    }, []);
+    }, [id]);
 
     const handleQuickActionsOpen = useCallback(() => {
         setQuickOpen(true);
-        pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [setQuickOpen, surfaceId, onDelete]);
+        pushSelection({ type: "panel", id: id, onDelete });
+    }, [setQuickOpen, id, onDelete]);
 
     const handleInlineInsertOpen = useCallback(() => {
         if (!allowInsert) return;
         setInsertContext("nested");
         setInlineMenuOpen(true);
-        pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [allowInsert, setInsertContext, setInlineMenuOpen, surfaceId, onDelete]);
+        pushSelection({ type: "panel", id: id, onDelete });
+    }, [allowInsert, setInsertContext, setInlineMenuOpen, id, onDelete]);
 
     const handleQuickInsertOpenQuickActions = useCallback(() => {
         if (!allowInsert) return;
         setInlineMenuOpen(false);
         setQuickOpen(true);
-        pushSelection({ type: "panel", id: surfaceId, onDelete });
-    }, [allowInsert, setInlineMenuOpen, setQuickOpen, surfaceId, onDelete]);
+        pushSelection({ type: "panel", id: id, onDelete });
+    }, [allowInsert, setInlineMenuOpen, setQuickOpen, id, onDelete]);
 
     return (
         <>
@@ -259,7 +255,7 @@ export const PanelWrapper: FC<Props> = ({
                             : "border-border/50 bg-transparent",
                         className
                     )}
-                    data-surface-id={surfaceId}
+                    data-surface-id={id}
                     tabIndex={-1}
                     onPointerOver={(event) => {
                         const targetBlock = (event.target as HTMLElement | null)?.closest(
@@ -290,10 +286,10 @@ export const PanelWrapper: FC<Props> = ({
                             "[data-surface-id]"
                         ) as HTMLElement | null;
                         if (targetSurface && targetSurface !== event.currentTarget) return;
-                        pushSelection({ type: "panel", id: surfaceId, onDelete });
+                        pushSelection({ type: "panel", id: id, onDelete });
                     }}
                     onFocusCapture={() => {
-                        pushSelection({ type: "panel", id: surfaceId, onDelete });
+                        pushSelection({ type: "panel", id: id, onDelete });
                     }}
                 >
                     <PanelToolbar

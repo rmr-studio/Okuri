@@ -21,7 +21,7 @@ import { ComponentType } from "../../interface/block.interface";
 
 export interface RenderElementMetadata<T extends ZodTypeAny> {
     type: string;
-    name?: string;w
+    name?: string;
     description?: string;
     icon?: Component<any>;
     schema: T;
@@ -30,7 +30,7 @@ export interface RenderElementMetadata<T extends ZodTypeAny> {
 
 type BlockElementMap = Record<string, RenderElementMetadata<ZodTypeAny>>;
 
-const baseBlockElements: Record<ComponentType, RenderElementMetadata<ZodTypeAny>> = {   
+const baseBlockElements: Record<ComponentType, RenderElementMetadata<ZodTypeAny>> = {
     CONTACT_CARD: ContactCard,
     ADDRESS_CARD: AddressCard,
     LINE_ITEM: ListBlock,

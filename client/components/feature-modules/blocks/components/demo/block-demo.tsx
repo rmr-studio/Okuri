@@ -113,10 +113,6 @@ const WorkspaceToolbar: FC = () => {
 const BlockEnvironmentWorkspace: React.FC = () => {
     const { environment } = useBlockEnvironment();
 
-    useEffect(() => {
-        console.log(environment);
-    }, [environment]);
-
     return (
         <>
             <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
