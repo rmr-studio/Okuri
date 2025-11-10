@@ -74,6 +74,7 @@ export const PanelWrapper: FC<Props> = ({
         type: "panel",
         onDelete,
         elementRef: surfaceRef,
+        focusParentOnDelete: true,
     });
     const { acquireLock } = useBlockFocus();
     const overlayLockRef = useRef<(() => void) | null>(null);

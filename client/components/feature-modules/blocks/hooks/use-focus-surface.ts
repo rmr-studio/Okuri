@@ -1,4 +1,4 @@
-import { MutableRefObject, useCallback, useEffect, useMemo } from "react";
+import { MutableRefObject, useCallback, useEffect, useMemo, useRef } from "react";
 import {
     FocusBehaviorOptions,
     FocusLock,
@@ -6,6 +6,7 @@ import {
     FocusSurfaceType,
     useBlockFocus,
 } from "../context/block-focus-provider";
+import { useBlockEnvironment } from "../context/block-environment-provider";
 
 interface UseFocusSurfaceOptions {
     id: string;
@@ -15,6 +16,7 @@ interface UseFocusSurfaceOptions {
     elementRef?: MutableRefObject<HTMLElement | null>;
     onDelete?: () => void;
     metadata?: Record<string, unknown>;
+    focusParentOnDelete?: boolean;
 }
 
 export interface FocusSurfaceControls {
@@ -40,6 +42,18 @@ export const useFocusSurface = (options: UseFocusSurfaceOptions): FocusSurfaceCo
         setHoveredSurface,
         updateStackEntry,
     } = useBlockFocus();
+    const { getParentId } = useBlockEnvironment();
+
+    // Store refs to avoid re-registration when these change
+    const focusSurfaceRef = useRef(focusSurface);
+    const getParentIdRef = useRef(getParentId);
+    const stateRef = useRef(state);
+
+    useEffect(() => {
+        focusSurfaceRef.current = focusSurface;
+        getParentIdRef.current = getParentId;
+        stateRef.current = state;
+    });
 
     // Only register with stable ID and type to avoid re-registration on every render.
     // Mutable properties (onDelete, metadata, etc.) are updated via updateSurface below.
@@ -52,8 +66,29 @@ export const useFocusSurface = (options: UseFocusSurfaceOptions): FocusSurfaceCo
     );
 
     useEffect(() => {
-        return registerSurface(registration);
-    }, [registerSurface, registration]);
+        const cleanup = registerSurface(registration);
+
+        // Return cleanup that focuses parent if requested
+        return () => {
+            // Check if this surface is currently focused before cleanup
+            const wasFocused = stateRef.current.primaryFocusId === options.id;
+
+            // Run the original cleanup
+            cleanup();
+
+            // If this surface was focused and should focus parent on delete, do it
+            if (wasFocused && options.focusParentOnDelete) {
+                const parentId = getParentIdRef.current(options.id);
+                if (parentId) {
+                    // Use setTimeout to ensure the parent surface is still registered
+                    // after our cleanup completes
+                    setTimeout(() => {
+                        focusSurfaceRef.current(parentId, { emitStackEntry: true });
+                    }, 0);
+                }
+            }
+        };
+    }, [registerSurface, registration, options.id, options.focusParentOnDelete]);
 
     useEffect(() => {
         updateSurface(options.id, {
