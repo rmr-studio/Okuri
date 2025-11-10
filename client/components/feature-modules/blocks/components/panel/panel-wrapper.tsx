@@ -59,6 +59,7 @@ export const PanelWrapper: FC<Props> = ({
     const [isQuickOpen, setQuickOpen] = useState(false);
     const [isInlineMenuOpen, setInlineMenuOpen] = useState(false);
     const [isDetailsOpen, setDetailsOpen] = useState(false);
+    const [isActionsOpen, setActionsOpen] = useState(false);
     const [draftTitle, setDraftTitle] = useState(title ?? "");
     const [insertContext, setInsertContext] = useState<"nested" | "sibling">("nested");
     const [toolbarFocusIndex, setToolbarFocusIndex] = useState<number>(-1); // -1 = no toolbar focus
@@ -104,15 +105,46 @@ export const PanelWrapper: FC<Props> = ({
         (allowInsert && (isInlineMenuOpen || isSlashOpen)) ||
         isHovered;
 
-    // Reset toolbar focus when panel loses selection or menus open
+    // Close all menus when panel loses selection
     useEffect(() => {
-        if (!isSelected || isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen) {
+        if (!isSelected) {
             setToolbarFocusIndex(-1);
+            setSlashOpen(false);
+            setQuickOpen(false);
+            setInlineMenuOpen(false);
+            setDetailsOpen(false);
+            setActionsOpen(false);
         }
-    }, [isSelected, isSlashOpen, isQuickOpen, isInlineMenuOpen, isDetailsOpen]);
+    }, [isSelected]);
+
+    // Close menus when toolbar focus moves away from them (but keep panel selected)
+    useEffect(() => {
+        if (!isSelected) return; // Only applies when panel is selected
+
+        // Calculate which button each menu corresponds to
+        let buttonIndex = 0;
+        const quickActionsIndex = buttonIndex++;
+        const insertIndex = allowInsert ? buttonIndex++ : -1;
+        const detailsIndex = buttonIndex++;
+        const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
+
+        // Close menus that don't match the current toolbar focus
+        if (toolbarFocusIndex !== quickActionsIndex && isQuickOpen) {
+            setQuickOpen(false);
+        }
+        if (toolbarFocusIndex !== insertIndex && isInlineMenuOpen) {
+            setInlineMenuOpen(false);
+        }
+        if (toolbarFocusIndex !== detailsIndex && isDetailsOpen) {
+            setDetailsOpen(false);
+        }
+        if (toolbarFocusIndex !== actionsMenuIndex && isActionsOpen) {
+            setActionsOpen(false);
+        }
+    }, [toolbarFocusIndex, isSelected, allowInsert, hasMenuActions, isQuickOpen, isInlineMenuOpen, isDetailsOpen, isActionsOpen]);
 
     useEffect(() => {
-        const shouldLock = isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen;
+        const shouldLock = isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen || isActionsOpen;
         // Acquire or release overlay lock based on menu state
         if (!shouldLock && overlayLockRef.current) {
             overlayLockRef.current();
@@ -195,22 +227,25 @@ export const PanelWrapper: FC<Props> = ({
                 if (isInput) return;
                 event.preventDefault();
 
-                // Map toolbar index to button action
+                // Determine which menu should be opened
                 let buttonIndex = 0;
+                let targetMenu: "quick" | "insert" | "details" | "actions" | null = null;
 
                 if (toolbarFocusIndex === buttonIndex++) {
-                    // Quick Actions
-                    setQuickOpen(true);
+                    targetMenu = "quick";
                 } else if (allowInsert && toolbarFocusIndex === buttonIndex++) {
-                    // Insert Block
-                    setInlineMenuOpen(true);
+                    targetMenu = "insert";
                 } else if (toolbarFocusIndex === buttonIndex++) {
-                    // Panel Details
-                    setDetailsOpen(true);
+                    targetMenu = "details";
                 } else if (hasMenuActions && toolbarFocusIndex === buttonIndex++) {
-                    // Action Menu - this needs to be implemented
-                    // For now, we'll leave it as is (user can click or use other methods)
+                    targetMenu = "actions";
                 }
+
+                // Close all menus except the target, then open the target
+                setQuickOpen(targetMenu === "quick");
+                setInlineMenuOpen(targetMenu === "insert");
+                setDetailsOpen(targetMenu === "details");
+                setActionsOpen(targetMenu === "actions");
 
                 return;
             }
@@ -413,6 +448,8 @@ export const PanelWrapper: FC<Props> = ({
                                 toolbarFocusIndex={toolbarFocusIndex}
                                 detailsOpen={isDetailsOpen}
                                 onDetailsOpenChange={(open) => setDetailsOpen(open)}
+                                actionsOpen={isActionsOpen}
+                                onActionsOpenChange={(open) => setActionsOpen(open)}
                             />
                         )}
                     </AnimatePresence>

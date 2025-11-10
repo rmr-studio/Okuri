@@ -35,6 +35,8 @@ interface PanelToolbarProps {
     toolbarFocusIndex?: number;
     detailsOpen?: boolean;
     onDetailsOpenChange?: (open: boolean) => void;
+    actionsOpen?: boolean;
+    onActionsOpenChange?: (open: boolean) => void;
 }
 
 const toolbarButtonClass =
@@ -63,6 +65,8 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     toolbarFocusIndex = -1,
     detailsOpen,
     onDetailsOpenChange,
+    actionsOpen,
+    onActionsOpenChange,
 }) => {
     // Helper to get button class with focus highlight
     const getButtonClass = (index: number) => {
@@ -192,6 +196,8 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     menuActions={menuActions}
                     toolbarButtonClass={getButtonClass(actionsMenuIndex)}
                     onMenuAction={onMenuAction}
+                    actionsOpen={actionsOpen}
+                    onActionsOpenChange={onActionsOpenChange}
                 />
             ) : null}
         </motion.div>

@@ -15,13 +15,32 @@ interface PanelActionsProps {
     menuActions: QuickActionItem[];
     toolbarButtonClass: string;
     onMenuAction: (action: QuickActionItem) => void;
+    actionsOpen?: boolean;
+    onActionsOpenChange?: (open: boolean) => void;
 }
 
-const PanelActions: FC<PanelActionsProps> = ({ menuActions, toolbarButtonClass, onMenuAction }) => {
+const PanelActions: FC<PanelActionsProps> = ({
+    menuActions,
+    toolbarButtonClass,
+    onMenuAction,
+    actionsOpen,
+    onActionsOpenChange,
+}) => {
     if (menuActions.length === 0) return null;
 
     return (
-        <DropdownMenu>
+        <DropdownMenu
+            open={actionsOpen}
+            onOpenChange={(open) => {
+                onActionsOpenChange?.(open);
+                // Blur the trigger when closing to prevent focus sticking
+                if (!open) {
+                    setTimeout(() => {
+                        (document.activeElement as HTMLElement)?.blur();
+                    }, 0);
+                }
+            }}
+        >
             <Tooltip>
                 <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
