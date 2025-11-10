@@ -109,7 +109,9 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 // For child blocks, calculate Y based on position in parent's children array
                 const parentNode = findNodeById(tree.root, parentId);
                 if (parentNode && isContentNode(parentNode) && parentNode.children) {
-                    const childIndex = parentNode.children.findIndex((child) => child.block.id === id);
+                    const childIndex = parentNode.children.findIndex(
+                        (child) => child.block.id === id
+                    );
                     if (childIndex >= 0) {
                         calculatedY = childIndex * 10; // Space out child blocks
                     }

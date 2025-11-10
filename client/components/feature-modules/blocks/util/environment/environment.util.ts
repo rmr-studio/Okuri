@@ -1,12 +1,12 @@
 import { nowIso } from "@/lib/util/utils";
-import { BlockNode, BlockTree, GridRect, isContentNode } from "../../interface/block.interface";
+import { BlockNode, BlockTree, isContentNode } from "../../interface/block.interface";
 import {
     DetachResult,
     EditorEnvironment,
     EditorEnvironmentMetadata,
     InsertResult,
 } from "../../interface/editor.interface";
-import { allowChildren, getDefaultDimensions, insertChild } from "../block/block.util";
+import { allowChildren, insertChild } from "../block/block.util";
 
 /** Collect descendant ids for a node (used when removing or re-indexing). */
 export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void => {
@@ -29,8 +29,7 @@ export const traverseTree = (
     parentId: string | null,
     treeId: string,
     hierarchy: Map<string, string | null>,
-    treeIndex: Map<string, string>,
-    layouts?: Map<string, GridRect>
+    treeIndex: Map<string, string>
 ): void => {
     const blockId = node.block.id;
 
@@ -41,12 +40,8 @@ export const traverseTree = (
     if (!isContentNode(node)) return;
     if (!allowChildren(node) || !node.children) return;
 
-    if (layouts) {
-        layouts.set(blockId, getDefaultDimensions(node));
-    }
-
     node.children.forEach((child) => {
-        traverseTree(child, blockId, treeId, hierarchy, treeIndex, layouts);
+        traverseTree(child, blockId, treeId, hierarchy, treeIndex);
     });
 };
 
@@ -333,19 +328,15 @@ export function createEmptyEnvironment(organisationId: string): EditorEnvironmen
  */
 export interface EnvironmentInitResult {
     environment: EditorEnvironment;
-    layouts: Map<string, GridRect>;
 }
 
 export const init = (
     organisationId: string,
     initialTrees: BlockTree[] = []
 ): EnvironmentInitResult => {
-    const layouts = new Map<string, GridRect>();
-
     if (!initialTrees || initialTrees.length === 0) {
         return {
             environment: createEmptyEnvironment(organisationId),
-            layouts,
         };
     }
 
@@ -355,8 +346,6 @@ export const init = (
     initialTrees.forEach((instance) => {
         const rootId = instance.root.block.id;
 
-        layouts.set(rootId, getDefaultDimensions(instance.root));
-
         hierarchy.set(rootId, null);
         treeIndex.set(rootId, rootId);
 
@@ -365,7 +354,7 @@ export const init = (
 
         instance.root.children.forEach((child) => {
             // Recursively traverse the tree
-            traverseTree(child, rootId, rootId, hierarchy, treeIndex, layouts);
+            traverseTree(child, rootId, rootId, hierarchy, treeIndex);
         });
     });
 
@@ -382,7 +371,6 @@ export const init = (
                 updatedAt: nowIso(),
             },
         },
-        layouts,
     };
 };
 

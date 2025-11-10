@@ -4,12 +4,7 @@ import { useEffect } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useBlockFocus } from "../../context/block-focus-provider";
 import { useGrid } from "../../context/grid-provider";
-import {
-    getBlockToLeft,
-    getBlockToRight,
-    getNextInTree,
-    getPreviousInTree,
-} from "../../util/navigation/keyboard-navigation.util";
+import { getNextInTree, getPreviousInTree } from "../../util/navigation/keyboard-navigation.util";
 
 /**
  * Handles keyboard navigation for focused blocks.
@@ -28,18 +23,18 @@ export const KeyboardNavigationHandler: React.FC = () => {
         const handleKeyDown = (event: KeyboardEvent) => {
             // Check if user is typing in a form element
             const activeElement = document.activeElement as HTMLElement | null;
-            const isFormElement = activeElement && (
-                activeElement.tagName === "INPUT" ||
-                activeElement.tagName === "TEXTAREA" ||
-                activeElement.isContentEditable
-            );
+            const isFormElement =
+                activeElement &&
+                (activeElement.tagName === "INPUT" ||
+                    activeElement.tagName === "TEXTAREA" ||
+                    activeElement.isContentEditable);
 
             // Skip navigation if typing in a form
             if (isFormElement) return;
 
             // Check if keyboard navigation is locked (e.g., menu is open)
             const isNavigationLocked = Array.from(state.locks.values()).some(
-                lock => lock.suppressKeyboardNavigation
+                (lock) => lock.suppressKeyboardNavigation
             );
             if (isNavigationLocked) return;
 
@@ -82,7 +77,7 @@ export const KeyboardNavigationHandler: React.FC = () => {
             if (nextId) {
                 // Blur the currently focused DOM element to remove visual focus from the clicked panel
                 const activeElement = document.activeElement as HTMLElement | null;
-                if (activeElement && typeof activeElement.blur === 'function') {
+                if (activeElement && typeof activeElement.blur === "function") {
                     activeElement.blur();
                 }
 
@@ -93,7 +88,7 @@ export const KeyboardNavigationHandler: React.FC = () => {
         window.addEventListener("keydown", handleKeyDown, { signal });
 
         return () => controller.abort();
-    }, [state.primaryFocusId, blockEnvironment, gridContext, focusSurface]);
+    }, [state, blockEnvironment, gridContext, focusSurface]);
 
     return null;
 };

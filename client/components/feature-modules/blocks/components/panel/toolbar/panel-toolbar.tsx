@@ -1,3 +1,12 @@
+/**
+ * PanelToolbar - Main toolbar component for panels
+ *
+ * Toolbar Menu Pattern:
+ * When adding new toolbar menus, always use Popover + Command components, NOT DropdownMenu.
+ * DropdownMenu causes DOM focus issues with keyboard navigation. See panel-actions.tsx
+ * for implementation reference.
+ */
+
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

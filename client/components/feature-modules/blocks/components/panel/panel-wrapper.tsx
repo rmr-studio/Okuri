@@ -65,6 +65,39 @@ export const PanelWrapper: FC<Props> = ({
     const [toolbarFocusIndex, setToolbarFocusIndex] = useState<number>(-1); // -1 = no toolbar focus
     const inlineSearchRef = useRef<HTMLInputElement | null>(null);
     const surfaceRef = useRef<HTMLDivElement | null>(null);
+    const actions = quickActions ?? [];
+
+    const menuActions = useMemo(() => {
+        if (onDelete && !actions.some((action) => action.id === "delete")) {
+            return [
+                ...actions,
+                {
+                    id: "__delete",
+                    label: "Delete block",
+                    onSelect: onDelete,
+                },
+            ];
+        }
+        return actions;
+    }, [actions, onDelete]);
+
+    const hasMenuActions = menuActions.length > 0;
+
+    // Calculate toolbar button indices and count
+    const toolbarIndices = useMemo(() => {
+        let buttonIndex = 0;
+        const quickActionsIndex = buttonIndex++;
+        const insertIndex = allowInsert ? buttonIndex++ : -1;
+        const detailsIndex = buttonIndex++;
+        const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
+        return {
+            quickActionsIndex,
+            insertIndex,
+            detailsIndex,
+            actionsMenuIndex,
+            count: buttonIndex,
+        };
+    }, [allowInsert, hasMenuActions]);
 
     const {
         isSelected,
@@ -83,21 +116,6 @@ export const PanelWrapper: FC<Props> = ({
     const overlayLockRef = useRef<(() => void) | null>(null);
 
     const items = slashItems ?? defaultSlashItems;
-    const actions = quickActions ?? [];
-    const menuActions = useMemo(() => {
-        if (onDelete && !actions.some((action) => action.id === "delete")) {
-            return [
-                ...actions,
-                {
-                    id: "__delete",
-                    label: "Delete block",
-                    onSelect: onDelete,
-                },
-            ];
-        }
-        return actions;
-    }, [actions, onDelete]);
-    const hasMenuActions = menuActions.length > 0;
 
     const shouldHighlight =
         isSelected ||
@@ -120,13 +138,9 @@ export const PanelWrapper: FC<Props> = ({
     // Close menus when toolbar focus moves away from them (but keep panel selected)
     useEffect(() => {
         if (!isSelected) return; // Only applies when panel is selected
+        if (toolbarFocusIndex === -1) return; // No keyboard focus, don't close menus
 
-        // Calculate which button each menu corresponds to
-        let buttonIndex = 0;
-        const quickActionsIndex = buttonIndex++;
-        const insertIndex = allowInsert ? buttonIndex++ : -1;
-        const detailsIndex = buttonIndex++;
-        const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
+        const { quickActionsIndex, insertIndex, detailsIndex, actionsMenuIndex } = toolbarIndices;
 
         // Close menus that don't match the current toolbar focus
         if (toolbarFocusIndex !== quickActionsIndex && isQuickOpen) {
@@ -141,15 +155,27 @@ export const PanelWrapper: FC<Props> = ({
         if (toolbarFocusIndex !== actionsMenuIndex && isActionsOpen) {
             setActionsOpen(false);
         }
-    }, [toolbarFocusIndex, isSelected, allowInsert, hasMenuActions, isQuickOpen, isInlineMenuOpen, isDetailsOpen, isActionsOpen]);
+    }, [
+        toolbarFocusIndex,
+        isSelected,
+        toolbarIndices,
+        isQuickOpen,
+        isInlineMenuOpen,
+        isDetailsOpen,
+        isActionsOpen,
+    ]);
 
     useEffect(() => {
-        const shouldLock = isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen || isActionsOpen;
+        const shouldLock =
+            isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen || isActionsOpen;
         // Acquire or release overlay lock based on menu state
         if (!shouldLock && overlayLockRef.current) {
             overlayLockRef.current();
             overlayLockRef.current = null;
         } else if (shouldLock && !overlayLockRef.current) {
+            // Clear hover state before acquiring lock to prevent race condition
+            setFocusHover(false);
+
             const release = acquireLock({
                 id: `panel-overlay-${id}`,
                 reason: "Panel overlay menu open",
@@ -168,7 +194,16 @@ export const PanelWrapper: FC<Props> = ({
                 overlayLockRef.current = null;
             }
         };
-    }, [id, acquireLock, isInlineMenuOpen, isQuickOpen, isSlashOpen]);
+    }, [
+        id,
+        acquireLock,
+        isInlineMenuOpen,
+        isQuickOpen,
+        isSlashOpen,
+        isDetailsOpen,
+        isActionsOpen,
+        setFocusHover,
+    ]);
 
     useEffect(() => {
         setDraftTitle(title ?? "");
@@ -179,14 +214,6 @@ export const PanelWrapper: FC<Props> = ({
             requestAnimationFrame(() => inlineSearchRef.current?.focus());
         }
     }, [isInlineMenuOpen]);
-
-    // Calculate total toolbar buttons
-    const toolbarButtonCount = useMemo(() => {
-        let count = 2; // Quick Actions + Panel Details (always present)
-        if (allowInsert) count++; // Insert Block button
-        if (hasMenuActions) count++; // Action Menu button
-        return count;
-    }, [allowInsert, hasMenuActions]);
 
     useEffect(() => {
         if (!isSelected) return;
@@ -204,6 +231,12 @@ export const PanelWrapper: FC<Props> = ({
                 if (isInput) return;
                 event.preventDefault();
 
+                // Blur any focused toolbar button to prevent it from capturing Enter key
+                const activeElement = document.activeElement as HTMLElement | null;
+                if (activeElement && typeof activeElement.blur === "function") {
+                    activeElement.blur();
+                }
+
                 if (toolbarFocusIndex === -1) {
                     // First time pressing arrow - focus first toolbar button
                     setToolbarFocusIndex(0);
@@ -211,11 +244,11 @@ export const PanelWrapper: FC<Props> = ({
                     // Navigate between toolbar buttons
                     if (event.key === "ArrowLeft") {
                         setToolbarFocusIndex((prev) =>
-                            prev <= 0 ? toolbarButtonCount - 1 : prev - 1
+                            prev <= 0 ? toolbarIndices.count - 1 : prev - 1
                         );
                     } else {
                         setToolbarFocusIndex((prev) =>
-                            prev >= toolbarButtonCount - 1 ? 0 : prev + 1
+                            prev >= toolbarIndices.count - 1 ? 0 : prev + 1
                         );
                     }
                 }
@@ -227,19 +260,14 @@ export const PanelWrapper: FC<Props> = ({
                 if (isInput) return;
                 event.preventDefault();
 
-                // Determine which menu should be opened
-                let buttonIndex = 0;
-                let targetMenu: "quick" | "insert" | "details" | "actions" | null = null;
+                const toolbarOrder: Array<"quick" | "insert" | "details" | "actions"> = [
+                    "quick",
+                    ...(allowInsert ? (["insert"] as const) : []),
+                    "details",
+                    ...(hasMenuActions ? (["actions"] as const) : []),
+                ];
 
-                if (toolbarFocusIndex === buttonIndex++) {
-                    targetMenu = "quick";
-                } else if (allowInsert && toolbarFocusIndex === buttonIndex++) {
-                    targetMenu = "insert";
-                } else if (toolbarFocusIndex === buttonIndex++) {
-                    targetMenu = "details";
-                } else if (hasMenuActions && toolbarFocusIndex === buttonIndex++) {
-                    targetMenu = "actions";
-                }
+                const targetMenu = toolbarOrder[toolbarFocusIndex] ?? null;
 
                 // Close all menus except the target, then open the target
                 setQuickOpen(targetMenu === "quick");
@@ -266,7 +294,7 @@ export const PanelWrapper: FC<Props> = ({
 
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
                 event.preventDefault();
-                // TODO. Set up inline edit mode. Or separate data drawer
+                // TODO. Set up inline edit mode. Or separate data drawerk
             }
 
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -284,7 +312,15 @@ export const PanelWrapper: FC<Props> = ({
 
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [allowInsert, actions.length, focusSelf, isSelected, toolbarFocusIndex, toolbarButtonCount, hasMenuActions]);
+    }, [
+        allowInsert,
+        actions.length,
+        focusSelf,
+        isSelected,
+        toolbarFocusIndex,
+        toolbarIndices,
+        hasMenuActions,
+    ]);
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
@@ -336,16 +372,18 @@ export const PanelWrapper: FC<Props> = ({
     );
 
     const handleQuickActionsOpen = useCallback(() => {
+        setToolbarFocusIndex(toolbarIndices.quickActionsIndex);
         setQuickOpen(true);
         focusSelf();
-    }, [focusSelf, setQuickOpen]);
+    }, [focusSelf, setQuickOpen, toolbarIndices.quickActionsIndex]);
 
     const handleInlineInsertOpen = useCallback(() => {
         if (!allowInsert) return;
+        setToolbarFocusIndex(toolbarIndices.insertIndex);
         setInsertContext("nested");
         setInlineMenuOpen(true);
         focusSelf();
-    }, [allowInsert, focusSelf, setInlineMenuOpen]);
+    }, [allowInsert, focusSelf, setInlineMenuOpen, toolbarIndices.insertIndex]);
 
     const handleQuickInsertOpenQuickActions = useCallback(() => {
         if (!allowInsert) return;
@@ -353,6 +391,36 @@ export const PanelWrapper: FC<Props> = ({
         setQuickOpen(true);
         focusSelf();
     }, [allowInsert, focusSelf, setInlineMenuOpen, setQuickOpen]);
+
+    const handleDetailsOpenChange = useCallback(
+        (open: boolean) => {
+            if (open) {
+                setToolbarFocusIndex(toolbarIndices.detailsIndex);
+            }
+            setDetailsOpen(open);
+        },
+        [toolbarIndices.detailsIndex]
+    );
+
+    const handleActionsOpenChange = useCallback(
+        (open: boolean) => {
+            if (open) {
+                setToolbarFocusIndex(toolbarIndices.actionsMenuIndex);
+            }
+            setActionsOpen(open);
+        },
+        [toolbarIndices.actionsMenuIndex]
+    );
+
+    const handleInlineMenuOpenChange = useCallback(
+        (open: boolean) => {
+            if (open) {
+                setToolbarFocusIndex(toolbarIndices.insertIndex);
+            }
+            setInlineMenuOpen(open);
+        },
+        [toolbarIndices.insertIndex]
+    );
 
     return (
         <>
@@ -428,7 +496,7 @@ export const PanelWrapper: FC<Props> = ({
                                 }
                                 inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
                                 onInlineMenuOpenChange={
-                                    allowInsert ? (open) => setInlineMenuOpen(open) : undefined
+                                    allowInsert ? handleInlineMenuOpenChange : undefined
                                 }
                                 inlineSearchRef={allowInsert ? inlineSearchRef : undefined}
                                 items={allowInsert ? items : undefined}
@@ -447,9 +515,9 @@ export const PanelWrapper: FC<Props> = ({
                                 onMenuAction={handleMenuAction}
                                 toolbarFocusIndex={toolbarFocusIndex}
                                 detailsOpen={isDetailsOpen}
-                                onDetailsOpenChange={(open) => setDetailsOpen(open)}
+                                onDetailsOpenChange={handleDetailsOpenChange}
                                 actionsOpen={isActionsOpen}
-                                onActionsOpenChange={(open) => setActionsOpen(open)}
+                                onActionsOpenChange={handleActionsOpenChange}
                             />
                         )}
                     </AnimatePresence>

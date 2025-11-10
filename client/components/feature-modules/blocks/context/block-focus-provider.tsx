@@ -121,6 +121,10 @@ export function BlockFocusProvider({ children }: PropsWithChildren) {
         }
     }, []);
 
+    useEffect(() => {
+        console.table({ primaryFocusId, hoveredSurfaceId, selection, surfaceVersion, lockVersion });
+    }, [primaryFocusId, selection, hoveredSurfaceId, selection, surfaceVersion, lockVersion]);
+
     const updateSurface = useCallback((id: string, updates: Partial<FocusSurfaceRegistration>) => {
         const current = surfacesRef.current.get(id);
         if (!current) return;
@@ -133,7 +137,7 @@ export function BlockFocusProvider({ children }: PropsWithChildren) {
             const currentVal = current[key as keyof FocusSurfaceRegistration];
             const newVal = updates[key as keyof Partial<FocusSurfaceRegistration>];
             // Skip function comparisons - they change every render but are functionally equivalent
-            if (typeof newVal !== 'function' && currentVal !== newVal) {
+            if (typeof newVal !== "function" && currentVal !== newVal) {
                 hasChanges = true;
                 break;
             }
