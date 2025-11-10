@@ -98,7 +98,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className={cn(
-                "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[100]"
+                "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[50]"
             )}
         >
             <Tooltip>
