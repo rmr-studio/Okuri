@@ -35,22 +35,15 @@ export const getFirstBlock = (context: NavigationContext): string | null => {
 };
 
 /**
- * Get the last focusable block in the entire tree (last root's last descendant)
+ * Get the last focusable block in the entire tree (last root)
  */
 export const getLastBlock = (context: NavigationContext): string | null => {
     const roots = getRootBlockIds(context);
     if (roots.length === 0) return null;
 
-    let current = roots[roots.length - 1];
-
-    // Walk down to the last descendant
-    while (true) {
-        const children = context.getChildren(current);
-        if (children.length === 0) break;
-        current = children[children.length - 1];
-    }
-
-    return current;
+    // Return the last root block itself
+    // The logic to enter its children is handled by getPreviousInTree when navigating backward
+    return roots[roots.length - 1];
 };
 
 /**

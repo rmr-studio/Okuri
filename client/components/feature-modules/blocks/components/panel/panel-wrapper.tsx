@@ -58,8 +58,10 @@ export const PanelWrapper: FC<Props> = ({
     const [isSlashOpen, setSlashOpen] = useState(false);
     const [isQuickOpen, setQuickOpen] = useState(false);
     const [isInlineMenuOpen, setInlineMenuOpen] = useState(false);
+    const [isDetailsOpen, setDetailsOpen] = useState(false);
     const [draftTitle, setDraftTitle] = useState(title ?? "");
     const [insertContext, setInsertContext] = useState<"nested" | "sibling">("nested");
+    const [toolbarFocusIndex, setToolbarFocusIndex] = useState<number>(-1); // -1 = no toolbar focus
     const inlineSearchRef = useRef<HTMLInputElement | null>(null);
     const surfaceRef = useRef<HTMLDivElement | null>(null);
 
@@ -102,8 +104,15 @@ export const PanelWrapper: FC<Props> = ({
         (allowInsert && (isInlineMenuOpen || isSlashOpen)) ||
         isHovered;
 
+    // Reset toolbar focus when panel loses selection or menus open
     useEffect(() => {
-        const shouldLock = isSlashOpen || isQuickOpen || isInlineMenuOpen;
+        if (!isSelected || isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen) {
+            setToolbarFocusIndex(-1);
+        }
+    }, [isSelected, isSlashOpen, isQuickOpen, isInlineMenuOpen, isDetailsOpen]);
+
+    useEffect(() => {
+        const shouldLock = isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen;
         // Acquire or release overlay lock based on menu state
         if (!shouldLock && overlayLockRef.current) {
             overlayLockRef.current();
@@ -114,6 +123,7 @@ export const PanelWrapper: FC<Props> = ({
                 reason: "Panel overlay menu open",
                 suppressHover: true,
                 suppressSelection: true,
+                suppressKeyboardNavigation: true, // Prevent block navigation when menus are open
                 scope: "surface",
                 surfaceId: id,
             });
@@ -138,6 +148,14 @@ export const PanelWrapper: FC<Props> = ({
         }
     }, [isInlineMenuOpen]);
 
+    // Calculate total toolbar buttons
+    const toolbarButtonCount = useMemo(() => {
+        let count = 2; // Quick Actions + Panel Details (always present)
+        if (allowInsert) count++; // Insert Block button
+        if (hasMenuActions) count++; // Action Menu button
+        return count;
+    }, [allowInsert, hasMenuActions]);
+
     useEffect(() => {
         if (!isSelected) return;
 
@@ -148,6 +166,54 @@ export const PanelWrapper: FC<Props> = ({
                 (active.tagName === "INPUT" ||
                     active.tagName === "TEXTAREA" ||
                     active.getAttribute("contenteditable") === "true");
+
+            // Toolbar navigation with Left/Right arrows
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                if (isInput) return;
+                event.preventDefault();
+
+                if (toolbarFocusIndex === -1) {
+                    // First time pressing arrow - focus first toolbar button
+                    setToolbarFocusIndex(0);
+                } else {
+                    // Navigate between toolbar buttons
+                    if (event.key === "ArrowLeft") {
+                        setToolbarFocusIndex((prev) =>
+                            prev <= 0 ? toolbarButtonCount - 1 : prev - 1
+                        );
+                    } else {
+                        setToolbarFocusIndex((prev) =>
+                            prev >= toolbarButtonCount - 1 ? 0 : prev + 1
+                        );
+                    }
+                }
+                return;
+            }
+
+            // Activate focused toolbar button with Enter
+            if (event.key === "Enter" && toolbarFocusIndex >= 0) {
+                if (isInput) return;
+                event.preventDefault();
+
+                // Map toolbar index to button action
+                let buttonIndex = 0;
+
+                if (toolbarFocusIndex === buttonIndex++) {
+                    // Quick Actions
+                    setQuickOpen(true);
+                } else if (allowInsert && toolbarFocusIndex === buttonIndex++) {
+                    // Insert Block
+                    setInlineMenuOpen(true);
+                } else if (toolbarFocusIndex === buttonIndex++) {
+                    // Panel Details
+                    setDetailsOpen(true);
+                } else if (hasMenuActions && toolbarFocusIndex === buttonIndex++) {
+                    // Action Menu - this needs to be implemented
+                    // For now, we'll leave it as is (user can click or use other methods)
+                }
+
+                return;
+            }
 
             if (
                 allowInsert &&
@@ -183,7 +249,7 @@ export const PanelWrapper: FC<Props> = ({
 
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [allowInsert, actions.length, focusSelf, isSelected]);
+    }, [allowInsert, actions.length, focusSelf, isSelected, toolbarFocusIndex, toolbarButtonCount, hasMenuActions]);
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
@@ -344,6 +410,9 @@ export const PanelWrapper: FC<Props> = ({
                                 hasMenuActions={hasMenuActions}
                                 menuActions={menuActions}
                                 onMenuAction={handleMenuAction}
+                                toolbarFocusIndex={toolbarFocusIndex}
+                                detailsOpen={isDetailsOpen}
+                                onDetailsOpenChange={(open) => setDetailsOpen(open)}
                             />
                         )}
                     </AnimatePresence>

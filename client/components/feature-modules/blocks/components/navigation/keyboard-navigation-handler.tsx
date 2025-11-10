@@ -37,6 +37,12 @@ export const KeyboardNavigationHandler: React.FC = () => {
             // Skip navigation if typing in a form
             if (isFormElement) return;
 
+            // Check if keyboard navigation is locked (e.g., menu is open)
+            const isNavigationLocked = Array.from(state.locks.values()).some(
+                lock => lock.suppressKeyboardNavigation
+            );
+            if (isNavigationLocked) return;
+
             // Get current focus
             const currentFocusId = state.primaryFocusId;
             if (!currentFocusId) return;
@@ -69,13 +75,8 @@ export const KeyboardNavigationHandler: React.FC = () => {
             } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 nextId = getPreviousInTree(currentFocusId, navContext);
-            } else if (event.key === "ArrowLeft") {
-                event.preventDefault();
-                nextId = getBlockToLeft(currentFocusId, navContext);
-            } else if (event.key === "ArrowRight") {
-                event.preventDefault();
-                nextId = getBlockToRight(currentFocusId, navContext);
             }
+            // Left/Right arrows are reserved for toolbar navigation within focused panels
 
             // Focus the next block if found
             if (nextId) {

@@ -41,6 +41,7 @@ export interface FocusLock {
     reason?: string;
     suppressHover?: boolean;
     suppressSelection?: boolean;
+    suppressKeyboardNavigation?: boolean;
     scope?: "global" | "surface";
     surfaceId?: string;
 }
