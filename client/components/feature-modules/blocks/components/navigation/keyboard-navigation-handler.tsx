@@ -79,6 +79,12 @@ export const KeyboardNavigationHandler: React.FC = () => {
 
             // Focus the next block if found
             if (nextId) {
+                // Blur the currently focused DOM element to remove visual focus from the clicked panel
+                const activeElement = document.activeElement as HTMLElement | null;
+                if (activeElement && typeof activeElement.blur === 'function') {
+                    activeElement.blur();
+                }
+
                 focusSurface(nextId, { emitStackEntry: true });
             }
         };

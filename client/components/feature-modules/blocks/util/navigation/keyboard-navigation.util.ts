@@ -23,16 +23,15 @@ export const getRootBlockIds = (context: NavigationContext): string[] => {
 };
 
 /**
- * Get the first focusable block in the entire tree (first root or first child)
+ * Get the first focusable block in the entire tree (first root)
  */
 export const getFirstBlock = (context: NavigationContext): string | null => {
     const roots = getRootBlockIds(context);
     if (roots.length === 0) return null;
 
-    // Return the first root, or its first descendant if we want to enter containers
-    const firstRoot = roots[0];
-    const children = context.getChildren(firstRoot);
-    return children.length > 0 ? children[0] : firstRoot;
+    // Return the first root block itself
+    // The logic to enter its children is handled by getNextInTree when navigating forward
+    return roots[0];
 };
 
 /**
