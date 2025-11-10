@@ -4,6 +4,7 @@ import { useGrid } from "@/components/feature-modules/blocks/context/grid-provid
 import { GridItemHTMLElement, GridStack, GridStackNode } from "gridstack";
 import { FC, useCallback, useLayoutEffect, useRef } from "react";
 import { useBlockEnvironment } from "../context/block-environment-provider";
+import { useBlockFocus } from "../context/block-focus-provider";
 import { getNewParentId } from "../util/grid/grid.util";
 
 type GridStackLike = Pick<GridStack, "on" | "off">;
@@ -22,36 +23,49 @@ export const BlockEnvironmentGridSync: FC = () => {
 export const useEnvironmentGridSync = (_parentId: string | null = null) => {
     const { gridStack } = useGrid();
     const { getParentId, moveBlock, isInitialized } = useBlockEnvironment();
+    const { acquireLock, releaseLock } = useBlockFocus();
 
     const listenersRef = useRef<Map<GridStackLike, () => void>>(new Map());
     const initializedRef = useRef(isInitialized);
+    const gridInteractionLockRef = useRef<(() => void) | null>(null);
 
     useLayoutEffect(() => {
         initializedRef.current = isInitialized;
     }, [isInitialized]);
+
+    const acquireInteractionLock = useCallback(() => {
+        if (gridInteractionLockRef.current) return;
+
+        const release = acquireLock({
+            id: "grid-interaction",
+            reason: "Grid interaction in progress",
+            suppressHover: true,
+            suppressSelection: true,
+        });
+        gridInteractionLockRef.current = release;
+    }, [acquireLock]);
+
+    const releaseInteractionLock = useCallback(() => {
+        if (!gridInteractionLockRef.current) return;
+        // releaseLock("grid-interaction");
+        gridInteractionLockRef.current();
+        gridInteractionLockRef.current = null;
+    }, [releaseLock]);
 
     const attachListeners = useCallback(
         (grid: GridStackLike | null | undefined, root: GridStack) => {
             if (!grid || listenersRef.current.has(grid)) return;
 
             /**
-             * This event listener will observe all layout changes (move/resize) within the grid.
-             * This will only fire when a change has been committed (via the `change` event) so it won't spam updates during drag/resize.
-             * @param event -> The layout change event
-             * @param el -> The grid item element(s) that were changed (ie. Repositioned, Resized, etc)
-             */
-            const handleLayoutEvent = (_: Event, el: GridItemHTMLElement) => {
-                console.log(el);
-                // const nodes = collectNodesFromArgs(args);
-                // processLayouts(nodes);
-            };
-
-            /**
              * This event listener will observe when a user completes a layout action (drag/resize).
              * This is to detect when a purposeful action has been made, so we can flush layout changes to the backend
              */
-            const handleLayoutAction = (_: Event, element: GridItemHTMLElement) => {
-                console.log(element);
+            const handleResourceLock = (_: Event, _2: GridItemHTMLElement) => {
+                acquireInteractionLock();
+            };
+
+            const handleResourceUnlock = (_: Event, _2: GridItemHTMLElement) => {
+                releaseInteractionLock();
             };
 
             const handleBlockAdded = (_event: Event, items: GridStackNode[] = []) => {
@@ -72,9 +86,17 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             };
 
             grid.on("added", handleBlockAdded);
+            grid.on("dragstart", handleResourceLock);
+            grid.on("resizestart", handleResourceLock);
+            grid.on("dragstop", handleResourceUnlock);
+            grid.on("resizestop", handleResourceUnlock);
 
             listenersRef.current.set(grid, () => {
                 grid.off("added");
+                grid.off("dragstart");
+                grid.off("resizestart");
+                grid.off("dragstop");
+                grid.off("resizestop");
             });
         },
         [getParentId, moveBlock]

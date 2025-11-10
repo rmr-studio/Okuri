@@ -1,16 +1,11 @@
 "use client";
-
-import {
-    subscribe as focusSubscribe,
-    pushSelection,
-    removeSelection,
-    updateSelection,
-} from "@/components/feature-modules/blocks/util/block/block.focus-manager";
 import { blockElements } from "@/components/feature-modules/blocks/util/block/block.registry";
 import { ChildNodeProps, ClassNameProps } from "@/lib/interfaces/interface";
 import { cn } from "@/lib/util/utils";
 import { TypeIcon } from "lucide-react";
 import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useBlockFocus } from "../../context/block-focus-provider";
+import { useFocusSurface } from "../../hooks/use-focus-surface";
 import { QuickActionItem, SlashMenuItem } from "../../interface/panel.interface";
 import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
@@ -58,17 +53,29 @@ export const PanelWrapper: FC<Props> = ({
 }) => {
     // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
 
-    const [isSelected, setIsSelected] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const [isSlashOpen, setSlashOpen] = useState(false);
     const [isQuickOpen, setQuickOpen] = useState(false);
     const [isInlineMenuOpen, setInlineMenuOpen] = useState(false);
     const [draftTitle, setDraftTitle] = useState(title ?? "");
     const [insertContext, setInsertContext] = useState<"nested" | "sibling">("nested");
-    const [isHovered, setHovered] = useState(false);
     const inlineSearchRef = useRef<HTMLInputElement | null>(null);
+    const surfaceRef = useRef<HTMLDivElement | null>(null);
 
-    const showInsertHandle =
-        allowInsert && (isSelected || isInlineMenuOpen || isQuickOpen || isSlashOpen || isHovered);
+    const {
+        isSelected,
+        focusSelf,
+        setHovered: setFocusHover,
+        disableHover,
+        disableSelect,
+    } = useFocusSurface({
+        id,
+        type: "panel",
+        onDelete,
+        elementRef: surfaceRef,
+    });
+    const { acquireLock } = useBlockFocus();
+    const overlayLockRef = useRef<(() => void) | null>(null);
 
     const items = slashItems ?? defaultSlashItems;
     const actions = quickActions ?? [];
@@ -95,26 +102,30 @@ export const PanelWrapper: FC<Props> = ({
     const toolbarVisible = shouldHighlight;
 
     useEffect(() => {
-        const unsubscribe = focusSubscribe((selection) => {
-            setIsSelected(selection?.type === "panel" && selection.id === id);
-        });
+        const shouldLock = isSlashOpen || isQuickOpen || isInlineMenuOpen;
+        // Acquire or release overlay lock based on menu state
+        if (!shouldLock && overlayLockRef.current) {
+            overlayLockRef.current();
+            overlayLockRef.current = null;
+        } else if (shouldLock && !overlayLockRef.current) {
+            const release = acquireLock({
+                id: `panel-overlay-${id}`,
+                reason: "Panel overlay menu open",
+                suppressHover: true,
+                suppressSelection: true,
+                scope: "surface",
+                surfaceId: id,
+            });
+            overlayLockRef.current = release;
+        }
+
         return () => {
-            if (typeof unsubscribe === "function") {
-                unsubscribe();
+            if (overlayLockRef.current) {
+                overlayLockRef.current();
+                overlayLockRef.current = null;
             }
         };
-    }, [id]);
-
-    useEffect(() => {
-        if (!isSelected) return;
-        updateSelection({ type: "panel", id: id, onDelete });
-    }, [isSelected, onDelete, id]);
-
-    useEffect(() => {
-        return () => {
-            removeSelection("panel", id);
-        };
-    }, [id]);
+    }, [id, acquireLock, isInlineMenuOpen, isQuickOpen, isSlashOpen]);
 
     useEffect(() => {
         setDraftTitle(title ?? "");
@@ -147,7 +158,7 @@ export const PanelWrapper: FC<Props> = ({
                 if (isInput) return;
                 event.preventDefault();
                 setInsertContext("nested");
-                pushSelection({ type: "panel", id: id, onDelete });
+                focusSelf();
                 setInlineMenuOpen(true);
             }
 
@@ -160,18 +171,18 @@ export const PanelWrapper: FC<Props> = ({
                 event.preventDefault();
                 if (allowInsert && actions.length === 0) {
                     setInsertContext("nested");
-                    pushSelection({ type: "panel", id: id, onDelete });
+                    focusSelf();
                     setInlineMenuOpen(true);
                 } else {
                     setQuickOpen(true);
-                    pushSelection({ type: "panel", id: id, onDelete });
+                    focusSelf();
                 }
             }
         };
 
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [allowInsert, actions.length, isSelected, id, onDelete]);
+    }, [allowInsert, actions.length, focusSelf, isSelected]);
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
@@ -181,8 +192,8 @@ export const PanelWrapper: FC<Props> = ({
         if (!allowInsert) return;
         setInlineMenuOpen(false);
         setSlashOpen(true);
-        pushSelection({ type: "panel", id: id, onDelete });
-    }, [allowInsert, setInlineMenuOpen, setSlashOpen, id, onDelete]);
+        focusSelf();
+    }, [allowInsert, focusSelf, setInlineMenuOpen, setSlashOpen]);
 
     const handleSelect = useCallback(
         (item: SlashMenuItem) => {
@@ -215,33 +226,37 @@ export const PanelWrapper: FC<Props> = ({
         [id, setQuickOpen]
     );
 
-    const handleMenuAction = useCallback((item: QuickActionItem) => {
-        item.onSelect(id);
-    }, [id]);
+    const handleMenuAction = useCallback(
+        (item: QuickActionItem) => {
+            item.onSelect(id);
+        },
+        [id]
+    );
 
     const handleQuickActionsOpen = useCallback(() => {
         setQuickOpen(true);
-        pushSelection({ type: "panel", id: id, onDelete });
-    }, [setQuickOpen, id, onDelete]);
+        focusSelf();
+    }, [focusSelf, setQuickOpen]);
 
     const handleInlineInsertOpen = useCallback(() => {
         if (!allowInsert) return;
         setInsertContext("nested");
         setInlineMenuOpen(true);
-        pushSelection({ type: "panel", id: id, onDelete });
-    }, [allowInsert, setInsertContext, setInlineMenuOpen, id, onDelete]);
+        focusSelf();
+    }, [allowInsert, focusSelf, setInlineMenuOpen]);
 
     const handleQuickInsertOpenQuickActions = useCallback(() => {
         if (!allowInsert) return;
         setInlineMenuOpen(false);
         setQuickOpen(true);
-        pushSelection({ type: "panel", id: id, onDelete });
-    }, [allowInsert, setInlineMenuOpen, setQuickOpen, id, onDelete]);
+        focusSelf();
+    }, [allowInsert, focusSelf, setInlineMenuOpen, setQuickOpen]);
 
     return (
         <>
             <PanelActionContextMenu id={id} actions={menuActions} onDelete={onDelete}>
                 <div
+                    ref={surfaceRef}
                     className={cn(
                         "group flex relative flex-col rounded-sm border text-card-foreground transition-colors w-full p-4",
                         allowInsert
@@ -258,24 +273,32 @@ export const PanelWrapper: FC<Props> = ({
                     data-surface-id={id}
                     tabIndex={-1}
                     onPointerOver={(event) => {
+                        if (disableHover) return;
                         const targetBlock = (event.target as HTMLElement | null)?.closest(
                             "[data-block-id]"
                         );
                         if (targetBlock) {
-                            setHovered(false);
+                            setIsHovered(false);
+                            setFocusHover(false);
                             return;
                         }
                         const targetSurface = (event.target as HTMLElement | null)?.closest(
                             "[data-surface-id]"
                         );
                         if (!targetSurface || targetSurface === event.currentTarget) {
-                            setHovered(true);
+                            setIsHovered(true);
+                            setFocusHover(true);
                         } else {
-                            setHovered(false);
+                            setIsHovered(false);
+                            setFocusHover(false);
                         }
                     }}
-                    onPointerLeave={() => setHovered(false)}
+                    onPointerLeave={() => {
+                        setIsHovered(false);
+                        setFocusHover(false);
+                    }}
                     onPointerDown={(event) => {
+                        if (disableSelect) return;
                         // If the pointer interaction is happening inside another block surface,
                         // let the child handle its own activation.
                         const targetBlock = (event.target as HTMLElement | null)?.closest(
@@ -286,37 +309,39 @@ export const PanelWrapper: FC<Props> = ({
                             "[data-surface-id]"
                         ) as HTMLElement | null;
                         if (targetSurface && targetSurface !== event.currentTarget) return;
-                        pushSelection({ type: "panel", id: id, onDelete });
+                        focusSelf();
                     }}
                     onFocusCapture={() => {
-                        pushSelection({ type: "panel", id: id, onDelete });
+                        focusSelf();
                     }}
                 >
-                    <PanelToolbar
-                        visible={toolbarVisible}
-                        onQuickActionsClick={handleQuickActionsOpen}
-                        allowInsert={allowInsert}
-                        onInlineInsertClick={allowInsert ? handleInlineInsertOpen : undefined}
-                        inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
-                        onInlineMenuOpenChange={
-                            allowInsert ? (open) => setInlineMenuOpen(open) : undefined
-                        }
-                        inlineSearchRef={allowInsert ? inlineSearchRef : undefined}
-                        items={allowInsert ? items : undefined}
-                        onSelectItem={allowInsert ? handleSelect : undefined}
-                        onShowAllOptions={allowInsert ? handleOpenInsertModal : undefined}
-                        onOpenQuickActionsFromInline={
-                            allowInsert ? handleQuickInsertOpenQuickActions : undefined
-                        }
-                        draftTitle={draftTitle}
-                        onDraftTitleChange={(value) => setDraftTitle(value)}
-                        onTitleBlur={handleTitleBlur}
-                        titlePlaceholder={titlePlaceholder}
-                        description={description}
-                        hasMenuActions={hasMenuActions}
-                        menuActions={menuActions}
-                        onMenuAction={handleMenuAction}
-                    />
+                    {(isSelected || isHovered) && (
+                        <PanelToolbar
+                            visible={toolbarVisible}
+                            onQuickActionsClick={handleQuickActionsOpen}
+                            allowInsert={allowInsert}
+                            onInlineInsertClick={allowInsert ? handleInlineInsertOpen : undefined}
+                            inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
+                            onInlineMenuOpenChange={
+                                allowInsert ? (open) => setInlineMenuOpen(open) : undefined
+                            }
+                            inlineSearchRef={allowInsert ? inlineSearchRef : undefined}
+                            items={allowInsert ? items : undefined}
+                            onSelectItem={allowInsert ? handleSelect : undefined}
+                            onShowAllOptions={allowInsert ? handleOpenInsertModal : undefined}
+                            onOpenQuickActionsFromInline={
+                                allowInsert ? handleQuickInsertOpenQuickActions : undefined
+                            }
+                            draftTitle={draftTitle}
+                            onDraftTitleChange={(value) => setDraftTitle(value)}
+                            onTitleBlur={handleTitleBlur}
+                            titlePlaceholder={titlePlaceholder}
+                            description={description}
+                            hasMenuActions={hasMenuActions}
+                            menuActions={menuActions}
+                            onMenuAction={handleMenuAction}
+                        />
+                    )}
                     {children}
                     {allowInsert && (
                         <InsertBlockModal
