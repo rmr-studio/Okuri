@@ -42,7 +42,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         [organisationId, initialTrees]
     );
 
-    const { environment: initialEnvState, layouts: initialLayouts } = initialEnvironment;
+    const { environment: initialEnvState } = initialEnvironment;
 
     const [environment, setEnvironment] = useState<EditorEnvironment>(initialEnvState);
     const [isInitialized, setIsInitialized] = useState(false);

@@ -96,11 +96,33 @@ export const WidgetEnvironmentSync: React.FC = () => {
             const { x, y, width, height } = getDefaultDimensions(blockNode);
             const parentId = getParentId(id);
 
+            // Calculate proper Y coordinate based on sibling order to prevent reverse rendering
+            let calculatedY = y;
+            if (!parentId) {
+                // For root blocks, calculate Y based on position in trees array
+                const trees = getTrees();
+                const treeIndex = trees.findIndex((t) => getTreeId(t) === treeId);
+                if (treeIndex >= 0) {
+                    calculatedY = treeIndex * 10; // Space out root blocks
+                }
+            } else {
+                // For child blocks, calculate Y based on position in parent's children array
+                const parentNode = findNodeById(tree.root, parentId);
+                if (parentNode && isContentNode(parentNode) && parentNode.children) {
+                    const childIndex = parentNode.children.findIndex(
+                        (child) => child.block.id === id
+                    );
+                    if (childIndex >= 0) {
+                        calculatedY = childIndex * 10; // Space out child blocks
+                    }
+                }
+            }
+
             let meta: WidgetRenderStructure;
             const widgetConfig: GridStackWidget = {
                 id: id,
                 x: x,
-                y: y,
+                y: calculatedY, // Use calculated Y to maintain proper order
                 w: width,
                 h: height,
             };

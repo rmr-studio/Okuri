@@ -18,6 +18,7 @@ import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
+import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-handler";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GridStackOptions } from "gridstack";
@@ -113,12 +114,11 @@ const WorkspaceToolbar: FC = () => {
 };
 
 const BlockEnvironmentWorkspace: React.FC = () => {
-    const { environment } = useBlockEnvironment();
-
     return (
         <>
             <BlockFocusProvider>
                 <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
+                    <KeyboardNavigationHandler />
                     <WorkspaceToolbar />
                     <BlockEnvironmentGridSync />
                     <WidgetEnvironmentSync />

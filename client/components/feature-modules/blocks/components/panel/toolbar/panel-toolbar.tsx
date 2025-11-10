@@ -1,3 +1,12 @@
+/**
+ * PanelToolbar - Main toolbar component for panels
+ *
+ * Toolbar Menu Pattern:
+ * When adding new toolbar menus, always use Popover + Command components, NOT DropdownMenu.
+ * DropdownMenu causes DOM focus issues with keyboard navigation. See panel-actions.tsx
+ * for implementation reference.
+ */
+
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,6 +41,11 @@ interface PanelToolbarProps {
     hasMenuActions: boolean;
     menuActions: QuickActionItem[];
     onMenuAction: (action: QuickActionItem) => void;
+    toolbarFocusIndex?: number;
+    detailsOpen?: boolean;
+    onDetailsOpenChange?: (open: boolean) => void;
+    actionsOpen?: boolean;
+    onActionsOpenChange?: (open: boolean) => void;
 }
 
 const toolbarButtonClass =
@@ -57,14 +71,34 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     hasMenuActions,
     menuActions,
     onMenuAction,
+    toolbarFocusIndex = -1,
+    detailsOpen,
+    onDetailsOpenChange,
+    actionsOpen,
+    onActionsOpenChange,
 }) => {
+    // Helper to get button class with focus highlight
+    const getButtonClass = (index: number) => {
+        const isFocused = toolbarFocusIndex === index;
+        return cn(
+            toolbarButtonClass,
+            isFocused && "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
+        );
+    };
+
+    // Calculate button indices
+    let buttonIndex = 0;
+    const quickActionsIndex = buttonIndex++;
+    const insertIndex = allowInsert ? buttonIndex++ : -1;
+    const detailsIndex = buttonIndex++;
+    const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className={cn(
-                "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[100]"
+                "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[50]"
             )}
         >
             <Tooltip>
@@ -93,7 +127,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                         variant="ghost"
                         size="icon"
                         aria-label="Quick actions"
-                        className={toolbarButtonClass}
+                        className={getButtonClass(quickActionsIndex)}
                         onClick={onQuickActionsClick}
                     >
                         <CommandIcon className="size-3.5" />
@@ -119,7 +153,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                                     variant="ghost"
                                     size="icon"
                                     aria-label="Insert block"
-                                    className={toolbarButtonClass}
+                                    className={getButtonClass(insertIndex)}
                                     onClick={onInlineInsertClick}
                                 >
                                     <PlusIcon className="size-3.5" />
@@ -139,7 +173,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     </PopoverContent>
                 </Popover>
             ) : null}
-            <Popover>
+            <Popover open={detailsOpen} onOpenChange={onDetailsOpenChange}>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <PopoverTrigger asChild>
@@ -147,7 +181,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                                 variant="ghost"
                                 size="icon"
                                 aria-label="Panel details"
-                                className={toolbarButtonClass}
+                                className={getButtonClass(detailsIndex)}
                             >
                                 <InfoIcon className="size-3.5" />
                             </Button>
@@ -169,8 +203,10 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
             {hasMenuActions ? (
                 <PanelActions
                     menuActions={menuActions}
-                    toolbarButtonClass={toolbarButtonClass}
+                    toolbarButtonClass={getButtonClass(actionsMenuIndex)}
                     onMenuAction={onMenuAction}
+                    actionsOpen={actionsOpen}
+                    onActionsOpenChange={onActionsOpenChange}
                 />
             ) : null}
         </motion.div>

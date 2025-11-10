@@ -41,6 +41,7 @@ export interface FocusLock {
     reason?: string;
     suppressHover?: boolean;
     suppressSelection?: boolean;
+    suppressKeyboardNavigation?: boolean;
     scope?: "global" | "surface";
     surfaceId?: string;
 }
@@ -132,7 +133,7 @@ export function BlockFocusProvider({ children }: PropsWithChildren) {
             const currentVal = current[key as keyof FocusSurfaceRegistration];
             const newVal = updates[key as keyof Partial<FocusSurfaceRegistration>];
             // Skip function comparisons - they change every render but are functionally equivalent
-            if (typeof newVal !== 'function' && currentVal !== newVal) {
+            if (typeof newVal !== "function" && currentVal !== newVal) {
                 hasChanges = true;
                 break;
             }

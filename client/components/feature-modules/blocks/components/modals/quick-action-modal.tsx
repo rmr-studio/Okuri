@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/command";
 import { CommandIcon } from "lucide-react";
 import { FC } from "react";
-import { QuickActionItem } from "../panel/panel-wrapper";
+import { QuickActionItem } from "../../interface/panel.interface";
 
 interface Props {
     open: boolean;
