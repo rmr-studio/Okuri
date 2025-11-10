@@ -14,6 +14,7 @@ import { PlusIcon, SaveIcon, TypeIcon } from "lucide-react";
 import React, { FC, Fragment, useEffect, useMemo, useState } from "react";
 import "../../styles/gridstack-custom.css";
 
+import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/block-focus-provider";
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
@@ -45,6 +46,7 @@ export const DEFAULT_WIDGET_OPTIONS: GridStackOptions = {
     },
     draggable: {
         cancel: ".block-no-drag",
+        pause: 5,
     },
     column: 23,
     columnOpts: {
@@ -115,14 +117,16 @@ const BlockEnvironmentWorkspace: React.FC = () => {
 
     return (
         <>
-            <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
-                <WorkspaceToolbar />
-                <BlockEnvironmentGridSync />
-                <WidgetEnvironmentSync />
-                <GridContainerProvider>
-                    <BlockRenderer />
-                </GridContainerProvider>
-            </GridProvider>
+            <BlockFocusProvider>
+                <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
+                    <WorkspaceToolbar />
+                    <BlockEnvironmentGridSync />
+                    <WidgetEnvironmentSync />
+                    <GridContainerProvider>
+                        <BlockRenderer />
+                    </GridContainerProvider>
+                </GridProvider>
+            </BlockFocusProvider>
             <DebugInfo />
         </>
     );

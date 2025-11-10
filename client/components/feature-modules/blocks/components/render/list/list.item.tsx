@@ -65,15 +65,12 @@ export const ListItem = <T extends unknown>({
     return (
         <div ref={setNodeRef} style={style} className="relative block-no-drag">
             <PanelWrapper
-                showResizeHandles={false}
                 className="w-full relative flex-row items-center gap-2 "
                 id={id}
                 quickActions={quickActions}
                 allowInsert={false}
                 onDelete={handleDelete}
             >
-             
-
                 {/* Block content */}
                 <div className="flex-1 overflow-hidden" {...attributes} {...listeners}>
                     {render(item)}

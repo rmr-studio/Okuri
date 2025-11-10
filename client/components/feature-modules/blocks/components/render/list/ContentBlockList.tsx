@@ -22,8 +22,9 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ReactNode, useCallback } from "react";
+import { ReactNode, useCallback, useRef } from "react";
 import { useBlockEnvironment } from "../../../context/block-environment-provider";
+import { useBlockFocus } from "../../../context/block-focus-provider";
 import { BlockListConfiguration, BlockNode } from "../../../interface/block.interface";
 import { ListPanel } from "./list.container";
 import { ListItem } from "./list.item";
@@ -45,6 +46,9 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     render,
 }) => {
     const { reorderBlock } = useBlockEnvironment();
+    const { acquireLock, releaseLock } = useBlockFocus();
+
+    const dragLockRef = useRef<(() => void) | null>(null);
 
     // Configure dnd-kit sensors for pointer and keyboard interaction
     const sensors = useSensors(
@@ -58,9 +62,27 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
         })
     );
 
+    const handleDragStart = useCallback(() => {
+        if (dragLockRef.current) return;
+        dragLockRef.current = acquireLock({
+            id: `list-drag-${id}`,
+            reason: "List drag in progress",
+            suppressHover: true,
+            suppressSelection: true,
+        });
+    }, [acquireLock, id]);
+
+    const releaseDragLock = useCallback(() => {
+        if (!dragLockRef.current) return;
+        releaseLock(`list-drag-${id}`);
+        dragLockRef.current();
+        dragLockRef.current = null;
+    }, [releaseLock, id]);
+
     // Handle drag end event to reorder blocks
     const handleDragEnd = useCallback(
         (event: DragEndEvent) => {
+            releaseDragLock();
             const { active, over } = event;
 
             if (over && active.id !== over.id) {
@@ -96,6 +118,8 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragEnd={handleDragEnd}
+                    onDragStart={handleDragStart}
+                    onDragCancel={releaseDragLock}
                 >
                     <SortableContext
                         items={children.map((child) => child.block.id)}

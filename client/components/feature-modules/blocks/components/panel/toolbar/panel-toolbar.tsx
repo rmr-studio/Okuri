@@ -5,6 +5,7 @@ import { cn } from "@/lib/util/utils";
 import { CommandIcon, InfoIcon, PlusIcon } from "lucide-react";
 import { FC, RefObject } from "react";
 
+import { motion } from "framer-motion";
 import { QuickActionItem, SlashMenuItem } from "../../../interface/panel.interface";
 import PanelActions from "./panel-actions";
 import PanelDetails from "./panel-details";
@@ -37,7 +38,6 @@ const toolbarButtonClass =
     "pointer-events-auto size-7 rounded-md border border-transparent bg-background/90 text-muted-foreground hover:border-border hover:text-foreground transition-colors";
 
 const PanelToolbar: FC<PanelToolbarProps> = ({
-    visible,
     onQuickActionsClick,
     allowInsert,
     onInlineInsertClick,
@@ -59,10 +59,12 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     onMenuAction,
 }) => {
     return (
-        <div
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className={cn(
-                "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[100] border-red-500",
-                visible ? "opacity-100 pointer-events-auto" : "pointer-events-none opacity-0"
+                "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[100]"
             )}
         >
             <Tooltip>
@@ -171,7 +173,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     onMenuAction={onMenuAction}
                 />
             ) : null}
-        </div>
+        </motion.div>
     );
 };
 

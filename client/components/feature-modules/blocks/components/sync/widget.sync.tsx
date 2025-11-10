@@ -158,8 +158,6 @@ export const WidgetEnvironmentSync: React.FC = () => {
             }
 
             if (!parentId) {
-                // Top-level block - add to main grid
-                console.log(`Adding top-level widget ${id} to GridStack`);
                 const { success, node } = addWidget(widgetConfig, meta);
                 if (!success || !node?.el) {
                     console.warn(`Failed to add widget ${id} to GridStack`);
@@ -182,13 +180,9 @@ export const WidgetEnvironmentSync: React.FC = () => {
             const parsedParentMeta = parseContent(parent);
             if (!parsedParentMeta) return;
             if (parsedParentMeta.renderType === "list") {
-                console.log(
-                    `Parent widget ${parentId} is a list item. Child widget ${id} will be rendered as part of the list.`
-                );
                 return;
             }
 
-            console.log(`Adding nested widget ${id} to parent ${parentId} subgrid`);
             const { success: insertionSuccess, node } = addWidget(widgetConfig, meta, parent);
 
             if (!insertionSuccess || !node?.el) {
@@ -216,9 +210,6 @@ export const WidgetEnvironmentSync: React.FC = () => {
         if (!hasInitiallyLoadedRef.current && !isInitialized) {
             hasInitiallyLoadedRef.current = true;
             setIsInitialized(true);
-            console.log(
-                "[GridStackWidgetSync] Initial grid load complete, environment initialized"
-            );
         }
     }, [
         gridStack,
