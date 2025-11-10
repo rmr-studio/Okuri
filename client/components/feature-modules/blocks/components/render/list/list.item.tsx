@@ -7,6 +7,8 @@
 
 "use client";
 
+import { ClassNameProps } from "@/lib/interfaces/interface";
+import { cn } from "@/lib/util/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ReactNode, useCallback, useMemo } from "react";
@@ -14,7 +16,7 @@ import { useBlockEnvironment } from "../../../context/block-environment-provider
 import { BlockListConfiguration } from "../../../interface/block.interface";
 import { PanelWrapper } from "../../panel/panel-wrapper";
 
-interface Props<T> {
+interface Props<T> extends ClassNameProps {
     id: string;
     item: T;
     config: BlockListConfiguration;
@@ -30,6 +32,7 @@ export const ListItem = <T extends unknown>({
     id,
     item,
     config,
+    className,
     isDraggable,
     render,
 }: Props<T>) => {
@@ -63,7 +66,7 @@ export const ListItem = <T extends unknown>({
     const showDragHandle = isDraggable && config.display.showDragHandles;
 
     return (
-        <div ref={setNodeRef} style={style} className="relative block-no-drag">
+        <div ref={setNodeRef} style={style} className={cn("relative block-no-drag", className)}>
             <PanelWrapper
                 className="w-full relative flex-row items-center gap-2 "
                 id={id}

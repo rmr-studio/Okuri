@@ -41,15 +41,12 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             reason: "Grid interaction in progress",
             suppressHover: true,
             suppressSelection: true,
-            scope: "global",
         });
         gridInteractionLockRef.current = release;
     }, [acquireLock]);
 
     const releaseInteractionLock = useCallback(() => {
-        console.log("hey");
         if (!gridInteractionLockRef.current) return;
-        releaseLock("grid-interaction");
         gridInteractionLockRef.current();
         gridInteractionLockRef.current = null;
     }, [releaseLock]);

@@ -22,7 +22,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ReactNode, useCallback, useRef } from "react";
+import { ReactNode, useCallback, useEffect, useRef } from "react";
 import { useBlockEnvironment } from "../../../context/block-environment-provider";
 import { useBlockFocus } from "../../../context/block-focus-provider";
 import { BlockListConfiguration, BlockNode } from "../../../interface/block.interface";
@@ -54,7 +54,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Require 8px movement before drag starts (prevents accidental drags)
+                distance: 4, // Require 8px movement before drag starts (prevents accidental drags)
             },
         }),
         useSensor(KeyboardSensor, {
@@ -74,10 +74,15 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
 
     const releaseDragLock = useCallback(() => {
         if (!dragLockRef.current) return;
-        releaseLock(`list-drag-${id}`);
         dragLockRef.current();
         dragLockRef.current = null;
-    }, [releaseLock, id]);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            releaseDragLock();
+        };
+    }, [releaseDragLock]);
 
     // Handle drag end event to reorder blocks
     const handleDragEnd = useCallback(
@@ -140,7 +145,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                     </SortableContext>
                 </DndContext>
             ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col">
                     {children.map((child) => (
                         <ListItem
                             key={child.block.id}
