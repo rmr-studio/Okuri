@@ -126,9 +126,6 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                             <PortalContentWrapper
                                 widgetId={widgetId}
                                 onMount={() => {
-                                    console.log(
-                                        `[PortalContentWrapper] Content mounted for widget ${widgetId}, triggering resize`
-                                    );
                                     // Trigger resize after portal content is fully rendered
                                     requestAnimationFrame(() => {
                                         resizeWidgetToContent(widgetId);

@@ -123,8 +123,27 @@ export function BlockFocusProvider({ children }: PropsWithChildren) {
     const updateSurface = useCallback((id: string, updates: Partial<FocusSurfaceRegistration>) => {
         const current = surfacesRef.current.get(id);
         if (!current) return;
+
+        // Check if any non-function values actually changed to avoid unnecessary re-renders.
+        // Functions (like onDelete) are always updated but don't trigger version increment
+        // since they're recreated on every render but functionally equivalent.
+        let hasChanges = false;
+        for (const key in updates) {
+            const currentVal = current[key as keyof FocusSurfaceRegistration];
+            const newVal = updates[key as keyof Partial<FocusSurfaceRegistration>];
+            // Skip function comparisons - they change every render but are functionally equivalent
+            if (typeof newVal !== 'function' && currentVal !== newVal) {
+                hasChanges = true;
+                break;
+            }
+        }
+
+        // Always update the ref (to get latest callbacks), but only increment version if data changed
         surfacesRef.current.set(id, { ...current, ...updates });
-        setSurfaceVersion((version) => version + 1);
+
+        if (hasChanges) {
+            setSurfaceVersion((version) => version + 1);
+        }
     }, []);
 
     const registerSurface = useCallback(
@@ -272,7 +291,9 @@ export function BlockFocusProvider({ children }: PropsWithChildren) {
         registerSurface,
         updateSurface,
         focusSurface,
+        setSelection,
         toggleSelection,
+        clearFocus,
         pushStackEntry,
         removeStackEntry,
         updateStackEntry,

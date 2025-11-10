@@ -2,6 +2,7 @@
 import { blockElements } from "@/components/feature-modules/blocks/util/block/block.registry";
 import { ChildNodeProps, ClassNameProps } from "@/lib/interfaces/interface";
 import { cn } from "@/lib/util/utils";
+import { AnimatePresence } from "framer-motion";
 import { TypeIcon } from "lucide-react";
 import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBlockFocus } from "../../context/block-focus-provider";
@@ -99,7 +100,6 @@ export const PanelWrapper: FC<Props> = ({
         isQuickOpen ||
         (allowInsert && (isInlineMenuOpen || isSlashOpen)) ||
         isHovered;
-    const toolbarVisible = shouldHighlight;
 
     useEffect(() => {
         const shouldLock = isSlashOpen || isQuickOpen || isInlineMenuOpen;
@@ -315,33 +315,37 @@ export const PanelWrapper: FC<Props> = ({
                         focusSelf();
                     }}
                 >
-                    {(isSelected || isHovered) && (
-                        <PanelToolbar
-                            visible={toolbarVisible}
-                            onQuickActionsClick={handleQuickActionsOpen}
-                            allowInsert={allowInsert}
-                            onInlineInsertClick={allowInsert ? handleInlineInsertOpen : undefined}
-                            inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
-                            onInlineMenuOpenChange={
-                                allowInsert ? (open) => setInlineMenuOpen(open) : undefined
-                            }
-                            inlineSearchRef={allowInsert ? inlineSearchRef : undefined}
-                            items={allowInsert ? items : undefined}
-                            onSelectItem={allowInsert ? handleSelect : undefined}
-                            onShowAllOptions={allowInsert ? handleOpenInsertModal : undefined}
-                            onOpenQuickActionsFromInline={
-                                allowInsert ? handleQuickInsertOpenQuickActions : undefined
-                            }
-                            draftTitle={draftTitle}
-                            onDraftTitleChange={(value) => setDraftTitle(value)}
-                            onTitleBlur={handleTitleBlur}
-                            titlePlaceholder={titlePlaceholder}
-                            description={description}
-                            hasMenuActions={hasMenuActions}
-                            menuActions={menuActions}
-                            onMenuAction={handleMenuAction}
-                        />
-                    )}
+                    <AnimatePresence key={`panel-toolbar-${id}`}>
+                        {shouldHighlight && (
+                            <PanelToolbar
+                                visible={shouldHighlight}
+                                onQuickActionsClick={handleQuickActionsOpen}
+                                allowInsert={allowInsert}
+                                onInlineInsertClick={
+                                    allowInsert ? handleInlineInsertOpen : undefined
+                                }
+                                inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
+                                onInlineMenuOpenChange={
+                                    allowInsert ? (open) => setInlineMenuOpen(open) : undefined
+                                }
+                                inlineSearchRef={allowInsert ? inlineSearchRef : undefined}
+                                items={allowInsert ? items : undefined}
+                                onSelectItem={allowInsert ? handleSelect : undefined}
+                                onShowAllOptions={allowInsert ? handleOpenInsertModal : undefined}
+                                onOpenQuickActionsFromInline={
+                                    allowInsert ? handleQuickInsertOpenQuickActions : undefined
+                                }
+                                draftTitle={draftTitle}
+                                onDraftTitleChange={(value) => setDraftTitle(value)}
+                                onTitleBlur={handleTitleBlur}
+                                titlePlaceholder={titlePlaceholder}
+                                description={description}
+                                hasMenuActions={hasMenuActions}
+                                menuActions={menuActions}
+                                onMenuAction={handleMenuAction}
+                            />
+                        )}
+                    </AnimatePresence>
                     {children}
                     {allowInsert && (
                         <InsertBlockModal

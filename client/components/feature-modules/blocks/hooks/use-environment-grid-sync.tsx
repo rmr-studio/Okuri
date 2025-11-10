@@ -41,13 +41,15 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             reason: "Grid interaction in progress",
             suppressHover: true,
             suppressSelection: true,
+            scope: "global",
         });
         gridInteractionLockRef.current = release;
     }, [acquireLock]);
 
     const releaseInteractionLock = useCallback(() => {
+        console.log("hey");
         if (!gridInteractionLockRef.current) return;
-        // releaseLock("grid-interaction");
+        releaseLock("grid-interaction");
         gridInteractionLockRef.current();
         gridInteractionLockRef.current = null;
     }, [releaseLock]);
@@ -61,18 +63,19 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
              * This is to detect when a purposeful action has been made, so we can flush layout changes to the backend
              */
             const handleResourceLock = (_: Event, _2: GridItemHTMLElement) => {
+                if (!initializedRef.current) return;
                 acquireInteractionLock();
             };
 
             const handleResourceUnlock = (_: Event, _2: GridItemHTMLElement) => {
+                if (!initializedRef.current) return;
                 releaseInteractionLock();
             };
 
             const handleBlockAdded = (_event: Event, items: GridStackNode[] = []) => {
-                // processLayouts(items);
-
                 if (!initializedRef.current) return;
 
+                releaseInteractionLock();
                 items.forEach((item) => {
                     if (item.id === undefined || item.id === null) return;
                     const blockId = String(item.id);
@@ -90,6 +93,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             grid.on("resizestart", handleResourceLock);
             grid.on("dragstop", handleResourceUnlock);
             grid.on("resizestop", handleResourceUnlock);
+            grid.on("dropped", handleResourceUnlock);
 
             listenersRef.current.set(grid, () => {
                 grid.off("added");
@@ -97,6 +101,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 grid.off("resizestart");
                 grid.off("dragstop");
                 grid.off("resizestop");
+                grid.off("dropped");
             });
         },
         [getParentId, moveBlock]

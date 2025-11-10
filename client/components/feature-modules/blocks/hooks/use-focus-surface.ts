@@ -41,25 +41,14 @@ export const useFocusSurface = (options: UseFocusSurfaceOptions): FocusSurfaceCo
         updateStackEntry,
     } = useBlockFocus();
 
+    // Only register with stable ID and type to avoid re-registration on every render.
+    // Mutable properties (onDelete, metadata, etc.) are updated via updateSurface below.
     const registration: FocusSurfaceRegistration = useMemo(
         () => ({
             id: options.id,
             type: options.type,
-            parentId: options.parentId,
-            order: options.order,
-            elementRef: options.elementRef,
-            onDelete: options.onDelete,
-            metadata: options.metadata,
         }),
-        [
-            options.id,
-            options.type,
-            options.parentId,
-            options.order,
-            options.elementRef,
-            options.onDelete,
-            options.metadata,
-        ]
+        [options.id, options.type]
     );
 
     useEffect(() => {
@@ -84,7 +73,10 @@ export const useFocusSurface = (options: UseFocusSurfaceOptions): FocusSurfaceCo
         updateSurface,
     ]);
 
-    const locks = useMemo(() => Array.from(state.locks.values()), [state]);
+    // Convert locks Map to array. Recomputes on each render but is inexpensive.
+    // Using useMemo with [state] would cause unnecessary recomputation on every context change.
+    // Using [state.locks] wouldn't recompute when locks change (since it's a stable ref).
+    const locks = Array.from(state.locks.values());
 
     const lockApplies = useCallback(
         (lock: FocusLock) => {
