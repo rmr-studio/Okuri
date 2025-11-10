@@ -534,17 +534,16 @@ export const PanelWrapper: FC<Props> = ({
                             items={items}
                         />
                     )}
-
-                    <QuickActionModal
-                        open={isQuickOpen}
-                        setOpen={setQuickOpen}
-                        onInsert={allowInsert ? handleOpenInsertModal : undefined}
-                        onActionSelect={handleQuickSelect}
-                        actions={actions}
-                        allowInsert={allowInsert}
-                    />
                 </div>
             </PanelActionContextMenu>
+            <QuickActionModal
+                open={isQuickOpen}
+                setOpen={setQuickOpen}
+                onInsert={allowInsert ? handleOpenInsertModal : undefined}
+                onActionSelect={handleQuickSelect}
+                actions={actions}
+                allowInsert={allowInsert}
+            />
         </>
     );
 };

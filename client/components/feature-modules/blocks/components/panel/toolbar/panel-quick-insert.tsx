@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/command";
 import { SearchIcon } from "lucide-react";
 import { FC, RefObject } from "react";
-import type { SlashMenuItem } from "../panel-wrapper";
+import { SlashMenuItem } from "../../../interface/panel.interface";
 
 interface PanelQuickInsertProps {
     searchRef: RefObject<HTMLInputElement | null>;
