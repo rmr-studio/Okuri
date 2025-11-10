@@ -121,10 +121,6 @@ export function BlockFocusProvider({ children }: PropsWithChildren) {
         }
     }, []);
 
-    useEffect(() => {
-        console.table({ primaryFocusId, hoveredSurfaceId, selection, surfaceVersion, lockVersion });
-    }, [primaryFocusId, selection, hoveredSurfaceId, selection, surfaceVersion, lockVersion]);
-
     const updateSurface = useCallback((id: string, updates: Partial<FocusSurfaceRegistration>) => {
         const current = surfacesRef.current.get(id);
         if (!current) return;
