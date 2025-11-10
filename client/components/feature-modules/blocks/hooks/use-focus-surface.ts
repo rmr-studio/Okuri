@@ -42,17 +42,20 @@ export const useFocusSurface = (options: UseFocusSurfaceOptions): FocusSurfaceCo
         setHoveredSurface,
         updateStackEntry,
     } = useBlockFocus();
-    const { getParentId } = useBlockEnvironment();
+    const blockEnvironment = useBlockEnvironment();
+    const { getParentId } = blockEnvironment;
 
     // Store refs to avoid re-registration when these change
     const focusSurfaceRef = useRef(focusSurface);
     const getParentIdRef = useRef(getParentId);
     const stateRef = useRef(state);
+    const blockEnvironmentRef = useRef(blockEnvironment);
 
     useEffect(() => {
         focusSurfaceRef.current = focusSurface;
         getParentIdRef.current = getParentId;
         stateRef.current = state;
+        blockEnvironmentRef.current = blockEnvironment;
     });
 
     // Only register with stable ID and type to avoid re-registration on every render.
@@ -68,7 +71,7 @@ export const useFocusSurface = (options: UseFocusSurfaceOptions): FocusSurfaceCo
     useEffect(() => {
         const cleanup = registerSurface(registration);
 
-        // Return cleanup that focuses parent if requested
+        // Return cleanup that focuses parent/previous block if requested
         return () => {
             // Check if this surface is currently focused before cleanup
             const wasFocused = stateRef.current.primaryFocusId === options.id;
@@ -79,11 +82,37 @@ export const useFocusSurface = (options: UseFocusSurfaceOptions): FocusSurfaceCo
             // If this surface was focused and should focus parent on delete, do it
             if (wasFocused && options.focusParentOnDelete) {
                 const parentId = getParentIdRef.current(options.id);
+
                 if (parentId) {
-                    // Use setTimeout to ensure the parent surface is still registered
-                    // after our cleanup completes
+                    // Has a parent - focus the parent (existing behavior)
                     setTimeout(() => {
                         focusSurfaceRef.current(parentId, { emitStackEntry: true });
+                    }, 0);
+                } else {
+                    // No parent (it's a root block) - try to focus a sibling root
+                    // Note: By the time this runs, the block may already be removed from the environment,
+                    // so we need to check what's available
+                    setTimeout(() => {
+                        const trees = blockEnvironmentRef.current.getTrees();
+
+                        if (trees.length === 0) {
+                            // No blocks left, clear focus
+                            return;
+                        }
+
+                        // Try to find this block in the trees to determine its position
+                        const currentIndex = trees.findIndex(tree => tree.root.block.id === options.id);
+
+                        if (currentIndex > 0) {
+                            // Block still exists and has a previous sibling
+                            focusSurfaceRef.current(trees[currentIndex - 1].root.block.id, { emitStackEntry: true });
+                        } else if (currentIndex === 0 && trees.length > 1) {
+                            // Block is first, focus the next one
+                            focusSurfaceRef.current(trees[1].root.block.id, { emitStackEntry: true });
+                        } else if (currentIndex === -1) {
+                            // Block already removed - focus the last remaining tree
+                            focusSurfaceRef.current(trees[trees.length - 1].root.block.id, { emitStackEntry: true });
+                        }
                     }, 0);
                 }
             }
