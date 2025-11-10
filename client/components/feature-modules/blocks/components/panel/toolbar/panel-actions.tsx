@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
 import { MoreHorizontalIcon } from "lucide-react";
-import { FC } from "react";
+import { FC, useEffect, useRef } from "react";
 import { QuickActionItem } from "../../../interface/panel.interface";
 
 interface PanelActionsProps {
@@ -35,6 +35,17 @@ const PanelActions: FC<PanelActionsProps> = ({
     actionsOpen,
     onActionsOpenChange,
 }) => {
+    const commandRef = useRef<HTMLDivElement>(null);
+
+    // Auto-focus the Command component when menu opens for keyboard navigation
+    useEffect(() => {
+        if (actionsOpen) {
+            requestAnimationFrame(() => {
+                commandRef.current?.focus();
+            });
+        }
+    }, [actionsOpen]);
+
     if (menuActions.length === 0) return null;
 
     return (
@@ -55,7 +66,7 @@ const PanelActions: FC<PanelActionsProps> = ({
                 <TooltipContent>More actions</TooltipContent>
             </Tooltip>
             <PopoverContent className="w-64 p-0" align="start">
-                <Command>
+                <Command ref={commandRef} tabIndex={0}>
                     <CommandList>
                         <CommandGroup heading="Actions">
                             {menuActions.map((action) => (

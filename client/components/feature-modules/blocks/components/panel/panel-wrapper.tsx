@@ -226,6 +226,10 @@ export const PanelWrapper: FC<Props> = ({
                     active.tagName === "TEXTAREA" ||
                     active.getAttribute("contenteditable") === "true");
 
+            // Toolbar keyboard navigation
+            // NOTE: Toolbar menus must use Popover, NOT DropdownMenu to avoid DOM focus conflicts.
+            // See panel-toolbar.tsx and panel-actions.tsx for implementation details.
+
             // Toolbar navigation with Left/Right arrows
             if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
                 if (isInput) return;
