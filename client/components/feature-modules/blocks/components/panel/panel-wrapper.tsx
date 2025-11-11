@@ -91,11 +91,25 @@ export const PanelWrapper: FC<Props> = ({
     }
 
     // Sync local edit mode state with provider
+    const prevEditModeRef = useRef<"inline" | "drawer" | null>(null);
     useEffect(() => {
         const editMode = getEditMode(id);
+        const prevEditMode = prevEditModeRef.current;
+
         // Only set to true if in inline mode; drawer mode is handled separately
         setEditMode(editMode === "inline");
-    }, [id, getEditMode]);
+
+        // If transitioning from drawer to null (drawer closed), request resize
+        if (prevEditMode === "drawer" && editMode === null && requestResize) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestResize();
+                });
+            });
+        }
+
+        prevEditModeRef.current = editMode;
+    }, [id, getEditMode, requestResize]);
 
     const menuActions = useMemo(() => {
         if (onDelete && !actions.some((action) => action.id === "delete")) {
