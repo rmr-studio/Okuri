@@ -72,7 +72,7 @@ export const PanelWrapper: FC<Props> = ({
     const actions = quickActions ?? [];
 
     // Block edit state
-    const { startEdit, saveAndExit, openDrawer, isEditing, getEditMode, drawerState } =
+    const { startEdit, saveAndExit, openDrawer, isEditing, getEditMode, drawerState, cancelEdit } =
         useBlockEdit();
     const { getBlock, getChildren } = useBlockEnvironment();
     const [isEditMode, setEditMode] = useState(false);
@@ -260,6 +260,23 @@ export const PanelWrapper: FC<Props> = ({
             }
         }
     }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id]);
+
+    const handleSaveEditClick = useCallback(() => {
+        if (isEditMode) {
+            saveAndExit(id).then((success) => {
+                if (success) {
+                    setEditMode(false);
+                }
+            });
+        }
+    }, [isEditMode, saveAndExit, id]);
+
+    const handleDiscardEditClick = useCallback(() => {
+        if (isEditMode) {
+            cancelEdit(id);
+            setEditMode(false);
+        }
+    }, [isEditMode, cancelEdit, id]);
 
     useEffect(() => {
         if (!isSelected) return;
@@ -608,6 +625,8 @@ export const PanelWrapper: FC<Props> = ({
                                 onEditClick={handleEditClick}
                                 isEditMode={isEditMode}
                                 hasChildren={hasChildren}
+                                onSaveEditClick={handleSaveEditClick}
+                                onDiscardEditClick={handleDiscardEditClick}
                             />
                         )}
                     </AnimatePresence>

@@ -44,6 +44,10 @@ export interface BlockEditContextValue {
     cancelEdit(blockId: string): void;
     saveAndExit(blockId: string): Promise<boolean>;
 
+    // Batch actions
+    saveAllEdits(): Promise<boolean>;
+    discardAllEdits(): void;
+
     // Draft manipulation
     updateDraft(blockId: string, fieldPath: string, value: any): void;
     getDraft(blockId: string): any | null;
@@ -119,6 +123,78 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, [editingSessions.size, drawerState.isOpen, acquireLock]);
 
     /* -------------------------------------------------------------------------- */
+    /*                                 Validation                                 */
+    /* -------------------------------------------------------------------------- */
+
+    const validateField = useCallback(
+        (blockId: string, fieldPath: string): string[] => {
+            const block = getBlock(blockId);
+            if (!block || !isContentNode(block)) return [];
+
+            const draft = drafts.get(blockId);
+            if (!draft) return [];
+
+            const value = get(draft, fieldPath);
+            const schema = block.block.type.schema;
+            const formField = block.block.type.display.form.fields[fieldPath];
+
+            const errors: string[] = [];
+
+            // Check required
+            if (formField && schema.required) {
+                if (value === undefined || value === null || value === "") {
+                    errors.push("This field is required");
+                }
+            }
+
+            // Type-specific validation based on schema format
+            if (value && schema.format) {
+                switch (schema.format) {
+                    case "EMAIL":
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                            errors.push("Invalid email format");
+                        }
+                        break;
+                    case "PHONE":
+                        if (!/^\+?[\d\s\-()]+$/.test(value)) {
+                            errors.push("Invalid phone format");
+                        }
+                        break;
+                    case "URL":
+                        try {
+                            new URL(value);
+                        } catch {
+                            errors.push("Invalid URL format");
+                        }
+                        break;
+                }
+            }
+
+            // Update session validation errors
+            setEditingSessions((prev) => {
+                const next = new Map(prev);
+                const session = next.get(blockId);
+                if (session) {
+                    session.validationErrors.set(fieldPath, errors);
+                }
+                return next;
+            });
+
+            return errors;
+        },
+        [getBlock, drafts]
+    );
+
+    const getFieldErrors = useCallback(
+        (blockId: string, fieldPath: string): string[] => {
+            const session = editingSessions.get(blockId);
+            if (!session) return [];
+            return session.validationErrors.get(fieldPath) || [];
+        },
+        [editingSessions]
+    );
+
+    /* -------------------------------------------------------------------------- */
     /*                              Block-level Actions                           */
     /* -------------------------------------------------------------------------- */
 
@@ -182,7 +258,9 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 return next;
             });
 
-            console.log(`Started ${mode} edit for block ${blockId}${forceRefresh ? " (force refresh)" : ""}`);
+            console.log(
+                `Started ${mode} edit for block ${blockId}${forceRefresh ? " (force refresh)" : ""}`
+            );
         },
         [getBlock, editingSessions]
     );
@@ -292,6 +370,76 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         [saveEdit]
     );
 
+    const saveAllEdits = useCallback(async (): Promise<boolean> => {
+        const allBlockIds = Array.from(editingSessions.keys());
+
+        // Validate all blocks first
+        const allValid = allBlockIds.every((blockId) => {
+            const session = editingSessions.get(blockId);
+            if (!session) return true;
+
+            const block = getBlock(blockId);
+            if (!block || !isContentNode(block)) return false;
+
+            const formFields = block.block.type.display.form.fields;
+            let isValid = true;
+
+            // Validate all fields
+            Object.keys(formFields).forEach((fieldPath) => {
+                const errors = validateField(blockId, fieldPath);
+                if (errors.length > 0) {
+                    isValid = false;
+                }
+            });
+
+            return isValid;
+        });
+
+        if (!allValid) {
+            console.warn("Validation failed for one or more blocks. Cannot save all.");
+            return false;
+        }
+
+        // Update all blocks in the environment
+        allBlockIds.forEach((blockId) => {
+            const draft = drafts.get(blockId);
+            if (!draft) return;
+
+            const block = getBlock(blockId);
+            if (!block || !isContentNode(block)) return;
+
+            // Create updated node with draft data
+            const updatedNode: BlockNode = {
+                ...block,
+                block: {
+                    ...block.block,
+                    payload: draft,
+                },
+            };
+
+            // Commit to BlockEnvironment
+            updateBlock(blockId, updatedNode);
+            console.log(`Saved block ${blockId}`);
+        });
+
+        // Clean up ALL sessions and drafts at once
+        setEditingSessions(new Map());
+        setDrafts(new Map());
+
+        console.log(`Saved all ${allBlockIds.length} blocks`);
+        return true;
+    }, [editingSessions, drafts, validateField, getBlock, updateBlock]);
+
+    const discardAllEdits = useCallback(() => {
+        const allBlockIds = Array.from(editingSessions.keys());
+
+        // Clean up ALL sessions and drafts at once
+        setEditingSessions(new Map());
+        setDrafts(new Map());
+
+        console.log(`Discarded edits for ${allBlockIds.length} blocks`);
+    }, [editingSessions]);
+
     /* -------------------------------------------------------------------------- */
     /*                              Draft Manipulation                            */
     /* -------------------------------------------------------------------------- */
@@ -328,78 +476,6 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             return drafts.get(blockId) || null;
         },
         [drafts]
-    );
-
-    /* -------------------------------------------------------------------------- */
-    /*                                 Validation                                 */
-    /* -------------------------------------------------------------------------- */
-
-    const validateField = useCallback(
-        (blockId: string, fieldPath: string): string[] => {
-            const block = getBlock(blockId);
-            if (!block || !isContentNode(block)) return [];
-
-            const draft = drafts.get(blockId);
-            if (!draft) return [];
-
-            const value = get(draft, fieldPath);
-            const schema = block.block.type.schema;
-            const formField = block.block.type.display.form.fields[fieldPath];
-
-            const errors: string[] = [];
-
-            // Check required
-            if (formField && schema.required) {
-                if (value === undefined || value === null || value === "") {
-                    errors.push("This field is required");
-                }
-            }
-
-            // Type-specific validation based on schema format
-            if (value && schema.format) {
-                switch (schema.format) {
-                    case "EMAIL":
-                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                            errors.push("Invalid email format");
-                        }
-                        break;
-                    case "PHONE":
-                        if (!/^\+?[\d\s\-()]+$/.test(value)) {
-                            errors.push("Invalid phone format");
-                        }
-                        break;
-                    case "URL":
-                        try {
-                            new URL(value);
-                        } catch {
-                            errors.push("Invalid URL format");
-                        }
-                        break;
-                }
-            }
-
-            // Update session validation errors
-            setEditingSessions((prev) => {
-                const next = new Map(prev);
-                const session = next.get(blockId);
-                if (session) {
-                    session.validationErrors.set(fieldPath, errors);
-                }
-                return next;
-            });
-
-            return errors;
-        },
-        [getBlock, drafts]
-    );
-
-    const getFieldErrors = useCallback(
-        (blockId: string, fieldPath: string): string[] => {
-            const session = editingSessions.get(blockId);
-            if (!session) return [];
-            return session.validationErrors.get(fieldPath) || [];
-        },
-        [editingSessions]
     );
 
     /* -------------------------------------------------------------------------- */
@@ -595,6 +671,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             saveEdit,
             cancelEdit,
             saveAndExit,
+            saveAllEdits,
+            discardAllEdits,
             updateDraft,
             getDraft,
             openDrawer,
@@ -616,6 +694,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             saveEdit,
             cancelEdit,
             saveAndExit,
+            saveAllEdits,
+            discardAllEdits,
             updateDraft,
             getDraft,
             openDrawer,
