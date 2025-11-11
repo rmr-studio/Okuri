@@ -2,7 +2,8 @@
 
 import { User } from "@/components/feature-modules/user/interface/user.interface";
 import { useAuth } from "@/components/provider/auth-context";
-import { FCWC, Propless } from "@/lib/interfaces/interface";
+import { ClassNameProps, FCWC, Propless } from "@/lib/interfaces/interface";
+import { cn } from "@/lib/util/utils";
 import { UseQueryResult } from "@tanstack/react-query";
 import Link from "next/link";
 import { FC } from "react";
@@ -43,9 +44,9 @@ export const UnauthenticatedNavbarProfile: FC<Propless> = () => {
     );
 };
 
-export const NavbarWrapper: FCWC<Propless> = ({ children }) => {
+export const NavbarWrapper: FCWC<ClassNameProps> = ({ children, className }) => {
     return (
-        <div className="h-[4rem] sticky top-0 flex w-auto flex-grow border-b items-center px-4 bg-background/40 backdrop-blur-[4px]">
+        <div className={cn("h-[4rem] sticky top-0 flex w-auto flex-grow border-b items-center px-4 bg-background/40 backdrop-blur-[4px]", className)}>
             {children}
             <div className="flex items-center">
                 <ModeToggle />

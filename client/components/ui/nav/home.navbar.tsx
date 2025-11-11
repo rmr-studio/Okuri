@@ -1,11 +1,17 @@
 "use client";
 
+import { ClassNameProps } from "@/lib/interfaces/interface";
 import Link from "next/link";
+import { FC } from "react";
 import { HomeNavbarAuthentication } from "./home.auth";
+import { NavbarWrapper } from "./navbar.content";
 
-export const HomeNavbar = () => {
+export const HomeNavbar: FC<ClassNameProps> = ({ className }) => {
+    //todo Add mobile nav to condense nav links into a hamburger menu
+    // Use code from renley github
+
     return (
-        <header className="z-20 flex items-center justify-between p-6 relative">
+        <NavbarWrapper className={className}>
             {/* Logo */}
             <div className="flex items-center">
                 <svg
@@ -44,6 +50,6 @@ export const HomeNavbar = () => {
             <section className="flex w-32 justify-end">
                 <HomeNavbarAuthentication />
             </section>
-        </header>
+        </NavbarWrapper>
     );
 };
