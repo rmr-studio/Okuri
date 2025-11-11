@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
-import { CommandIcon, InfoIcon, PlusIcon } from "lucide-react";
+import { CommandIcon, InfoIcon, PlusIcon, Edit3, FolderEdit } from "lucide-react";
 import { FC, RefObject } from "react";
 
 import { motion } from "framer-motion";
@@ -46,6 +46,10 @@ interface PanelToolbarProps {
     onDetailsOpenChange?: (open: boolean) => void;
     actionsOpen?: boolean;
     onActionsOpenChange?: (open: boolean) => void;
+    onEditClick?: () => void;
+    onDrawerEditClick?: () => void;
+    isEditMode?: boolean;
+    hasChildren?: boolean;
 }
 
 const toolbarButtonClass =
@@ -76,6 +80,10 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     onDetailsOpenChange,
     actionsOpen,
     onActionsOpenChange,
+    onEditClick,
+    onDrawerEditClick,
+    isEditMode = false,
+    hasChildren = false,
 }) => {
     // Helper to get button class with focus highlight
     const getButtonClass = (index: number) => {
@@ -173,6 +181,52 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     </PopoverContent>
                 </Popover>
             ) : null}
+
+            {/* Edit button */}
+            {onEditClick && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={isEditMode ? "Save and exit edit mode" : "Edit block"}
+                            className={cn(
+                                toolbarButtonClass,
+                                isEditMode && "bg-primary text-primary-foreground hover:bg-primary/90"
+                            )}
+                            onClick={onEditClick}
+                        >
+                            <Edit3 className="size-3.5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        {isEditMode
+                            ? "Save and exit (⌘E)"
+                            : hasChildren
+                            ? "Edit children (⌘E)"
+                            : "Edit block (⌘E)"}
+                    </TooltipContent>
+                </Tooltip>
+            )}
+
+            {/* Drawer edit button (for containers) */}
+            {onDrawerEditClick && hasChildren && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Edit in drawer"
+                            className={toolbarButtonClass}
+                            onClick={onDrawerEditClick}
+                        >
+                            <FolderEdit className="size-3.5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Edit all children (⌘⇧E)</TooltipContent>
+                </Tooltip>
+            )}
+
             <Popover open={detailsOpen} onOpenChange={onDetailsOpenChange}>
                 <Tooltip>
                     <TooltipTrigger asChild>

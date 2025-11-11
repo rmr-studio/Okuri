@@ -22,6 +22,7 @@ import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-han
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GridStackOptions } from "gridstack";
+import { BlockEditProvider } from "../../context/block-edit-provider";
 import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
@@ -35,6 +36,7 @@ import {
     createNoteNode,
     createTaskListNode,
 } from "../../util/block/factory/mock.factory";
+import { BlockEditDrawer, EditModeIndicator } from "../forms";
 import { editorPanel } from "../panel/editor-panel";
 import { defaultSlashItems } from "../panel/panel-wrapper";
 import { WidgetEnvironmentSync } from "../sync/widget.sync";
@@ -117,15 +119,19 @@ const BlockEnvironmentWorkspace: React.FC = () => {
     return (
         <>
             <BlockFocusProvider>
-                <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
-                    <KeyboardNavigationHandler />
-                    <WorkspaceToolbar />
-                    <BlockEnvironmentGridSync />
-                    <WidgetEnvironmentSync />
-                    <GridContainerProvider>
-                        <BlockRenderer />
-                    </GridContainerProvider>
-                </GridProvider>
+                <BlockEditProvider>
+                    <EditModeIndicator />
+                    <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
+                        <KeyboardNavigationHandler />
+                        <WorkspaceToolbar />
+                        <BlockEnvironmentGridSync />
+                        <WidgetEnvironmentSync />
+                        <GridContainerProvider>
+                            <BlockRenderer />
+                        </GridContainerProvider>
+                    </GridProvider>
+                    <BlockEditDrawer />
+                </BlockEditProvider>
             </BlockFocusProvider>
             <DebugInfo />
         </>

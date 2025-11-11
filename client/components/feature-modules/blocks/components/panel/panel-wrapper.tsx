@@ -6,12 +6,16 @@ import { AnimatePresence } from "framer-motion";
 import { TypeIcon } from "lucide-react";
 import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBlockFocus } from "../../context/block-focus-provider";
+import { useBlockEdit } from "../../context/block-edit-provider";
+import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useFocusSurface } from "../../hooks/use-focus-surface";
 import { QuickActionItem, SlashMenuItem } from "../../interface/panel.interface";
+import { isContentNode } from "../../interface/block.interface";
 import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
 import PanelToolbar from "./toolbar/panel-toolbar";
+import { BlockForm } from "../forms/block-form";
 
 interface Props extends ChildNodeProps, ClassNameProps {
     id: string;
@@ -66,6 +70,13 @@ export const PanelWrapper: FC<Props> = ({
     const inlineSearchRef = useRef<HTMLInputElement | null>(null);
     const surfaceRef = useRef<HTMLDivElement | null>(null);
     const actions = quickActions ?? [];
+
+    // Block edit state
+    const { startEdit, saveAndExit, openDrawer, isEditing, getEditMode } = useBlockEdit();
+    const { getBlock, getChildren } = useBlockEnvironment();
+    const [isEditMode, setEditMode] = useState(false);
+    const block = getBlock(id);
+    const hasChildren = getChildren(id).length > 0;
 
     const menuActions = useMemo(() => {
         if (onDelete && !actions.some((action) => action.id === "delete")) {
@@ -296,9 +307,34 @@ export const PanelWrapper: FC<Props> = ({
                 setInlineMenuOpen(true);
             }
 
+            // Cmd+E or Cmd+Shift+E: Edit mode
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
                 event.preventDefault();
-                // TODO. Set up inline edit mode. Or separate data drawerk
+
+                if (event.shiftKey) {
+                    // Cmd+Shift+E: Always open drawer for any block
+                    openDrawer(id);
+                } else {
+                    // Cmd+E: Inline edit for simple blocks, drawer for containers
+                    if (hasChildren) {
+                        // Has children: open drawer
+                        openDrawer(id);
+                    } else {
+                        // No children: toggle inline edit
+                        if (isEditMode) {
+                            // Exit edit mode and save
+                            saveAndExit(id).then((success) => {
+                                if (success) {
+                                    setEditMode(false);
+                                }
+                            });
+                        } else {
+                            // Enter edit mode
+                            startEdit(id, "inline");
+                            setEditMode(true);
+                        }
+                    }
+                }
             }
 
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -324,6 +360,12 @@ export const PanelWrapper: FC<Props> = ({
         toolbarFocusIndex,
         toolbarIndices,
         hasMenuActions,
+        isEditMode,
+        hasChildren,
+        openDrawer,
+        saveAndExit,
+        startEdit,
+        id,
     ]);
 
     const handleTitleBlur = useCallback(() => {
@@ -426,6 +468,29 @@ export const PanelWrapper: FC<Props> = ({
         [toolbarIndices.insertIndex]
     );
 
+    const handleEditClick = useCallback(() => {
+        if (hasChildren) {
+            // Has children: open drawer
+            openDrawer(id);
+        } else {
+            // No children: toggle inline edit
+            if (isEditMode) {
+                saveAndExit(id).then((success) => {
+                    if (success) {
+                        setEditMode(false);
+                    }
+                });
+            } else {
+                startEdit(id, "inline");
+                setEditMode(true);
+            }
+        }
+    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id]);
+
+    const handleDrawerEditClick = useCallback(() => {
+        openDrawer(id);
+    }, [openDrawer, id]);
+
     return (
         <>
             <PanelActionContextMenu id={id} actions={menuActions} onDelete={onDelete}>
@@ -522,10 +587,18 @@ export const PanelWrapper: FC<Props> = ({
                                 onDetailsOpenChange={handleDetailsOpenChange}
                                 actionsOpen={isActionsOpen}
                                 onActionsOpenChange={handleActionsOpenChange}
+                                onEditClick={handleEditClick}
+                                onDrawerEditClick={handleDrawerEditClick}
+                                isEditMode={isEditMode}
+                                hasChildren={hasChildren}
                             />
                         )}
                     </AnimatePresence>
-                    {children}
+                    {isEditMode && block && isContentNode(block) ? (
+                        <BlockForm blockId={id} blockType={block.block.type} mode="inline" />
+                    ) : (
+                        children
+                    )}
                     {allowInsert && (
                         <InsertBlockModal
                             open={isSlashOpen}

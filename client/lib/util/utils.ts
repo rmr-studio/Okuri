@@ -93,3 +93,41 @@ export const hexToRgb = (hex: string): string => {
     const b = bigint & 255;
     return `${r}, ${g}, ${b}`;
 };
+
+export function get(obj: any, path: string | Array<string | number>, defaultValue?: any) {
+    const segments = Array.isArray(path) ? path : path.split(".");
+    let current = obj;
+
+    for (const segment of segments) {
+        if (current == null) return defaultValue;
+        current = current[segment];
+    }
+
+    return current === undefined ? defaultValue : current;
+}
+
+export function set(obj: any, path: string | Array<string | number>, value: any) {
+    const segments = Array.isArray(path) ? path : path.split(".");
+    let current = obj;
+
+    for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const isLast = i === segments.length - 1;
+
+        if (isLast) {
+            current[segment] = value;
+        } else {
+            if (
+                !(segment in current) ||
+                typeof current[segment] !== "object" ||
+                current[segment] == null
+            ) {
+                const next = isNaN(Number(segments[i + 1])) ? {} : [];
+                current[segment] = next;
+            }
+            current = current[segment];
+        }
+    }
+
+    return obj;
+}
