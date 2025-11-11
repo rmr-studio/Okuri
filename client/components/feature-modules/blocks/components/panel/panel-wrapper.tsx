@@ -16,6 +16,7 @@ import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
 import PanelToolbar from "./toolbar/panel-toolbar";
+import { useRenderElement } from "../../context/block-renderer-provider";
 
 interface Props extends ChildNodeProps, ClassNameProps {
     id: string;
@@ -78,6 +79,16 @@ export const PanelWrapper: FC<Props> = ({
     const [isEditMode, setEditMode] = useState(false);
     const block = getBlock(id);
     const hasChildren = getChildren(id).length > 0;
+
+    // Get resize function for inline edit mode
+    let requestResize: (() => void) | undefined;
+    try {
+        const renderContext = useRenderElement();
+        requestResize = renderContext?.widget.requestResize;
+    } catch {
+        // Not in RenderElementProvider context, resize not available
+        requestResize = undefined;
+    }
 
     // Sync local edit mode state with provider
     useEffect(() => {
@@ -252,6 +263,14 @@ export const PanelWrapper: FC<Props> = ({
                 saveAndExit(id).then((success) => {
                     if (success) {
                         setEditMode(false);
+                        // Resize back to display content after exiting edit mode
+                        if (requestResize) {
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    requestResize();
+                                });
+                            });
+                        }
                     }
                 });
             } else {
@@ -259,24 +278,40 @@ export const PanelWrapper: FC<Props> = ({
                 setEditMode(true);
             }
         }
-    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id]);
+    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize]);
 
     const handleSaveEditClick = useCallback(() => {
         if (isEditMode) {
             saveAndExit(id).then((success) => {
                 if (success) {
                     setEditMode(false);
+                    // Resize back to display content after saving
+                    if (requestResize) {
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                requestResize();
+                            });
+                        });
+                    }
                 }
             });
         }
-    }, [isEditMode, saveAndExit, id]);
+    }, [isEditMode, saveAndExit, id, requestResize]);
 
     const handleDiscardEditClick = useCallback(() => {
         if (isEditMode) {
             cancelEdit(id);
             setEditMode(false);
+            // Resize back to display content after discarding
+            if (requestResize) {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        requestResize();
+                    });
+                });
+            }
         }
-    }, [isEditMode, cancelEdit, id]);
+    }, [isEditMode, cancelEdit, id, requestResize]);
 
     useEffect(() => {
         if (!isSelected) return;
@@ -631,7 +666,12 @@ export const PanelWrapper: FC<Props> = ({
                         )}
                     </AnimatePresence>
                     {isEditMode && block && isContentNode(block) ? (
-                        <BlockForm blockId={id} blockType={block.block.type} mode="inline" />
+                        <BlockForm
+                            blockId={id}
+                            blockType={block.block.type}
+                            mode="inline"
+                            onResize={requestResize}
+                        />
                     ) : (
                         children
                     )}

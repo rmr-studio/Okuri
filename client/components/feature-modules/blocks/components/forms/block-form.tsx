@@ -11,9 +11,10 @@ interface BlockFormProps {
     blockId: string;
     blockType: BlockType;
     mode: "inline" | "drawer";
+    onResize?: () => void;
 }
 
-export const BlockForm: FC<BlockFormProps> = ({ blockId, blockType, mode }) => {
+export const BlockForm: FC<BlockFormProps> = ({ blockId, blockType, mode, onResize }) => {
     const { getDraft, updateDraft, validateField, getFieldErrors } = useBlockEdit();
     const formRef = useRef<HTMLDivElement>(null);
     const draft = getDraft(blockId);
@@ -31,6 +32,27 @@ export const BlockForm: FC<BlockFormProps> = ({ blockId, blockType, mode }) => {
             }
         }
     }, [mode]);
+
+    // Request resize when form mounts in inline mode
+    useEffect(() => {
+        if (mode === "inline" && onResize) {
+            // Delay to ensure form is fully rendered
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    onResize();
+                });
+            });
+        }
+    }, [mode, onResize]);
+
+    // Request resize when draft data changes (form content changes)
+    useEffect(() => {
+        if (mode === "inline" && onResize && draft) {
+            requestAnimationFrame(() => {
+                onResize();
+            });
+        }
+    }, [draft, mode, onResize]);
 
     // Tab navigation between fields and blocks
     useEffect(() => {
@@ -125,8 +147,24 @@ export const BlockForm: FC<BlockFormProps> = ({ blockId, blockType, mode }) => {
                     <div key={fieldPath}>
                         <Widget
                             value={value !== undefined ? value : widgetMeta.defaultValue}
-                            onChange={(newValue) => updateDraft(blockId, fieldPath, newValue)}
-                            onBlur={() => validateField(blockId, fieldPath)}
+                            onChange={(newValue) => {
+                                updateDraft(blockId, fieldPath, newValue);
+                                // Request resize after value change (deferred to allow DOM update)
+                                if (mode === "inline" && onResize) {
+                                    requestAnimationFrame(() => {
+                                        onResize();
+                                    });
+                                }
+                            }}
+                            onBlur={() => {
+                                validateField(blockId, fieldPath);
+                                // Request resize after validation (errors may appear)
+                                if (mode === "inline" && onResize) {
+                                    requestAnimationFrame(() => {
+                                        onResize();
+                                    });
+                                }
+                            }}
                             label={fieldConfig.label}
                             description={fieldConfig.description}
                             tooltip={fieldConfig.tooltip}
