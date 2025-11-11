@@ -17,7 +17,6 @@ export const BlockEditDrawer: FC = () => {
         closeDrawer,
         validateBlock,
         startEdit,
-        isEditing,
         drawerState: { expandedSections },
         toggleSection,
     } = useBlockEdit();
@@ -40,12 +39,13 @@ export const BlockEditDrawer: FC = () => {
 
         const allBlocks = getAllDescendants(drawerState.rootBlockId);
 
-        // Start drawer edit sessions for ALL blocks (including those already in inline mode)
-        // This ensures all blocks within the drawer are in "drawer" mode
+        // Start drawer edit sessions for ALL blocks with force refresh
+        // This ensures all blocks start with fresh draft data from the environment
         allBlocks.forEach((blockId) => {
-            startEdit(blockId, "drawer");
+            startEdit(blockId, "drawer", true); // forceRefresh=true
         });
-    }, [drawerState.isOpen, drawerState.rootBlockId, getChildren, startEdit]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [drawerState.isOpen, drawerState.rootBlockId]);
 
     if (!drawerState.isOpen || !drawerState.rootBlockId) return null;
 

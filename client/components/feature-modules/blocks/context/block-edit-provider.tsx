@@ -39,7 +39,7 @@ export interface BlockEditContextValue {
     drawerState: DrawerState;
 
     // Block-level actions
-    startEdit(blockId: string, mode: "inline" | "drawer"): void;
+    startEdit(blockId: string, mode: "inline" | "drawer", forceRefresh?: boolean): void;
     saveEdit(blockId: string): Promise<boolean>;
     cancelEdit(blockId: string): void;
     saveAndExit(blockId: string): Promise<boolean>;
@@ -123,19 +123,22 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     /* -------------------------------------------------------------------------- */
 
     const startEdit = useCallback(
-        (blockId: string, mode: "inline" | "drawer") => {
+        (blockId: string, mode: "inline" | "drawer", forceRefresh: boolean = false) => {
             const block = getBlock(blockId);
             if (!block || !isContentNode(block)) {
                 console.warn(`Cannot start edit: block ${blockId} not found or not a content node`);
                 return;
             }
 
+            // Clone current block payload data into drafts
+            const currentData = block.block.payload;
+            const draftData = structuredClone(currentData);
+
             // Check if already editing
             const existingSession = editingSessions.get(blockId);
-            const existingDraft = drafts.get(blockId);
 
-            if (existingSession && existingDraft) {
-                // Already editing - just update the mode if needed
+            if (existingSession && !forceRefresh) {
+                // Already editing - just update the mode and refresh draft if switching to drawer
                 if (existingSession.mode !== mode) {
                     setEditingSessions((prev) => {
                         const next = new Map(prev);
@@ -145,15 +148,22 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         }
                         return next;
                     });
+
+                    // Refresh draft when switching to drawer mode
+                    if (mode === "drawer") {
+                        setDrafts((prev) => {
+                            const next = new Map(prev);
+                            next.set(blockId, draftData);
+                            return next;
+                        });
+                    }
+
                     console.log(`Updated edit mode to ${mode} for block ${blockId}`);
                 }
                 return;
             }
 
-            // Clone current block payload data into drafts
-            const currentData = block.block.payload;
-            const draftData = structuredClone(currentData);
-
+            // Create new session and draft (or force refresh)
             setDrafts((prev) => {
                 const next = new Map(prev);
                 next.set(blockId, draftData);
@@ -172,9 +182,9 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 return next;
             });
 
-            console.log(`Started ${mode} edit for block ${blockId}`);
+            console.log(`Started ${mode} edit for block ${blockId}${forceRefresh ? " (force refresh)" : ""}`);
         },
-        [getBlock, editingSessions, drafts]
+        [getBlock, editingSessions]
     );
 
     const validateBlock = useCallback(
@@ -321,104 +331,6 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     );
 
     /* -------------------------------------------------------------------------- */
-    /*                              Drawer Management                             */
-    /* -------------------------------------------------------------------------- */
-
-    const openDrawer = useCallback(
-        (rootBlockId: string) => {
-            const block = getBlock(rootBlockId);
-            if (!block) {
-                console.warn(`Cannot open drawer: block ${rootBlockId} not found`);
-                return;
-            }
-
-            // Start edit session for drawer mode
-            startEdit(rootBlockId, "drawer");
-
-            setDrawerState({
-                isOpen: true,
-                rootBlockId,
-                expandedSections: new Set([rootBlockId]), // Expand root by default
-            });
-
-            console.log(`Opened drawer for block ${rootBlockId}`);
-        },
-        [getBlock, startEdit]
-    );
-
-    const closeDrawer = useCallback(
-        async (saveAll: boolean) => {
-            if (!drawerState.rootBlockId) return;
-
-            // Helper to get all descendants of a block using BlockEnvironment
-            const getAllDescendants = (blockId: string): string[] => {
-                const result = [blockId];
-                const childIds = getChildren(blockId);
-
-                childIds.forEach((childId) => {
-                    result.push(...getAllDescendants(childId));
-                });
-
-                return result;
-            };
-
-            // Get all blocks within the drawer's tree
-            const drawerBlockIds = new Set(getAllDescendants(drawerState.rootBlockId));
-
-            if (saveAll) {
-                // Collect ALL editing sessions within the drawer tree (both inline and drawer modes)
-                const blocksToSave = Array.from(editingSessions.keys()).filter((blockId) =>
-                    drawerBlockIds.has(blockId)
-                );
-
-                // Validate all blocks first
-                const allValid = blocksToSave.every((blockId) => validateBlock(blockId));
-
-                if (!allValid) {
-                    console.warn("Validation failed for one or more blocks. Cannot save.");
-                    return;
-                }
-
-                // Save all blocks
-                for (const blockId of blocksToSave) {
-                    await saveEdit(blockId);
-                }
-            } else {
-                // Cancel ALL sessions within the drawer tree
-                const blocksToCancel = Array.from(editingSessions.keys()).filter((blockId) =>
-                    drawerBlockIds.has(blockId)
-                );
-
-                blocksToCancel.forEach((blockId) => cancelEdit(blockId));
-            }
-
-            setDrawerState({
-                isOpen: false,
-                rootBlockId: null,
-                expandedSections: new Set(),
-            });
-
-            console.log(`Closed drawer (saved: ${saveAll})`);
-        },
-        [drawerState.rootBlockId, editingSessions, validateBlock, saveEdit, cancelEdit, getChildren]
-    );
-
-    const toggleSection = useCallback((blockId: string) => {
-        setDrawerState((prev) => {
-            const expanded = new Set(prev.expandedSections);
-            if (expanded.has(blockId)) {
-                expanded.delete(blockId);
-            } else {
-                expanded.add(blockId);
-            }
-            return {
-                ...prev,
-                expandedSections: expanded,
-            };
-        });
-    }, []);
-
-    /* -------------------------------------------------------------------------- */
     /*                                 Validation                                 */
     /* -------------------------------------------------------------------------- */
 
@@ -489,6 +401,159 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         },
         [editingSessions]
     );
+
+    /* -------------------------------------------------------------------------- */
+    /*                              Drawer Management                             */
+    /* -------------------------------------------------------------------------- */
+
+    const openDrawer = useCallback(
+        (rootBlockId: string) => {
+            const block = getBlock(rootBlockId);
+            if (!block) {
+                console.warn(`Cannot open drawer: block ${rootBlockId} not found`);
+                return;
+            }
+
+            // Start edit session for drawer mode
+            startEdit(rootBlockId, "drawer");
+
+            setDrawerState({
+                isOpen: true,
+                rootBlockId,
+                expandedSections: new Set([rootBlockId]), // Expand root by default
+            });
+
+            console.log(`Opened drawer for block ${rootBlockId}`);
+        },
+        [getBlock, startEdit]
+    );
+
+    const closeDrawer = useCallback(
+        async (saveAll: boolean) => {
+            if (!drawerState.rootBlockId) return;
+
+            // Helper to get all descendants of a block using BlockEnvironment
+            const getAllDescendants = (blockId: string): string[] => {
+                const result = [blockId];
+                const childIds = getChildren(blockId);
+
+                childIds.forEach((childId) => {
+                    result.push(...getAllDescendants(childId));
+                });
+
+                return result;
+            };
+
+            // Get all blocks within the drawer's tree
+            const drawerBlockIds = new Set(getAllDescendants(drawerState.rootBlockId));
+
+            // Collect ALL editing sessions within the drawer tree (both inline and drawer modes)
+            const blocksInDrawer = Array.from(editingSessions.keys()).filter((blockId) =>
+                drawerBlockIds.has(blockId)
+            );
+
+            if (saveAll) {
+                // installHook.js:1 Cannot update a component (`BlockEditProvider`) while rendering a different component (`RecursiveFormRenderer`). To locate the bad setState() call inside `RecursiveFormRenderer`, follow the stack trace as described in https://react.dev/link/setstate-in-renderv lidate all blocks first
+                const allValid = blocksInDrawer.every((blockId) => {
+                    const session = editingSessions.get(blockId);
+                    if (!session) return true;
+
+                    const block = getBlock(blockId);
+                    if (!block || !isContentNode(block)) return false;
+
+                    const formFields = block.block.type.display.form.fields;
+                    let isValid = true;
+
+                    // Validate all fields
+                    Object.keys(formFields).forEach((fieldPath) => {
+                        const errors = validateField(blockId, fieldPath);
+                        if (errors.length > 0) {
+                            isValid = false;
+                        }
+                    });
+
+                    return isValid;
+                });
+
+                if (!allValid) {
+                    console.warn("Validation failed for one or more blocks. Cannot save.");
+                    return;
+                }
+
+                // Update all blocks in the environment
+                blocksInDrawer.forEach((blockId) => {
+                    const draft = drafts.get(blockId);
+                    if (!draft) return;
+
+                    const block = getBlock(blockId);
+                    if (!block || !isContentNode(block)) return;
+
+                    // Create updated node with draft data
+                    const updatedNode: BlockNode = {
+                        ...block,
+                        block: {
+                            ...block.block,
+                            payload: draft,
+                        },
+                    };
+
+                    // Commit to BlockEnvironment
+                    updateBlock(blockId, updatedNode);
+                    console.log(`Saved block ${blockId}`);
+                });
+            }
+
+            // Clean up ALL sessions and drafts within the drawer tree at once
+            setEditingSessions((prev) => {
+                const next = new Map(prev);
+                blocksInDrawer.forEach((blockId) => {
+                    next.delete(blockId);
+                });
+                return next;
+            });
+
+            setDrafts((prev) => {
+                const next = new Map(prev);
+                blocksInDrawer.forEach((blockId) => {
+                    next.delete(blockId);
+                });
+                return next;
+            });
+
+            // Close the drawer
+            setDrawerState({
+                isOpen: false,
+                rootBlockId: null,
+                expandedSections: new Set(),
+            });
+
+            console.log(`Closed drawer (saved: ${saveAll})`);
+        },
+        [
+            drawerState.rootBlockId,
+            editingSessions,
+            drafts,
+            validateField,
+            getChildren,
+            getBlock,
+            updateBlock,
+        ]
+    );
+
+    const toggleSection = useCallback((blockId: string) => {
+        setDrawerState((prev) => {
+            const expanded = new Set(prev.expandedSections);
+            if (expanded.has(blockId)) {
+                expanded.delete(blockId);
+            } else {
+                expanded.add(blockId);
+            }
+            return {
+                ...prev,
+                expandedSections: expanded,
+            };
+        });
+    }, []);
 
     /* -------------------------------------------------------------------------- */
     /*                                   Queries                                  */
