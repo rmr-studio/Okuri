@@ -99,11 +99,16 @@ export const PanelWrapper: FC<Props> = ({
         // Only set to true if in inline mode; drawer mode is handled separately
         setEditMode(editMode === "inline");
 
-        // If transitioning from drawer to null (drawer closed), request resize
-        if (prevEditMode === "drawer" && editMode === null && requestResize) {
+        // If transitioning from any edit mode to null (edit mode closed), request resize
+        // This handles: individual save/discard, Save All, Discard All, and drawer close
+        if (prevEditMode !== null && editMode === null && requestResize) {
+            // Use triple requestAnimationFrame to ensure React has fully unmounted
+            // the form and mounted the display content before measuring
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    requestResize();
+                    requestAnimationFrame(() => {
+                        requestResize();
+                    });
                 });
             });
         }
