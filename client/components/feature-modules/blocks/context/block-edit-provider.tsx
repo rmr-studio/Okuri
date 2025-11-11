@@ -56,6 +56,7 @@ export interface BlockEditContextValue {
     // Validation
     validateField(blockId: string, fieldPath: string): string[];
     validateBlock(blockId: string): boolean;
+    getFieldErrors(blockId: string, fieldPath: string): string[];
 
     // Queries
     isEditing(blockId: string): boolean;
@@ -445,6 +446,15 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         [getBlock, drafts]
     );
 
+    const getFieldErrors = useCallback(
+        (blockId: string, fieldPath: string): string[] => {
+            const session = editingSessions.get(blockId);
+            if (!session) return [];
+            return session.validationErrors.get(fieldPath) || [];
+        },
+        [editingSessions]
+    );
+
     /* -------------------------------------------------------------------------- */
     /*                                   Queries                                  */
     /* -------------------------------------------------------------------------- */
@@ -492,6 +502,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             toggleSection,
             validateField,
             validateBlock,
+            getFieldErrors,
             isEditing,
             getEditMode,
             hasUnsavedChanges,
@@ -512,6 +523,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             toggleSection,
             validateField,
             validateBlock,
+            getFieldErrors,
             isEditing,
             getEditMode,
             hasUnsavedChanges,

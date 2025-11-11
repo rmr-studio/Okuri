@@ -136,6 +136,8 @@ The PanelWrapper already includes edit functionality - no additional integration
 |----------|--------|
 | `Cmd+E` | Toggle inline edit for simple blocks, or open drawer for containers |
 | `Cmd+Shift+E` | Always open drawer (even for simple blocks) |
+| `Arrow Left/Right` | Navigate between toolbar buttons |
+| `Enter` | Activate focused toolbar button |
 | `Tab` | Navigate to next form field (or next block when at last field) |
 | `Shift+Tab` | Navigate to previous form field (or previous block when at first field) |
 
@@ -144,7 +146,9 @@ The PanelWrapper already includes edit functionality - no additional integration
 - **Edit Icon (✎)**: Toggles inline edit or opens drawer
   - Highlights in primary color when in edit mode
   - Shows "Save and exit" when active
-- **Folder Edit Icon (📁)**: Opens drawer (only visible for containers)
+  - For simple blocks: Opens inline edit (shows hint about Cmd+Shift+E for drawer)
+  - For containers: Opens drawer with all children
+  - **Accessible via arrow keys**: Navigate left/right between toolbar buttons, press Enter to activate
 
 ### Validation
 

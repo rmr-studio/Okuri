@@ -14,7 +14,7 @@ interface BlockFormProps {
 }
 
 export const BlockForm: FC<BlockFormProps> = ({ blockId, blockType, mode }) => {
-    const { getDraft, updateDraft, validateField } = useBlockEdit();
+    const { getDraft, updateDraft, validateField, getFieldErrors } = useBlockEdit();
     const formRef = useRef<HTMLDivElement>(null);
     const draft = getDraft(blockId);
 
@@ -119,7 +119,7 @@ export const BlockForm: FC<BlockFormProps> = ({ blockId, blockType, mode }) => {
 
                 const Widget = widgetMeta.component;
                 const value = get(draft, fieldPath);
-                const errors = validateField(blockId, fieldPath);
+                const errors = getFieldErrors(blockId, fieldPath);
 
                 return (
                     <div key={fieldPath}>

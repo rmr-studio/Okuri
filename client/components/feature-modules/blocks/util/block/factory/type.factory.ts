@@ -134,7 +134,25 @@ export const createLayoutContainerBlockType = (organisationId?: string): BlockTy
         description: "Hosts nested blocks inside a grid-aware surface.",
         organisationId,
         schema: layoutContainerSchema,
-        display: createBaseDisplay(layoutContainerComponent),
+        display: {
+            form: {
+                fields: {
+                    "data.title": {
+                        type: "TEXT_INPUT",
+                        label: "Container Title",
+                        placeholder: "Enter container title",
+                        required: false,
+                    },
+                    "data.description": {
+                        type: "TEXT_AREA",
+                        label: "Description",
+                        placeholder: "Describe this container",
+                        required: false,
+                    },
+                },
+            },
+            render: createBaseDisplay(layoutContainerComponent).render,
+        },
         nesting: {
             max: undefined,
             allowedTypes: ALL_BLOCK_COMPONENT_TYPES,
@@ -187,7 +205,31 @@ export const createBlockListBlockType = (organisationId?: string): BlockType =>
         description: "Renders a homogeneous list of owned child blocks.",
         organisationId,
         schema: listSchema,
-        display: createBaseDisplay(listComponent),
+        display: {
+            form: {
+                fields: {
+                    "data.title": {
+                        type: "TEXT_INPUT",
+                        label: "List Title",
+                        placeholder: "Enter list title",
+                        required: false,
+                    },
+                    "data.description": {
+                        type: "TEXT_AREA",
+                        label: "Description",
+                        placeholder: "Describe this list",
+                        required: false,
+                    },
+                    "data.emptyMessage": {
+                        type: "TEXT_INPUT",
+                        label: "Empty Message",
+                        placeholder: "Message shown when list is empty",
+                        required: false,
+                    },
+                },
+            },
+            render: createBaseDisplay(listComponent).render,
+        },
         nesting: {
             max: 100,
             allowedTypes: ALL_BLOCK_COMPONENT_TYPES,
@@ -327,7 +369,25 @@ export const createContentBlockListType = (organisationId?: string): BlockType =
         description: "Ordered list of content blocks with configurable ordering.",
         organisationId,
         schema: contentBlockListSchema,
-        display: createBaseDisplay(contentBlockListComponent),
+        display: {
+            form: {
+                fields: {
+                    "data.title": {
+                        type: "TEXT_INPUT",
+                        label: "List Title",
+                        placeholder: "Enter list title",
+                        required: false,
+                    },
+                    "data.description": {
+                        type: "TEXT_AREA",
+                        label: "Description",
+                        placeholder: "Describe this list",
+                        required: false,
+                    },
+                },
+            },
+            render: createBaseDisplay(contentBlockListComponent).render,
+        },
         nesting: {
             max: undefined,
             allowedTypes: ALL_BLOCK_COMPONENT_TYPES, // Default, overridden by listConfig

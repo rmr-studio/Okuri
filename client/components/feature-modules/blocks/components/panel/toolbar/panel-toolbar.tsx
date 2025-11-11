@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
-import { CommandIcon, InfoIcon, PlusIcon, Edit3, FolderEdit } from "lucide-react";
+import { CommandIcon, InfoIcon, PlusIcon, Edit3 } from "lucide-react";
 import { FC, RefObject } from "react";
 
 import { motion } from "framer-motion";
@@ -47,7 +47,6 @@ interface PanelToolbarProps {
     actionsOpen?: boolean;
     onActionsOpenChange?: (open: boolean) => void;
     onEditClick?: () => void;
-    onDrawerEditClick?: () => void;
     isEditMode?: boolean;
     hasChildren?: boolean;
 }
@@ -81,7 +80,6 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     actionsOpen,
     onActionsOpenChange,
     onEditClick,
-    onDrawerEditClick,
     isEditMode = false,
     hasChildren = false,
 }) => {
@@ -98,6 +96,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     let buttonIndex = 0;
     const quickActionsIndex = buttonIndex++;
     const insertIndex = allowInsert ? buttonIndex++ : -1;
+    const editIndex = onEditClick ? buttonIndex++ : -1;
     const detailsIndex = buttonIndex++;
     const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
     return (
@@ -191,7 +190,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                             size="icon"
                             aria-label={isEditMode ? "Save and exit edit mode" : "Edit block"}
                             className={cn(
-                                toolbarButtonClass,
+                                getButtonClass(editIndex),
                                 isEditMode && "bg-primary text-primary-foreground hover:bg-primary/90"
                             )}
                             onClick={onEditClick}
@@ -205,25 +204,12 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                             : hasChildren
                             ? "Edit children (⌘E)"
                             : "Edit block (⌘E)"}
+                        {!hasChildren && (
+                            <span className="block text-xs text-muted-foreground mt-1">
+                                ⌘⇧E for drawer
+                            </span>
+                        )}
                     </TooltipContent>
-                </Tooltip>
-            )}
-
-            {/* Drawer edit button (for containers) */}
-            {onDrawerEditClick && hasChildren && (
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Edit in drawer"
-                            className={toolbarButtonClass}
-                            onClick={onDrawerEditClick}
-                        >
-                            <FolderEdit className="size-3.5" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit all children (⌘⇧E)</TooltipContent>
                 </Tooltip>
             )}
 
