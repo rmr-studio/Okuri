@@ -40,13 +40,12 @@ export const BlockEditDrawer: FC = () => {
 
         const allBlocks = getAllDescendants(drawerState.rootBlockId);
 
-        // Start edit sessions for blocks that aren't already being edited
+        // Start drawer edit sessions for ALL blocks (including those already in inline mode)
+        // This ensures all blocks within the drawer are in "drawer" mode
         allBlocks.forEach((blockId) => {
-            if (!isEditing(blockId)) {
-                startEdit(blockId, "drawer");
-            }
+            startEdit(blockId, "drawer");
         });
-    }, [drawerState.isOpen, drawerState.rootBlockId, getChildren, startEdit, isEditing]);
+    }, [drawerState.isOpen, drawerState.rootBlockId, getChildren, startEdit]);
 
     if (!drawerState.isOpen || !drawerState.rootBlockId) return null;
 
@@ -182,7 +181,7 @@ const RecursiveFormRenderer: FC<RecursiveFormRendererProps> = ({
     validationErrors,
 }) => {
     const { getChildren, getBlock } = useBlockEnvironment();
-    const { drawerState, toggleSection, startEdit, isEditing } = useBlockEdit();
+    const { drawerState, toggleSection } = useBlockEdit();
     const children = getChildren(blockId);
 
     if (children.length === 0) {
@@ -202,11 +201,6 @@ const RecursiveFormRenderer: FC<RecursiveFormRendererProps> = ({
                 const hasChildren = childCount > 0;
                 const hasError = validationErrors.has(childId);
                 const isExpanded = drawerState.expandedSections.has(childId);
-
-                // Start edit session for this child if not already editing
-                if (!isEditing(childId)) {
-                    startEdit(childId, "drawer");
-                }
 
                 return (
                     <Collapsible

@@ -79,6 +79,13 @@ export const PanelWrapper: FC<Props> = ({
     const block = getBlock(id);
     const hasChildren = getChildren(id).length > 0;
 
+    // Sync local edit mode state with provider
+    useEffect(() => {
+        const editMode = getEditMode(id);
+        // Only set to true if in inline mode; drawer mode is handled separately
+        setEditMode(editMode === "inline");
+    }, [id, getEditMode]);
+
     const menuActions = useMemo(() => {
         if (onDelete && !actions.some((action) => action.id === "delete")) {
             return [

@@ -84,7 +84,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         expandedSections: new Set(),
     });
 
-    const { getBlock, updateBlock } = useBlockEnvironment();
+    const { getBlock, updateBlock, getChildren } = useBlockEnvironment();
     const { acquireLock } = useBlockFocus();
     const lockRef = useRef<(() => void) | null>(null);
 
@@ -130,6 +130,26 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 return;
             }
 
+            // Check if already editing
+            const existingSession = editingSessions.get(blockId);
+            const existingDraft = drafts.get(blockId);
+
+            if (existingSession && existingDraft) {
+                // Already editing - just update the mode if needed
+                if (existingSession.mode !== mode) {
+                    setEditingSessions((prev) => {
+                        const next = new Map(prev);
+                        const session = next.get(blockId);
+                        if (session) {
+                            session.mode = mode;
+                        }
+                        return next;
+                    });
+                    console.log(`Updated edit mode to ${mode} for block ${blockId}`);
+                }
+                return;
+            }
+
             // Clone current block payload data into drafts
             const currentData = block.block.payload;
             const draftData = structuredClone(currentData);
@@ -154,7 +174,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
             console.log(`Started ${mode} edit for block ${blockId}`);
         },
-        [getBlock]
+        [getBlock, editingSessions, drafts]
     );
 
     const validateBlock = useCallback(
@@ -330,10 +350,25 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         async (saveAll: boolean) => {
             if (!drawerState.rootBlockId) return;
 
+            // Helper to get all descendants of a block using BlockEnvironment
+            const getAllDescendants = (blockId: string): string[] => {
+                const result = [blockId];
+                const childIds = getChildren(blockId);
+
+                childIds.forEach((childId) => {
+                    result.push(...getAllDescendants(childId));
+                });
+
+                return result;
+            };
+
+            // Get all blocks within the drawer's tree
+            const drawerBlockIds = new Set(getAllDescendants(drawerState.rootBlockId));
+
             if (saveAll) {
-                // Collect all blocks in drawer that are being edited
-                const blocksToSave = Array.from(editingSessions.keys()).filter(
-                    (blockId) => editingSessions.get(blockId)?.mode === "drawer"
+                // Collect ALL editing sessions within the drawer tree (both inline and drawer modes)
+                const blocksToSave = Array.from(editingSessions.keys()).filter((blockId) =>
+                    drawerBlockIds.has(blockId)
                 );
 
                 // Validate all blocks first
@@ -349,9 +384,9 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     await saveEdit(blockId);
                 }
             } else {
-                // Cancel all drawer sessions
-                const blocksToCancel = Array.from(editingSessions.keys()).filter(
-                    (blockId) => editingSessions.get(blockId)?.mode === "drawer"
+                // Cancel ALL sessions within the drawer tree
+                const blocksToCancel = Array.from(editingSessions.keys()).filter((blockId) =>
+                    drawerBlockIds.has(blockId)
                 );
 
                 blocksToCancel.forEach((blockId) => cancelEdit(blockId));
@@ -365,7 +400,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
             console.log(`Closed drawer (saved: ${saveAll})`);
         },
-        [drawerState.rootBlockId, editingSessions, validateBlock, saveEdit, cancelEdit]
+        [drawerState.rootBlockId, editingSessions, validateBlock, saveEdit, cancelEdit, getChildren]
     );
 
     const toggleSection = useCallback((blockId: string) => {
