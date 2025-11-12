@@ -1,11 +1,11 @@
 "use client";
 
-import { FC, useState } from "react";
-import { useBlockEdit } from "../../context/block-edit-provider";
-import { AlertCircle, Edit3, Lock, Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { AlertCircle, Check, Edit3, X } from "lucide-react";
+import { FC, useState } from "react";
+import { useBlockEdit } from "../../context/block-edit-provider";
 
 export const EditModeIndicator: FC = () => {
     const { getEditingCount, hasUnsavedChanges, saveAllEdits, discardAllEdits } = useBlockEdit();
@@ -14,11 +14,16 @@ export const EditModeIndicator: FC = () => {
 
     const handleSaveAll = async () => {
         setIsSaving(true);
-        const success = await saveAllEdits();
-        setIsSaving(false);
-        if (!success) {
-            // Show error feedback if needed
-            console.error("Failed to save all edits due to validation errors");
+        try {
+            const success = await saveAllEdits();
+            if (!success) {
+                // Show error feedback if needed
+                console.error("Failed to save all edits due to validation errors");
+            }
+        } catch (error) {
+            console.error("Error saving all edits:", error);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -50,17 +55,12 @@ export const EditModeIndicator: FC = () => {
 
                     <div className="h-4 w-px bg-primary-foreground/30" />
 
-                    <div className="flex items-center gap-2 text-sm">
-                        <Lock className="h-3.5 w-3.5" />
-                        <span>Movement disabled</span>
-                    </div>
-
                     {hasUnsavedChanges() && (
                         <>
                             <div className="h-4 w-px bg-primary-foreground/30" />
                             <div className="flex items-center gap-2">
-                                <AlertCircle className="h-3.5 w-3.5 text-yellow-300" />
-                                <span className="text-sm text-yellow-300">Unsaved changes</span>
+                                <AlertCircle className="h-3.5 w-3.5 text-edit" />
+                                <span className="text-sm text-edit">Unsaved changes</span>
                             </div>
                         </>
                     )}
@@ -72,7 +72,6 @@ export const EditModeIndicator: FC = () => {
                         <Button
                             size="sm"
                             variant="secondary"
-                            className="h-7 px-3 text-xs bg-white/20 hover:bg-white/30 text-primary-foreground border-0"
                             onClick={handleSaveAll}
                             disabled={isSaving}
                         >
@@ -81,8 +80,8 @@ export const EditModeIndicator: FC = () => {
                         </Button>
                         <Button
                             size="sm"
-                            variant="secondary"
-                            className="h-7 px-3 text-xs bg-white/20 hover:bg-white/30 text-primary-foreground border-0"
+                            variant="destructive"
+                            className="bg-destructive/50"
                             onClick={handleDiscardAll}
                             disabled={isSaving}
                         >

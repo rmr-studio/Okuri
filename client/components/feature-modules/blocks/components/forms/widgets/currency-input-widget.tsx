@@ -1,10 +1,10 @@
 "use client";
 
-import { FC } from "react";
-import { FormWidgetProps } from "../form-widget.types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/util/utils";
+import { FC, useState } from "react";
+import { FormWidgetProps } from "../form-widget.types";
 
 export const CurrencyInputWidget: FC<FormWidgetProps<number>> = ({
     value,
@@ -17,16 +17,26 @@ export const CurrencyInputWidget: FC<FormWidgetProps<number>> = ({
     disabled,
 }) => {
     const hasErrors = errors && errors.length > 0;
+    const [input, setInput] = useState("");
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const rawValue = e.target.value;
-        // Remove non-numeric characters except decimal point
-        const numericValue = rawValue.replace(/[^0-9.]/g, "");
-        const parsedValue = numericValue ? parseFloat(numericValue) : 0;
-        onChange(parsedValue);
+        let cleaned = e.target.value.replace(/[^0-9.]/g, "");
+        // Allow only one decimal point
+        const parts = cleaned.split(".");
+        if (parts.length > 2) {
+            cleaned = parts[0] + "." + parts.slice(1).join("");
+        }
+        setInput(cleaned);
     };
 
-    const displayValue = value ? value.toFixed(2) : "";
+    const handleBlur = () => {
+        const parsedValue = input ? parseFloat(input) : 0;
+        onChange(parsedValue);
+        setInput("");
+        onBlur?.();
+    };
+
+    const displayValue = input || (value ? value.toFixed(2) : "");
 
     return (
         <div className="space-y-2">
@@ -43,7 +53,7 @@ export const CurrencyInputWidget: FC<FormWidgetProps<number>> = ({
                     type="text"
                     value={displayValue}
                     onChange={handleChange}
-                    onBlur={onBlur}
+                    onBlur={handleBlur}
                     placeholder={placeholder || "0.00"}
                     disabled={disabled}
                     className={cn(

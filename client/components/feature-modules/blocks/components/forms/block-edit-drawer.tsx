@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/util/utils";
 import { AlertCircle, ChevronRight } from "lucide-react";
-import { FC, useState, useEffect } from "react";
+import { FC, useEffect, useState } from "react";
 import { useBlockEdit } from "../../context/block-edit-provider";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { isContentNode } from "../../interface/block.interface";
@@ -24,20 +24,22 @@ export const BlockEditDrawer: FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [validationErrors, setValidationErrors] = useState<Map<string, boolean>>(new Map());
 
+    const getAllDescendantBlocks = (blockId: string): string[] => {
+        const result = [blockId];
+        const children = getChildren(blockId);
+
+        children.forEach((childId) => {
+            result.push(...getAllDescendantBlocks(childId));
+        });
+
+        return result;
+    };
+
     // Start edit sessions for all descendants when drawer opens
     useEffect(() => {
         if (!drawerState.isOpen || !drawerState.rootBlockId) return;
 
-        const getAllDescendants = (blockId: string): string[] => {
-            const result = [blockId];
-            const children = getChildren(blockId);
-            children.forEach((childId) => {
-                result.push(...getAllDescendants(childId));
-            });
-            return result;
-        };
-
-        const allBlocks = getAllDescendants(drawerState.rootBlockId);
+        const allBlocks = getAllDescendantBlocks(drawerState.rootBlockId);
 
         // Start drawer edit sessions for ALL blocks with force refresh
         // This ensures all blocks start with fresh draft data from the environment
@@ -84,17 +86,6 @@ export const BlockEditDrawer: FC = () => {
 
     const handleCancel = () => {
         closeDrawer(false);
-    };
-
-    const getAllDescendantBlocks = (blockId: string): string[] => {
-        const result = [blockId];
-        const children = getChildren(blockId);
-
-        children.forEach((childId) => {
-            result.push(...getAllDescendantBlocks(childId));
-        });
-
-        return result;
     };
 
     return (

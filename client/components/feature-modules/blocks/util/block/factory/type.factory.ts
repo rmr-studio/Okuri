@@ -5,8 +5,8 @@ import {
     BlockSchema,
     BlockType,
     BlockTypeNesting,
-    GridRect,
 } from "../../../interface/block.interface";
+import { GridRect } from "../../../interface/layout.interface";
 
 export const DEFAULT_GRID_LAYOUT: GridRect = {
     x: 0,
@@ -141,13 +141,11 @@ export const createLayoutContainerBlockType = (organisationId?: string): BlockTy
                         type: "TEXT_INPUT",
                         label: "Container Title",
                         placeholder: "Enter container title",
-                        required: false,
                     },
                     "data.description": {
                         type: "TEXT_AREA",
                         label: "Description",
                         placeholder: "Describe this container",
-                        required: false,
                     },
                 },
             },
@@ -212,19 +210,16 @@ export const createBlockListBlockType = (organisationId?: string): BlockType =>
                         type: "TEXT_INPUT",
                         label: "List Title",
                         placeholder: "Enter list title",
-                        required: false,
                     },
                     "data.description": {
                         type: "TEXT_AREA",
                         label: "Description",
                         placeholder: "Describe this list",
-                        required: false,
                     },
                     "data.emptyMessage": {
                         type: "TEXT_INPUT",
                         label: "Empty Message",
                         placeholder: "Message shown when list is empty",
-                        required: false,
                     },
                 },
             },
@@ -376,13 +371,11 @@ export const createContentBlockListType = (organisationId?: string): BlockType =
                         type: "TEXT_INPUT",
                         label: "List Title",
                         placeholder: "Enter list title",
-                        required: false,
                     },
                     "data.description": {
                         type: "TEXT_AREA",
                         label: "Description",
                         placeholder: "Describe this list",
-                        required: false,
                     },
                 },
             },

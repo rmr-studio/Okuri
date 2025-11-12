@@ -1,10 +1,10 @@
 "use client";
 
-import { FC } from "react";
-import { FormWidgetProps } from "../form-widget.types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/util/utils";
+import { FC } from "react";
+import { FormWidgetProps } from "../form-widget.types";
 
 export const CheckboxWidget: FC<FormWidgetProps<boolean>> = ({
     value,
@@ -16,22 +16,24 @@ export const CheckboxWidget: FC<FormWidgetProps<boolean>> = ({
     disabled,
 }) => {
     const hasErrors = errors && errors.length > 0;
+    // Sanitize label for use as HTML id
+    const sanitizedId = label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
     return (
         <div className="space-y-2">
             <div className="flex items-center space-x-2">
                 <Checkbox
-                    id={label}
+                    id={sanitizedId}
                     checked={value || false}
                     onCheckedChange={(checked) => {
-                        onChange(checked === true);
+                        onChange(!!checked);
                         onBlur?.();
                     }}
                     disabled={disabled}
                     className={cn(hasErrors && "border-destructive")}
                 />
                 <Label
-                    htmlFor={label}
+                    htmlFor={sanitizedId}
                     className={cn("cursor-pointer", hasErrors && "text-destructive")}
                 >
                     {label}

@@ -1,14 +1,11 @@
 "use client";
 
+import { DateTimePicker } from "@/components/ui/forms/date-picker/date-picker";
+import { DateTimeInput } from "@/components/ui/forms/date-picker/date-picker-input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/util/utils";
 import { FC, useState } from "react";
 import { FormWidgetProps } from "../form-widget.types";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/util/utils";
 
 export const DatePickerWidget: FC<FormWidgetProps<string>> = ({
     value,
@@ -25,42 +22,40 @@ export const DatePickerWidget: FC<FormWidgetProps<string>> = ({
 
     const date = value ? new Date(value) : undefined;
 
+    const handleChange = (date: Date | undefined) => {
+        if (date) {
+            onChange(date.toISOString());
+        } else {
+            onChange("");
+        }
+        onBlur?.();
+    };
+
     return (
         <div className="space-y-2">
             <Label htmlFor={label} className={cn(hasErrors && "text-destructive")}>
                 {label}
             </Label>
             {description && <p className="text-sm text-muted-foreground">{description}</p>}
-            <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="outline"
-                        disabled={disabled}
-                        className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !value && "text-muted-foreground",
-                            hasErrors && "border-destructive"
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>{placeholder || "Pick a date"}</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={(selectedDate) => {
-                            if (selectedDate) {
-                                onChange(selectedDate.toISOString());
-                                setOpen(false);
-                                onBlur?.();
-                            }
-                        }}
-                        initialFocus
+            <DateTimePicker
+                value={date}
+                onChange={handleChange}
+                modal={true}
+                hideTime
+                // min={minDate}
+                // max={maxDate}
+                // exitOnClick={exitOnClick}
+                clearable
+                renderTrigger={({ open, value, setOpen }) => (
+                    <DateTimeInput
+                        value={value}
+                        onChange={(x) => !open && handleChange(x)}
+                        format="dd/MM/yyyy"
+                        disabled={open}
+                        onCalendarClick={() => setOpen(!open)}
                     />
-                </PopoverContent>
-            </Popover>
+                )}
+            />
             {hasErrors && (
                 <div className="space-y-1">
                     {errors.map((error, idx) => (

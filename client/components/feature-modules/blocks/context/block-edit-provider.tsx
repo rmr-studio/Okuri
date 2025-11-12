@@ -140,16 +140,21 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
             const errors: string[] = [];
 
+            // Extract the property name from the field path (e.g., "data.email" -> "email")
+            const fieldParts = fieldPath.split(".");
+            const propertyName = fieldParts[fieldParts.length - 1];
+            const propertySchema = schema.properties?.[propertyName];
+
             // Check required
-            if (formField && schema.required) {
+            if (propertySchema?.required) {
                 if (value === undefined || value === null || value === "") {
                     errors.push("This field is required");
                 }
             }
 
             // Type-specific validation based on schema format
-            if (value && schema.format) {
-                switch (schema.format) {
+            if (value && propertySchema?.format) {
+                switch (propertySchema.format) {
                     case "EMAIL":
                         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
                             errors.push("Invalid email format");
@@ -286,7 +291,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
             return isValid;
         },
-        [editingSessions, getBlock]
+        [editingSessions, getBlock, validateField]
     );
 
     const saveEdit = useCallback(
@@ -374,26 +379,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const allBlockIds = Array.from(editingSessions.keys());
 
         // Validate all blocks first
-        const allValid = allBlockIds.every((blockId) => {
-            const session = editingSessions.get(blockId);
-            if (!session) return true;
-
-            const block = getBlock(blockId);
-            if (!block || !isContentNode(block)) return false;
-
-            const formFields = block.block.type.display.form.fields;
-            let isValid = true;
-
-            // Validate all fields
-            Object.keys(formFields).forEach((fieldPath) => {
-                const errors = validateField(blockId, fieldPath);
-                if (errors.length > 0) {
-                    isValid = false;
-                }
-            });
-
-            return isValid;
-        });
+        const allValid = allBlockIds.every((blockId) => validateBlock(blockId));
 
         if (!allValid) {
             console.warn("Validation failed for one or more blocks. Cannot save all.");
@@ -428,7 +414,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         console.log(`Saved all ${allBlockIds.length} blocks`);
         return true;
-    }, [editingSessions, drafts, validateField, getBlock, updateBlock]);
+    }, [editingSessions, drafts, validateBlock, getBlock, updateBlock]);
 
     const discardAllEdits = useCallback(() => {
         const allBlockIds = Array.from(editingSessions.keys());
@@ -529,27 +515,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             );
 
             if (saveAll) {
-                // installHook.js:1 Cannot update a component (`BlockEditProvider`) while rendering a different component (`RecursiveFormRenderer`). To locate the bad setState() call inside `RecursiveFormRenderer`, follow the stack trace as described in https://react.dev/link/setstate-in-renderv lidate all blocks first
-                const allValid = blocksInDrawer.every((blockId) => {
-                    const session = editingSessions.get(blockId);
-                    if (!session) return true;
-
-                    const block = getBlock(blockId);
-                    if (!block || !isContentNode(block)) return false;
-
-                    const formFields = block.block.type.display.form.fields;
-                    let isValid = true;
-
-                    // Validate all fields
-                    Object.keys(formFields).forEach((fieldPath) => {
-                        const errors = validateField(blockId, fieldPath);
-                        if (errors.length > 0) {
-                            isValid = false;
-                        }
-                    });
-
-                    return isValid;
-                });
+                // Validate all blocks first
+                const allValid = blocksInDrawer.every((blockId) => validateBlock(blockId));
 
                 if (!allValid) {
                     console.warn("Validation failed for one or more blocks. Cannot save.");
@@ -609,7 +576,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             drawerState.rootBlockId,
             editingSessions,
             drafts,
-            validateField,
+            validateBlock,
             getChildren,
             getBlock,
             updateBlock,

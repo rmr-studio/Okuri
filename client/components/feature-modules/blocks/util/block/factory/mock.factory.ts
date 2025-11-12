@@ -345,7 +345,6 @@ const createNoteBlockType = (organisationId: string): BlockType => {
                         type: "TEXT_AREA",
                         label: "Note Content",
                         placeholder: "Start typing your note...",
-                        required: true,
                     },
                 },
             },
@@ -407,12 +406,11 @@ const createProjectOverviewType = (organisationId: string): BlockType => {
                         type: "TEXT_INPUT",
                         label: "Project Name",
                         placeholder: "Enter project name",
-                        required: true,
                     },
                     "data.status": {
                         type: "DROPDOWN",
                         label: "Project Status",
-                        required: false,
+
                         options: [
                             { label: "Planning", value: "Planning" },
                             { label: "In Progress", value: "In progress" },
@@ -425,7 +423,6 @@ const createProjectOverviewType = (organisationId: string): BlockType => {
                         type: "TEXT_AREA",
                         label: "Project Summary",
                         placeholder: "Describe the project...",
-                        required: false,
                     },
                 },
             },

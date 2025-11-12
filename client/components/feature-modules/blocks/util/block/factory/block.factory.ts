@@ -13,7 +13,6 @@ import {
     BlockTypeNesting,
     EntityReferenceMetadata,
     EntityReferencePayload,
-    EntityType,
     Metadata,
     NodeType,
     Reference,
