@@ -17,7 +17,7 @@ export interface WidgetRenderStructure {
     // The block type key
     key: string;
     renderType: "component" | "container" | "list";
-    blockType: NodeType;
+    blockType: NodeType | "error";
 }
 
 export interface CallbackProvider {

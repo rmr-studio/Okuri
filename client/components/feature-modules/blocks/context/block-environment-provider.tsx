@@ -35,6 +35,7 @@ export const BlockEnvironmentContext = createContext<BlockEnvironmentContextValu
 export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> = ({
     organisationId,
     initialTrees,
+    initialLayout,
     children,
 }) => {
     const initialEnvironment = useMemo(
@@ -597,6 +598,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const value = useMemo<BlockEnvironmentContextValue>(
         () => ({
             environment,
+            initialLayout,
             isInitialized,
             setIsInitialized,
             addBlock,
@@ -619,6 +621,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         }),
         [
             environment,
+            initialLayout,
             isInitialized,
             addBlock,
             insertBlock,

@@ -201,10 +201,11 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     const initGrid = useCallback(() => {
         if (containerRef.current) {
             GridStack.renderCB = renderCBFn;
+            GridStack.resizeToContentCB = resizeToContentCBFn;
             return GridStack.init(optionsRef.current, containerRef.current);
         }
         return null;
-    }, [renderCBFn]);
+    }, [renderCBFn, resizeToContentCBFn]);
 
     useLayoutEffect(() => {
         if (!gridStack) return;

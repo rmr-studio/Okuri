@@ -2,6 +2,7 @@
 
 import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
+import { MissingBlockErrorComponent } from "../components/bespoke/MissingBlockError";
 import { BlockStructureRenderer } from "../components/render/block-structure-renderer";
 import { ContentBlockList } from "../components/render/list/ContentBlockList";
 import { PortalContentWrapper } from "../components/render/portal-wrapper";
@@ -85,20 +86,57 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
     return (
         <>
             {Array.from(environment.widgetMetaMap.entries()).map(([widgetId, meta]) => {
+                // Skip placeholder widgets (used to keep subgrids active)
+                if (widgetId.endsWith("-placeholder")) {
+                    return null;
+                }
+
                 // Extract Node's render structure from widget content
                 const nodeData = parseContent(meta);
                 if (!nodeData) return null;
 
                 const { id, blockType, renderType } = nodeData;
+
+                const container = getWidgetContainer(widgetId);
+                if (!container) return null;
+
+                // Handle error blocks (missing blocks from layout)
+                if (blockType === "error") {
+                    const rendered = <MissingBlockErrorComponent blockId={id} />;
+                    return (
+                        <RenderElementContext.Provider
+                            key={widgetId}
+                            value={{
+                                widget: {
+                                    id: widgetId,
+                                    container,
+                                    requestResize: () => resizeWidgetToContent(widgetId),
+                                },
+                            }}
+                        >
+                            {createPortal(
+                                <PortalContentWrapper
+                                    widgetId={widgetId}
+                                    onMount={() => {
+                                        requestAnimationFrame(() => {
+                                            resizeWidgetToContent(widgetId);
+                                        });
+                                    }}
+                                >
+                                    {rendered}
+                                </PortalContentWrapper>,
+                                container
+                            )}
+                        </RenderElementContext.Provider>
+                    );
+                }
+
                 const blockNode = getBlock(id);
 
                 if (!blockNode) {
                     console.warn(`Block ${id} not found in environment`);
                     return null;
                 }
-
-                const container = getWidgetContainer(widgetId);
-                if (!container) return null;
 
                 // Compute the rendered components based on provided block metadata
                 const rendered: ReactNode = isList(blockNode)

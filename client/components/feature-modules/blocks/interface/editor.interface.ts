@@ -44,11 +44,13 @@ export interface EditorEnvironment {
 export interface BlockEnvironmentProviderProps extends ChildNodeProps {
     organisationId: string;
     initialTrees?: BlockTree[];
+    initialLayout?: import("gridstack").GridStackOptions;
 }
 
 /** Context contract exposed to consumers. */
 export interface BlockEnvironmentContextValue {
     environment: EditorEnvironment;
+    initialLayout?: import("gridstack").GridStackOptions;
     isInitialized: boolean;
     setIsInitialized(value: boolean): void;
     addBlock(tree: BlockNode, parentId?: string | null): string;

@@ -31,11 +31,18 @@ import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync"
 import { BlockNode, BlockTree } from "../../interface/block.interface";
 import { EditorEnvironment } from "../../interface/editor.interface";
 import { SlashMenuItem } from "../../interface/panel.interface";
+import { createBlockType, createContentNode } from "../../util/block/factory/block.factory";
 import {
     createLayoutContainerNode,
     createNoteNode,
     createTaskListNode,
 } from "../../util/block/factory/mock.factory";
+import {
+    createContentBlockListType,
+    createLayoutContainerBlockType,
+    DEFAULT_GRID_LAYOUT,
+} from "../../util/block/factory/type.factory";
+import { BlockComponentNode, BlockListConfiguration, BlockRenderStructure, BlockType } from "../../interface/block.interface";
 import { BlockEditDrawer, EditModeIndicator } from "../forms";
 import { editorPanel } from "../panel/editor-panel";
 import { defaultSlashItems } from "../panel/panel-wrapper";
@@ -76,9 +83,13 @@ export const DEFAULT_WIDGET_OPTIONS: GridStackOptions = {
 /* -------------------------------------------------------------------------- */
 
 export const BlockDemo = () => {
-    const blocks = useMemo(() => createDemoTrees(), []);
+    const { trees, layout } = useMemo(() => createDemoEnvironment(), []);
     return (
-        <BlockEnvironmentProvider organisationId={DEMO_ORG_ID} initialTrees={blocks}>
+        <BlockEnvironmentProvider
+            organisationId={DEMO_ORG_ID}
+            initialTrees={trees}
+            initialLayout={layout}
+        >
             <div className="mx-auto space-y-8 p-6">
                 <header className="space-y-2">
                     <h1 className="text-2xl font-semibold">Block Environment Demo</h1>
@@ -116,12 +127,15 @@ const WorkspaceToolbar: FC = () => {
 };
 
 const BlockEnvironmentWorkspace: React.FC = () => {
+    const { initialLayout } = useBlockEnvironment();
+    const gridOptions = initialLayout ?? DEFAULT_WIDGET_OPTIONS;
+
     return (
         <>
             <BlockFocusProvider>
                 <BlockEditProvider>
                     <EditModeIndicator />
-                    <GridProvider initialOptions={DEFAULT_WIDGET_OPTIONS}>
+                    <GridProvider initialOptions={gridOptions}>
                         <KeyboardNavigationHandler />
                         <WorkspaceToolbar />
                         <BlockEnvironmentGridSync />
@@ -285,26 +299,407 @@ const AddBlockButton: React.FC = () => {
 // Note: buildGridEnvironment has been replaced by buildGridEnvironmentWithWidgetMap
 // from util/render/render.tree.ts which recursively builds widgets for the entire tree
 
-function createDemoTrees(): BlockTree[] {
-    // Create a layout container (demonstrates wildcard slots)
-    const layoutNode = createLayoutContainerNode(DEMO_ORG_ID);
+/**
+ * Helper to create a note block type (inlined from mock.factory)
+ */
+function createNoteBlockType(organisationId: string): BlockType {
+    const component: BlockComponentNode = {
+        id: "note",
+        type: "TEXT",
+        props: {
+            variant: "body",
+        },
+        bindings: [{ prop: "text", source: { type: "DataPath", path: "$.data/content" } }],
+        fetchPolicy: "LAZY",
+    };
+
+    const render: BlockRenderStructure = {
+        version: 1,
+        layoutGrid: {
+            layout: DEFAULT_GRID_LAYOUT,
+            items: [
+                {
+                    id: component.id,
+                    rect: { x: 0, y: 0, width: 12, height: 4, locked: false },
+                },
+            ],
+        },
+        components: { [component.id]: component },
+    };
+
+    return createBlockType({
+        key: "note",
+        name: "Note",
+        description: "Simple rich text note.",
+        organisationId,
+        schema: {
+            name: "Note",
+            type: "OBJECT",
+            required: true,
+            properties: {
+                content: { name: "Content", type: "STRING", required: true },
+            },
+        },
+        display: {
+            form: {
+                fields: {
+                    "data.content": {
+                        type: "TEXT_AREA",
+                        label: "Note Content",
+                        placeholder: "Start typing your note...",
+                    },
+                },
+            },
+            render,
+        },
+        nesting: null,
+    });
+}
+
+/**
+ * Helper to create a task block type (inlined from mock.factory)
+ */
+function createTaskBlockType(organisationId: string): BlockType {
+    const component: BlockComponentNode = {
+        id: "task",
+        type: "TEXT",
+        props: {
+            variant: "body",
+        },
+        bindings: [
+            {
+                prop: "text",
+                source: { type: "DataPath", path: "$.data/title" },
+            },
+        ],
+        fetchPolicy: "LAZY",
+    };
+
+    const render: BlockRenderStructure = {
+        version: 1,
+        layoutGrid: {
+            layout: DEFAULT_GRID_LAYOUT,
+            items: [
+                {
+                    id: component.id,
+                    rect: { x: 0, y: 0, width: 12, height: 4, locked: false },
+                },
+            ],
+        },
+        components: { [component.id]: component },
+    };
+
+    return createBlockType({
+        key: "project_task",
+        name: "Project Task",
+        description: "Individual task item for a project.",
+        organisationId,
+        schema: {
+            name: "Task",
+            type: "OBJECT",
+            required: true,
+            properties: {
+                title: { name: "Title", type: "STRING", required: true },
+                assignee: { name: "Assignee", type: "STRING", required: false },
+                status: { name: "Status", type: "STRING", required: false },
+                dueDate: { name: "Due date", type: "STRING", required: false, format: "DATE" },
+            },
+        },
+        display: {
+            form: {
+                fields: {
+                    "data.title": {
+                        type: "TEXT_INPUT",
+                        label: "Task Title",
+                        placeholder: "Enter task title",
+                    },
+                    "data.assignee": {
+                        type: "TEXT_INPUT",
+                        label: "Assignee",
+                        placeholder: "Who is responsible?",
+                    },
+                    "data.status": {
+                        type: "DROPDOWN",
+                        label: "Status",
+                        options: [
+                            { label: "Not Started", value: "NOT_STARTED" },
+                            { label: "In Progress", value: "IN_PROGRESS" },
+                            { label: "In Review", value: "IN_REVIEW" },
+                            { label: "Completed", value: "COMPLETED" },
+                        ],
+                    },
+                    "data.dueDate": {
+                        type: "DATE_PICKER",
+                        label: "Due Date",
+                        placeholder: "Select due date",
+                    },
+                },
+            },
+            render,
+        },
+        nesting: null,
+    });
+}
+
+/**
+ * Helper to create a task list node with a specific ID
+ */
+function createTaskListNodeWithId(organisationId: string, id: string): BlockNode {
+    const listType = createContentBlockListType(organisationId);
+    const taskType = createTaskBlockType(organisationId);
+
+    // Create task items
+    const tasks = [
+        createContentNode({
+            organisationId,
+            type: taskType,
+            data: {
+                title: "Design wireframes",
+                assignee: "Jane Doe",
+                status: "IN_PROGRESS",
+                dueDate: "2024-12-15",
+            },
+            name: "Design wireframes",
+        }),
+        createContentNode({
+            organisationId,
+            type: taskType,
+            data: {
+                title: "Implement authentication",
+                assignee: "John Smith",
+                status: "NOT_STARTED",
+                dueDate: "2024-12-20",
+            },
+            name: "Implement authentication",
+        }),
+        createContentNode({
+            organisationId,
+            type: taskType,
+            data: {
+                title: "Write documentation",
+                assignee: "Alice Johnson",
+                status: "NOT_STARTED",
+                dueDate: "2024-12-25",
+            },
+            name: "Write documentation",
+        }),
+    ];
+
+    return createContentNode({
+        id,
+        organisationId,
+        type: listType,
+        name: "Project Tasks",
+        data: {
+            title: "Project Tasks",
+            description: "Drag to reorder tasks",
+        },
+        children: tasks,
+        payloadOverride: {
+            type: "content",
+            meta: { validationErrors: [] },
+            data: {
+                title: "Project Tasks",
+                description: "Drag to reorder tasks",
+            },
+            listConfig: {
+                allowedTypes: ["project_task"],
+                allowDuplicates: false,
+                display: {
+                    itemSpacing: 12,
+                    showDragHandles: true,
+                    emptyMessage: "No tasks yet. Add one to get started!",
+                },
+                order: {
+                    mode: "MANUAL",
+                },
+            },
+        },
+    });
+}
+
+interface Environment {
+    trees: BlockTree[];
+    layout?: GridStackOptions;
+}
+
+function createDemoEnvironment(): Environment {
+    // Define IDs that match the layout below
+    const STANDALONE_NOTE_ID = "block-c5745236-a506-4410-994d-4ee9d17c07f2";
+    const LAYOUT_CONTAINER_ID = "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16";
+    const NESTED_NOTE_1_ID = "block-2eb29c0a-a7c8-4033-be94-7977466feaf4";
+    const NESTED_NOTE_2_ID = "block-4b907540-2d30-43a8-a12c-b7c574ef2f32";
+    const TASK_LIST_ID = "block-f79f702b-f858-479a-a415-261a76d81bdb";
+
+    // Create blocks with specific IDs to match the layout
+    const noteType = createNoteBlockType(DEMO_ORG_ID);
+    const layoutType = createLayoutContainerBlockType(DEMO_ORG_ID);
+
+    // Create nested blocks for layout container
+    const nestedNote1 = createContentNode({
+        id: NESTED_NOTE_1_ID,
+        organisationId: DEMO_ORG_ID,
+        type: noteType,
+        name: "Welcome note",
+        data: {
+            content: "Welcome to the block environment! This is a nested block inside a layout container.",
+        },
+    });
+
+    const nestedNote2 = createContentNode({
+        id: NESTED_NOTE_2_ID,
+        organisationId: DEMO_ORG_ID,
+        type: noteType,
+        name: "Instructions",
+        data: {
+            content: "You can add, remove, and rearrange blocks using the toolbar. Try dragging blocks around!",
+        },
+    });
+
+    // Create layout container with nested blocks
+    const layoutNode = createContentNode({
+        id: LAYOUT_CONTAINER_ID,
+        organisationId: DEMO_ORG_ID,
+        type: layoutType,
+        name: "Getting Started",
+        data: {
+            title: "Getting Started",
+            description: "An introduction to block environments",
+        },
+        children: [nestedNote1, nestedNote2],
+    });
+
     const layoutTree: BlockTree = {
         type: "block_tree",
         root: layoutNode,
     };
 
     // Create a task list (demonstrates content block list with manual ordering)
-    const taskListNode = createTaskListNode(DEMO_ORG_ID);
+    const taskListNode = createTaskListNodeWithId(DEMO_ORG_ID, TASK_LIST_ID);
     const taskListTree: BlockTree = {
         type: "block_tree",
         root: taskListNode,
     };
 
-    const noteNode = createNoteNode(DEMO_ORG_ID, "Standalone note block");
+    // Create standalone note
+    const noteNode = createContentNode({
+        id: STANDALONE_NOTE_ID,
+        organisationId: DEMO_ORG_ID,
+        type: noteType,
+        name: "Standalone note",
+        data: {
+            content: "Standalone note block",
+        },
+    });
+
     const noteTree: BlockTree = {
         type: "block_tree",
         root: noteNode,
     };
 
-    return [layoutTree, taskListTree, noteTree];
+    const gridLayout: GridStackOptions = {
+        sizeToContent: true,
+        resizable: {
+            handles: "se, sw",
+        },
+        draggable: {
+            cancel: ".block-no-drag",
+            pause: 5,
+        },
+        columnOpts: {
+            breakpoints: [
+                {
+                    w: 1024,
+                    c: 12,
+                },
+                {
+                    w: 768,
+                    c: 1,
+                },
+            ],
+            columnMax: 12,
+        },
+        acceptWidgets: true,
+        cellHeight: 25,
+        children: [
+            {
+                id: "block-c5745236-a506-4410-994d-4ee9d17c07f2",
+                x: 0,
+                y: 0,
+                w: 12,
+                h: 4,
+                content:
+                    '{"id":"block-c5745236-a506-4410-994d-4ee9d17c07f2","key":"note","renderType":"component","blockType":"content_node"}',
+            },
+            {
+                id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16",
+                x: 0,
+                y: 4,
+                w: 6,
+                h: 15,
+                subGridOpts: {
+                    sizeToContent: true,
+                    resizable: {
+                        handles: "se, sw",
+                    },
+                    draggable: {
+                        cancel: ".block-no-drag",
+                        pause: 5,
+                    },
+                    column: "auto",
+                    acceptWidgets: true,
+                    alwaysShowResizeHandle: false,
+                    layout: "list",
+                    class: "grid-stack-subgrid",
+                    cellHeight: 25,
+                    children: [
+                        {
+                            id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16-placeholder",
+                            x: 0,
+                            y: 0,
+                            w: 6,
+                            h: 0, // Zero height to hide placeholder
+                            locked: true,
+                            noMove: true,
+                            noResize: true,
+                        },
+                        {
+                            id: "block-2eb29c0a-a7c8-4033-be94-7977466feaf4",
+                            x: 0,
+                            y: 1,
+                            w: 6,
+                            h: 4,
+                            content:
+                                '{"id":"block-2eb29c0a-a7c8-4033-be94-7977466feaf4","key":"note","renderType":"component","blockType":"content_node"}',
+                        },
+                        {
+                            id: "block-4b907540-2d30-43a8-a12c-b7c574ef2f32",
+                            x: 0,
+                            y: 5,
+                            w: 6,
+                            h: 5,
+                            content:
+                                '{"id":"block-4b907540-2d30-43a8-a12c-b7c574ef2f32","key":"note","renderType":"component","blockType":"content_node"}',
+                        },
+                    ],
+                },
+                content:
+                    '{"id":"block-7b648d3c-94d1-4988-8530-fc49f6fc2b16","key":"layout_container","renderType":"container","blockType":"content_node"}',
+            },
+            {
+                id: "block-f79f702b-f858-479a-a415-261a76d81bdb",
+                x: 6,
+                y: 4,
+                w: 6,
+                h: 11,
+                content:
+                    '{"id":"block-f79f702b-f858-479a-a415-261a76d81bdb","key":"content_block_list","renderType":"list","blockType":"content_node"}',
+            },
+        ],
+    };
+
+    return {
+        trees: [layoutTree, taskListTree, noteTree],
+        layout: gridLayout,
+    };
 }
