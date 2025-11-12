@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
-import { CommandIcon, InfoIcon, PlusIcon } from "lucide-react";
+import { CommandIcon, InfoIcon, PlusIcon, Edit3, Check, X } from "lucide-react";
 import { FC, RefObject } from "react";
 
 import { motion } from "framer-motion";
@@ -46,6 +46,11 @@ interface PanelToolbarProps {
     onDetailsOpenChange?: (open: boolean) => void;
     actionsOpen?: boolean;
     onActionsOpenChange?: (open: boolean) => void;
+    onEditClick?: () => void;
+    isEditMode?: boolean;
+    hasChildren?: boolean;
+    onSaveEditClick?: () => void;
+    onDiscardEditClick?: () => void;
 }
 
 const toolbarButtonClass =
@@ -76,6 +81,11 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     onDetailsOpenChange,
     actionsOpen,
     onActionsOpenChange,
+    onEditClick,
+    isEditMode = false,
+    hasChildren = false,
+    onSaveEditClick,
+    onDiscardEditClick,
 }) => {
     // Helper to get button class with focus highlight
     const getButtonClass = (index: number) => {
@@ -90,6 +100,9 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     let buttonIndex = 0;
     const quickActionsIndex = buttonIndex++;
     const insertIndex = allowInsert ? buttonIndex++ : -1;
+    const editIndex = onEditClick ? buttonIndex++ : -1;
+    const saveEditIndex = isEditMode && onSaveEditClick ? buttonIndex++ : -1;
+    const discardEditIndex = isEditMode && onDiscardEditClick ? buttonIndex++ : -1;
     const detailsIndex = buttonIndex++;
     const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
     return (
@@ -173,6 +186,85 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     </PopoverContent>
                 </Popover>
             ) : null}
+
+            {/* Edit button */}
+            {onEditClick && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={isEditMode ? "Save and exit edit mode" : "Edit block"}
+                            className={cn(
+                                getButtonClass(editIndex),
+                                isEditMode && "bg-primary text-primary-foreground hover:bg-primary/90"
+                            )}
+                            onClick={onEditClick}
+                        >
+                            <Edit3 className="size-3.5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        {isEditMode
+                            ? "Save and exit (⌘E)"
+                            : hasChildren
+                            ? "Edit children (⌘E)"
+                            : "Edit block (⌘E)"}
+                        {!hasChildren && (
+                            <span className="block text-xs text-muted-foreground mt-1">
+                                ⌘⇧E for drawer
+                            </span>
+                        )}
+                    </TooltipContent>
+                </Tooltip>
+            )}
+
+            {/* Edit mode actions - Save and Discard */}
+            {isEditMode && onSaveEditClick && onDiscardEditClick && (
+                <>
+                    {/* Divider */}
+                    <div className="h-5 w-px bg-border mx-0.5" />
+
+                    {/* Save button */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Save changes"
+                                className={cn(
+                                    getButtonClass(saveEditIndex),
+                                    "size-6 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                )}
+                                onClick={onSaveEditClick}
+                            >
+                                <Check className="size-3" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Save changes</TooltipContent>
+                    </Tooltip>
+
+                    {/* Discard button */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Discard changes"
+                                className={cn(
+                                    getButtonClass(discardEditIndex),
+                                    "size-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                )}
+                                onClick={onDiscardEditClick}
+                            >
+                                <X className="size-3" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Discard changes</TooltipContent>
+                    </Tooltip>
+                </>
+            )}
+
             <Popover open={detailsOpen} onOpenChange={onDetailsOpenChange}>
                 <Tooltip>
                     <TooltipTrigger asChild>

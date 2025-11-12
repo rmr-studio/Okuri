@@ -1,5 +1,5 @@
 import { FormFieldProps } from "@/lib/interfaces/interface";
-import { FC } from "react";
+import { FC, ReactNode } from "react";
 import { FormControl, FormItem, FormLabel, FormMessage } from "../form";
 import { DateTimePicker } from "./date-picker/date-picker";
 import { DateTimeInput } from "./date-picker/date-picker-input";
@@ -12,6 +12,7 @@ interface DatePickerProps {
     required?: boolean;
     displayErrorMessage?: boolean;
     exitOnClick?: boolean;
+    errors?: ReactNode;
 }
 
 export const FormDatePicker: FC<DatePickerProps> = ({
@@ -22,6 +23,7 @@ export const FormDatePicker: FC<DatePickerProps> = ({
     minDate,
     displayErrorMessage = true,
     exitOnClick = false,
+    errors,
 }) => {
     return (
         <FormItem className="flex flex-col w-full">
@@ -51,7 +53,7 @@ export const FormDatePicker: FC<DatePickerProps> = ({
                     )}
                 />
             </FormControl>
-            {displayErrorMessage && <FormMessage className="font-semibold" />}
+            {displayErrorMessage && (errors ?? <FormMessage className="font-semibold" />)}
         </FormItem>
     );
 };

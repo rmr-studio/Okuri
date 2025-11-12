@@ -2,18 +2,17 @@ import { nowIso, uniqueId } from "@/lib/util/utils";
 import {
     Block,
     BlockContentMetadata,
+    BlockDisplay,
     BlockMeta,
     BlockNode,
     BlockReferenceMetadata,
     BlockReferencePayload,
-    BlockRenderStructure,
     BlockSchema,
     BlockTree,
     BlockType,
     BlockTypeNesting,
     EntityReferenceMetadata,
     EntityReferencePayload,
-    EntityType,
     Metadata,
     NodeType,
     Reference,
@@ -238,7 +237,7 @@ export const createBlockType = ({
     description,
     organisationId,
     schema,
-    render,
+    display,
     nesting,
 }: {
     key: string;
@@ -246,7 +245,7 @@ export const createBlockType = ({
     description?: string;
     organisationId: string;
     schema: BlockSchema;
-    render: BlockRenderStructure;
+    display: BlockDisplay;
     nesting?: BlockTypeNesting | null;
 }): BlockType => ({
     id: uniqueId(`type-${key}`),
@@ -259,10 +258,7 @@ export const createBlockType = ({
     strictness: "SOFT",
     system: false,
     schema,
-    display: {
-        form: { fields: {} },
-        render,
-    },
+    display,
     nesting: nesting ?? undefined,
     createdAt: nowIso(),
     updatedAt: nowIso(),
