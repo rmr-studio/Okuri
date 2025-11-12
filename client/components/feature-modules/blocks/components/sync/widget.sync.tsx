@@ -78,13 +78,28 @@ export const WidgetEnvironmentSync: React.FC = () => {
     const hasInitiallyLoadedRef = useRef(false);
 
     const triggerSubgridResize = useCallback((element?: HTMLElement | null) => {
-        const gridItem = element as GridItemHTMLElement | null;
-        const subGrid = gridItem?.gridstackNode?.subGrid;
-        if (!subGrid) return;
-        requestAnimationFrame(() => {
-            if (!gridItem?.isConnected) return;
-            subGrid.onResize();
-        });
+        try {
+            const gridItem = element as GridItemHTMLElement | null;
+            const subGrid = gridItem?.gridstackNode?.subGrid;
+            if (!subGrid) return;
+
+            // Guard against invalid subgrid instances
+            if (!subGrid.engine || !subGrid.opts) return;
+
+            requestAnimationFrame(() => {
+                try {
+                    if (!gridItem?.isConnected) return;
+                    if (!subGrid.engine || !subGrid.opts) return;
+                    subGrid.onResize();
+                } catch (error) {
+                    // Catch errors during subgrid resize
+                    console.debug("Subgrid resize error (non-critical):", error);
+                }
+            });
+        } catch (error) {
+            // Catch any errors in the outer scope
+            console.debug("Trigger subgrid resize error (non-critical):", error);
+        }
     }, []);
 
     useEffect(() => {

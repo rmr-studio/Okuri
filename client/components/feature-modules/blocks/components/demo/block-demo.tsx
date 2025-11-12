@@ -28,21 +28,22 @@ import {
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
-import { BlockNode, BlockTree } from "../../interface/block.interface";
+import {
+    BlockComponentNode,
+    BlockNode,
+    BlockRenderStructure,
+    BlockTree,
+    BlockType,
+} from "../../interface/block.interface";
 import { EditorEnvironment } from "../../interface/editor.interface";
 import { SlashMenuItem } from "../../interface/panel.interface";
 import { createBlockType, createContentNode } from "../../util/block/factory/block.factory";
-import {
-    createLayoutContainerNode,
-    createNoteNode,
-    createTaskListNode,
-} from "../../util/block/factory/mock.factory";
+import { createLayoutContainerNode, createNoteNode } from "../../util/block/factory/mock.factory";
 import {
     createContentBlockListType,
     createLayoutContainerBlockType,
     DEFAULT_GRID_LAYOUT,
 } from "../../util/block/factory/type.factory";
-import { BlockComponentNode, BlockListConfiguration, BlockRenderStructure, BlockType } from "../../interface/block.interface";
 import { BlockEditDrawer, EditModeIndicator } from "../forms";
 import { editorPanel } from "../panel/editor-panel";
 import { defaultSlashItems } from "../panel/panel-wrapper";
@@ -542,7 +543,8 @@ function createDemoEnvironment(): Environment {
         type: noteType,
         name: "Welcome note",
         data: {
-            content: "Welcome to the block environment! This is a nested block inside a layout container.",
+            content:
+                "Welcome to the block environment! This is a nested block inside a layout container.",
         },
     });
 
@@ -552,7 +554,8 @@ function createDemoEnvironment(): Environment {
         type: noteType,
         name: "Instructions",
         data: {
-            content: "You can add, remove, and rearrange blocks using the toolbar. Try dragging blocks around!",
+            content:
+                "You can add, remove, and rearrange blocks using the toolbar. Try dragging blocks around!",
         },
     });
 

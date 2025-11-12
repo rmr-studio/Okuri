@@ -41,9 +41,14 @@ export const Block: FC<Props> = ({
         if (!gridItem) return;
 
         const moveSubGrid = () => {
-            const subGrid = gridItem.querySelector(".grid-stack-subgrid") as HTMLElement | null;
-            if (subGrid && !host.contains(subGrid)) {
-                host.appendChild(subGrid);
+            try {
+                const subGrid = gridItem.querySelector(".grid-stack-subgrid") as HTMLElement | null;
+                if (subGrid && !host.contains(subGrid)) {
+                    host.appendChild(subGrid);
+                }
+            } catch (error) {
+                // Catch any errors when moving subgrid during DOM mutations
+                console.debug("SubGrid move error (non-critical):", error);
             }
         };
 

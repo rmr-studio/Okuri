@@ -60,29 +60,45 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
              * This is to detect when a purposeful action has been made, so we can flush layout changes to the backend
              */
             const handleResourceLock = (_: Event, _2: GridItemHTMLElement) => {
-                if (!initializedRef.current) return;
-                acquireInteractionLock();
+                try {
+                    if (!initializedRef.current) return;
+                    acquireInteractionLock();
+                } catch (error) {
+                    console.debug("Grid resize/drag start handler error (non-critical):", error);
+                }
             };
 
             const handleResourceUnlock = (_: Event, _2: GridItemHTMLElement) => {
-                if (!initializedRef.current) return;
-                releaseInteractionLock();
+                try {
+                    if (!initializedRef.current) return;
+                    releaseInteractionLock();
+                } catch (error) {
+                    console.debug("Grid resize/drag stop handler error (non-critical):", error);
+                }
             };
 
             const handleBlockAdded = (_event: Event, items: GridStackNode[] = []) => {
-                if (!initializedRef.current) return;
+                try {
+                    if (!initializedRef.current) return;
 
-                releaseInteractionLock();
-                items.forEach((item) => {
-                    if (item.id === undefined || item.id === null) return;
-                    const blockId = String(item.id);
-                    const currentParent = getParentId(blockId);
-                    const newParent = getNewParentId(item, root);
+                    releaseInteractionLock();
+                    items.forEach((item) => {
+                        try {
+                            if (!item || item.id === undefined || item.id === null) return;
+                            const blockId = String(item.id);
+                            const currentParent = getParentId(blockId);
+                            const newParent = getNewParentId(item, root);
 
-                    if (currentParent !== newParent) {
-                        moveBlock(blockId, newParent);
-                    }
-                });
+                            if (currentParent !== newParent) {
+                                moveBlock(blockId, newParent);
+                            }
+                        } catch (itemError) {
+                            console.debug("Block added item handler error (non-critical):", itemError);
+                        }
+                    });
+                } catch (error) {
+                    console.debug("Block added handler error (non-critical):", error);
+                }
             };
 
             grid.on("added", handleBlockAdded);
@@ -93,12 +109,16 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             grid.on("dropped", handleResourceUnlock);
 
             listenersRef.current.set(grid, () => {
-                grid.off("added");
-                grid.off("dragstart");
-                grid.off("resizestart");
-                grid.off("dragstop");
-                grid.off("resizestop");
-                grid.off("dropped");
+                try {
+                    grid.off("added");
+                    grid.off("dragstart");
+                    grid.off("resizestart");
+                    grid.off("dragstop");
+                    grid.off("resizestop");
+                    grid.off("dropped");
+                } catch (error) {
+                    console.debug("Grid event listener cleanup error (non-critical):", error);
+                }
             });
         },
         [getParentId, moveBlock]
