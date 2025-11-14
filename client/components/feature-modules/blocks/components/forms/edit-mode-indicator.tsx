@@ -75,6 +75,10 @@ export const EditModeIndicator: FC = () => {
         // Discard layout changes
         if (hasLayout) {
             discardLayoutChanges();
+            // This will work.... last resort
+            // setTimeout(() => {
+            //     discardLayoutChanges();
+            // }, 1);
         }
 
         console.log("🔄 All changes discarded");

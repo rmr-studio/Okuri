@@ -661,16 +661,6 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                     cellHeight: 25,
                     children: [
                         {
-                            id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16-placeholder",
-                            x: 0,
-                            y: 0,
-                            w: 6,
-                            h: 0, // Zero height to hide placeholder
-                            locked: true,
-                            noMove: true,
-                            noResize: true,
-                        },
-                        {
                             id: "block-2eb29c0a-a7c8-4033-be94-7977466feaf4",
                             x: 0,
                             y: 1,

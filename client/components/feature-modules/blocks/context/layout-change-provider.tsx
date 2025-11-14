@@ -8,6 +8,7 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react";
@@ -39,6 +40,9 @@ interface LayoutChangeContextValue {
     /** Number of layout change events (for UI feedback) */
     layoutChangeCount: number;
 
+    version: number;
+    setVersion: (v: number) => void;
+
     /** Save status for UI feedback */
     saveStatus: "idle" | "saving" | "success" | "error";
 }
@@ -56,7 +60,7 @@ export const useLayoutChange = (): LayoutChangeContextValue => {
 export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     const { layoutId, blockTreeLayout, isInitialized } = useBlockEnvironment();
     const { gridStack, save: saveGridLayout, reloadEnvironment } = useGrid();
-
+    const [version, setVersion] = useState(0);
     const [hasChanges, setHasChanges] = useState(false);
     const [changeCount, setChangeCount] = useState(0);
     const [hasStructuralChanges, setHasStructuralChanges] = useState(false);
@@ -75,7 +79,9 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             lastSavedLayoutRef.current = blockTreeLayout.layout;
             console.log("📐 [LOCAL] Updated lastSavedLayoutRef from blockTreeLayout:", {
                 widgetCount: blockTreeLayout.layout.children?.length ?? 0,
-                hasContainers: blockTreeLayout.layout.children?.some((w) => w.subGridOpts?.children),
+                hasContainers: blockTreeLayout.layout.children?.some(
+                    (w) => w.subGridOpts?.children
+                ),
             });
         }
     }, [blockTreeLayout?.layout]);
@@ -264,9 +270,11 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                     .filter((w) => w.subGridOpts?.children)
                     .map((w) => ({ id: w.id, childCount: w.subGridOpts?.children?.length })),
             });
-
+            
+            setVersion((v) => v + 1);
             // Reload GridStack from last saved state
             gridStack.load(savedChildren);
+            
 
             // Wait for GridStack DOM updates to complete before syncing environment
             requestAnimationFrame(() => {
@@ -333,9 +341,20 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         saveLayoutChanges,
         discardLayoutChanges,
         canDiscard,
+        version,
+        setVersion,
         layoutChangeCount: changeCount,
         saveStatus,
     };
 
-    return <LayoutChangeContext.Provider value={value}>{children}</LayoutChangeContext.Provider>;
+    return (
+        <LayoutChangeContext.Provider
+            value={useMemo(
+                () => value,
+                [hasChanges, changeCount, hasStructuralChanges, saveStatus, version]
+            )}
+        >
+            {children}
+        </LayoutChangeContext.Provider>
+    );
 };

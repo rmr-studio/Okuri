@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/util/utils";
 import { FC, ReactNode, useEffect, useRef } from "react";
 import { z } from "zod";
+import { useLayoutChange } from "../../context/layout-change-provider";
 import { RenderElementMetadata } from "../../util/block/block.registry";
 
 interface Props {
@@ -32,13 +33,22 @@ export const Block: FC<Props> = ({
     children,
 }) => {
     const hostRef = useRef<HTMLDivElement>(null);
+    const observerRef = useRef<MutationObserver | null>(null);
+    const { version } = useLayoutChange();
 
     useEffect(() => {
+        console.log("LayoutContainerBlock mounted or version changed:", version);
         const host = hostRef.current;
-        if (!host) return;
+        if (!host) {
+            console.warn("Grid host not found for LayoutContainerBlock");
+            return;
+        }
 
         const gridItem = host.closest(".grid-stack-item");
-        if (!gridItem) return;
+        if (!gridItem) {
+            console.warn("Grid item not found for LayoutContainerBlock");
+            return;
+        }
 
         const moveSubGrid = () => {
             try {
@@ -48,17 +58,21 @@ export const Block: FC<Props> = ({
                 }
             } catch (error) {
                 // Catch any errors when moving subgrid during DOM mutations
-                console.debug("SubGrid move error (non-critical):", error);
+                console.warn("SubGrid move error (non-critical):", error);
             }
         };
 
         moveSubGrid();
-
-        const observer = new MutationObserver(moveSubGrid);
+        observerRef.current = new MutationObserver(moveSubGrid);
+        const observer = observerRef.current;
         observer.observe(gridItem, { childList: true, subtree: true, attributes: false });
 
-        return () => observer.disconnect();
-    }, []);
+        return () => {
+            observer.disconnect();
+            observerRef.current = null;
+            console.log("LayoutContainerBlock unmounted, observer disconnected");
+        };
+    }, [version]);
 
     if (variant === "plain") {
         return (
