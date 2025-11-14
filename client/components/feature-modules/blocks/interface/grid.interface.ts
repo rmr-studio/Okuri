@@ -30,4 +30,5 @@ export interface GridstackContextValue {
     removeWidget: (id: string) => void;
     widgetExists: (id: string) => boolean;
     findWidget: (id: string) => GridActionResult<GridStackNode>;
+    reloadEnvironment: (layout: GridStackOptions) => void;
 }

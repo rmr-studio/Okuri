@@ -5,6 +5,7 @@ import { GridItemHTMLElement, GridStack, GridStackNode } from "gridstack";
 import { FC, useCallback, useLayoutEffect, useRef } from "react";
 import { useBlockEnvironment } from "../context/block-environment-provider";
 import { useBlockFocus } from "../context/block-focus-provider";
+import { useLayoutChange } from "../context/layout-change-provider";
 import { getNewParentId } from "../util/grid/grid.util";
 
 type GridStackLike = Pick<GridStack, "on" | "off">;
@@ -24,6 +25,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
     const { gridStack } = useGrid();
     const { getParentId, moveBlock, isInitialized } = useBlockEnvironment();
     const { acquireLock, releaseLock } = useBlockFocus();
+    const { trackLayoutChange, trackStructuralChange } = useLayoutChange();
 
     const listenersRef = useRef<Map<GridStackLike, () => void>>(new Map());
     const initializedRef = useRef(isInitialized);
@@ -90,6 +92,9 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                             const newParent = getNewParentId(item, root);
 
                             if (currentParent !== newParent) {
+                                // Track structural change (re-parenting)
+                                trackStructuralChange();
+                                // Update BlockEnvironment
                                 moveBlock(blockId, newParent);
                             }
                         } catch (itemError) {
@@ -101,7 +106,35 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 }
             };
 
+            /**
+             * Handle layout changes (resize, reposition within same parent)
+             * This fires when GridStack layout changes but does NOT indicate re-parenting
+             */
+            const handleLayoutChange = (_event: Event, items: GridStackNode[] = []) => {
+                try {
+                    if (!initializedRef.current) return;
+
+                    // Check if any item changed parent (if so, skip - handleBlockAdded handles it)
+                    const hasParentChange = items.some((item) => {
+                        if (!item || item.id === undefined || item.id === null) return false;
+                        const blockId = String(item.id);
+                        const currentParent = getParentId(blockId);
+                        const newParent = getNewParentId(item, root);
+                        return currentParent !== newParent;
+                    });
+
+                    // Only track as layout change if no parent changes occurred
+                    // (parent changes are structural and handled separately)
+                    if (!hasParentChange && items.length > 0) {
+                        trackLayoutChange();
+                    }
+                } catch (error) {
+                    console.debug("Layout change handler error (non-critical):", error);
+                }
+            };
+
             grid.on("added", handleBlockAdded);
+            grid.on("change", handleLayoutChange);
             grid.on("dragstart", handleResourceLock);
             grid.on("resizestart", handleResourceLock);
             grid.on("dragstop", handleResourceUnlock);
@@ -111,6 +144,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             listenersRef.current.set(grid, () => {
                 try {
                     grid.off("added");
+                    grid.off("change");
                     grid.off("dragstart");
                     grid.off("resizestart");
                     grid.off("dragstop");
@@ -121,7 +155,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 }
             });
         },
-        [getParentId, moveBlock]
+        [getParentId, moveBlock, trackLayoutChange, trackStructuralChange]
     );
 
     useLayoutEffect(() => {

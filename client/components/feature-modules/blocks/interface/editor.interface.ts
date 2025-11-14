@@ -4,6 +4,7 @@
 
 import { ChildNodeProps } from "@/lib/interfaces/interface";
 import { BlockNode, BlockTree } from "./block.interface";
+import { BlockTreeLayout } from "./layout.interface";
 
 /** Metadata describing the environment itself. */
 export interface EditorEnvironmentMetadata {
@@ -44,13 +45,19 @@ export interface EditorEnvironment {
 export interface BlockEnvironmentProviderProps extends ChildNodeProps {
     organisationId: string;
     initialTrees?: BlockTree[];
-    initialLayout?: import("gridstack").GridStackOptions;
+
+    /** Full layout object with ID tracking for persistence */
+    blockTreeLayout?: BlockTreeLayout;
 }
 
 /** Context contract exposed to consumers. */
 export interface BlockEnvironmentContextValue {
     environment: EditorEnvironment;
-    initialLayout?: import("gridstack").GridStackOptions;
+
+    /** Full layout object with metadata */
+    blockTreeLayout?: BlockTreeLayout;
+    /** Layout ID for persistence operations */
+    layoutId?: string;
     isInitialized: boolean;
     setIsInitialized(value: boolean): void;
     addBlock(tree: BlockNode, parentId?: string | null): string;

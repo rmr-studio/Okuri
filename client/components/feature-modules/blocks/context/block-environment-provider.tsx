@@ -35,7 +35,7 @@ export const BlockEnvironmentContext = createContext<BlockEnvironmentContextValu
 export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> = ({
     organisationId,
     initialTrees,
-    initialLayout,
+    blockTreeLayout,
     children,
 }) => {
     const initialEnvironment = useMemo(
@@ -47,6 +47,10 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
 
     const [environment, setEnvironment] = useState<EditorEnvironment>(initialEnvState);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    // Derive layout from blockTreeLayout
+    const layoutForGrid = blockTreeLayout?.layout;
+    const layoutId = blockTreeLayout?.id;
 
     useEffect(() => {
         setEnvironment(initialEnvState);
@@ -598,7 +602,9 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const value = useMemo<BlockEnvironmentContextValue>(
         () => ({
             environment,
-            initialLayout,
+            initialLayout: layoutForGrid,
+            blockTreeLayout,
+            layoutId,
             isInitialized,
             setIsInitialized,
             addBlock,
@@ -621,7 +627,9 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         }),
         [
             environment,
-            initialLayout,
+            layoutForGrid,
+            blockTreeLayout,
+            layoutId,
             isInitialized,
             addBlock,
             insertBlock,

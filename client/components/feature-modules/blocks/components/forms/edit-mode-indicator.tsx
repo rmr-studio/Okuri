@@ -3,37 +3,86 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Check, Edit3, X } from "lucide-react";
+import { AlertCircle, Check, Edit3, Layout, X } from "lucide-react";
 import { FC, useState } from "react";
 import { useBlockEdit } from "../../context/block-edit-provider";
+import { useBlockEnvironment } from "../../context/block-environment-provider";
+import { useLayoutChange } from "../../context/layout-change-provider";
 
 export const EditModeIndicator: FC = () => {
     const { getEditingCount, hasUnsavedChanges, saveAllEdits, discardAllEdits } = useBlockEdit();
+    const { isInitialized } = useBlockEnvironment();
+    const {
+        hasLayoutChanges,
+        layoutChangeCount,
+        saveLayoutChanges,
+        discardLayoutChanges,
+        canDiscard,
+        saveStatus,
+    } = useLayoutChange();
+
     const editingCount = getEditingCount();
+    const hasDataChanges = hasUnsavedChanges();
+    const hasLayout = hasLayoutChanges();
+    const totalChanges = editingCount + (hasLayout ? 1 : 0);
+    const discardAllowed = canDiscard();
+
     const [isSaving, setIsSaving] = useState(false);
+
+    // Don't show indicator during initialization to prevent false positives
+    // from widget sync operations
+    const shouldShow = isInitialized && totalChanges > 0;
 
     const handleSaveAll = async () => {
         setIsSaving(true);
         try {
-            const success = await saveAllEdits();
-            if (!success) {
-                // Show error feedback if needed
-                console.error("Failed to save all edits due to validation errors");
+            let allSuccess = true;
+
+            // 1. Save block data edits (existing functionality)
+            if (hasDataChanges) {
+                const dataSuccess = await saveAllEdits();
+                if (!dataSuccess) {
+                    console.error("Failed to save block data edits");
+                    allSuccess = false;
+                }
+            }
+
+            // 2. Save layout changes (new functionality)
+            if (hasLayout && allSuccess) {
+                const layoutSuccess = await saveLayoutChanges();
+                if (!layoutSuccess) {
+                    console.error("Failed to save layout changes");
+                    allSuccess = false;
+                }
+            }
+
+            if (allSuccess) {
+                console.log("✅ All changes saved successfully");
             }
         } catch (error) {
-            console.error("Error saving all edits:", error);
+            console.error("Error saving all changes:", error);
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDiscardAll = () => {
-        discardAllEdits();
+        // Discard block data edits
+        if (hasDataChanges) {
+            discardAllEdits();
+        }
+
+        // Discard layout changes
+        if (hasLayout) {
+            discardLayoutChanges();
+        }
+
+        console.log("🔄 All changes discarded");
     };
 
     return (
         <AnimatePresence>
-            {editingCount > 0 && (
+            {shouldShow && (
                 <motion.div
                     key="edit-indicator"
                     initial={{ opacity: 0, y: -20 }}
@@ -46,16 +95,28 @@ export const EditModeIndicator: FC = () => {
                         "border border-primary-foreground/20"
                     )}
                 >
+                    {/* Status indicators */}
                     <div className="flex items-center gap-2">
-                        <Edit3 className="h-4 w-4" />
-                        <span className="font-medium">
-                            {editingCount} block{editingCount !== 1 ? "s" : ""} in edit mode
-                        </span>
+                        {editingCount > 0 && (
+                            <>
+                                <Edit3 className="h-4 w-4" />
+                                <span className="font-medium">
+                                    {editingCount} block{editingCount !== 1 ? "s" : ""} editing
+                                </span>
+                            </>
+                        )}
+                        {editingCount > 0 && hasLayout && (
+                            <span className="text-primary-foreground/60">•</span>
+                        )}
+                        {hasLayout && (
+                            <>
+                                <Layout className="h-4 w-4" />
+                                <span className="font-medium">Layout modified</span>
+                            </>
+                        )}
                     </div>
 
-                    <div className="h-4 w-px bg-primary-foreground/30" />
-
-                    {hasUnsavedChanges() && (
+                    {(hasDataChanges || hasLayout) && (
                         <>
                             <div className="h-4 w-px bg-primary-foreground/30" />
                             <div className="flex items-center gap-2">
@@ -73,17 +134,22 @@ export const EditModeIndicator: FC = () => {
                             size="sm"
                             variant="secondary"
                             onClick={handleSaveAll}
-                            disabled={isSaving}
+                            disabled={isSaving || saveStatus === "saving"}
                         >
                             <Check className="h-3.5 w-3.5 mr-1" />
-                            {isSaving ? "Saving..." : "Save All"}
+                            {isSaving || saveStatus === "saving" ? "Saving..." : "Save All"}
                         </Button>
                         <Button
                             size="sm"
                             variant="destructive"
                             className="bg-destructive/50"
                             onClick={handleDiscardAll}
-                            disabled={isSaving}
+                            disabled={isSaving || saveStatus === "saving" || !discardAllowed}
+                            title={
+                                !discardAllowed
+                                    ? "Cannot discard: blocks were added, removed, or re-parented. Please save changes or refresh the page."
+                                    : "Discard all unsaved changes"
+                            }
                         >
                             <X className="h-3.5 w-3.5 mr-1" />
                             Discard All

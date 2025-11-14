@@ -73,7 +73,39 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
 
         const cb: SaveFcn = (node: GridStackNode) => {};
 
-        return gridStack.save(true, true, cb) as GridStackOptions;
+        const rawLayout = gridStack.save(true, true, cb) as GridStackOptions;
+
+        // Preserve original widget metadata instead of capturing rendered HTML
+        // GridStack.save() captures the DOM content, but we need the JSON metadata
+        const preserveWidgetContent = (widgets: GridStackWidget[]): GridStackWidget[] => {
+            return widgets.map((widget) => {
+                const preserved = { ...widget };
+
+                // Restore original content from widgetMetaMap (JSON metadata, not HTML)
+                if (widget.id && environment.widgetMetaMap.has(widget.id)) {
+                    const originalWidget = environment.widgetMetaMap.get(widget.id);
+                    if (originalWidget?.content) {
+                        preserved.content = originalWidget.content;
+                    }
+                }
+
+                // Recursively preserve subgrid content
+                if (preserved.subGridOpts?.children) {
+                    preserved.subGridOpts = {
+                        ...preserved.subGridOpts,
+                        children: preserveWidgetContent(preserved.subGridOpts.children),
+                    };
+                }
+
+                return preserved;
+            });
+        };
+
+        if (rawLayout.children) {
+            rawLayout.children = preserveWidgetContent(rawLayout.children);
+        }
+
+        return rawLayout;
     };
 
     /**
@@ -370,9 +402,50 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
         [environment]
     );
 
-    const saveOptions = useCallback(() => {
-        return gridStack?.save(true, true);
-    }, [gridStack]);
+    /**
+     * Reload the environment state from a layout (e.g., after gridStack.load())
+     * Rebuilds widgetMetaMap and addedWidgets from the provided layout
+     */
+    const reloadEnvironment = useCallback((layout: GridStackOptions) => {
+        const newWidgetMetaMap = new Map<string, GridStackWidget>();
+        const newAddedWidgets = new Set<string>();
+
+        console.log("🔄 [GRID] Reloading environment from layout:", {
+            layoutChildren: layout.children?.length ?? 0,
+            hasContainers: layout.children?.some((w) => w.subGridOpts?.children),
+        });
+
+        const processChildren = (children: GridStackWidget[], depth = 0) => {
+            children.forEach((widget) => {
+                if (widget.id) {
+                    newWidgetMetaMap.set(widget.id, widget);
+                    newAddedWidgets.add(widget.id);
+                    console.log(`🔄 [GRID] Added widget at depth ${depth}:`, {
+                        id: widget.id,
+                        hasSubGrid: !!widget.subGridOpts?.children,
+                        childCount: widget.subGridOpts?.children?.length ?? 0,
+                    });
+                }
+                if (widget.subGridOpts?.children) {
+                    processChildren(widget.subGridOpts.children, depth + 1);
+                }
+            });
+        };
+
+        if (layout.children) {
+            processChildren(layout.children);
+        }
+
+        setEnvironment({
+            widgetMetaMap: newWidgetMetaMap,
+            addedWidgets: newAddedWidgets,
+        });
+
+        console.log("🔄 [GRID] Environment reloaded from layout", {
+            widgetCount: newWidgetMetaMap.size,
+            widgetIds: Array.from(newAddedWidgets),
+        });
+    }, []);
 
     return (
         <GridStackContext.Provider
@@ -387,9 +460,9 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                     findWidget,
                     widgetExists,
                     removeWidget,
-                    saveOptions,
+                    reloadEnvironment,
                 }),
-                [initialOptions, gridStack, addWidget, removeWidget, saveOptions, environment, save]
+                [initialOptions, gridStack, addWidget, removeWidget, environment, save, reloadEnvironment]
             )}
         >
             {children}
