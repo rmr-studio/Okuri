@@ -13,26 +13,33 @@ import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
 
 /**
  * Recursively extracts all widget configurations from a layout, including nested subgrids.
- * Returns a map of widgetId -> GridStackWidget for quick lookup.
+ * Returns a map of widgetId -> GridStackWidget for quick lookup and a parent map.
  */
-function buildLayoutWidgetMap(layout?: GridStackOptions): Map<string, GridStackWidget> {
-    const map = new Map<string, GridStackWidget>();
-    if (!layout?.children) return map;
+function buildLayoutWidgetMap(layout?: GridStackOptions): {
+    widgetMap: Map<string, GridStackWidget>;
+    parentMap: Map<string, string>;
+} {
+    const widgetMap = new Map<string, GridStackWidget>();
+    const parentMap = new Map<string, string>();
+    if (!layout?.children) return { widgetMap, parentMap };
 
-    const processChildren = (children: GridStackWidget[]) => {
+    const processChildren = (children: GridStackWidget[], parentId?: string) => {
         children.forEach((widget) => {
             if (widget.id) {
-                map.set(widget.id, widget);
+                widgetMap.set(widget.id, widget);
+                if (parentId) {
+                    parentMap.set(widget.id, parentId);
+                }
             }
             // Recursively process subgrid children
-            if (widget.subGridOpts?.children) {
-                processChildren(widget.subGridOpts.children);
+            if (widget.subGridOpts?.children && widget.id) {
+                processChildren(widget.subGridOpts.children, widget.id);
             }
         });
     };
 
     processChildren(layout.children);
-    return map;
+    return { widgetMap, parentMap };
 }
 
 /**
@@ -63,7 +70,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
     } = useBlockEnvironment();
 
     // Build a map of widget configurations from the provided layout
-    const layoutWidgetMap = useMemo(
+    const { widgetMap: layoutWidgetMap, parentMap: layoutParentMap } = useMemo(
         () => buildLayoutWidgetMap(initialLayout),
         [initialLayout]
     );
@@ -306,9 +313,27 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 blockType: "error",
             };
 
-            const { success, node } = addWidget(widgetConfig, meta);
-            if (!success || !node?.el) {
-                console.warn(`Failed to add error widget for missing block ${id}`);
+            // Resolve parent node (if any) to place error widget in the correct grid
+            const parentId = layoutParentMap.get(id);
+            if (parentId) {
+                const { success: querySuccess, node: parent } = findWidget(parentId);
+                if (!querySuccess || !parent) {
+                    console.warn(
+                        `Parent widget ${parentId} not found for missing block ${id}. Widget not added.`
+                    );
+                    return;
+                }
+
+                const { success, node } = addWidget(widgetConfig, meta, parent);
+                if (!success || !node?.el) {
+                    console.warn(`Failed to add error widget for missing block ${id} to parent ${parentId}`);
+                }
+            } else {
+                // No parent - add to root grid
+                const { success, node } = addWidget(widgetConfig, meta);
+                if (!success || !node?.el) {
+                    console.warn(`Failed to add error widget for missing block ${id}`);
+                }
             }
         };
 
@@ -348,6 +373,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
         addWidget,
         triggerSubgridResize,
         layoutWidgetMap,
+        layoutParentMap,
         widgetExists,
         getTrees,
     ]);
