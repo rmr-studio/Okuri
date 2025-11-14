@@ -1,4 +1,4 @@
-import { GridItemHTMLElement, GridStackWidget } from "gridstack";
+import { GridItemHTMLElement, GridStackOptions, GridStackWidget } from "gridstack";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
@@ -10,6 +10,37 @@ import { isList } from "../../util/list/list.util";
 import { hasWildcardSlots } from "../../util/render/binding.resolver";
 import { parseContent } from "../../util/render/render.util";
 import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
+
+/**
+ * Recursively extracts all widget configurations from a layout, including nested subgrids.
+ * Returns a map of widgetId -> GridStackWidget for quick lookup and a parent map.
+ */
+function buildLayoutWidgetMap(layout?: GridStackOptions): {
+    widgetMap: Map<string, GridStackWidget>;
+    parentMap: Map<string, string>;
+} {
+    const widgetMap = new Map<string, GridStackWidget>();
+    const parentMap = new Map<string, string>();
+    if (!layout?.children) return { widgetMap, parentMap };
+
+    const processChildren = (children: GridStackWidget[], parentId?: string) => {
+        children.forEach((widget) => {
+            if (widget.id) {
+                widgetMap.set(widget.id, widget);
+                if (parentId) {
+                    parentMap.set(widget.id, parentId);
+                }
+            }
+            // Recursively process subgrid children
+            if (widget.subGridOpts?.children && widget.id) {
+                processChildren(widget.subGridOpts.children, widget.id);
+            }
+        });
+    };
+
+    processChildren(layout.children);
+    return { widgetMap, parentMap };
+}
 
 /**
  * Synchronizes GridStack widgets when blocks change at any level of the tree.
@@ -33,9 +64,16 @@ export const WidgetEnvironmentSync: React.FC = () => {
         getTrees,
         getParentId,
         environment: blockEnvironment,
+        initialLayout,
         isInitialized,
         setIsInitialized,
     } = useBlockEnvironment();
+
+    // Build a map of widget configurations from the provided layout
+    const { widgetMap: layoutWidgetMap, parentMap: layoutParentMap } = useMemo(
+        () => buildLayoutWidgetMap(initialLayout),
+        [initialLayout]
+    );
 
     // Track ALL block IDs in the environment (not just top-level)
     const allBlockIds = useMemo(() => {
@@ -47,13 +85,28 @@ export const WidgetEnvironmentSync: React.FC = () => {
     const hasInitiallyLoadedRef = useRef(false);
 
     const triggerSubgridResize = useCallback((element?: HTMLElement | null) => {
-        const gridItem = element as GridItemHTMLElement | null;
-        const subGrid = gridItem?.gridstackNode?.subGrid;
-        if (!subGrid) return;
-        requestAnimationFrame(() => {
-            if (!gridItem?.isConnected) return;
-            subGrid.onResize();
-        });
+        try {
+            const gridItem = element as GridItemHTMLElement | null;
+            const subGrid = gridItem?.gridstackNode?.subGrid;
+            if (!subGrid) return;
+
+            // Guard against invalid subgrid instances
+            if (!subGrid.engine || !subGrid.opts) return;
+
+            requestAnimationFrame(() => {
+                try {
+                    if (!gridItem?.isConnected) return;
+                    if (!subGrid.engine || !subGrid.opts) return;
+                    subGrid.onResize();
+                } catch (error) {
+                    // Catch errors during subgrid resize
+                    console.debug("Subgrid resize error (non-critical):", error);
+                }
+            });
+        } catch (error) {
+            // Catch any errors in the outer scope
+            console.debug("Trigger subgrid resize error (non-critical):", error);
+        }
     }, []);
 
     useEffect(() => {
@@ -72,6 +125,19 @@ export const WidgetEnvironmentSync: React.FC = () => {
             (id: string) => !currentBlockIds.has(id)
         );
 
+        // Find missing blocks: blocks referenced in layout but not in block environment
+        const missingBlockIds: string[] = [];
+        if (layoutWidgetMap.size > 0 && !hasInitiallyLoadedRef.current) {
+            layoutWidgetMap.forEach((widget, widgetId) => {
+                // Skip placeholder widgets
+                if (widgetId.endsWith("-placeholder")) return;
+                // If widget is in layout but not in block environment, it's missing
+                if (!currentBlockIds.has(widgetId)) {
+                    missingBlockIds.push(widgetId);
+                }
+            });
+        }
+
         const addNewWidget = (id: string) => {
             // Ignore placeholder widgets used to keep subgrids active when empty
             if (id.endsWith("-placeholder")) {
@@ -79,6 +145,12 @@ export const WidgetEnvironmentSync: React.FC = () => {
             }
 
             if (widgetExists(id)) {
+                return;
+            }
+
+            // If this block exists in the layout, skip it
+            // GridStack has already initialized it from initialOptions
+            if (layoutWidgetMap.has(id)) {
                 return;
             }
 
@@ -93,8 +165,10 @@ export const WidgetEnvironmentSync: React.FC = () => {
             const blockNode = findNodeById(tree.root, id);
             if (!blockNode) return;
 
-            const { x, y, width, height } = getDefaultDimensions(blockNode);
             const parentId = getParentId(id);
+
+            // Use default dimensions for new blocks (not in layout)
+            const { x, y, width, height } = getDefaultDimensions(blockNode);
 
             // Calculate proper Y coordinate based on sibling order to prevent reverse rendering
             let calculatedY = y;
@@ -118,14 +192,15 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 }
             }
 
-            let meta: WidgetRenderStructure;
             const widgetConfig: GridStackWidget = {
                 id: id,
                 x: x,
-                y: calculatedY, // Use calculated Y to maintain proper order
+                y: calculatedY,
                 w: width,
                 h: height,
             };
+
+            let meta: WidgetRenderStructure;
 
             // Base definition for widget metadata
             meta = {
@@ -147,6 +222,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
 
                 if (hasWildcards && isContentNode(blockNode)) {
                     meta.renderType = "container";
+
                     // Add subgrid configuration - children will be added separately by the sync logic
                     // Include a placeholder widget to keep the subgrid active when empty
                     // This prevents GridStack from collapsing/destroying empty subgrids
@@ -169,7 +245,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                                 x: 0,
                                 y: 0,
                                 w: 12,
-                                h: 1,
+                                h: 0, // Zero height to make it invisible
                                 locked: true,
                                 noMove: true,
                                 noResize: true,
@@ -215,9 +291,60 @@ export const WidgetEnvironmentSync: React.FC = () => {
             return;
         };
 
+        const addMissingBlockWidget = (id: string) => {
+            if (widgetExists(id)) return;
+
+            const layoutWidget = layoutWidgetMap.get(id);
+            if (!layoutWidget) return;
+
+            // Create error widget with layout dimensions
+            const widgetConfig: GridStackWidget = {
+                id: id,
+                x: layoutWidget.x ?? 0,
+                y: layoutWidget.y ?? 0,
+                w: layoutWidget.w ?? 12,
+                h: layoutWidget.h ?? 4,
+            };
+
+            const meta: WidgetRenderStructure = {
+                id: id,
+                key: "error",
+                renderType: "component",
+                blockType: "error",
+            };
+
+            // Resolve parent node (if any) to place error widget in the correct grid
+            const parentId = layoutParentMap.get(id);
+            if (parentId) {
+                const { success: querySuccess, node: parent } = findWidget(parentId);
+                if (!querySuccess || !parent) {
+                    console.warn(
+                        `Parent widget ${parentId} not found for missing block ${id}. Widget not added.`
+                    );
+                    return;
+                }
+
+                const { success, node } = addWidget(widgetConfig, meta, parent);
+                if (!success || !node?.el) {
+                    console.warn(`Failed to add error widget for missing block ${id} to parent ${parentId}`);
+                }
+            } else {
+                // No parent - add to root grid
+                const { success, node } = addWidget(widgetConfig, meta);
+                if (!success || !node?.el) {
+                    console.warn(`Failed to add error widget for missing block ${id}`);
+                }
+            }
+        };
+
         // Add new widgets
         addedBlockIds.forEach((blockId) => {
             addNewWidget(blockId);
+        });
+
+        // Add error widgets for missing blocks (only on initial load)
+        missingBlockIds.forEach((blockId) => {
+            addMissingBlockWidget(blockId);
         });
 
         // Remove old widgets
@@ -245,6 +372,10 @@ export const WidgetEnvironmentSync: React.FC = () => {
         findWidget,
         addWidget,
         triggerSubgridResize,
+        layoutWidgetMap,
+        layoutParentMap,
+        widgetExists,
+        getTrees,
     ]);
 
     return null;

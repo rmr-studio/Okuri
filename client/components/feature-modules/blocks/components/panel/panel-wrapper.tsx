@@ -5,13 +5,18 @@ import { cn } from "@/lib/util/utils";
 import { AnimatePresence } from "framer-motion";
 import { TypeIcon } from "lucide-react";
 import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useBlockEdit } from "../../context/block-edit-provider";
+import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useBlockFocus } from "../../context/block-focus-provider";
 import { useFocusSurface } from "../../hooks/use-focus-surface";
+import { isContentNode } from "../../interface/block.interface";
 import { QuickActionItem, SlashMenuItem } from "../../interface/panel.interface";
+import { BlockForm } from "../forms/block-form";
 import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
 import PanelToolbar from "./toolbar/panel-toolbar";
+import { useRenderElement } from "../../context/block-renderer-provider";
 
 interface Props extends ChildNodeProps, ClassNameProps {
     id: string;
@@ -67,6 +72,50 @@ export const PanelWrapper: FC<Props> = ({
     const surfaceRef = useRef<HTMLDivElement | null>(null);
     const actions = quickActions ?? [];
 
+    // Block edit state
+    const { startEdit, saveAndExit, openDrawer, isEditing, getEditMode, drawerState, cancelEdit } =
+        useBlockEdit();
+    const { getBlock, getChildren } = useBlockEnvironment();
+    const [isEditMode, setEditMode] = useState(false);
+    const block = getBlock(id);
+    const hasChildren = getChildren(id).length > 0;
+
+    // Get resize function for inline edit mode
+    let requestResize: (() => void) | undefined;
+    try {
+        const renderContext = useRenderElement();
+        requestResize = renderContext?.widget.requestResize;
+    } catch {
+        // Not in RenderElementProvider context, resize not available
+        requestResize = undefined;
+    }
+
+    // Sync local edit mode state with provider
+    const prevEditModeRef = useRef<"inline" | "drawer" | null>(null);
+    useEffect(() => {
+        const editMode = getEditMode(id);
+        const prevEditMode = prevEditModeRef.current;
+
+        // Only set to true if in inline mode; drawer mode is handled separately
+        setEditMode(editMode === "inline");
+
+        // If transitioning from any edit mode to null (edit mode closed), request resize
+        // This handles: individual save/discard, Save All, Discard All, and drawer close
+        if (prevEditMode !== null && editMode === null && requestResize) {
+            // Use triple requestAnimationFrame to ensure React has fully unmounted
+            // the form and mounted the display content before measuring
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        requestResize();
+                    });
+                });
+            });
+        }
+
+        prevEditModeRef.current = editMode;
+    }, [id, getEditMode, requestResize]);
+
     const menuActions = useMemo(() => {
         if (onDelete && !actions.some((action) => action.id === "delete")) {
             return [
@@ -88,11 +137,13 @@ export const PanelWrapper: FC<Props> = ({
         let buttonIndex = 0;
         const quickActionsIndex = buttonIndex++;
         const insertIndex = allowInsert ? buttonIndex++ : -1;
+        const editIndex = buttonIndex++; // Edit button always present
         const detailsIndex = buttonIndex++;
         const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
         return {
             quickActionsIndex,
             insertIndex,
+            editIndex,
             detailsIndex,
             actionsMenuIndex,
             count: buttonIndex,
@@ -167,7 +218,12 @@ export const PanelWrapper: FC<Props> = ({
 
     useEffect(() => {
         const shouldLock =
-            isSlashOpen || isQuickOpen || isInlineMenuOpen || isDetailsOpen || isActionsOpen;
+            isSlashOpen ||
+            isQuickOpen ||
+            isInlineMenuOpen ||
+            isDetailsOpen ||
+            isActionsOpen ||
+            drawerState.isOpen;
         // Acquire or release overlay lock based on menu state
         if (!shouldLock && overlayLockRef.current) {
             overlayLockRef.current();
@@ -202,6 +258,7 @@ export const PanelWrapper: FC<Props> = ({
         isSlashOpen,
         isDetailsOpen,
         isActionsOpen,
+        drawerState.isOpen,
         setFocusHover,
     ]);
 
@@ -214,6 +271,66 @@ export const PanelWrapper: FC<Props> = ({
             requestAnimationFrame(() => inlineSearchRef.current?.focus());
         }
     }, [isInlineMenuOpen]);
+
+    const handleEditClick = useCallback(() => {
+        if (hasChildren) {
+            // Has children: open drawer
+            openDrawer(id);
+        } else {
+            // No children: toggle inline edit
+            if (isEditMode) {
+                saveAndExit(id).then((success) => {
+                    if (success) {
+                        setEditMode(false);
+                        // Resize back to display content after exiting edit mode
+                        if (requestResize) {
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    requestResize();
+                                });
+                            });
+                        }
+                    }
+                });
+            } else {
+                startEdit(id, "inline");
+                setEditMode(true);
+            }
+        }
+    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize]);
+
+    const handleSaveEditClick = useCallback(() => {
+        if (isEditMode) {
+            saveAndExit(id).then((success) => {
+                if (success) {
+                    setEditMode(false);
+                    // Resize back to display content after saving
+                    if (requestResize) {
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                requestResize();
+                            });
+                        });
+                    }
+                }
+            });
+        }
+    }, [isEditMode, saveAndExit, id, requestResize]);
+
+    const handleDiscardEditClick = useCallback(() => {
+        if (isEditMode) {
+            cancelEdit(id);
+            setEditMode(false);
+            // Resize back to display content after discarding
+            if (requestResize) {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        requestResize();
+                    });
+                });
+            }
+        }
+    }, [isEditMode, cancelEdit, id, requestResize]);
 
     useEffect(() => {
         if (!isSelected) return;
@@ -264,20 +381,25 @@ export const PanelWrapper: FC<Props> = ({
                 if (isInput) return;
                 event.preventDefault();
 
-                const toolbarOrder: Array<"quick" | "insert" | "details" | "actions"> = [
-                    "quick",
-                    ...(allowInsert ? (["insert"] as const) : []),
-                    "details",
-                    ...(hasMenuActions ? (["actions"] as const) : []),
-                ];
+                const {
+                    quickActionsIndex,
+                    insertIndex,
+                    editIndex,
+                    detailsIndex,
+                    actionsMenuIndex,
+                } = toolbarIndices;
 
-                const targetMenu = toolbarOrder[toolbarFocusIndex] ?? null;
+                // Handle edit button activation
+                if (toolbarFocusIndex === editIndex) {
+                    handleEditClick();
+                    return;
+                }
 
-                // Close all menus except the target, then open the target
-                setQuickOpen(targetMenu === "quick");
-                setInlineMenuOpen(targetMenu === "insert");
-                setDetailsOpen(targetMenu === "details");
-                setActionsOpen(targetMenu === "actions");
+                // Handle other menu buttons
+                setQuickOpen(toolbarFocusIndex === quickActionsIndex);
+                setInlineMenuOpen(toolbarFocusIndex === insertIndex && insertIndex !== -1);
+                setDetailsOpen(toolbarFocusIndex === detailsIndex);
+                setActionsOpen(toolbarFocusIndex === actionsMenuIndex && actionsMenuIndex !== -1);
 
                 return;
             }
@@ -296,9 +418,34 @@ export const PanelWrapper: FC<Props> = ({
                 setInlineMenuOpen(true);
             }
 
+            // Cmd+E or Cmd+Shift+E: Edit mode
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
                 event.preventDefault();
-                // TODO. Set up inline edit mode. Or separate data drawerk
+
+                if (event.shiftKey) {
+                    // Cmd+Shift+E: Always open drawer for any block
+                    openDrawer(id);
+                } else {
+                    // Cmd+E: Inline edit for simple blocks, drawer for containers
+                    if (hasChildren) {
+                        // Has children: open drawer
+                        openDrawer(id);
+                    } else {
+                        // No children: toggle inline edit
+                        if (isEditMode) {
+                            // Exit edit mode and save
+                            saveAndExit(id).then((success) => {
+                                if (success) {
+                                    setEditMode(false);
+                                }
+                            });
+                        } else {
+                            // Enter edit mode
+                            startEdit(id, "inline");
+                            setEditMode(true);
+                        }
+                    }
+                }
             }
 
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -324,6 +471,13 @@ export const PanelWrapper: FC<Props> = ({
         toolbarFocusIndex,
         toolbarIndices,
         hasMenuActions,
+        isEditMode,
+        hasChildren,
+        openDrawer,
+        saveAndExit,
+        startEdit,
+        id,
+        handleEditClick,
     ]);
 
     const handleTitleBlur = useCallback(() => {
@@ -522,10 +676,24 @@ export const PanelWrapper: FC<Props> = ({
                                 onDetailsOpenChange={handleDetailsOpenChange}
                                 actionsOpen={isActionsOpen}
                                 onActionsOpenChange={handleActionsOpenChange}
+                                onEditClick={handleEditClick}
+                                isEditMode={isEditMode}
+                                hasChildren={hasChildren}
+                                onSaveEditClick={handleSaveEditClick}
+                                onDiscardEditClick={handleDiscardEditClick}
                             />
                         )}
                     </AnimatePresence>
-                    {children}
+                    {isEditMode && block && isContentNode(block) ? (
+                        <BlockForm
+                            blockId={id}
+                            blockType={block.block.type}
+                            mode="inline"
+                            onResize={requestResize}
+                        />
+                    ) : (
+                        children
+                    )}
                     {allowInsert && (
                         <InsertBlockModal
                             open={isSlashOpen}

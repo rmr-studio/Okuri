@@ -172,7 +172,48 @@ const createAddressBlockType = (organisationId: string): BlockType => {
                 },
             },
         },
-        render,
+        display: {
+            form: {
+                fields: {
+                    "data.title": {
+                        type: "TEXT_INPUT",
+                        label: "Title",
+                        placeholder: "e.g., Home, Office",
+                    },
+                    "data.description": {
+                        type: "TEXT_AREA",
+                        label: "Description",
+                        placeholder: "Additional address notes",
+                    },
+                    "data.address.street": {
+                        type: "TEXT_INPUT",
+                        label: "Street Address",
+                        placeholder: "123 Main St",
+                    },
+                    "data.address.city": {
+                        type: "TEXT_INPUT",
+                        label: "City",
+                        placeholder: "San Francisco",
+                    },
+                    "data.address.state": {
+                        type: "TEXT_INPUT",
+                        label: "State/Province",
+                        placeholder: "CA",
+                    },
+                    "data.address.postalCode": {
+                        type: "TEXT_INPUT",
+                        label: "Postal Code",
+                        placeholder: "94102",
+                    },
+                    "data.address.country": {
+                        type: "TEXT_INPUT",
+                        label: "Country",
+                        placeholder: "USA",
+                    },
+                },
+            },
+            render,
+        },
         nesting: null,
     });
 };
@@ -223,7 +264,38 @@ const createTaskBlockType = (organisationId: string): BlockType => {
                 dueDate: { name: "Due date", type: "STRING", required: false, format: "DATE" },
             },
         },
-        render,
+        display: {
+            form: {
+                fields: {
+                    "data.title": {
+                        type: "TEXT_INPUT",
+                        label: "Task Title",
+                        placeholder: "Enter task title",
+                    },
+                    "data.assignee": {
+                        type: "TEXT_INPUT",
+                        label: "Assignee",
+                        placeholder: "Who is responsible?",
+                    },
+                    "data.status": {
+                        type: "DROPDOWN",
+                        label: "Status",
+                        options: [
+                            { label: "Not Started", value: "NOT_STARTED" },
+                            { label: "In Progress", value: "IN_PROGRESS" },
+                            { label: "In Review", value: "IN_REVIEW" },
+                            { label: "Completed", value: "COMPLETED" },
+                        ],
+                    },
+                    "data.dueDate": {
+                        type: "DATE_PICKER",
+                        label: "Due Date",
+                        placeholder: "Select due date",
+                    },
+                },
+            },
+            render,
+        },
         nesting: null,
     });
 };
@@ -266,7 +338,18 @@ const createNoteBlockType = (organisationId: string): BlockType => {
                 content: { name: "Content", type: "STRING", required: true },
             },
         },
-        render,
+        display: {
+            form: {
+                fields: {
+                    "data.content": {
+                        type: "TEXT_AREA",
+                        label: "Note Content",
+                        placeholder: "Start typing your note...",
+                    },
+                },
+            },
+            render,
+        },
         nesting: null,
     });
 };
@@ -316,7 +399,35 @@ const createProjectOverviewType = (organisationId: string): BlockType => {
                 summary: { name: "Summary", type: "STRING", required: false },
             },
         },
-        render,
+        display: {
+            form: {
+                fields: {
+                    "data.name": {
+                        type: "TEXT_INPUT",
+                        label: "Project Name",
+                        placeholder: "Enter project name",
+                    },
+                    "data.status": {
+                        type: "DROPDOWN",
+                        label: "Project Status",
+
+                        options: [
+                            { label: "Planning", value: "Planning" },
+                            { label: "In Progress", value: "In progress" },
+                            { label: "On Hold", value: "On hold" },
+                            { label: "Completed", value: "Completed" },
+                            { label: "Cancelled", value: "Cancelled" },
+                        ],
+                    },
+                    "data.summary": {
+                        type: "TEXT_AREA",
+                        label: "Project Summary",
+                        placeholder: "Describe the project...",
+                    },
+                },
+            },
+            render,
+        },
         nesting: {
             max: undefined,
             allowedTypes: ALL_BLOCK_COMPONENT_TYPES,

@@ -13,6 +13,7 @@ import { ContactCard } from "../../components/bespoke/ContactCard";
 import { DataSummaryTable } from "../../components/bespoke/DataSummaryTable";
 import { FallbackBlock } from "../../components/bespoke/FallbackBlock";
 import { ImageBlock } from "../../components/bespoke/ImageBlock";
+import { MissingBlockError } from "../../components/bespoke/MissingBlockError";
 import { ButtonBlock } from "../../components/primitive/block.button";
 import { LayoutContainerBlock } from "../../components/primitive/block.container";
 import { ListBlock } from "../../components/primitive/block.list";
@@ -45,6 +46,7 @@ const baseBlockElements: Record<ComponentType, RenderElementMetadata<ZodTypeAny>
 export const blockElements = {
     ...baseBlockElements,
     FALLBACK: FallbackBlock,
+    MISSING_BLOCK_ERROR: MissingBlockError,
 } satisfies BlockElementMap;
 
 const componentKeys = Object.keys(baseBlockElements);

@@ -93,3 +93,60 @@ export const hexToRgb = (hex: string): string => {
     const b = bigint & 255;
     return `${r}, ${g}, ${b}`;
 };
+
+/**
+ * Safely retrieves a value from a nested object using a dot-separated path or array of keys.
+ * Returns defaultValue if any intermediate value is null/undefined or if the final value is undefined.
+ * @param obj - The object to traverse
+ * @param path - Dot-separated string (e.g., "user.address.city") or array of keys
+ * @param defaultValue - Value to return if path cannot be resolved
+ * @returns The value at the path, or defaultValue
+ */
+export function get(obj: any, path: string | Array<string | number>, defaultValue?: any) {
+    const segments = Array.isArray(path) ? path : path.split(".");
+    let current = obj;
+
+    for (const segment of segments) {
+        if (current == null) return defaultValue;
+        current = current[segment];
+    }
+
+    return current === undefined ? defaultValue : current;
+}
+
+/**
+ * Sets a value at the specified path in an object, creating intermediate objects/arrays as needed.
+ * WARNING: This function mutates the input object.
+ * @param obj - The object to mutate
+ * @param path - Dot-separated string or array of keys
+ * @param value - Value to set at the path
+ * @returns The mutated object (for chaining)
+ */
+export function set(obj: any, path: string | Array<string | number>, value: any) {
+    const segments = Array.isArray(path) ? path : path.split(".");
+    let current = obj;
+
+    for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const isLast = i === segments.length - 1;
+
+        if (isLast) {
+            current[segment] = value;
+        } else {
+            if (
+                !(segment in current) ||
+                typeof current[segment] !== "object" ||
+                current[segment] == null
+            ) {
+                // Create array if next segment is a numeric index, otherwise create object
+                const nextSegment = segments[i + 1];
+                const next =
+                    typeof nextSegment === "number" || /^\d+$/.test(String(nextSegment)) ? [] : {};
+                current[segment] = next;
+            }
+            current = current[segment];
+        }
+    }
+
+    return obj;
+}

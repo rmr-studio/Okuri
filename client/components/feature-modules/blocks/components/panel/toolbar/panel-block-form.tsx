@@ -1,5 +1,1 @@
-const PanelForm = () => {
-    return <div></div>;
-};
-
-export default PanelForm;
+export { BlockForm as default } from "../../forms/block-form";
