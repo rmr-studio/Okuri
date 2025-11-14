@@ -40,10 +40,32 @@ export const GridStackContext = createContext<GridstackContextValue | null>(null
 export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }) => {
     const { environment: blockEnvironment } = useBlockEnvironment();
     const [gridStack, setGridStack] = useState<GridStack | null>(null);
-    const [environment, setEnvironment] = useState<GridEnvironment>(() => ({
-        widgetMetaMap: new Map<string, GridStackWidget>(),
-        addedWidgets: new Set<string>(),
-    }));
+    const [environment, setEnvironment] = useState<GridEnvironment>(() => {
+        // Initialize widgetMetaMap from layout if provided
+        const widgetMetaMap = new Map<string, GridStackWidget>();
+        const addedWidgets = new Set<string>();
+
+        if (initialOptions?.children) {
+            // Recursively populate from layout
+            const processChildren = (children: GridStackWidget[]) => {
+                children.forEach((widget) => {
+                    if (widget.id) {
+                        widgetMetaMap.set(widget.id, widget);
+                        addedWidgets.add(widget.id);
+                    }
+                    if (widget.subGridOpts?.children) {
+                        processChildren(widget.subGridOpts.children);
+                    }
+                });
+            };
+            processChildren(initialOptions.children);
+        }
+
+        return {
+            widgetMetaMap,
+            addedWidgets,
+        };
+    });
     // Track list of node IDs to help with re-renders when nodes are added/removed
 
     const save = (): GridStackOptions | undefined => {

@@ -9,8 +9,17 @@ import { GridStack, GridStackNode } from "gridstack";
  * @returns
  */
 export const getNewParentId = (item: GridStackNode, gridStack: GridStack): string | null => {
-    if (!item.grid) return null;
-    if (item.grid === gridStack) return null;
+    try {
+        if (!item || !item.grid) return null;
+        if (item.grid === gridStack) return null;
 
-    return item.grid.parentGridNode?.id ?? null;
+        // Guard against invalid grid state during resize operations
+        if (!item.grid.parentGridNode) return null;
+
+        return item.grid.parentGridNode.id ?? null;
+    } catch (error) {
+        // Catch any errors accessing grid properties during transitions
+        console.debug("getNewParentId error (non-critical):", error);
+        return null;
+    }
 };

@@ -86,33 +86,59 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
     const resizeObserverMap = useRef<Map<string, ResizeObserver>>(new Map());
 
     const syncElementToGrid = useCallback((element: HTMLElement) => {
-        if (!element) return;
+        try {
+            if (!element) return;
 
-        const component = element.firstElementChild as HTMLElement;
-        if (!component) return;
+            const component = element.firstElementChild as HTMLElement;
+            if (!component) return;
 
-        const desiredHeightPx = component.getBoundingClientRect().height;
-        // Only skip if there's no visible content to measure
-        if (desiredHeightPx === 0) return;
+            const desiredHeightPx = component.getBoundingClientRect().height;
+            // Only skip if there's no visible content to measure
+            if (desiredHeightPx === 0) return;
 
-        const gridItem = element.closest(".grid-stack-item") as GridItemHTMLElement | null;
-        if (!gridItem) return;
+            const gridItem = element.closest(".grid-stack-item") as GridItemHTMLElement | null;
+            if (!gridItem) return;
 
-        // Get the individual cell height per row in the grid instance
-        const node = gridItem.gridstackNode as
-            | (GridStackNode & { _moving?: boolean; _resizing?: boolean })
-            | undefined;
-        if (!node) return;
-        if (node._moving || node._resizing) return;
-        const grid = node.grid;
-        if (!grid) return;
-        const cellHeight = grid.getCellHeight(true);
+            // Get the individual cell height per row in the grid instance
+            const node = gridItem.gridstackNode as
+                | (GridStackNode & { _moving?: boolean; _resizing?: boolean })
+                | undefined;
+            if (!node) return;
+            if (node._moving || node._resizing) return;
+            const grid = node.grid;
+            if (!grid) return;
 
-        if (!cellHeight) return;
+            // Guard against destroyed or invalid grid instances
+            if (!grid.engine || !grid.opts) return;
 
-        const desiredRows = Math.max(1, Math.ceil(desiredHeightPx / cellHeight) + 1);
-        if (desiredRows !== node.h) {
-            grid.update(gridItem, { h: desiredRows });
+            const cellHeight = grid.getCellHeight(true);
+
+            if (!cellHeight) return;
+
+            const desiredRows = Math.max(1, Math.ceil(desiredHeightPx / cellHeight) + 1);
+            if (desiredRows !== node.h) {
+                // Additional safety checks before updating
+                if (!gridItem.gridstackNode) return;
+
+                // Check if node is being moved or resized (cast to access private properties)
+                const nodeWithState = gridItem.gridstackNode as GridStackNode & {
+                    _moving?: boolean;
+                    _resizing?: boolean;
+                };
+                if (nodeWithState._moving || nodeWithState._resizing) return;
+
+                // Batch the update to prevent event cascade issues
+                grid.batchUpdate();
+                try {
+                    grid.update(gridItem, { h: desiredRows });
+                } finally {
+                    grid.commit();
+                }
+            }
+        } catch (error) {
+            // Silently catch errors during resize operations to prevent uncaught exceptions
+            // These can occur when grids are being destroyed or reconfigured
+            console.debug("Grid sync error (non-critical):", error);
         }
     }, []);
 
@@ -136,21 +162,39 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
             }
 
             const observer = new ResizeObserver((entries) => {
-                entries.forEach((entry) => {
-                    syncElementToGrid(entry.target as HTMLElement);
-                });
+                try {
+                    entries.forEach((entry) => {
+                        const element = entry.target as HTMLElement;
+                        const gridItem = element.closest(".grid-stack-item") as GridItemHTMLElement | null;
+
+                        // Skip if grid is actively being resized by user
+                        const nodeWithState = gridItem?.gridstackNode as
+                            | (GridStackNode & { _resizing?: boolean })
+                            | undefined;
+                        if (nodeWithState?._resizing) return;
+
+                        syncElementToGrid(element);
+                    });
+                } catch (error) {
+                    // Catch any errors in the resize observer callback
+                    console.debug("ResizeObserver callback error (non-critical):", error);
+                }
             });
 
             // Wait for the next frame to ensure content is rendered
             requestAnimationFrame(() => {
-                const renderedComponent = target.firstElementChild as HTMLElement;
-                if (renderedComponent) {
-                    // Observe the actual rendered component
-                    observer.observe(renderedComponent);
-                    resizeObserverMap.current.set(widgetId, observer);
+                try {
+                    const renderedComponent = target.firstElementChild as HTMLElement;
+                    if (renderedComponent) {
+                        // Observe the actual rendered component
+                        observer.observe(renderedComponent);
+                        resizeObserverMap.current.set(widgetId, observer);
 
-                    // Initial sync after content is available
-                    syncElementToGrid(renderedComponent);
+                        // Initial sync after content is available
+                        syncElementToGrid(renderedComponent);
+                    }
+                } catch (error) {
+                    console.debug("ResizeObserver registration error (non-critical):", error);
                 }
             });
         },
@@ -159,30 +203,34 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
     const renderCBFn = useCallback(
         (element: HTMLElement, widget: GridStackWidget & { grid?: GridStack }) => {
-            const closestGrid = element.closest(".grid-stack") as
-                | (HTMLElement & { gridstack?: GridStack })
-                | null;
-            const grid = widget.grid ?? closestGrid?.gridstack;
-            if (widget.id && grid) {
-                const contentWrapper = element.querySelector<HTMLElement>(
-                    ".grid-stack-item-content"
-                );
-                const renderRoot = contentWrapper
-                    ? ensureRenderRoot(contentWrapper, widget)
-                    : element;
+            try {
+                const closestGrid = element.closest(".grid-stack") as
+                    | (HTMLElement & { gridstack?: GridStack })
+                    | null;
+                const grid = widget.grid ?? closestGrid?.gridstack;
+                if (widget.id && grid) {
+                    const contentWrapper = element.querySelector<HTMLElement>(
+                        ".grid-stack-item-content"
+                    );
+                    const renderRoot = contentWrapper
+                        ? ensureRenderRoot(contentWrapper, widget)
+                        : element;
 
-                // Get or create the widget container map for this grid instance
-                let containers = gridWidgetContainersMap.get(grid);
-                if (!containers) {
-                    containers = new Map<string, HTMLElement>();
-                    gridWidgetContainersMap.set(grid, containers);
+                    // Get or create the widget container map for this grid instance
+                    let containers = gridWidgetContainersMap.get(grid);
+                    if (!containers) {
+                        containers = new Map<string, HTMLElement>();
+                        gridWidgetContainersMap.set(grid, containers);
+                    }
+                    containers.set(widget.id, renderRoot);
+
+                    // Also update the local ref for backward compatibility
+                    widgetContainersRef.current.set(widget.id, renderRoot);
+
+                    registerResizeObserver(widget.id, renderRoot);
                 }
-                containers.set(widget.id, renderRoot);
-
-                // Also update the local ref for backward compatibility
-                widgetContainersRef.current.set(widget.id, renderRoot);
-
-                registerResizeObserver(widget.id, renderRoot);
+            } catch (error) {
+                console.debug("Grid render callback error (non-critical):", error);
             }
         },
         [registerResizeObserver]
@@ -190,21 +238,41 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
 
     const resizeToContentCBFn = useCallback(
         (el: GridItemHTMLElement) => {
-            if (!el) return;
-            const node = el.gridstackNode;
-            if (!node?.id) return;
-            resizeWidgetToContent(node.id);
+            try {
+                if (!el) return;
+                const node = el.gridstackNode;
+                if (!node?.id) return;
+                resizeWidgetToContent(node.id);
+            } catch (error) {
+                console.debug("Resize to content callback error (non-critical):", error);
+            }
         },
         [resizeWidgetToContent]
     );
 
     const initGrid = useCallback(() => {
         if (containerRef.current) {
-            GridStack.renderCB = renderCBFn;
+            // Wrap callbacks in error handlers to catch any internal GridStack errors
+            GridStack.renderCB = (el: HTMLElement, widget: any) => {
+                try {
+                    renderCBFn(el, widget);
+                } catch (error) {
+                    console.debug("GridStack.renderCB error (non-critical):", error);
+                }
+            };
+
+            GridStack.resizeToContentCB = (el: any) => {
+                try {
+                    resizeToContentCBFn(el);
+                } catch (error) {
+                    console.debug("GridStack.resizeToContentCB error (non-critical):", error);
+                }
+            };
+
             return GridStack.init(optionsRef.current, containerRef.current);
         }
         return null;
-    }, [renderCBFn]);
+    }, [renderCBFn, resizeToContentCBFn]);
 
     useLayoutEffect(() => {
         if (!gridStack) return;
