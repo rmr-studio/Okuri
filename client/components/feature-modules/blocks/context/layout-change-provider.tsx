@@ -270,34 +270,33 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                     .filter((w) => w.subGridOpts?.children)
                     .map((w) => ({ id: w.id, childCount: w.subGridOpts?.children?.length })),
             });
-            
             setVersion((v) => v + 1);
             // Reload GridStack from last saved state
-            gridStack.load(savedChildren);
-            
-
-            // Wait for GridStack DOM updates to complete before syncing environment
             requestAnimationFrame(() => {
-                // Sync GridProvider environment with reloaded layout
-                // Must happen after gridStack.load() DOM updates complete
-                console.log("🔄 [LOCAL] Reloading environment after gridStack.load()");
-                reloadEnvironment(lastSavedLayoutRef.current);
-
-                // Trigger resize for all layout containers to properly fit children
-                // This prevents child widgets from being misaligned after discard
+                gridStack.load(savedChildren);
+                // Wait for GridStack DOM updates to complete before syncing environment
                 requestAnimationFrame(() => {
-                    try {
-                        // Find all widgets with subgrids (layout containers)
-                        gridStack.engine.nodes.forEach((node) => {
-                            if (node.subGrid && node.el) {
-                                // Trigger resize to reflow children
-                                node.subGrid.onResize();
-                            }
-                        });
-                        console.log("🔄 [LOCAL] Triggered resize for layout containers");
-                    } catch (error) {
-                        console.debug("Layout container resize error (non-critical):", error);
-                    }
+                    // Sync GridProvider environment with reloaded layout
+                    // Must happen after gridStack.load() DOM updates complete
+                    console.log("🔄 [LOCAL] Reloading environment after gridStack.load()");
+                    reloadEnvironment(lastSavedLayoutRef.current);
+
+                    // Trigger resize for all layout containers to properly fit children
+                    // This prevents child widgets from being misaligned after discard
+                    requestAnimationFrame(() => {
+                        try {
+                            // Find all widgets with subgrids (layout containers)
+                            gridStack.engine.nodes.forEach((node) => {
+                                if (node.subGrid && node.el) {
+                                    // Trigger resize to reflow children
+                                    node.subGrid.onResize();
+                                }
+                            });
+                            console.log("🔄 [LOCAL] Triggered resize for layout containers");
+                        } catch (error) {
+                            console.debug("Layout container resize error (non-critical):", error);
+                        }
+                    });
                 });
             });
 
