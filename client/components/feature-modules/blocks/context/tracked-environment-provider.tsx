@@ -6,35 +6,29 @@ import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
 import { useLayoutChange } from "./layout-change-provider";
 
-/**
- * Extended context that provides command-enabled operations
- * This wraps the base BlockEnvironment operations with command pattern
- */
-interface CommandEnabledEnvironmentContextValue {
+interface TrackedEnvironmentContextValue {
     /** Change-aware operations that will mark the layout as dirty */
-    addBlockWithCommand: (
+    addTrackedBlock: (
         block: BlockNode,
         parentId?: string | null,
         index?: number | null
     ) => string;
-    removeBlockWithCommand: (blockId: string) => void;
-    moveBlockWithCommand: (blockId: string, targetParentId: string | null) => void;
-    updateBlockWithCommand: (blockId: string, updatedContent: BlockNode) => void;
+    removeTrackedBlock: (blockId: string) => void;
+    moveTrackedBlock: (blockId: string, targetParentId: string | null) => void;
+    updateTrackedBlock: (blockId: string, updatedContent: BlockNode) => void;
 
     /** Direct access to underlying providers (for when commands aren't needed) */
     blockEnvironment: ReturnType<typeof useBlockEnvironment>;
     gridStack: ReturnType<typeof useGrid>;
 }
 
-const CommandEnabledEnvironmentContext =
-    createContext<CommandEnabledEnvironmentContextValue | undefined>(undefined);
+const TrackedEnvironmentContext =
+    createContext<TrackedEnvironmentContextValue | undefined>(undefined);
 
-export const useCommandEnvironment = (): CommandEnabledEnvironmentContextValue => {
-    const context = useContext(CommandEnabledEnvironmentContext);
+export const useTrackedEnvironment = (): TrackedEnvironmentContextValue => {
+    const context = useContext(TrackedEnvironmentContext);
     if (!context) {
-        throw new Error(
-            "useCommandEnvironment must be used within a CommandEnabledEnvironmentProvider"
-        );
+        throw new Error("useTrackedEnvironment must be used within a TrackedEnvironmentProvider");
     }
     return context;
 };
@@ -44,7 +38,7 @@ export const useCommandEnvironment = (): CommandEnabledEnvironmentContextValue =
  * This sits between the UI and the base providers, intercepting operations
  * and converting them to commands for undo/redo support
  */
-export const CommandEnabledEnvironmentProvider: FC<PropsWithChildren> = ({ children }) => {
+export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) => {
     const blockEnvironment = useBlockEnvironment();
     const gridStack = useGrid();
     const { trackStructuralChange } = useLayoutChange();
@@ -58,7 +52,7 @@ export const CommandEnabledEnvironmentProvider: FC<PropsWithChildren> = ({ child
      * Add a block using a command
      * This creates an AddBlockCommand, executes it, and adds it to history
      */
-    const addBlockWithCommand = useCallback(
+    const addTrackedBlock = useCallback(
         (block: BlockNode, parentId: string | null = null, index: number | null = null): string => {
             const id = addBlock(block, parentId ?? null, index ?? null);
             trackStructuralChange();
@@ -70,7 +64,7 @@ export const CommandEnabledEnvironmentProvider: FC<PropsWithChildren> = ({ child
     /**
      * Remove a block using a command
      */
-    const removeBlockWithCommand = useCallback(
+    const removeTrackedBlock = useCallback(
         (blockId: string): void => {
             removeBlock(blockId);
             trackStructuralChange();
@@ -81,7 +75,7 @@ export const CommandEnabledEnvironmentProvider: FC<PropsWithChildren> = ({ child
     /**
      * Move a block using a command
      */
-    const moveBlockWithCommand = useCallback(
+    const moveTrackedBlock = useCallback(
         (blockId: string, targetParentId: string | null): void => {
             moveBlock(blockId, targetParentId);
             trackStructuralChange();
@@ -92,7 +86,7 @@ export const CommandEnabledEnvironmentProvider: FC<PropsWithChildren> = ({ child
     /**
      * Update a block using a command
      */
-    const updateBlockWithCommand = useCallback(
+    const updateTrackedBlock = useCallback(
         (blockId: string, updatedContent: BlockNode): void => {
             updateBlock(blockId, updatedContent);
             trackStructuralChange();
@@ -100,28 +94,28 @@ export const CommandEnabledEnvironmentProvider: FC<PropsWithChildren> = ({ child
         [updateBlock, trackStructuralChange]
     );
 
-    const value: CommandEnabledEnvironmentContextValue = useMemo(
+    const value: TrackedEnvironmentContextValue = useMemo(
         () => ({
-            addBlockWithCommand,
-            removeBlockWithCommand,
-            moveBlockWithCommand,
-            updateBlockWithCommand,
+            addTrackedBlock,
+            removeTrackedBlock,
+            moveTrackedBlock,
+            updateTrackedBlock,
             blockEnvironment,
             gridStack,
         }),
         [
-            addBlockWithCommand,
-            removeBlockWithCommand,
-            moveBlockWithCommand,
-            updateBlockWithCommand,
+            addTrackedBlock,
+            removeTrackedBlock,
+            moveTrackedBlock,
+            updateTrackedBlock,
             blockEnvironment,
             gridStack,
         ]
     );
 
     return (
-        <CommandEnabledEnvironmentContext.Provider value={value}>
+        <TrackedEnvironmentContext.Provider value={value}>
             {children}
-        </CommandEnabledEnvironmentContext.Provider>
+        </TrackedEnvironmentContext.Provider>
     );
 };

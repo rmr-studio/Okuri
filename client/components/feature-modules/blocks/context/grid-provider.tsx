@@ -395,6 +395,8 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                     environment,
                     save,
                     reloadEnvironment,
+                    findWidget,
+                    widgetExists,
                 ]
             )}
         >

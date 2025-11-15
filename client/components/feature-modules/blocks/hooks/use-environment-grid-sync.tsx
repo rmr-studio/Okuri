@@ -5,8 +5,8 @@ import { GridItemHTMLElement, GridStack, GridStackNode } from "gridstack";
 import { FC, useCallback, useLayoutEffect, useRef } from "react";
 import { useBlockEnvironment } from "../context/block-environment-provider";
 import { useBlockFocus } from "../context/block-focus-provider";
-import { useCommandEnvironment } from "../context/command-enabled-environment-provider";
 import { useLayoutChange } from "../context/layout-change-provider";
+import { useTrackedEnvironment } from "../context/tracked-environment-provider";
 import { getNewParentId } from "../util/grid/grid.util";
 
 type GridStackLike = Pick<GridStack, "on" | "off">;
@@ -25,9 +25,9 @@ export const BlockEnvironmentGridSync: FC = () => {
 export const useEnvironmentGridSync = (_parentId: string | null = null) => {
     const { gridStack } = useGrid();
     const { getParentId, isInitialized } = useBlockEnvironment();
-    const { moveBlockWithCommand } = useCommandEnvironment();
+    const { moveTrackedBlock } = useTrackedEnvironment();
     const { acquireLock, releaseLock } = useBlockFocus();
-    const { trackLayoutChange, trackStructuralChange } = useLayoutChange();
+    const { trackLayoutChange } = useLayoutChange();
 
     // Store widget states before drag/resize to create proper commands
     const widgetBeforeChangeRef = useRef<Map<string, GridStackNode>>(new Map());
@@ -66,7 +66,10 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
              * This event listener will observe when a user starts a layout action (drag/resize).
              * Store the widget state BEFORE the change so we can create proper undo commands
              */
-            const handleResourceLock = (_: Event, items: GridItemHTMLElement | GridItemHTMLElement[]) => {
+            const handleResourceLock = (
+                _: Event,
+                items: GridItemHTMLElement | GridItemHTMLElement[]
+            ) => {
                 try {
                     if (!initializedRef.current) return;
                     acquireInteractionLock();
@@ -144,13 +147,14 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                             const newParent = getNewParentId(item, root);
 
                             if (currentParent !== newParent) {
-                                // Track structural change (re-parenting)
-                                trackStructuralChange();
-                                // Update BlockEnvironment with command
-                                moveBlockWithCommand(blockId, newParent);
+                                // Track structural change for re-parenting
+                                moveTrackedBlock(blockId, newParent);
                             }
                         } catch (itemError) {
-                            console.debug("Block added item handler error (non-critical):", itemError);
+                            console.debug(
+                                "Block added item handler error (non-critical):",
+                                itemError
+                            );
                         }
                     });
                 } catch (error) {
@@ -210,7 +214,13 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 }
             });
         },
-        [getParentId, moveBlockWithCommand, trackLayoutChange, trackStructuralChange, acquireInteractionLock, releaseInteractionLock]
+        [
+            getParentId,
+            moveTrackedBlock,
+            trackLayoutChange,
+            acquireInteractionLock,
+            releaseInteractionLock,
+        ]
     );
 
     useLayoutEffect(() => {

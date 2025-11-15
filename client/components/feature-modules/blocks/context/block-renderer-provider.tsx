@@ -170,6 +170,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                                 onMount={() => {
                                     // Trigger resize after portal content is fully rendered
                                     requestAnimationFrame(() => {
+                                        console.log("yuh");
                                         resizeWidgetToContent(widgetId);
                                     });
                                 }}

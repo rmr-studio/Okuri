@@ -2,7 +2,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/util/utils";
 import { FC, ReactNode, useEffect, useRef } from "react";
 import { z } from "zod";
-import { useLayoutChange } from "../../context/layout-change-provider";
 import { RenderElementMetadata } from "../../util/block/block.registry";
 
 interface Props {
@@ -34,8 +33,6 @@ export const Block: FC<Props> = ({
 }) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const observerRef = useRef<MutationObserver | null>(null);
-    const { publishedVersion, localVersion } = useLayoutChange();
-    const versionKey = `${publishedVersion}-${localVersion}`;
 
     useEffect(() => {
         const host = hostRef.current;
@@ -71,7 +68,7 @@ export const Block: FC<Props> = ({
             observer.disconnect();
             observerRef.current = null;
         };
-    }, [versionKey]);
+    }, []);
 
     if (variant === "plain") {
         return (

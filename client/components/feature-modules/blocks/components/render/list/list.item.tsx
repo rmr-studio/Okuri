@@ -12,7 +12,7 @@ import { cn } from "@/lib/util/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ReactNode, useCallback, useMemo } from "react";
-import { useCommandEnvironment } from "../../../context/command-enabled-environment-provider";
+import { useTrackedEnvironment } from "../../../context/tracked-environment-provider";
 import { BlockListConfiguration } from "../../../interface/block.interface";
 import { PanelWrapper } from "../../panel/panel-wrapper";
 
@@ -36,14 +36,14 @@ export const ListItem = <T extends unknown>({
     isDraggable,
     render,
 }: Props<T>) => {
-    const { removeBlockWithCommand } = useCommandEnvironment();
+    const { removeTrackedBlock } = useTrackedEnvironment();
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id,
         disabled: !isDraggable,
     });
 
-    const handleDelete = useCallback(() => removeBlockWithCommand(id), [removeBlockWithCommand, id]);
+    const handleDelete = useCallback(() => removeTrackedBlock(id), [removeTrackedBlock, id]);
 
     const quickActions = useMemo(
         () => [

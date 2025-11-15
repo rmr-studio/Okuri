@@ -16,7 +16,7 @@ import "../../styles/gridstack-custom.css";
 
 import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/block-focus-provider";
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
-import { useCommandEnvironment } from "@/components/feature-modules/blocks/context/command-enabled-environment-provider";
+import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { LayoutChangeProvider } from "@/components/feature-modules/blocks/context/layout-change-provider";
@@ -30,7 +30,7 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
-import { CommandEnabledEnvironmentProvider } from "../../context/command-enabled-environment-provider";
+import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
 import { LayoutHistoryProvider } from "../../context/layout-history-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import {
@@ -143,7 +143,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
                     <GridProvider initialOptions={gridOptions}>
                         <LayoutHistoryProvider>
                             <LayoutChangeProvider>
-                                <CommandEnabledEnvironmentProvider>
+                                <TrackedEnvironmentProvider>
                                     <EditModeIndicator />
                                     <KeyboardNavigationHandler />
                                     <WorkspaceToolbar />
@@ -153,7 +153,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
                                         <BlockRenderer />
                                     </GridContainerProvider>
                                     <BlockEditDrawer />
-                                </CommandEnabledEnvironmentProvider>
+                                </TrackedEnvironmentProvider>
                             </LayoutChangeProvider>
                         </LayoutHistoryProvider>
                     </GridProvider>
@@ -169,12 +169,12 @@ const BlockEnvironmentWorkspace: React.FC = () => {
  */
 const BlockRenderer: React.FC = () => {
     const { getBlock, getParent, moveBlockUp, moveBlockDown } = useBlockEnvironment();
-    const { removeBlockWithCommand, addBlockWithCommand } = useCommandEnvironment();
+    const { removeTrackedBlock, addTrackedBlock } = useTrackedEnvironment();
 
     const { wrapper } = editorPanel({
         getBlock,
-        insertBlock: (child, parentId, index) => addBlockWithCommand(child, parentId, index),
-        removeBlock: removeBlockWithCommand,
+        insertBlock: (child, parentId, index) => addTrackedBlock(child, parentId, index),
+        removeBlock: removeTrackedBlock,
         getParent,
         moveBlockUp,
         moveBlockDown,
@@ -241,7 +241,7 @@ function formatEnvironment(environment: EditorEnvironment): string {
  */
 const AddBlockButton: React.FC = () => {
     const [open, setOpen] = useState(false);
-    const { addBlockWithCommand } = useCommandEnvironment();
+    const { addTrackedBlock } = useTrackedEnvironment();
 
     const slashItems: SlashMenuItem[] = [
         ...defaultSlashItems,
@@ -259,14 +259,14 @@ const AddBlockButton: React.FC = () => {
         switch (item.id) {
             case "LAYOUT_CONTAINER":
             case "LINE_ITEM":
-                addBlockWithCommand(createLayoutContainerNode(DEMO_ORG_ID));
+                addTrackedBlock(createLayoutContainerNode(DEMO_ORG_ID));
                 break;
             case "TEXT":
             case "BLANK_NOTE":
-                addBlockWithCommand(createNoteNode(DEMO_ORG_ID));
+                addTrackedBlock(createNoteNode(DEMO_ORG_ID));
                 break;
             default:
-                addBlockWithCommand(createNoteNode(DEMO_ORG_ID, `New ${item.label}`));
+                addTrackedBlock(createNoteNode(DEMO_ORG_ID, `New ${item.label}`));
                 break;
         }
     };

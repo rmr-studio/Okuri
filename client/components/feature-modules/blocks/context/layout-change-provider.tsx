@@ -105,10 +105,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         [setPublishedVersion]
     );
 
-    const bumpLocalVersion = useCallback(() => {
-        setLocalVersion((prev) => prev + 1);
-    }, [setLocalVersion]);
-
     const applySnapshot = useCallback(
         (snapshot: LayoutSnapshot) => {
             const savedChildren = snapshot.gridLayout.children ?? [];
@@ -117,7 +113,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 setLocalVersion((version) => version + 1);
                 requestAnimationFrame(() => {
                     gridStack.load(savedChildren);
-
                     requestAnimationFrame(() => {
                         reloadEnvironment(snapshot.gridLayout);
                     });
@@ -128,7 +123,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
             hydrateEnvironment(snapshot.blockEnvironment);
         },
-        [gridStack, reloadEnvironment, hydrateEnvironment, bumpLocalVersion]
+        [gridStack, reloadEnvironment, hydrateEnvironment]
     );
 
     // Flag to prevent tracking during discard/initialization
@@ -141,7 +136,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
         const snapshot: LayoutSnapshot = {
             blockEnvironment: getEnvironmentSnapshot(),
-            gridLayout: structuredClone(blockTreeLayout.layout) as GridStackOptions,
+            gridLayout: structuredClone(blockTreeLayout.layout),
             timestamp: Date.now(),
             version: blockTreeLayout.version ?? 0,
         };
@@ -245,6 +240,44 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     }, [hasUnsavedChanges]);
 
     /**
+     * Discard all layout changes by clearing history and reloading from last save
+     * Called when user clicks "Discard All" in EditModeIndicator
+     * With command system, this clears all commands and reloads from saved state
+     */
+    const discardLayoutChanges = useCallback(
+        (curr?: LayoutSnapshot) => {
+            const snapshot = curr ?? getBaselineSnapshot();
+            console.log(snapshot);
+            if (!snapshot) {
+                console.warn("Cannot discard layout: missing saved snapshot");
+                return;
+            }
+
+            console.log("🔄 [DISCARD] Discarding all changes and reloading from saved state");
+
+            // Set flag to prevent tracking reload events
+            isDiscardingRef.current = true;
+
+            try {
+                // Clear command history immediately (don't undo - just discard)
+                clearLayoutChanges();
+
+                console.log("🔄 [DISCARD] History cleared, reloading from saved state");
+
+                applySnapshot(snapshot);
+            } catch (error) {
+                console.error("Failed to discard layout changes:", error);
+            } finally {
+                // Re-enable tracking after delay
+                setTimeout(() => {
+                    isDiscardingRef.current = false;
+                }, 500);
+            }
+        },
+        [clearLayoutChanges, getBaselineSnapshot, applySnapshot]
+    );
+
+    /**
      * Save current layout state to backend with version control
      * Called when user clicks "Save All" in EditModeIndicator
      */
@@ -311,11 +344,10 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
             setBaselineSnapshot(snapshot);
             requestAnimationFrame(() => {
-                // clearLayoutChanges();
                 discardLayoutChanges(snapshot);
-                updatePublishedVersion(nextVersion);
             });
 
+            updatePublishedVersion(nextVersion);
             setSaveStatus("success");
 
             // Reset success status after 2 seconds
@@ -337,45 +369,8 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         getEnvironmentSnapshot,
         setBaselineSnapshot,
         updatePublishedVersion,
+        discardLayoutChanges,
     ]);
-
-    /**
-     * Discard all layout changes by clearing history and reloading from last save
-     * Called when user clicks "Discard All" in EditModeIndicator
-     * With command system, this clears all commands and reloads from saved state
-     */
-    const discardLayoutChanges = useCallback(
-        (curr?: LayoutSnapshot) => {
-            const snapshot = curr ?? getBaselineSnapshot();
-            console.log(snapshot);
-            if (!snapshot) {
-                console.warn("Cannot discard layout: missing saved snapshot");
-                return;
-            }
-
-            console.log("🔄 [DISCARD] Discarding all changes and reloading from saved state");
-
-            // Set flag to prevent tracking reload events
-            isDiscardingRef.current = true;
-
-            try {
-                // Clear command history immediately (don't undo - just discard)
-                clearLayoutChanges();
-
-                console.log("🔄 [DISCARD] History cleared, reloading from saved state");
-
-                applySnapshot(snapshot);
-            } catch (error) {
-                console.error("Failed to discard layout changes:", error);
-            } finally {
-                // Re-enable tracking after delay
-                setTimeout(() => {
-                    isDiscardingRef.current = false;
-                }, 500);
-            }
-        },
-        [clearLayoutChanges, getBaselineSnapshot, applySnapshot]
-    );
 
     /**
      * Resolve a conflict after user makes a decision
@@ -485,6 +480,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             clearLayoutChanges,
             getEnvironmentSnapshot,
             applySnapshot,
+            discardLayoutChanges,
             setBaselineSnapshot,
             updatePublishedVersion,
         ]

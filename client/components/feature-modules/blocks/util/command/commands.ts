@@ -1,7 +1,11 @@
 import { GridStackWidget } from "gridstack";
 import { v4 as uuidv4 } from "uuid";
 import { BlockNode } from "../../interface/block.interface";
-import { CommandContext, LayoutCommand, LayoutCommandType } from "../../interface/command.interface";
+import {
+    CommandContext,
+    LayoutCommand,
+    LayoutCommandType,
+} from "../../interface/command.interface";
 
 /**
  * Base command class with common functionality
@@ -84,10 +88,7 @@ export class RemoveBlockCommand extends BaseCommand {
     private originalParentId?: string | null;
     private originalIndex?: number;
 
-    constructor(
-        private context: CommandContext,
-        private blockId: string
-    ) {
+    constructor(private context: CommandContext, private blockId: string) {
         super(LayoutCommandType.REMOVE_BLOCK, `Remove block ${blockId}`, { blockId });
     }
 
@@ -207,9 +208,7 @@ export class ResizeBlockCommand extends BaseCommand {
             h: this.newHeight,
         });
 
-        console.log(
-            `✅ [CMD] Resized block ${this.blockId} to ${this.newWidth}x${this.newHeight}`
-        );
+        console.log(`✅ [CMD] Resized block ${this.blockId} to ${this.newWidth}x${this.newHeight}`);
     }
 
     undo(): void {
@@ -332,15 +331,10 @@ export class UpdateBlockCommand extends BaseCommand {
  * Useful for operations that should be treated as a single undo/redo step
  */
 export class BatchCommand extends BaseCommand {
-    constructor(
-        private commands: LayoutCommand[],
-        description?: string
-    ) {
-        super(
-            LayoutCommandType.BATCH,
-            description || `Batch of ${commands.length} commands`,
-            { commandCount: commands.length }
-        );
+    constructor(public commands: LayoutCommand[], description?: string) {
+        super(LayoutCommandType.BATCH, description || `Batch of ${commands.length} commands`, {
+            commandCount: commands.length,
+        });
     }
 
     execute(): void {

@@ -1,7 +1,7 @@
 import { ChildNodeProps } from "@/lib/interfaces/interface";
 import { FC, useCallback, useMemo } from "react";
 import { useBlockEnvironment } from "../../../context/block-environment-provider";
-import { useCommandEnvironment } from "../../../context/command-enabled-environment-provider";
+import { useTrackedEnvironment } from "../../../context/tracked-environment-provider";
 import { SlashMenuItem } from "../../../interface/panel.interface";
 import { getAllowedChildTypes, getTitle } from "../../../util/block/block.util";
 import { createNodeFromSlashItem } from "../../panel/editor-panel";
@@ -18,7 +18,7 @@ interface Props extends ChildNodeProps {
  */
 export const ListPanel: FC<Props> = ({ blockId, children }) => {
     const { getBlock } = useBlockEnvironment();
-    const { removeBlockWithCommand, addBlockWithCommand } = useCommandEnvironment();
+    const { removeTrackedBlock, addTrackedBlock } = useTrackedEnvironment();
 
     const node = getBlock(blockId);
     if (!node) return children;
@@ -26,36 +26,46 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
     const { organisationId, type } = block;
 
     // Create callback handlers for block toolbar
-    const handleDelete = useCallback(() => removeBlockWithCommand(blockId), [removeBlockWithCommand, blockId]);
+    const handleDelete = useCallback(
+        () => removeTrackedBlock(blockId),
+        [removeTrackedBlock, blockId]
+    );
 
-    const handleInsert = useCallback((item: SlashMenuItem) => {
-        if (!type.nesting || !organisationId) return;
-        const newNode = createNodeFromSlashItem(item, organisationId);
-        if (!newNode) return;
+    const handleInsert = useCallback(
+        (item: SlashMenuItem) => {
+            if (!type.nesting || !organisationId) return;
+            const newNode = createNodeFromSlashItem(item, organisationId);
+            if (!newNode) return;
 
-        // TODO: Maybe adjust the insertion so it does not go through the same grid creation process
-        addBlockWithCommand(newNode, blockId, null);
-    }, [type.nesting, organisationId, addBlockWithCommand, blockId]);
+            // TODO: Maybe adjust the insertion so it does not go through the same grid creation process
+            addTrackedBlock(newNode, blockId, null);
+        },
+        [type.nesting, organisationId, addTrackedBlock, blockId]
+    );
 
     // Check if this block is inside a list
 
-    const quickActions = useMemo(() => [
-        {
-            id: "delete",
-            label: "Delete block",
-            shortcut: "⌘⌫",
-            onSelect: handleDelete,
-        },
-    ], [handleDelete]);
+    const quickActions = useMemo(
+        () => [
+            {
+                id: "delete",
+                label: "Delete block",
+                shortcut: "⌘⌫",
+                onSelect: handleDelete,
+            },
+        ],
+        [handleDelete]
+    );
 
     const title = useMemo(() => getTitle(node), [node]);
 
     // Todo: Implement Loading Slash items from Organisation generated block types + System Items
     const restrictedChildTypes = useMemo(() => getAllowedChildTypes(node), [node]);
-    const availableItems = useMemo(() =>
-        !!restrictedChildTypes.length
-            ? defaultSlashItems.filter((item) => restrictedChildTypes.includes(item.id))
-            : defaultSlashItems,
+    const availableItems = useMemo(
+        () =>
+            !!restrictedChildTypes.length
+                ? defaultSlashItems.filter((item) => restrictedChildTypes.includes(item.id))
+                : defaultSlashItems,
         [restrictedChildTypes]
     );
 
@@ -70,7 +80,6 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
             allowInsert={!!type.nesting}
             onInsert={handleInsert}
             onDelete={handleDelete}
-            showResizeHandles={true}
         >
             {children}
         </PanelWrapper>

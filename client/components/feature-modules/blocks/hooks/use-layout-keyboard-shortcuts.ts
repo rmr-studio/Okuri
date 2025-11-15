@@ -26,7 +26,7 @@ export const useLayoutKeyboardShortcuts = (onSave?: () => void | Promise<void>) 
             // Ctrl+S or Cmd+S - Save (if callback provided)
             if (ctrlKey && e.key === "s" && onSave) {
                 e.preventDefault();
-                onSave();
+                void onSave();
                 console.log("⌨️ [KEYBOARD] Save triggered");
                 return;
             }

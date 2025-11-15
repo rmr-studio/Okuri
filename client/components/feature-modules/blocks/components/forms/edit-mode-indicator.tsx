@@ -29,6 +29,9 @@ export const EditModeIndicator: FC = () => {
 
     const [isSaving, setIsSaving] = useState(false);
     const handleSaveAll = async () => {
+        if (isSaving || saveStatus === "saving" || saveStatus === "conflict") {
+            return;
+        }
         setIsSaving(true);
         try {
             let allSuccess = true;
@@ -51,7 +54,7 @@ export const EditModeIndicator: FC = () => {
                 }
             }
 
-            if (allSuccess) {
+            if (allSuccess && (hasDataChanges || hasLayout)) {
                 console.log("✅ All changes saved successfully");
             }
         } catch (error) {
@@ -62,7 +65,13 @@ export const EditModeIndicator: FC = () => {
     };
 
     // Set up keyboard shortcut for save (Ctrl/Cmd+S)
-    useLayoutKeyboardShortcuts(handleSaveAll);
+    const canSaveViaShortcut =
+        !isSaving &&
+        saveStatus !== "saving" &&
+        saveStatus !== "conflict" &&
+        (hasDataChanges || hasLayout);
+
+    useLayoutKeyboardShortcuts(canSaveViaShortcut ? handleSaveAll : undefined);
 
     // Don't show indicator during initialization to prevent false positives
     // from widget sync operations

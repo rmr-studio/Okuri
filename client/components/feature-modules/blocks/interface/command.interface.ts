@@ -1,6 +1,7 @@
 import { GridStackOptions, GridStackWidget } from "gridstack";
 import { BlockNode } from "./block.interface";
 import { EditorEnvironment } from "./editor.interface";
+import { BatchCommand } from "../util/command/commands";
 
 /**
  * Snapshot of the entire layout state at a point in time
@@ -98,10 +99,19 @@ export function isStructuralCommand(type: LayoutCommandType): boolean {
 /**
  * Helper to get category from command type
  */
-export function getCommandCategory(type: LayoutCommandType): CommandCategory {
+export function getCommandCategory(
+    type: LayoutCommandType,
+    command?: LayoutCommand
+): CommandCategory {
+    if (type === LayoutCommandType.BATCH && command) {
+        // Check if batch contains any structural commands
+        const batchCmd = command as BatchCommand;
+        if (batchCmd.commands?.some((cmd) => isStructuralCommand(cmd.type))) {
+            return "structural";
+        }
+    }
     return isStructuralCommand(type) ? "structural" : "layout";
 }
-
 /**
  * Context provided to commands for execution
  * Contains all necessary providers and utilities
