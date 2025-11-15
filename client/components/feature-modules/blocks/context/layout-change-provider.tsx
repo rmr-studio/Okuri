@@ -18,6 +18,8 @@ import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
 import { useLayoutHistory } from "./layout-history-provider";
 
+// DONT RESET THE LOCAL VERSION BACK TO ZERO IN ANY SITUATION
+
 interface LayoutChangeContextValue {
     /** Check if there are unsaved layout changes */
     hasLayoutChanges: () => boolean;
@@ -96,20 +98,23 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     >("idle");
     const [conflictData, setConflictData] = useState<SaveLayoutResponse | null>(null);
 
-    const updatePublishedVersion = useCallback((nextVersion: number) => {
-        setPublishedVersion(nextVersion);
-        setLocalVersion(0);
-    }, []);
+    const updatePublishedVersion = useCallback(
+        (nextVersion: number) => {
+            setPublishedVersion(nextVersion);
+        },
+        [setPublishedVersion]
+    );
 
     const bumpLocalVersion = useCallback(() => {
         setLocalVersion((prev) => prev + 1);
-    }, []);
+    }, [setLocalVersion]);
 
     const applySnapshot = useCallback(
-        (snapshot: LayoutSnapshot, options?: { bumpLocalVersion?: boolean }) => {
+        (snapshot: LayoutSnapshot) => {
             const savedChildren = snapshot.gridLayout.children ?? [];
 
             if (gridStack) {
+                setLocalVersion((version) => version + 1);
                 requestAnimationFrame(() => {
                     gridStack.load(savedChildren);
 
@@ -122,10 +127,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             }
 
             hydrateEnvironment(snapshot.blockEnvironment);
-
-            if (options?.bumpLocalVersion) {
-                bumpLocalVersion();
-            }
         },
         [gridStack, reloadEnvironment, hydrateEnvironment, bumpLocalVersion]
     );
@@ -303,7 +304,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
             // Success - update version and clear history
             const nextVersion = response.newVersion ?? publishedVersion + 1;
-            updatePublishedVersion(nextVersion);
 
             const snapshot: LayoutSnapshot = {
                 blockEnvironment: getEnvironmentSnapshot(),
@@ -312,17 +312,15 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 version: nextVersion,
             };
 
-            setBaselineSnapshot(snapshot);
+            // Clear change tracking and discard all temporary layout changes (that come from dynamic restorations of the layout containers)
 
-            console.log("💾 [SAVE] Layout saved successfully", {
-                layoutId,
-                oldVersion: publishedVersion,
-                newVersion: nextVersion,
-                widgetCount: currentLayout.children?.length ?? 0,
+            setBaselineSnapshot(snapshot);
+            requestAnimationFrame(() => {
+                // clearLayoutChanges();
+                discardLayoutChanges(snapshot);
+                updatePublishedVersion(nextVersion);
             });
 
-            // Clear change tracking and history
-            clearLayoutChanges();
             setSaveStatus("success");
 
             // Reset success status after 2 seconds
@@ -351,34 +349,38 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
      * Called when user clicks "Discard All" in EditModeIndicator
      * With command system, this clears all commands and reloads from saved state
      */
-    const discardLayoutChanges = useCallback(() => {
-        const snapshot = getBaselineSnapshot();
-        if (!snapshot) {
-            console.warn("Cannot discard layout: missing saved snapshot");
-            return;
-        }
+    const discardLayoutChanges = useCallback(
+        (curr?: LayoutSnapshot) => {
+            const snapshot = curr ?? getBaselineSnapshot();
+            console.log(snapshot);
+            if (!snapshot) {
+                console.warn("Cannot discard layout: missing saved snapshot");
+                return;
+            }
 
-        console.log("🔄 [DISCARD] Discarding all changes and reloading from saved state");
+            console.log("🔄 [DISCARD] Discarding all changes and reloading from saved state");
 
-        // Set flag to prevent tracking reload events
-        isDiscardingRef.current = true;
+            // Set flag to prevent tracking reload events
+            isDiscardingRef.current = true;
 
-        try {
-            // Clear command history immediately (don't undo - just discard)
-            clearLayoutChanges();
+            try {
+                // Clear command history immediately (don't undo - just discard)
+                clearLayoutChanges();
 
-            console.log("🔄 [DISCARD] History cleared, reloading from saved state");
+                console.log("🔄 [DISCARD] History cleared, reloading from saved state");
 
-            applySnapshot(snapshot, { bumpLocalVersion: true });
-        } catch (error) {
-            console.error("Failed to discard layout changes:", error);
-        } finally {
-            // Re-enable tracking after delay
-            setTimeout(() => {
-                isDiscardingRef.current = false;
-            }, 500);
-        }
-    }, [clearLayoutChanges, getBaselineSnapshot, applySnapshot]);
+                applySnapshot(snapshot);
+            } catch (error) {
+                console.error("Failed to discard layout changes:", error);
+            } finally {
+                // Re-enable tracking after delay
+                setTimeout(() => {
+                    isDiscardingRef.current = false;
+                }, 500);
+            }
+        },
+        [clearLayoutChanges, getBaselineSnapshot, applySnapshot]
+    );
 
     /**
      * Resolve a conflict after user makes a decision
@@ -413,10 +415,12 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                         };
 
                         setBaselineSnapshot(serverSnapshot);
-                        updatePublishedVersion(conflictData.latestVersion);
 
-                        clearLayoutChanges();
-                        applySnapshot(serverSnapshot);
+                        requestAnimationFrame(() => {
+                            if (!conflictData.latestVersion) return;
+                            discardLayoutChanges(serverSnapshot);
+                            updatePublishedVersion(conflictData.latestVersion);
+                        });
 
                         setSaveStatus("success");
                         setConflictData(null);
@@ -446,7 +450,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
                     if (response.success) {
                         const nextVersion = response.newVersion ?? publishedVersion + 1;
-                        updatePublishedVersion(nextVersion);
 
                         const snapshot: LayoutSnapshot = {
                             blockEnvironment: getEnvironmentSnapshot(),
@@ -456,7 +459,11 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                         };
 
                         setBaselineSnapshot(snapshot);
-                        clearLayoutChanges();
+                        requestAnimationFrame(() => {
+                            discardLayoutChanges(snapshot);
+                            updatePublishedVersion(nextVersion);
+                        });
+
                         setSaveStatus("success");
                         setConflictData(null);
                         setTimeout(() => setSaveStatus("idle"), 2000);
