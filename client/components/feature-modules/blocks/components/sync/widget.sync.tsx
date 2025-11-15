@@ -349,7 +349,6 @@ export const WidgetEnvironmentSync: React.FC = () => {
         // Track structural changes for block additions (exclude initial load)
         if (addedBlockIds.length > 0 && hasInitiallyLoadedRef.current) {
             trackStructuralChange();
-            console.log(`📐 [LOCAL] Tracked ${addedBlockIds.length} block addition(s) as structural change`);
         }
 
         // Add error widgets for missing blocks (only on initial load)
@@ -365,7 +364,6 @@ export const WidgetEnvironmentSync: React.FC = () => {
         // Track structural changes for block deletions
         if (removedBlockIds.length > 0 && hasInitiallyLoadedRef.current) {
             trackStructuralChange();
-            console.log(`📐 [LOCAL] Tracked ${removedBlockIds.length} block deletion(s) as structural change`);
         }
 
         // Update the ref for next render

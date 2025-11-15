@@ -78,8 +78,6 @@ export const EditModeIndicator: FC = () => {
         if (hasLayout) {
             discardLayoutChanges();
         }
-
-        console.log("🔄 All changes discarded");
     };
 
     return (

@@ -38,7 +38,6 @@ export const Block: FC<Props> = ({
     const versionKey = `${publishedVersion}-${localVersion}`;
 
     useEffect(() => {
-        console.log("LayoutContainerBlock mounted or version changed:", versionKey);
         const host = hostRef.current;
         if (!host) {
             console.warn("Grid host not found for LayoutContainerBlock");
@@ -71,7 +70,6 @@ export const Block: FC<Props> = ({
         return () => {
             observer.disconnect();
             observerRef.current = null;
-            console.log("LayoutContainerBlock unmounted, observer disconnected");
         };
     }, [versionKey]);
 

@@ -148,11 +148,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
         setBaselineSnapshot(snapshot);
         updatePublishedVersion(blockTreeLayout.version ?? 0);
-
-        console.log("📐 [LOCAL] Baseline snapshot captured", {
-            version: snapshot.version,
-            widgetCount: snapshot.gridLayout.children?.length ?? 0,
-        });
     }, [
         blockTreeLayout?.layout,
         blockTreeLayout?.version,
