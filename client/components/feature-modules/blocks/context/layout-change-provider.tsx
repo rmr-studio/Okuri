@@ -109,20 +109,18 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         (snapshot: LayoutSnapshot) => {
             const savedChildren = snapshot.gridLayout.children ?? [];
 
+            requestAnimationFrame(() => {
+                hydrateEnvironment(snapshot.blockEnvironment);
+            });
             if (gridStack) {
                 setLocalVersion((version) => version + 1);
                 requestAnimationFrame(() => {
                     gridStack.load(savedChildren);
-                });
-
-                requestAnimationFrame(() => {
                     reloadEnvironment(snapshot.gridLayout);
                 });
             } else {
                 reloadEnvironment(snapshot.gridLayout);
             }
-
-            hydrateEnvironment(snapshot.blockEnvironment);
         },
         [gridStack, reloadEnvironment, hydrateEnvironment]
     );
