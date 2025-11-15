@@ -16,6 +16,7 @@ import "../../styles/gridstack-custom.css";
 
 import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/block-focus-provider";
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
+import { useCommandEnvironment } from "@/components/feature-modules/blocks/context/command-enabled-environment-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { LayoutChangeProvider } from "@/components/feature-modules/blocks/context/layout-change-provider";
@@ -29,6 +30,8 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
+import { CommandEnabledEnvironmentProvider } from "../../context/command-enabled-environment-provider";
+import { LayoutHistoryProvider } from "../../context/layout-history-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import {
     BlockComponentNode,
@@ -138,17 +141,21 @@ const BlockEnvironmentWorkspace: React.FC = () => {
             <BlockFocusProvider>
                 <BlockEditProvider>
                     <GridProvider initialOptions={gridOptions}>
-                        <LayoutChangeProvider>
-                            <EditModeIndicator />
-                            <KeyboardNavigationHandler />
-                            <WorkspaceToolbar />
-                            <BlockEnvironmentGridSync />
-                            <WidgetEnvironmentSync />
-                            <GridContainerProvider>
-                                <BlockRenderer />
-                            </GridContainerProvider>
-                            <BlockEditDrawer />
-                        </LayoutChangeProvider>
+                        <LayoutHistoryProvider>
+                            <LayoutChangeProvider>
+                                <CommandEnabledEnvironmentProvider>
+                                    <EditModeIndicator />
+                                    <KeyboardNavigationHandler />
+                                    <WorkspaceToolbar />
+                                    <BlockEnvironmentGridSync />
+                                    <WidgetEnvironmentSync />
+                                    <GridContainerProvider>
+                                        <BlockRenderer />
+                                    </GridContainerProvider>
+                                    <BlockEditDrawer />
+                                </CommandEnabledEnvironmentProvider>
+                            </LayoutChangeProvider>
+                        </LayoutHistoryProvider>
                     </GridProvider>
                 </BlockEditProvider>
             </BlockFocusProvider>
@@ -161,13 +168,13 @@ const BlockEnvironmentWorkspace: React.FC = () => {
  * Renders all blocks with proper wrapping (PanelWrapper for toolbar, slash menu, etc.)
  */
 const BlockRenderer: React.FC = () => {
-    const { getBlock, removeBlock, insertBlock, getParent, moveBlockUp, moveBlockDown } =
-        useBlockEnvironment();
+    const { getBlock, getParent, moveBlockUp, moveBlockDown } = useBlockEnvironment();
+    const { removeBlockWithCommand, addBlockWithCommand } = useCommandEnvironment();
 
     const { wrapper } = editorPanel({
         getBlock,
-        insertBlock,
-        removeBlock,
+        insertBlock: (child, parentId, index) => addBlockWithCommand(child, parentId, index),
+        removeBlock: removeBlockWithCommand,
         getParent,
         moveBlockUp,
         moveBlockDown,
@@ -234,7 +241,7 @@ function formatEnvironment(environment: EditorEnvironment): string {
  */
 const AddBlockButton: React.FC = () => {
     const [open, setOpen] = useState(false);
-    const { addBlock } = useBlockEnvironment();
+    const { addBlockWithCommand } = useCommandEnvironment();
 
     const slashItems: SlashMenuItem[] = [
         ...defaultSlashItems,
@@ -252,14 +259,14 @@ const AddBlockButton: React.FC = () => {
         switch (item.id) {
             case "LAYOUT_CONTAINER":
             case "LINE_ITEM":
-                addBlock(createLayoutContainerNode(DEMO_ORG_ID));
+                addBlockWithCommand(createLayoutContainerNode(DEMO_ORG_ID));
                 break;
             case "TEXT":
             case "BLANK_NOTE":
-                addBlock(createNoteNode(DEMO_ORG_ID));
+                addBlockWithCommand(createNoteNode(DEMO_ORG_ID));
                 break;
             default:
-                addBlock(createNoteNode(DEMO_ORG_ID, `New ${item.label}`));
+                addBlockWithCommand(createNoteNode(DEMO_ORG_ID, `New ${item.label}`));
                 break;
         }
     };
@@ -697,6 +704,7 @@ function createDemoEnvironment(): DemoEnvironmentResult {
 
     // Wrap GridStack layout in BlockTreeLayout object for persistence tracking
     const blockTreeLayout: BlockTreeLayout = {
+        version: 1,
         id: "demo-layout-12345", // Mock ID for demo
         entityId: "demo-entity",
         entityType: EntityType.DEMO,

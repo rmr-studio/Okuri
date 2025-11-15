@@ -32,7 +32,8 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
     renderStructure,
     payload,
 }) => {
-    const { version } = useLayoutChange();
+    const { publishedVersion, localVersion } = useLayoutChange();
+    const renderVersion = `${publishedVersion}-${localVersion}`;
     const { layoutGrid, components } = renderStructure;
 
     if (!layoutGrid || !components) {
@@ -55,7 +56,7 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
 
                 return (
                     <ComponentRenderer
-                        key={`${blockId}-${layoutItem.id}-${version}`}
+                        key={`${blockId}-${layoutItem.id}-${renderVersion}`}
                         component={component}
                         payload={payload}
                     />

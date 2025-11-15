@@ -1,6 +1,7 @@
 import { ChildNodeProps } from "@/lib/interfaces/interface";
 import { FC, useCallback, useMemo } from "react";
 import { useBlockEnvironment } from "../../../context/block-environment-provider";
+import { useCommandEnvironment } from "../../../context/command-enabled-environment-provider";
 import { SlashMenuItem } from "../../../interface/panel.interface";
 import { getAllowedChildTypes, getTitle } from "../../../util/block/block.util";
 import { createNodeFromSlashItem } from "../../panel/editor-panel";
@@ -16,7 +17,8 @@ interface Props extends ChildNodeProps {
  * @returns
  */
 export const ListPanel: FC<Props> = ({ blockId, children }) => {
-    const { getBlock, removeBlock, insertBlock } = useBlockEnvironment();
+    const { getBlock } = useBlockEnvironment();
+    const { removeBlockWithCommand, addBlockWithCommand } = useCommandEnvironment();
 
     const node = getBlock(blockId);
     if (!node) return children;
@@ -24,7 +26,7 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
     const { organisationId, type } = block;
 
     // Create callback handlers for block toolbar
-    const handleDelete = useCallback(() => removeBlock(blockId), [removeBlock, blockId]);
+    const handleDelete = useCallback(() => removeBlockWithCommand(blockId), [removeBlockWithCommand, blockId]);
 
     const handleInsert = useCallback((item: SlashMenuItem) => {
         if (!type.nesting || !organisationId) return;
@@ -32,8 +34,8 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
         if (!newNode) return;
 
         // TODO: Maybe adjust the insertion so it does not go through the same grid creation process
-        insertBlock(newNode, blockId, null);
-    }, [type.nesting, organisationId, insertBlock, blockId]);
+        addBlockWithCommand(newNode, blockId, null);
+    }, [type.nesting, organisationId, addBlockWithCommand, blockId]);
 
     // Check if this block is inside a list
 

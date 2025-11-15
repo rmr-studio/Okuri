@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 
 import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
@@ -10,6 +18,7 @@ import {
 } from "../interface/editor.interface";
 import {
     collectDescendantIds,
+    cloneEnvironment,
     createEmptyEnvironment,
     detachNode,
     findNodeById,
@@ -46,7 +55,12 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const { environment: initialEnvState } = initialEnvironment;
 
     const [environment, setEnvironment] = useState<EditorEnvironment>(initialEnvState);
+    const environmentRef = useRef(environment);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    useEffect(() => {
+        environmentRef.current = environment;
+    }, [environment]);
 
     // Derive layout from blockTreeLayout
     const layoutForGrid = blockTreeLayout?.layout;
@@ -599,6 +613,14 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const reorderBlock = useCallback((blockId: string, parentId: string, targetIndex: number) => {},
     []);
 
+    const hydrateEnvironment = useCallback((snapshot: EditorEnvironment) => {
+        setEnvironment(cloneEnvironment(snapshot));
+    }, []);
+
+    const getEnvironmentSnapshot = useCallback((): EditorEnvironment => {
+        return cloneEnvironment(environmentRef.current);
+    }, []);
+
     const value = useMemo<BlockEnvironmentContextValue>(
         () => ({
             environment,
@@ -624,6 +646,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             moveBlockDown,
             reorderBlock,
             clear,
+            hydrateEnvironment,
+            getEnvironmentSnapshot,
         }),
         [
             environment,
@@ -648,6 +672,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             moveBlockDown,
             reorderBlock,
             clear,
+            hydrateEnvironment,
+            getEnvironmentSnapshot,
         ]
     );
 

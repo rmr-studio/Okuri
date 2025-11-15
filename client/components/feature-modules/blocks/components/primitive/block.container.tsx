@@ -34,10 +34,11 @@ export const Block: FC<Props> = ({
 }) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const observerRef = useRef<MutationObserver | null>(null);
-    const { version } = useLayoutChange();
+    const { publishedVersion, localVersion } = useLayoutChange();
+    const versionKey = `${publishedVersion}-${localVersion}`;
 
     useEffect(() => {
-        console.log("LayoutContainerBlock mounted or version changed:", version);
+        console.log("LayoutContainerBlock mounted or version changed:", versionKey);
         const host = hostRef.current;
         if (!host) {
             console.warn("Grid host not found for LayoutContainerBlock");
@@ -72,7 +73,7 @@ export const Block: FC<Props> = ({
             observerRef.current = null;
             console.log("LayoutContainerBlock unmounted, observer disconnected");
         };
-    }, [version]);
+    }, [versionKey]);
 
     if (variant === "plain") {
         return (

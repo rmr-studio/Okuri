@@ -91,4 +91,10 @@ export interface BlockEnvironmentContextValue {
     reorderBlock(blockId: string, parentId: string, targetIndex: number): void;
 
     clear(): void;
+
+    /** Replace the entire environment with a snapshot (used when discarding changes). */
+    hydrateEnvironment(snapshot: EditorEnvironment): void;
+
+    /** Capture the current environment state as a detached snapshot. */
+    getEnvironmentSnapshot(): EditorEnvironment;
 }

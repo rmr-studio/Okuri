@@ -61,6 +61,9 @@ export interface BlockTreeLayout {
     /** Complete GridStack layout configuration */
     layout: GridStackOptions;
 
+    /** Version number for optimistic locking (increments on every save) */
+    version: number;
+
     /** Audit fields (optional) */
     createdAt?: string;
     updatedAt?: string;

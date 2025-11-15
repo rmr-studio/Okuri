@@ -21,6 +21,18 @@ export const collectDescendantIds = (node: BlockNode, acc: Set<string>): void =>
 };
 
 /**
+ * Creates a deep clone of an EditorEnvironment so mutations don't leak across snapshots.
+ */
+export const cloneEnvironment = (environment: EditorEnvironment): EditorEnvironment => {
+    return {
+        trees: structuredClone(environment.trees),
+        metadata: { ...environment.metadata },
+        hierarchy: new Map(environment.hierarchy),
+        treeIndex: new Map(environment.treeIndex),
+    };
+};
+
+/**
  * Registers the entire subtree inside the hierarchy, tree index, layout, and UI maps.
  * If a layout map is provided, the node's current dimensions will be recorded.
  */

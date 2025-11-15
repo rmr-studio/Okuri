@@ -323,66 +323,6 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
             });
 
             // const { success, node } = findWidget(id);
-            // if (!success || !node?.el) return;
-
-            // // Also find and remove any descendant widgets
-            // const descendantIds = Array.from(node.el.querySelectorAll<HTMLElement>("[gs-id]"))
-            //     .map((el) => el.getAttribute("gs-id"))
-            //     .filter(Boolean) as string[];
-
-            // // Deleting Top Level Node
-            // if (parentId === id) {
-            //     gridStack.removeWidget(node.el, true);
-
-            //     // Update environment metadata
-            //     setEnvironment((prev) => {
-            //         const newWidgetSet = new Set(prev.addedWidgets);
-            //         const newMetaMap = new Map(prev.widgetMetaMap);
-            //         // Remove target and descendants from treeIndex and hierarchy
-
-            //         newMetaMap.delete(id);
-            //         newWidgetSet.delete(id);
-
-            //         descendantIds.forEach((did) => {
-            //             newMetaMap.delete(did);
-            //             newWidgetSet.delete(did);
-            //         });
-
-            //         return {
-            //             ...prev,
-            //             addedWidgets: newWidgetSet,
-            //             widgetMetaMap: newMetaMap,
-            //         };
-            //     });
-            //     return;
-            // }
-
-            // // Deleting Child Node
-            // const { success: queryParentSuccess, node: queryParent } = findWidget(parentId);
-
-            // if (!queryParentSuccess || !queryParent?.subGrid) return;
-            // queryParent.subGrid.removeWidget(node.el, true);
-
-            // // Update environment metadata
-            // setEnvironment((prev) => {
-            //     const newWidgetSet = new Set(prev.addedWidgets);
-            //     const newMetaMap = new Map(prev.widgetMetaMap);
-
-            //     newMetaMap.delete(id);
-            //     newWidgetSet.delete(id);
-
-            //     descendantIds.forEach((did) => {
-            //         newMetaMap.delete(did);
-            //         newWidgetSet.delete(did);
-            //     });
-
-            //     return {
-            //         ...prev,
-            //         addedWidgets: newWidgetSet,
-            //         widgetMetaMap: newMetaMap,
-            //     };
-            // });
-            // return;
         },
         [gridStack]
     );
@@ -410,21 +350,11 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
         const newWidgetMetaMap = new Map<string, GridStackWidget>();
         const newAddedWidgets = new Set<string>();
 
-        console.log("🔄 [GRID] Reloading environment from layout:", {
-            layoutChildren: layout.children?.length ?? 0,
-            hasContainers: layout.children?.some((w) => w.subGridOpts?.children),
-        });
-
         const processChildren = (children: GridStackWidget[], depth = 0) => {
             children.forEach((widget) => {
                 if (widget.id) {
                     newWidgetMetaMap.set(widget.id, widget);
                     newAddedWidgets.add(widget.id);
-                    console.log(`🔄 [GRID] Added widget at depth ${depth}:`, {
-                        id: widget.id,
-                        hasSubGrid: !!widget.subGridOpts?.children,
-                        childCount: widget.subGridOpts?.children?.length ?? 0,
-                    });
                 }
                 if (widget.subGridOpts?.children) {
                     processChildren(widget.subGridOpts.children, depth + 1);
@@ -439,11 +369,6 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
         setEnvironment({
             widgetMetaMap: newWidgetMetaMap,
             addedWidgets: newAddedWidgets,
-        });
-
-        console.log("🔄 [GRID] Environment reloaded from layout", {
-            widgetCount: newWidgetMetaMap.size,
-            widgetIds: Array.from(newAddedWidgets),
         });
     }, []);
 
@@ -462,7 +387,15 @@ export const GridProvider: FC<GridProviderProps> = ({ initialOptions, children }
                     removeWidget,
                     reloadEnvironment,
                 }),
-                [initialOptions, gridStack, addWidget, removeWidget, environment, save, reloadEnvironment]
+                [
+                    initialOptions,
+                    gridStack,
+                    addWidget,
+                    removeWidget,
+                    environment,
+                    save,
+                    reloadEnvironment,
+                ]
             )}
         >
             {children}

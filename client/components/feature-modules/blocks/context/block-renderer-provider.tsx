@@ -42,7 +42,8 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
     const { environment } = useGrid();
     const { getWidgetContainer, resizeWidgetToContent } = useContainer();
     const { getBlock } = useBlockEnvironment();
-    const { version } = useLayoutChange();
+    const { publishedVersion, localVersion } = useLayoutChange();
+    const versionKey = `${publishedVersion}-${localVersion}`;
 
     const renderList = (node: BlockNode): ReactNode => {
         // Determine List rendering component (Content v Reference Lists)
@@ -153,7 +154,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
 
                 return (
                     <RenderElementContext.Provider
-                        key={`${widgetId}-${version}`}
+                        key={`${widgetId}-${versionKey}`}
                         value={{
                             widget: {
                                 id: widgetId,
@@ -164,7 +165,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                     >
                         {createPortal(
                             <PortalContentWrapper
-                                key={`${widgetId}-${version}`}
+                                key={`${widgetId}-${versionKey}`}
                                 widgetId={widgetId}
                                 onMount={() => {
                                     // Trigger resize after portal content is fully rendered
