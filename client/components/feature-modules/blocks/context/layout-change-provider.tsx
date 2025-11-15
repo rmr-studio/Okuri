@@ -113,9 +113,10 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 setLocalVersion((version) => version + 1);
                 requestAnimationFrame(() => {
                     gridStack.load(savedChildren);
-                    requestAnimationFrame(() => {
-                        reloadEnvironment(snapshot.gridLayout);
-                    });
+                });
+
+                requestAnimationFrame(() => {
+                    reloadEnvironment(snapshot.gridLayout);
                 });
             } else {
                 reloadEnvironment(snapshot.gridLayout);
@@ -158,7 +159,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             // Wait 200ms after initialization to ensure widget sync completes
             const timer = setTimeout(() => {
                 hasInitializedRef.current = true;
-                console.log("📐 [LOCAL] Layout change tracking initialized");
             }, 200);
 
             return () => clearTimeout(timer);
@@ -201,7 +201,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         }
 
         if (isCurrentLayoutEqualBaseline()) {
-            console.log("📐 [LOCAL] Layout reverted to baseline, clearing change indicators");
             clearLayoutChanges();
             return;
         }
@@ -221,7 +220,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
         setChangeCount((prev) => prev + 1);
         markHistoryStructuralChange();
-        console.log("📝 [LOCAL] Structural change tracked");
     }, [markHistoryStructuralChange]);
 
     /**
@@ -244,38 +242,30 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
      * Called when user clicks "Discard All" in EditModeIndicator
      * With command system, this clears all commands and reloads from saved state
      */
-    const discardLayoutChanges = useCallback(
-        (curr?: LayoutSnapshot) => {
-            const snapshot = curr ?? getBaselineSnapshot();
-            console.log(snapshot);
-            if (!snapshot) {
-                console.warn("Cannot discard layout: missing saved snapshot");
-                return;
-            }
+    const discardLayoutChanges = useCallback(() => {
+        const snapshot = getBaselineSnapshot();
+        if (!snapshot) {
+            console.warn("Cannot discard layout: missing saved snapshot");
+            return;
+        }
 
-            console.log("🔄 [DISCARD] Discarding all changes and reloading from saved state");
+        // Set flag to prevent tracking reload events
+        isDiscardingRef.current = true;
 
-            // Set flag to prevent tracking reload events
-            isDiscardingRef.current = true;
+        try {
+            // Clear command history immediately (don't undo - just discard)
+            clearLayoutChanges();
 
-            try {
-                // Clear command history immediately (don't undo - just discard)
-                clearLayoutChanges();
-
-                console.log("🔄 [DISCARD] History cleared, reloading from saved state");
-
-                applySnapshot(snapshot);
-            } catch (error) {
-                console.error("Failed to discard layout changes:", error);
-            } finally {
-                // Re-enable tracking after delay
-                setTimeout(() => {
-                    isDiscardingRef.current = false;
-                }, 500);
-            }
-        },
-        [clearLayoutChanges, getBaselineSnapshot, applySnapshot]
-    );
+            applySnapshot(snapshot);
+        } catch (error) {
+            console.error("Failed to discard layout changes:", error);
+        } finally {
+            // Re-enable tracking after delay
+            setTimeout(() => {
+                isDiscardingRef.current = false;
+            }, 500);
+        }
+    }, [clearLayoutChanges, getBaselineSnapshot, applySnapshot]);
 
     /**
      * Save current layout state to backend with version control
@@ -339,15 +329,13 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 timestamp: Date.now(),
                 version: nextVersion,
             };
-
-            // Clear change tracking and discard all temporary layout changes (that come from dynamic restorations of the layout containers)
-
             setBaselineSnapshot(snapshot);
+            updatePublishedVersion(nextVersion);
+
             requestAnimationFrame(() => {
-                discardLayoutChanges(snapshot);
+                discardLayoutChanges();
             });
 
-            updatePublishedVersion(nextVersion);
             setSaveStatus("success");
 
             // Reset success status after 2 seconds
@@ -393,8 +381,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 if (action === "use-theirs") {
                     // Discard local changes and use server version
                     if (conflictData.latestLayout && conflictData.latestVersion) {
-                        console.log("🔄 [CONFLICT] Using server version");
-
                         const serverSnapshot: LayoutSnapshot = {
                             blockEnvironment: cloneEnvironment(conflictData.latestEnvironment!),
                             gridLayout: structuredClone(
@@ -408,7 +394,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
                         requestAnimationFrame(() => {
                             if (!conflictData.latestVersion) return;
-                            discardLayoutChanges(serverSnapshot);
+                            discardLayoutChanges();
                             updatePublishedVersion(conflictData.latestVersion);
                         });
 
@@ -421,7 +407,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
                 if (action === "keep-mine") {
                     // Force overwrite with our version
-                    console.log("💾 [CONFLICT] Force saving our version");
 
                     const currentLayout = saveGridLayout();
                     if (!currentLayout) {
@@ -440,18 +425,17 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
                     if (response.success) {
                         const nextVersion = response.newVersion ?? publishedVersion + 1;
-
                         const snapshot: LayoutSnapshot = {
                             blockEnvironment: getEnvironmentSnapshot(),
-                            gridLayout: structuredClone(currentLayout) as GridStackOptions,
+                            gridLayout: currentLayout,
                             timestamp: Date.now(),
                             version: nextVersion,
                         };
 
                         setBaselineSnapshot(snapshot);
+                        updatePublishedVersion(nextVersion);
                         requestAnimationFrame(() => {
-                            discardLayoutChanges(snapshot);
-                            updatePublishedVersion(nextVersion);
+                            discardLayoutChanges();
                         });
 
                         setSaveStatus("success");
