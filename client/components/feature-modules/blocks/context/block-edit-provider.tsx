@@ -238,8 +238,6 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                             return next;
                         });
                     }
-
-                    console.log(`Updated edit mode to ${mode} for block ${blockId}`);
                 }
                 return;
             }
@@ -262,10 +260,6 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 });
                 return next;
             });
-
-            console.log(
-                `Started ${mode} edit for block ${blockId}${forceRefresh ? " (force refresh)" : ""}`
-            );
         },
         [getBlock, editingSessions]
     );
@@ -345,7 +339,6 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 return next;
             });
 
-            console.log(`Saved block ${blockId}`);
             return true;
         },
         [editingSessions, drafts, getBlock, updateBlock, validateBlock]
@@ -363,8 +356,6 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             next.delete(blockId);
             return next;
         });
-
-        console.log(`Cancelled edit for block ${blockId}`);
     }, []);
 
     const saveAndExit = useCallback(

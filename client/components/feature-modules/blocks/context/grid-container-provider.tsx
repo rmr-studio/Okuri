@@ -201,6 +201,44 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
         [syncElementToGrid]
     );
 
+    const ensureDomContainer = useCallback(
+        (widgetId: string): HTMLElement | null => {
+            if (typeof document === "undefined") return null;
+
+            const safeId = (globalThis as any).CSS?.escape
+                ? (globalThis as any).CSS.escape(widgetId)
+                : widgetId;
+
+            const gridItem = document.querySelector<HTMLElement>(`[gs-id="${safeId}"]`);
+            if (!gridItem) return null;
+
+            const contentWrapper = gridItem.querySelector<HTMLElement>(".grid-stack-item-content");
+            if (!contentWrapper) return null;
+
+            let renderRoot = contentWrapper.querySelector<HTMLElement>(".grid-render-root");
+            if (!renderRoot) {
+                renderRoot = contentWrapper.ownerDocument.createElement("div");
+                renderRoot.className = "grid-render-root";
+                renderRoot.dataset.widgetId = widgetId;
+                contentWrapper.appendChild(renderRoot);
+            }
+
+            if (gridStack) {
+                let containers = gridWidgetContainersMap.get(gridStack);
+                if (!containers) {
+                    containers = new Map<string, HTMLElement>();
+                    gridWidgetContainersMap.set(gridStack, containers);
+                }
+                containers.set(widgetId, renderRoot);
+            }
+
+            widgetContainersRef.current.set(widgetId, renderRoot);
+            registerResizeObserver(widgetId, renderRoot);
+            return renderRoot;
+        },
+        [gridStack, registerResizeObserver]
+    );
+
     const renderCBFn = useCallback(
         (element: HTMLElement, widget: GridStackWidget & { grid?: GridStack }) => {
             try {
@@ -351,20 +389,39 @@ export function GridContainerProvider({ children }: PropsWithChildren) {
         <GridStackRenderContext.Provider
             value={useMemo(() => {
                 const getWidgetContainer = (widgetId: string) => {
+                    const resolveContainer = (
+                        containers?: Map<string, HTMLElement>
+                    ): HTMLElement | null => {
+                        if (!containers) return null;
+                        const container = containers.get(widgetId) || null;
+                        if (container && !container.isConnected) {
+                            containers.delete(widgetId);
+                            return null;
+                        }
+                        return container;
+                    };
+
                     if (gridStack) {
                         const containers = gridWidgetContainersMap.get(gridStack);
-                        if (containers?.has(widgetId)) {
-                            return containers.get(widgetId) || null;
+                        const container = resolveContainer(containers);
+                        if (container) {
+                            return container;
                         }
                     }
-                    return widgetContainersRef.current.get(widgetId) || null;
+
+                    const fallback = resolveContainer(widgetContainersRef.current);
+                    if (fallback) {
+                        return fallback;
+                    }
+
+                    return ensureDomContainer(widgetId);
                 };
 
                 return {
                     getWidgetContainer,
                     resizeWidgetToContent,
                 };
-            }, [gridStack, resizeWidgetToContent])}
+            }, [gridStack, resizeWidgetToContent, ensureDomContainer])}
         >
             <div ref={containerRef}>{gridStack ? children : null}</div>
         </GridStackRenderContext.Provider>

@@ -2,6 +2,7 @@ import { GridItemHTMLElement, GridStackOptions, GridStackWidget } from "gridstac
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
+import { useLayoutChange } from "../../context/layout-change-provider";
 import { isContentNode } from "../../interface/block.interface";
 import { WidgetRenderStructure } from "../../interface/render.interface";
 import { getDefaultDimensions } from "../../util/block/block.util";
@@ -64,15 +65,16 @@ export const WidgetEnvironmentSync: React.FC = () => {
         getTrees,
         getParentId,
         environment: blockEnvironment,
-        initialLayout,
         isInitialized,
         setIsInitialized,
+        blockTreeLayout,
     } = useBlockEnvironment();
+    const { trackStructuralChange } = useLayoutChange();
 
     // Build a map of widget configurations from the provided layout
     const { widgetMap: layoutWidgetMap, parentMap: layoutParentMap } = useMemo(
-        () => buildLayoutWidgetMap(initialLayout),
-        [initialLayout]
+        () => buildLayoutWidgetMap(blockTreeLayout?.layout),
+        [blockTreeLayout?.layout]
     );
 
     // Track ALL block IDs in the environment (not just top-level)
@@ -326,7 +328,9 @@ export const WidgetEnvironmentSync: React.FC = () => {
 
                 const { success, node } = addWidget(widgetConfig, meta, parent);
                 if (!success || !node?.el) {
-                    console.warn(`Failed to add error widget for missing block ${id} to parent ${parentId}`);
+                    console.warn(
+                        `Failed to add error widget for missing block ${id} to parent ${parentId}`
+                    );
                 }
             } else {
                 // No parent - add to root grid
@@ -342,6 +346,11 @@ export const WidgetEnvironmentSync: React.FC = () => {
             addNewWidget(blockId);
         });
 
+        // Track structural changes for block additions (exclude initial load)
+        if (addedBlockIds.length > 0 && hasInitiallyLoadedRef.current) {
+            trackStructuralChange();
+        }
+
         // Add error widgets for missing blocks (only on initial load)
         missingBlockIds.forEach((blockId) => {
             addMissingBlockWidget(blockId);
@@ -351,6 +360,11 @@ export const WidgetEnvironmentSync: React.FC = () => {
         removedBlockIds.forEach((blockId) => {
             removeWidget(blockId);
         });
+
+        // Track structural changes for block deletions
+        if (removedBlockIds.length > 0 && hasInitiallyLoadedRef.current) {
+            trackStructuralChange();
+        }
 
         // Update the ref for next render
         prevBlockIdsRef.current = new Set(currentBlockIds);
@@ -376,6 +390,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
         layoutParentMap,
         widgetExists,
         getTrees,
+        trackStructuralChange,
     ]);
 
     return null;
