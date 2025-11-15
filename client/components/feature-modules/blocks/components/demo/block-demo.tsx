@@ -16,8 +16,11 @@ import "../../styles/gridstack-custom.css";
 
 import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/block-focus-provider";
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
+import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
+import { LayoutChangeProvider } from "@/components/feature-modules/blocks/context/layout-change-provider";
+import { BlockTreeLayout, EntityType, LayoutScope } from "../../interface/layout.interface";
 import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-handler";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +30,8 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
+import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
+import { LayoutHistoryProvider } from "../../context/layout-history-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import {
     BlockComponentNode,
@@ -84,12 +89,12 @@ export const DEFAULT_WIDGET_OPTIONS: GridStackOptions = {
 /* -------------------------------------------------------------------------- */
 
 export const BlockDemo = () => {
-    const { trees, layout } = useMemo(() => createDemoEnvironment(), []);
+    const { trees, blockTreeLayout } = useMemo(() => createDemoEnvironment(), []);
     return (
         <BlockEnvironmentProvider
             organisationId={DEMO_ORG_ID}
             initialTrees={trees}
-            initialLayout={layout}
+            blockTreeLayout={blockTreeLayout}
         >
             <div className="mx-auto space-y-8 p-6">
                 <header className="space-y-2">
@@ -128,24 +133,30 @@ const WorkspaceToolbar: FC = () => {
 };
 
 const BlockEnvironmentWorkspace: React.FC = () => {
-    const { initialLayout } = useBlockEnvironment();
-    const gridOptions = initialLayout ?? DEFAULT_WIDGET_OPTIONS;
+    const { blockTreeLayout } = useBlockEnvironment();
+    const gridOptions = blockTreeLayout?.layout ?? DEFAULT_WIDGET_OPTIONS;
 
     return (
         <>
             <BlockFocusProvider>
                 <BlockEditProvider>
-                    <EditModeIndicator />
                     <GridProvider initialOptions={gridOptions}>
-                        <KeyboardNavigationHandler />
-                        <WorkspaceToolbar />
-                        <BlockEnvironmentGridSync />
-                        <WidgetEnvironmentSync />
-                        <GridContainerProvider>
-                            <BlockRenderer />
-                        </GridContainerProvider>
+                        <LayoutHistoryProvider>
+                            <LayoutChangeProvider>
+                                <TrackedEnvironmentProvider>
+                                    <EditModeIndicator />
+                                    <KeyboardNavigationHandler />
+                                    <WorkspaceToolbar />
+                                    <BlockEnvironmentGridSync />
+                                    <WidgetEnvironmentSync />
+                                    <GridContainerProvider>
+                                        <BlockRenderer />
+                                    </GridContainerProvider>
+                                    <BlockEditDrawer />
+                                </TrackedEnvironmentProvider>
+                            </LayoutChangeProvider>
+                        </LayoutHistoryProvider>
                     </GridProvider>
-                    <BlockEditDrawer />
                 </BlockEditProvider>
             </BlockFocusProvider>
             <DebugInfo />
@@ -157,13 +168,13 @@ const BlockEnvironmentWorkspace: React.FC = () => {
  * Renders all blocks with proper wrapping (PanelWrapper for toolbar, slash menu, etc.)
  */
 const BlockRenderer: React.FC = () => {
-    const { getBlock, removeBlock, insertBlock, getParent, moveBlockUp, moveBlockDown } =
-        useBlockEnvironment();
+    const { getBlock, getParent, moveBlockUp, moveBlockDown } = useBlockEnvironment();
+    const { removeTrackedBlock, addTrackedBlock } = useTrackedEnvironment();
 
     const { wrapper } = editorPanel({
         getBlock,
-        insertBlock,
-        removeBlock,
+        insertBlock: (child, parentId, index) => addTrackedBlock(child, parentId, index),
+        removeBlock: removeTrackedBlock,
         getParent,
         moveBlockUp,
         moveBlockDown,
@@ -230,7 +241,7 @@ function formatEnvironment(environment: EditorEnvironment): string {
  */
 const AddBlockButton: React.FC = () => {
     const [open, setOpen] = useState(false);
-    const { addBlock } = useBlockEnvironment();
+    const { addTrackedBlock } = useTrackedEnvironment();
 
     const slashItems: SlashMenuItem[] = [
         ...defaultSlashItems,
@@ -248,14 +259,14 @@ const AddBlockButton: React.FC = () => {
         switch (item.id) {
             case "LAYOUT_CONTAINER":
             case "LINE_ITEM":
-                addBlock(createLayoutContainerNode(DEMO_ORG_ID));
+                addTrackedBlock(createLayoutContainerNode(DEMO_ORG_ID));
                 break;
             case "TEXT":
             case "BLANK_NOTE":
-                addBlock(createNoteNode(DEMO_ORG_ID));
+                addTrackedBlock(createNoteNode(DEMO_ORG_ID));
                 break;
             default:
-                addBlock(createNoteNode(DEMO_ORG_ID, `New ${item.label}`));
+                addTrackedBlock(createNoteNode(DEMO_ORG_ID, `New ${item.label}`));
                 break;
         }
     };
@@ -519,12 +530,12 @@ function createTaskListNodeWithId(organisationId: string, id: string): BlockNode
     });
 }
 
-interface Environment {
+interface DemoEnvironmentResult {
     trees: BlockTree[];
-    layout?: GridStackOptions;
+    blockTreeLayout: BlockTreeLayout;
 }
 
-function createDemoEnvironment(): Environment {
+function createDemoEnvironment(): DemoEnvironmentResult {
     // Define IDs that match the layout below
     const STANDALONE_NOTE_ID = "block-c5745236-a506-4410-994d-4ee9d17c07f2";
     const LAYOUT_CONTAINER_ID = "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16";
@@ -657,16 +668,6 @@ function createDemoEnvironment(): Environment {
                     cellHeight: 25,
                     children: [
                         {
-                            id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16-placeholder",
-                            x: 0,
-                            y: 0,
-                            w: 6,
-                            h: 0, // Zero height to hide placeholder
-                            locked: true,
-                            noMove: true,
-                            noResize: true,
-                        },
-                        {
                             id: "block-2eb29c0a-a7c8-4033-be94-7977466feaf4",
                             x: 0,
                             y: 1,
@@ -701,8 +702,21 @@ function createDemoEnvironment(): Environment {
         ],
     };
 
+    // Wrap GridStack layout in BlockTreeLayout object for persistence tracking
+    const blockTreeLayout: BlockTreeLayout = {
+        version: 1,
+        id: "demo-layout-12345", // Mock ID for demo
+        entityId: "demo-entity",
+        entityType: EntityType.DEMO,
+        organisationId: DEMO_ORG_ID,
+        scope: LayoutScope.ORGANIZATION,
+        layout: gridLayout,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    };
+
     return {
         trees: [layoutTree, taskListTree, noteTree],
-        layout: gridLayout,
+        blockTreeLayout,
     };
 }

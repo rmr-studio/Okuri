@@ -32,13 +32,20 @@ export const Block: FC<Props> = ({
     children,
 }) => {
     const hostRef = useRef<HTMLDivElement>(null);
+    const observerRef = useRef<MutationObserver | null>(null);
 
     useEffect(() => {
         const host = hostRef.current;
-        if (!host) return;
+        if (!host) {
+            console.warn("Grid host not found for LayoutContainerBlock");
+            return;
+        }
 
         const gridItem = host.closest(".grid-stack-item");
-        if (!gridItem) return;
+        if (!gridItem) {
+            console.warn("Grid item not found for LayoutContainerBlock");
+            return;
+        }
 
         const moveSubGrid = () => {
             try {
@@ -48,16 +55,19 @@ export const Block: FC<Props> = ({
                 }
             } catch (error) {
                 // Catch any errors when moving subgrid during DOM mutations
-                console.debug("SubGrid move error (non-critical):", error);
+                console.warn("SubGrid move error (non-critical):", error);
             }
         };
 
         moveSubGrid();
-
-        const observer = new MutationObserver(moveSubGrid);
+        observerRef.current = new MutationObserver(moveSubGrid);
+        const observer = observerRef.current;
         observer.observe(gridItem, { childList: true, subtree: true, attributes: false });
 
-        return () => observer.disconnect();
+        return () => {
+            observer.disconnect();
+            observerRef.current = null;
+        };
     }, []);
 
     if (variant === "plain") {

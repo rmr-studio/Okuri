@@ -5,6 +5,8 @@ import { GridItemHTMLElement, GridStack, GridStackNode } from "gridstack";
 import { FC, useCallback, useLayoutEffect, useRef } from "react";
 import { useBlockEnvironment } from "../context/block-environment-provider";
 import { useBlockFocus } from "../context/block-focus-provider";
+import { useLayoutChange } from "../context/layout-change-provider";
+import { useTrackedEnvironment } from "../context/tracked-environment-provider";
 import { getNewParentId } from "../util/grid/grid.util";
 
 type GridStackLike = Pick<GridStack, "on" | "off">;
@@ -22,8 +24,13 @@ export const BlockEnvironmentGridSync: FC = () => {
  */
 export const useEnvironmentGridSync = (_parentId: string | null = null) => {
     const { gridStack } = useGrid();
-    const { getParentId, moveBlock, isInitialized } = useBlockEnvironment();
+    const { getParentId, isInitialized } = useBlockEnvironment();
+    const { moveTrackedBlock } = useTrackedEnvironment();
     const { acquireLock, releaseLock } = useBlockFocus();
+    const { trackLayoutChange } = useLayoutChange();
+
+    // Store widget states before drag/resize to create proper commands
+    const widgetBeforeChangeRef = useRef<Map<string, GridStackNode>>(new Map());
 
     const listenersRef = useRef<Map<GridStackLike, () => void>>(new Map());
     const initializedRef = useRef(isInitialized);
@@ -56,21 +63,71 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             if (!grid || listenersRef.current.has(grid)) return;
 
             /**
-             * This event listener will observe when a user completes a layout action (drag/resize).
-             * This is to detect when a purposeful action has been made, so we can flush layout changes to the backend
+             * This event listener will observe when a user starts a layout action (drag/resize).
+             * Store the widget state BEFORE the change so we can create proper undo commands
              */
-            const handleResourceLock = (_: Event, _2: GridItemHTMLElement) => {
+            const handleResourceLock = (
+                _: Event,
+                items: GridItemHTMLElement | GridItemHTMLElement[]
+            ) => {
                 try {
                     if (!initializedRef.current) return;
                     acquireInteractionLock();
+
+                    // Store current state of widgets being modified
+                    const itemArray = Array.isArray(items) ? items : [items];
+                    itemArray.forEach((item) => {
+                        const el = item as GridItemHTMLElement;
+                        const widgetId = el?.gridstackNode?.id;
+                        if (widgetId && el.gridstackNode) {
+                            widgetBeforeChangeRef.current.set(String(widgetId), {
+                                ...el.gridstackNode,
+                            });
+                        }
+                    });
                 } catch (error) {
                     console.debug("Grid resize/drag start handler error (non-critical):", error);
                 }
             };
 
-            const handleResourceUnlock = (_: Event, _2: GridItemHTMLElement) => {
+            const handleResourceUnlock = (
+                _: Event,
+                items: GridItemHTMLElement | GridItemHTMLElement[]
+            ) => {
                 try {
                     if (!initializedRef.current) return;
+
+                    const itemArray = Array.isArray(items) ? items : [items];
+
+                    const hasActualMutation = itemArray.some((item) => {
+                        const el = item as GridItemHTMLElement;
+                        const node = el?.gridstackNode;
+                        const widgetId = node?.id;
+
+                        if (!node || widgetId === undefined || widgetId === null) {
+                            return false;
+                        }
+
+                        const before = widgetBeforeChangeRef.current.get(String(widgetId));
+                        if (!before) {
+                            return false;
+                        }
+
+                        return (
+                            before.x !== node.x ||
+                            before.y !== node.y ||
+                            before.w !== node.w ||
+                            before.h !== node.h
+                        );
+                    });
+
+                    if (hasActualMutation) {
+                        trackLayoutChange();
+                    }
+
+                    // Clear stored widget states
+                    widgetBeforeChangeRef.current.clear();
+
                     releaseInteractionLock();
                 } catch (error) {
                     console.debug("Grid resize/drag stop handler error (non-critical):", error);
@@ -90,10 +147,14 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                             const newParent = getNewParentId(item, root);
 
                             if (currentParent !== newParent) {
-                                moveBlock(blockId, newParent);
+                                // Track structural change for re-parenting
+                                moveTrackedBlock(blockId, newParent);
                             }
                         } catch (itemError) {
-                            console.debug("Block added item handler error (non-critical):", itemError);
+                            console.debug(
+                                "Block added item handler error (non-critical):",
+                                itemError
+                            );
                         }
                     });
                 } catch (error) {
@@ -101,7 +162,38 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 }
             };
 
+            /**
+             * Handle layout changes (resize, reposition within same parent)
+             * This fires when GridStack layout changes but does NOT indicate re-parenting
+             */
+            const handleLayoutChange = (_event: Event, items: GridStackNode[] = []) => {
+                try {
+                    if (!initializedRef.current) return;
+
+                    // Check if any item changed parent (if so, skip - handleBlockAdded handles it)
+                    const hasParentChange = items.some((item) => {
+                        if (!item || item.id === undefined || item.id === null) return false;
+                        const blockId = String(item.id);
+                        const currentParent = getParentId(blockId);
+                        const newParent = getNewParentId(item, root);
+                        return currentParent !== newParent;
+                    });
+
+                    const isProgrammaticUpdate = widgetBeforeChangeRef.current.size === 0;
+
+                    // Only track as layout change if no parent changes occurred
+                    // (parent changes are structural and handled separately)
+                    // and the update was not part of an active drag/resize (handled on unlock)
+                    if (!hasParentChange && items.length > 0 && isProgrammaticUpdate) {
+                        trackLayoutChange();
+                    }
+                } catch (error) {
+                    console.debug("Layout change handler error (non-critical):", error);
+                }
+            };
+
             grid.on("added", handleBlockAdded);
+            grid.on("change", handleLayoutChange);
             grid.on("dragstart", handleResourceLock);
             grid.on("resizestart", handleResourceLock);
             grid.on("dragstop", handleResourceUnlock);
@@ -111,6 +203,7 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
             listenersRef.current.set(grid, () => {
                 try {
                     grid.off("added");
+                    grid.off("change");
                     grid.off("dragstart");
                     grid.off("resizestart");
                     grid.off("dragstop");
@@ -121,7 +214,13 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                 }
             });
         },
-        [getParentId, moveBlock]
+        [
+            getParentId,
+            moveTrackedBlock,
+            trackLayoutChange,
+            acquireInteractionLock,
+            releaseInteractionLock,
+        ]
     );
 
     useLayoutEffect(() => {

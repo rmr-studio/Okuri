@@ -9,6 +9,7 @@
  */
 
 import { FC } from "react";
+import { useLayoutChange } from "../../context/layout-change-provider";
 import {
     BlockComponentNode,
     BlockRenderStructure,
@@ -31,6 +32,8 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
     renderStructure,
     payload,
 }) => {
+    const { localVersion, publishedVersion } = useLayoutChange();
+    const renderVersion = `${publishedVersion}-${localVersion}`;
     const { layoutGrid, components } = renderStructure;
 
     if (!layoutGrid || !components) {
@@ -53,7 +56,7 @@ export const BlockStructureRenderer: FC<BlockStructureRendererProps> = ({
 
                 return (
                     <ComponentRenderer
-                        key={blockId + "-" + layoutItem.id}
+                        key={`${blockId}-${renderVersion}-${layoutItem.id}`}
                         component={component}
                         payload={payload}
                     />
