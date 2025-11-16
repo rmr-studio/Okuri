@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, FC, PropsWithChildren, useCallback, useContext, useMemo } from "react";
+import { createContext, FC, PropsWithChildren, useCallback, useContext, useMemo } from "react";
 import { BlockNode } from "../interface/block.interface";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
@@ -8,11 +8,7 @@ import { useLayoutChange } from "./layout-change-provider";
 
 interface TrackedEnvironmentContextValue {
     /** Change-aware operations that will mark the layout as dirty */
-    addTrackedBlock: (
-        block: BlockNode,
-        parentId?: string | null,
-        index?: number | null
-    ) => string;
+    addTrackedBlock: (block: BlockNode, parentId?: string | null, index?: number | null) => string;
     removeTrackedBlock: (blockId: string) => void;
     moveTrackedBlock: (blockId: string, targetParentId: string | null) => void;
     updateTrackedBlock: (blockId: string, updatedContent: BlockNode) => void;
@@ -22,8 +18,9 @@ interface TrackedEnvironmentContextValue {
     gridStack: ReturnType<typeof useGrid>;
 }
 
-const TrackedEnvironmentContext =
-    createContext<TrackedEnvironmentContextValue | undefined>(undefined);
+const TrackedEnvironmentContext = createContext<TrackedEnvironmentContextValue | undefined>(
+    undefined
+);
 
 export const useTrackedEnvironment = (): TrackedEnvironmentContextValue => {
     const context = useContext(TrackedEnvironmentContext);
@@ -53,8 +50,8 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
      * This creates an AddBlockCommand, executes it, and adds it to history
      */
     const addTrackedBlock = useCallback(
-        (block: BlockNode, parentId: string | null = null, index: number | null = null): string => {
-            const id = addBlock(block, parentId ?? null, index ?? null);
+        (block: BlockNode, parentId: string | null = null): string => {
+            const id = addBlock(block, parentId);
             trackStructuralChange();
             return id;
         },

@@ -36,7 +36,6 @@ export const EditModeIndicator: FC = () => {
         try {
             let allSuccess = true;
 
-            // 1. Save block data edits (existing functionality)
             if (hasDataChanges) {
                 const dataSuccess = await saveAllEdits();
                 if (!dataSuccess) {
@@ -45,7 +44,6 @@ export const EditModeIndicator: FC = () => {
                 }
             }
 
-            // 2. Save layout changes (new functionality)
             if (hasLayout && allSuccess) {
                 const layoutSuccess = await saveLayoutChanges();
                 if (!layoutSuccess) {

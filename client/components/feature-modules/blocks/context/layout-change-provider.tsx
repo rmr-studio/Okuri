@@ -13,6 +13,7 @@ import {
     useState,
 } from "react";
 import { LayoutSnapshot, SaveLayoutResponse } from "../interface/command.interface";
+import { EditorEnvironment } from "../interface/editor.interface";
 import { cloneEnvironment } from "../util/environment/environment.util";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
@@ -107,20 +108,19 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
     const applySnapshot = useCallback(
         (snapshot: LayoutSnapshot) => {
+            if (!gridStack) return;
             const savedChildren = snapshot.gridLayout.children ?? [];
 
+            // Re-hydrate environment, so that all blocks are present/restored before loading layout
             requestAnimationFrame(() => {
                 hydrateEnvironment(snapshot.blockEnvironment);
             });
-            if (gridStack) {
-                setLocalVersion((version) => version + 1);
-                requestAnimationFrame(() => {
-                    gridStack.load(savedChildren);
-                    reloadEnvironment(snapshot.gridLayout);
-                });
-            } else {
+
+            setLocalVersion((version) => version + 1);
+            requestAnimationFrame(() => {
+                gridStack.load(savedChildren);
                 reloadEnvironment(snapshot.gridLayout);
-            }
+            });
         },
         [gridStack, reloadEnvironment, hydrateEnvironment]
     );
@@ -289,7 +289,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
             // TODO: Call backend with version control
             // For now, simulate the response
-            const response: SaveLayoutResponse = await simulateSaveWithVersionControl(
+            const response: SaveLayoutResponse = await saveBlockEnvironment(
                 layoutId,
                 currentLayout,
                 environment,
@@ -413,7 +413,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                     }
 
                     // TODO: Send force save to backend with latest version number
-                    const response: SaveLayoutResponse = await simulateSaveWithVersionControl(
+                    const response: SaveLayoutResponse = await saveBlockEnvironment(
                         layoutId!,
                         currentLayout,
                         environment,
@@ -528,18 +528,15 @@ function areLayoutsEqual(a: GridStackOptions, b: GridStackOptions): boolean {
     }
 }
 
-/**
- * Temporary simulator for save with version control
- * TODO: Replace with actual LayoutService.saveLayoutSnapshot call
- */
-async function simulateSaveWithVersionControl(
+async function saveBlockEnvironment(
     layoutId: string,
     layout: GridStackOptions,
-    environment: any,
+    environment: EditorEnvironment,
     currentVersion: number,
     force: boolean = false
 ): Promise<SaveLayoutResponse> {
     // Simulate network delay
+    console.log(environment);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Simulate 10% chance of conflict (for testing)
