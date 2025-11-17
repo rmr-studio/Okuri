@@ -25,7 +25,7 @@ import {
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBlockFocus } from "../../../context/block-focus-provider";
 import { useTrackedEnvironment } from "../../../context/tracked-environment-provider";
-import { BlockListConfiguration, BlockNode } from "../../../interface/block.interface";
+import { BlockListConfiguration, BlockNode, isContentNode } from "../../../interface/block.interface";
 import {
     filterChildren,
     FilterSpec,
@@ -145,10 +145,12 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     render,
     renderControlsInWrapper = false,
 }) => {
-    const { reorderTrackedBlock } = useTrackedEnvironment();
+    const { reorderTrackedBlock, updateTrackedBlock, blockEnvironment } = useTrackedEnvironment();
+    const { getBlock } = blockEnvironment;
     const { acquireLock } = useBlockFocus();
 
     const dragLockRef = useRef<(() => void) | null>(null);
+    const configUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Detect if list contains uniform block types
     const isUniBlock = useMemo(() => isUniBlockList(children), [children]);
@@ -165,6 +167,66 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
 
     // Determine effective mode - force MANUAL if not uni-block
     const effectiveMode = isUniBlock ? activeMode : "MANUAL";
+
+    // Debounced persistence of configuration changes to backend
+    useEffect(() => {
+        // Clear any existing timer
+        if (configUpdateTimerRef.current) {
+            clearTimeout(configUpdateTimerRef.current);
+        }
+
+        // Check if config has changed from the original
+        const configChanged =
+            activeMode !== config.order.mode ||
+            JSON.stringify(activeSort) !== JSON.stringify(config.order.sort) ||
+            JSON.stringify(activeFilters) !== JSON.stringify(config.filters || []);
+
+        if (!configChanged) {
+            return; // No changes to persist
+        }
+
+        // Debounce: wait 1.5 seconds after last change before persisting
+        configUpdateTimerRef.current = setTimeout(() => {
+            const block = getBlock(id);
+            if (!block || !isContentNode(block)) return;
+
+            // Update the listConfig in the block's payload
+            const updatedBlock: BlockNode = {
+                ...block,
+                block: {
+                    ...block.block,
+                    payload: {
+                        ...block.block.payload,
+                        listConfig: {
+                            ...config,
+                            order: {
+                                ...config.order,
+                                mode: activeMode,
+                                sort: activeSort,
+                            },
+                            filters: activeFilters,
+                        } as BlockListConfiguration,
+                    },
+                },
+            };
+
+            // Persist to backend via tracked environment
+            updateTrackedBlock(id, updatedBlock);
+            console.log(
+                `💾 Persisted list configuration for ${id}:`,
+                `mode=${activeMode}`,
+                `sort=${activeSort ? `${activeSort.by} ${activeSort.dir}` : "none"}`,
+                `filters=${activeFilters.length}`
+            );
+        }, 1500);
+
+        // Cleanup timer on unmount
+        return () => {
+            if (configUpdateTimerRef.current) {
+                clearTimeout(configUpdateTimerRef.current);
+            }
+        };
+    }, [activeMode, activeSort, activeFilters, config, id, getBlock, updateTrackedBlock]);
 
     // Apply sorting/filtering to children
     const processedChildren = useMemo(() => {

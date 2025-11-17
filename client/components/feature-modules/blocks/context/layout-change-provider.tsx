@@ -14,10 +14,9 @@ import {
 } from "react";
 import {
     LayoutSnapshot,
-    SaveLayoutResponse,
+    SaveEnvironmentResponse,
     StructuralOperationRecord,
 } from "../interface/command.interface";
-import { cloneEnvironment } from "../util/environment/environment.util";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
 import { useLayoutHistory } from "./layout-history-provider";
@@ -59,7 +58,7 @@ interface LayoutChangeContextValue {
     saveStatus: "idle" | "saving" | "success" | "error" | "conflict";
 
     /** Conflict data if save failed due to version mismatch */
-    conflictData: SaveLayoutResponse | null;
+    conflictData: SaveEnvironmentResponse | null;
 
     /** Resolve a conflict after user decision */
     resolveConflict: (action: "keep-mine" | "use-theirs" | "cancel") => Promise<boolean>;
@@ -102,7 +101,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     const [saveStatus, setSaveStatus] = useState<
         "idle" | "saving" | "success" | "error" | "conflict"
     >("idle");
-    const [conflictData, setConflictData] = useState<SaveLayoutResponse | null>(null);
+    const [conflictData, setConflictData] = useState<SaveEnvironmentResponse | null>(null);
 
     const updatePublishedVersion = useCallback(
         (nextVersion: number) => {
@@ -299,7 +298,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
             // TODO: Call backend with version control
             // For now, simulate the response
-            const response: SaveLayoutResponse = await saveBlockEnvironment(
+            const response: SaveEnvironmentResponse = await saveBlockEnvironment(
                 layoutId,
                 currentLayout,
                 publishedVersion,
@@ -392,30 +391,28 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 }
 
                 if (action === "use-theirs") {
-                    // Discard local changes and use server version
-                    if (conflictData.latestLayout && conflictData.latestVersion) {
-                        const serverSnapshot: LayoutSnapshot = {
-                            blockEnvironment: cloneEnvironment(conflictData.latestEnvironment!),
-                            gridLayout: structuredClone(
-                                conflictData.latestLayout
-                            ) as GridStackOptions,
-                            timestamp: Date.now(),
-                            version: conflictData.latestVersion,
-                        };
-
-                        setBaselineSnapshot(serverSnapshot);
-
-                        requestAnimationFrame(() => {
-                            if (!conflictData.latestVersion) return;
-                            discardLayoutChanges();
-                            updatePublishedVersion(conflictData.latestVersion);
-                        });
-
-                        setSaveStatus("success");
-                        setConflictData(null);
-                        setTimeout(() => setSaveStatus("idle"), 2000);
-                        return true;
-                    }
+                    //TODO
+                    // Discard local changes and reload server version
+                    // if (conflictData.latestLayout && conflictData.latestVersion) {
+                    //     const serverSnapshot: LayoutSnapshot = {
+                    //         blockEnvironment: cloneEnvironment(conflictData.latestEnvironment!),
+                    //         gridLayout: structuredClone(
+                    //             conflictData.latestLayout
+                    //         ) as GridStackOptions,
+                    //         timestamp: Date.now(),
+                    //         version: conflictData.latestVersion,
+                    //     };
+                    //     setBaselineSnapshot(serverSnapshot);
+                    //     requestAnimationFrame(() => {
+                    //         if (!conflictData.latestVersion) return;
+                    //         discardLayoutChanges();
+                    //         updatePublishedVersion(conflictData.latestVersion);
+                    //     });
+                    //     setSaveStatus("success");
+                    //     setConflictData(null);
+                    //     setTimeout(() => setSaveStatus("idle"), 2000);
+                    //     return true;
+                    // }
                 }
 
                 if (action === "keep-mine") {
@@ -430,7 +427,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                     const operations = getStructuralOperations();
 
                     // TODO: Send force save to backend with latest version number
-                    const response: SaveLayoutResponse = await saveBlockEnvironment(
+                    const response: SaveEnvironmentResponse = await saveBlockEnvironment(
                         layoutId!,
                         currentLayout,
                         conflictData.latestVersion!,
@@ -559,7 +556,7 @@ async function saveBlockEnvironment(
     currentVersion: number,
     operations: StructuralOperationRecord[],
     force: boolean = false
-): Promise<SaveLayoutResponse> {
+): Promise<SaveEnvironmentResponse> {
     // Simulate network delay
     console.log("💾 Saving layout:", {
         layoutId,
@@ -577,8 +574,6 @@ async function saveBlockEnvironment(
         return {
             success: false,
             conflict: true,
-            latestLayout: layout, // In real scenario, this would be from backend
-            // latestEnvironment: environment,
             latestVersion: currentVersion + 1,
             lastModifiedBy: "john@example.com",
             lastModifiedAt: new Date().toISOString(),

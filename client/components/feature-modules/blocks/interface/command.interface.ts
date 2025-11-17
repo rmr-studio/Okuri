@@ -256,12 +256,6 @@ export interface SaveEnvironmentResponse {
     /** Whether there was a conflict (version mismatch) */
     conflict?: boolean;
 
-    /** Latest layout from backend (if conflict) */
-    latestLayout?: GridStackOptions;
-
-    /** Latest environment from backend (if conflict) */
-    latestEnvironment?: EditorEnvironment;
-
     /** Version of the conflicting layout */
     latestVersion?: number;
 

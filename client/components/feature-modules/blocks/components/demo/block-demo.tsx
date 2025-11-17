@@ -523,8 +523,13 @@ function createTaskListNodeWithId(organisationId: string, id: string): BlockNode
                     emptyMessage: "No tasks yet. Add one to get started!",
                 },
                 order: {
-                    mode: "MANUAL",
+                    mode: "SORTED",
+                    sort: {
+                        by: "data.dueDate",
+                        dir: "ASC",
+                    },
                 },
+                filterLogic: "AND",
             },
         },
     });

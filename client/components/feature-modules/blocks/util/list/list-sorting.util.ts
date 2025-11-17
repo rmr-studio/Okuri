@@ -11,6 +11,7 @@ export interface SortableField {
     name: string;
     type: string;
     format?: string;
+    enumValues?: string[]; // Predefined values for dropdown selection
 }
 
 export interface SortSpec {
@@ -47,6 +48,7 @@ export function getUniformBlockType(children: BlockNode[]): string | null {
  */
 export function getSortableFields(blockType: BlockType): SortableField[] {
     const properties = blockType.schema.properties || {};
+    const formFields = blockType.display?.form?.fields || {};
 
     return Object.entries(properties)
         .filter(([, schema]) => {
@@ -58,12 +60,39 @@ export function getSortableFields(blockType: BlockType): SortableField[] {
                 schema.format === "DATETIME"
             );
         })
-        .map(([key, schema]) => ({
-            key,
-            name: schema.name || key,
-            type: schema.type,
-            format: schema.format,
-        }));
+        .map(([key, schema]) => {
+            // Extract enum values from schema first
+            let enumValues =
+                (schema as any).enum ||
+                (schema as any).enumValues ||
+                (schema as any).allowedValues ||
+                (schema as any).options;
+
+            // If not in schema, check form field definitions
+            if (!enumValues) {
+                const fieldPath = `data.${key}`;
+                const formField = formFields[fieldPath];
+
+                if (formField && (formField as any).type === "DROPDOWN") {
+                    // Extract values from dropdown options
+                    const options = (formField as any).options;
+                    if (Array.isArray(options)) {
+                        enumValues = options.map((opt: any) => {
+                            // Support both string values and {label, value} objects
+                            return typeof opt === "string" ? opt : opt.value;
+                        });
+                    }
+                }
+            }
+
+            return {
+                key,
+                name: schema.name || key,
+                type: schema.type,
+                format: schema.format,
+                enumValues: Array.isArray(enumValues) ? enumValues : undefined,
+            };
+        });
 }
 
 /**
