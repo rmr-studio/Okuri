@@ -1,7 +1,7 @@
 import { GridStackOptions, GridStackWidget } from "gridstack";
+import { BatchCommand } from "../util/command/commands";
 import { BlockNode } from "./block.interface";
 import { EditorEnvironment } from "./editor.interface";
-import { BatchCommand } from "../util/command/commands";
 
 /**
  * Snapshot of the entire layout state at a point in time
@@ -190,7 +190,6 @@ export interface ConflictResolution {
  */
 export interface StructuralOperationRecord {
     id: string;
-    type: StructuralOperationType;
     timestamp: number;
     data: StructuralOperationData;
 }
@@ -247,7 +246,7 @@ export interface ReorderBlockOperation {
 /**
  * Response from backend when saving layout
  */
-export interface SaveLayoutResponse {
+export interface SaveEnvironmentResponse {
     /** Whether save was successful */
     success: boolean;
 

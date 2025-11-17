@@ -32,6 +32,7 @@ interface Props extends ChildNodeProps, ClassNameProps {
     onInsert?: (item: SlashMenuItem) => void;
     onInsertSibling?: (item: SlashMenuItem) => void;
     onDelete?: () => void;
+    customControls?: React.ReactNode;
 }
 
 export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).map((meta) => ({
@@ -56,6 +57,7 @@ export const PanelWrapper: FC<Props> = ({
     onDelete,
     className,
     allowInsert = false,
+    customControls,
 }) => {
     // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
 
@@ -684,6 +686,12 @@ export const PanelWrapper: FC<Props> = ({
                             />
                         )}
                     </AnimatePresence>
+
+                    {/* Custom controls section (e.g., list sort/filter controls) */}
+                    {customControls && (
+                        <div className="mb-3 border-b pb-3">{customControls}</div>
+                    )}
+
                     {isEditMode && block && isContentNode(block) ? (
                         <BlockForm
                             blockId={id}

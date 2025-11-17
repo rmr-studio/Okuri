@@ -2,15 +2,7 @@
 
 import { createContext, FC, PropsWithChildren, useCallback, useContext, useMemo } from "react";
 import { BlockNode } from "../interface/block.interface";
-import {
-    AddBlockOperation,
-    LayoutCommandType,
-    MoveBlockOperation,
-    RemoveBlockOperation,
-    ReorderBlockOperation,
-    StructuralOperationRecord,
-    UpdateBlockOperation,
-} from "../interface/command.interface";
+import { StructuralOperationRecord } from "../interface/command.interface";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
 import { useLayoutChange } from "./layout-change-provider";
@@ -72,7 +64,6 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             // Record the operation
             const operation: StructuralOperationRecord = {
                 id: crypto.randomUUID(),
-                type: LayoutCommandType.ADD_BLOCK,
                 timestamp: Date.now(),
                 data: {
                     type: "ADD_BLOCK",
@@ -80,7 +71,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
                     block,
                     parentId,
                     index,
-                } as AddBlockOperation,
+                },
             };
             recordStructuralOperation(operation);
 
@@ -101,13 +92,12 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             // Record the operation
             const operation: StructuralOperationRecord = {
                 id: crypto.randomUUID(),
-                type: LayoutCommandType.REMOVE_BLOCK,
                 timestamp: Date.now(),
                 data: {
                     type: "REMOVE_BLOCK",
                     blockId,
                     previousParentId,
-                } as RemoveBlockOperation,
+                },
             };
             recordStructuralOperation(operation);
 
@@ -127,14 +117,13 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             // Record the operation
             const operation: StructuralOperationRecord = {
                 id: crypto.randomUUID(),
-                type: LayoutCommandType.MOVE_BLOCK,
                 timestamp: Date.now(),
                 data: {
                     type: "MOVE_BLOCK",
                     blockId,
                     fromParentId,
                     toParentId: targetParentId,
-                } as MoveBlockOperation,
+                },
             };
             recordStructuralOperation(operation);
 
@@ -153,13 +142,12 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             // Record the operation
             const operation: StructuralOperationRecord = {
                 id: crypto.randomUUID(),
-                type: LayoutCommandType.UPDATE_BLOCK,
                 timestamp: Date.now(),
                 data: {
                     type: "UPDATE_BLOCK",
                     blockId,
                     updatedContent,
-                } as UpdateBlockOperation,
+                },
             };
             recordStructuralOperation(operation);
 
@@ -194,7 +182,6 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             // Record the operation
             const operation: StructuralOperationRecord = {
                 id: crypto.randomUUID(),
-                type: LayoutCommandType.REORDER_BLOCK,
                 timestamp: Date.now(),
                 data: {
                     type: "REORDER_BLOCK",
@@ -202,7 +189,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
                     parentId,
                     fromIndex,
                     toIndex: targetIndex,
-                } as ReorderBlockOperation,
+                },
             };
             recordStructuralOperation(operation);
 

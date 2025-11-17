@@ -22,10 +22,20 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ReactNode, useCallback, useEffect, useRef } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBlockFocus } from "../../../context/block-focus-provider";
 import { useTrackedEnvironment } from "../../../context/tracked-environment-provider";
 import { BlockListConfiguration, BlockNode } from "../../../interface/block.interface";
+import {
+    filterChildren,
+    FilterSpec,
+    getUniformBlockType,
+    isUniBlockList,
+    sortChildren,
+    SortSpec,
+} from "../../../util/list/list-sorting.util";
+import { ListFilterControls } from "./ListFilterControls";
+import { ListSortControls } from "./ListSortControls";
 import { ListPanel } from "./list.container";
 import { ListItem } from "./list.item";
 
@@ -34,7 +44,96 @@ interface ContentBlockListProps {
     config: BlockListConfiguration;
     children: BlockNode[] | undefined;
     render: (node: BlockNode) => ReactNode;
+    renderControlsInWrapper?: boolean; // If true, don't render controls here (they'll be in PanelWrapper)
 }
+
+interface ListControlsProps {
+    uniformBlockType: BlockNode["block"]["type"] | null;
+    isUniBlock: boolean;
+    currentMode: "MANUAL" | "SORTED";
+    onModeChange: (mode: "MANUAL" | "SORTED") => void;
+    activeSort: SortSpec | undefined;
+    setActiveSort: (sort: SortSpec | undefined) => void;
+    activeFilters: FilterSpec[];
+    setActiveFilters: (filters: FilterSpec[]) => void;
+    filterLogic: "AND" | "OR";
+}
+
+/**
+ * Separate component for list sort/filter controls
+ * Can be used standalone or within ContentBlockList
+ */
+export const ListControls: React.FC<ListControlsProps> = ({
+    uniformBlockType,
+    isUniBlock,
+    currentMode,
+    onModeChange,
+    activeSort,
+    setActiveSort,
+    activeFilters,
+    setActiveFilters,
+    filterLogic,
+}) => {
+    const isSortedMode = currentMode === "SORTED";
+    const isManualMode = currentMode === "MANUAL";
+
+    return (
+        <div className="space-y-2">
+            {/* Mode toggle - only show for uni-block lists */}
+            {isUniBlock && (
+                <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">List Mode:</span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            className={`px-3 py-1 text-xs rounded transition-colors ${
+                                isManualMode
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            }`}
+                            onClick={() => onModeChange("MANUAL")}
+                        >
+                            Manual Order
+                        </button>
+                        <button
+                            className={`px-3 py-1 text-xs rounded transition-colors ${
+                                isSortedMode
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            }`}
+                            onClick={() => onModeChange("SORTED")}
+                        >
+                            Sorted View
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Sort/filter controls - only show in SORTED mode */}
+            {isSortedMode && uniformBlockType && (
+                <>
+                    <ListSortControls
+                        blockType={uniformBlockType}
+                        currentSort={activeSort}
+                        onSortChange={setActiveSort}
+                    />
+                    <ListFilterControls
+                        blockType={uniformBlockType}
+                        currentFilters={activeFilters}
+                        filterLogic={filterLogic}
+                        onFiltersChange={setActiveFilters}
+                    />
+                </>
+            )}
+
+            {/* Manual mode hint */}
+            {isManualMode && isUniBlock && (
+                <div className="text-xs text-muted-foreground">
+                    Drag and drop items to reorder manually
+                </div>
+            )}
+        </div>
+    );
+};
 
 /**
  * Main list component that handles drag-and-drop reordering for content block lists.
@@ -44,11 +143,47 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     config,
     children = [],
     render,
+    renderControlsInWrapper = false,
 }) => {
     const { reorderTrackedBlock } = useTrackedEnvironment();
     const { acquireLock } = useBlockFocus();
 
     const dragLockRef = useRef<(() => void) | null>(null);
+
+    // Detect if list contains uniform block types
+    const isUniBlock = useMemo(() => isUniBlockList(children), [children]);
+    const uniformType = useMemo(() => getUniformBlockType(children), [children]);
+    const uniformBlockType = useMemo(
+        () => (uniformType && children[0] ? children[0].block.type : null),
+        [uniformType, children]
+    );
+
+    // Runtime sort/filter/mode overrides (starts with config defaults)
+    const [activeSort, setActiveSort] = useState<SortSpec | undefined>(config.order.sort);
+    const [activeFilters, setActiveFilters] = useState<FilterSpec[]>(config.filters || []);
+    const [activeMode, setActiveMode] = useState<"MANUAL" | "SORTED">(config.order.mode);
+
+    // Determine effective mode - force MANUAL if not uni-block
+    const effectiveMode = isUniBlock ? activeMode : "MANUAL";
+
+    // Apply sorting/filtering to children
+    const processedChildren = useMemo(() => {
+        if (effectiveMode !== "SORTED") return children;
+
+        let result = [...children];
+
+        // Apply filters first
+        if (activeFilters.length > 0 && uniformType) {
+            result = filterChildren(result, activeFilters, config.filterLogic || "AND");
+        }
+
+        // Apply sorting
+        if (activeSort && uniformType) {
+            result = sortChildren(result, activeSort);
+        }
+
+        return result;
+    }, [children, effectiveMode, activeSort, activeFilters, config.filterLogic, uniformType]);
 
     // Configure dnd-kit sensors for pointer and keyboard interaction
     const sensors = useSensors(
@@ -110,14 +245,46 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
         [children, id, reorderTrackedBlock, releaseDragLock]
     );
 
-    const isManualMode = config.order.mode === "MANUAL";
+    const isManualMode = effectiveMode === "MANUAL";
+    const isSortedMode = effectiveMode === "SORTED";
     const isEmpty = children.length === 0;
+    const isFiltered = processedChildren.length === 0 && children.length > 0;
 
     return (
-        <ListPanel blockId={id}>
+        <ListPanel
+            blockId={id}
+            listControls={
+                isUniBlock && !renderControlsInWrapper ? (
+                    <ListControls
+                        uniformBlockType={uniformBlockType}
+                        isUniBlock={isUniBlock}
+                        currentMode={effectiveMode}
+                        onModeChange={setActiveMode}
+                        activeSort={activeSort}
+                        setActiveSort={setActiveSort}
+                        activeFilters={activeFilters}
+                        setActiveFilters={setActiveFilters}
+                        filterLogic={config.filterLogic || "AND"}
+                    />
+                ) : undefined
+            }
+        >
+
             {isEmpty && (
                 <div className="p-4 text-sm text-muted-foreground">
                     No items yet. Add one to get started!
+                </div>
+            )}
+
+            {isFiltered && (
+                <div className="p-4 text-sm text-muted-foreground text-center">
+                    No items match the current filters.
+                    <button
+                        onClick={() => setActiveFilters([])}
+                        className="ml-2 text-primary underline"
+                    >
+                        Clear filters
+                    </button>
                 </div>
             )}
 
@@ -148,8 +315,8 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                     </SortableContext>
                 </DndContext>
             ) : (
-                <div className="flex flex-col">
-                    {children.map((child) => (
+                <div className="flex flex-col gap-3">
+                    {processedChildren.map((child) => (
                         <ListItem
                             key={child.block.id}
                             id={child.block.id}

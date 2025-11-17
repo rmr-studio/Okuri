@@ -15,7 +15,17 @@ export type BlockComponentNode = components["schemas"]["BlockComponentNode"];
 export type ComponentType = components["schemas"]["BlockComponentNode"]["type"];
 export type BlockMeta = components["schemas"]["BlockMeta"];
 export type BlockTypeNesting = components["schemas"]["BlockType"]["nesting"];
-export type BlockListConfiguration = components["schemas"]["BlockListConfiguration"];
+
+// Extended BlockListConfiguration with client-side filter/sort support
+// TODO: Update backend schema to include these properties
+export type BlockListConfiguration = components["schemas"]["BlockListConfiguration"] & {
+    filters?: Array<{
+        expr: {
+            [key: string]: unknown;
+        };
+    }>;
+    filterLogic?: "AND" | "OR";
+};
 
 export type NodeType = components["schemas"]["Node"]["type"];
 

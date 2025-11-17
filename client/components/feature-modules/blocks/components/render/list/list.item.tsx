@@ -75,6 +75,13 @@ export const ListItem = <T extends unknown>({
                 allowInsert={false}
                 onDelete={handleDelete}
             >
+                {/* Sorted mode indicator */}
+                {!isDraggable && (
+                    <div className="px-2 py-0.5 text-xs text-muted-foreground bg-muted/50 rounded border border-muted-foreground/20 whitespace-nowrap">
+                        Sorted
+                    </div>
+                )}
+
                 {/* Block content */}
                 <div className="flex-1 overflow-hidden" {...attributes} {...listeners}>
                     {render(item)}

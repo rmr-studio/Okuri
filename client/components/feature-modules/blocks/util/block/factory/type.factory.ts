@@ -383,6 +383,6 @@ export const createContentBlockListType = (organisationId?: string): BlockType =
         },
         nesting: {
             max: undefined,
-            allowedTypes: ALL_BLOCK_COMPONENT_TYPES, // Default, overridden by listConfig
+            allowedTypes: ["project_task"], // Default, overridden by listConfig
         },
     });
