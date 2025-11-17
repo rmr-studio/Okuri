@@ -23,8 +23,8 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { ReactNode, useCallback, useEffect, useRef } from "react";
-import { useBlockEnvironment } from "../../../context/block-environment-provider";
 import { useBlockFocus } from "../../../context/block-focus-provider";
+import { useTrackedEnvironment } from "../../../context/tracked-environment-provider";
 import { BlockListConfiguration, BlockNode } from "../../../interface/block.interface";
 import { ListPanel } from "./list.container";
 import { ListItem } from "./list.item";
@@ -45,8 +45,8 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     children = [],
     render,
 }) => {
-    const { reorderBlock } = useBlockEnvironment();
-    const { acquireLock, releaseLock } = useBlockFocus();
+    const { reorderTrackedBlock } = useTrackedEnvironment();
+    const { acquireLock } = useBlockFocus();
 
     const dragLockRef = useRef<(() => void) | null>(null);
 
@@ -99,12 +99,15 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                     const newOrder = arrayMove(children, oldIndex, newIndex);
                     const targetIndex = newOrder.findIndex((child) => child.block.id === active.id);
 
-                    // Call reorderBlock to update the environment
-                    reorderBlock(active.id as string, id, targetIndex);
+                    // Call reorderTrackedBlock to update the environment and record operation
+                    reorderTrackedBlock(active.id as string, id, targetIndex);
+                    console.log(
+                        `📋 Reordered block ${active.id} in list ${id}: ${oldIndex} → ${targetIndex}`
+                    );
                 }
             }
         },
-        [children, id, reorderBlock]
+        [children, id, reorderTrackedBlock, releaseDragLock]
     );
 
     const isManualMode = config.order.mode === "MANUAL";

@@ -70,8 +70,11 @@ export enum LayoutCommandType {
     /** Resizing a block (width/height change) */
     RESIZE_BLOCK = "RESIZE_BLOCK",
 
-    /** Repositioning a block within same parent (x/y change) */
+    /** Repositioning a block within same parent (x/y change in GridStack) */
     REPOSITION_BLOCK = "REPOSITION_BLOCK",
+
+    /** Reordering a block within a list (orderIndex change) */
+    REORDER_BLOCK = "REORDER_BLOCK",
 
     /** Updating block content/configuration */
     UPDATE_BLOCK = "UPDATE_BLOCK",
@@ -93,6 +96,8 @@ export function isStructuralCommand(type: LayoutCommandType): boolean {
         LayoutCommandType.ADD_BLOCK,
         LayoutCommandType.REMOVE_BLOCK,
         LayoutCommandType.MOVE_BLOCK,
+        LayoutCommandType.UPDATE_BLOCK,
+        LayoutCommandType.REORDER_BLOCK,
     ].includes(type);
 }
 
@@ -194,13 +199,15 @@ export type StructuralOperationType =
     | LayoutCommandType.ADD_BLOCK
     | LayoutCommandType.REMOVE_BLOCK
     | LayoutCommandType.MOVE_BLOCK
-    | LayoutCommandType.UPDATE_BLOCK;
+    | LayoutCommandType.UPDATE_BLOCK
+    | LayoutCommandType.REORDER_BLOCK; // For list reordering (orderIndex changes)
 
 export type StructuralOperationData =
     | AddBlockOperation
     | RemoveBlockOperation
     | MoveBlockOperation
-    | UpdateBlockOperation;
+    | UpdateBlockOperation
+    | ReorderBlockOperation;
 
 export interface AddBlockOperation {
     type: "ADD_BLOCK";
@@ -227,6 +234,14 @@ export interface UpdateBlockOperation {
     type: "UPDATE_BLOCK";
     blockId: string;
     updatedContent: BlockNode;
+}
+
+export interface ReorderBlockOperation {
+    type: "REORDER_BLOCK";
+    blockId: string;
+    parentId: string;
+    fromIndex: number;
+    toIndex: number;
 }
 
 /**
