@@ -10,7 +10,7 @@ import {
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import React, { useMemo, useState } from "react";
 
-import { revokeInvite } from "@/components/feature-modules/organisation/controller/organisation.controller";
+import { revokeInvite } from "@/components/feature-modules/organisation/service/organisation.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

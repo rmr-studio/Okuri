@@ -180,6 +180,56 @@ export interface ConflictResolution {
 }
 
 /**
+ * Serializable operation record for audit trail
+ * Only tracks structural changes - layout changes are captured in GridStack snapshot
+ */
+export interface StructuralOperationRecord {
+    id: string;
+    type: StructuralOperationType;
+    timestamp: number;
+    data: StructuralOperationData;
+}
+
+export type StructuralOperationType =
+    | LayoutCommandType.ADD_BLOCK
+    | LayoutCommandType.REMOVE_BLOCK
+    | LayoutCommandType.MOVE_BLOCK
+    | LayoutCommandType.UPDATE_BLOCK;
+
+export type StructuralOperationData =
+    | AddBlockOperation
+    | RemoveBlockOperation
+    | MoveBlockOperation
+    | UpdateBlockOperation;
+
+export interface AddBlockOperation {
+    type: "ADD_BLOCK";
+    blockId: string;
+    block: BlockNode;
+    parentId: string | null;
+    index?: number | null;
+}
+
+export interface RemoveBlockOperation {
+    type: "REMOVE_BLOCK";
+    blockId: string;
+    previousParentId: string | null;
+}
+
+export interface MoveBlockOperation {
+    type: "MOVE_BLOCK";
+    blockId: string;
+    fromParentId: string | null;
+    toParentId: string | null;
+}
+
+export interface UpdateBlockOperation {
+    type: "UPDATE_BLOCK";
+    blockId: string;
+    updatedContent: BlockNode;
+}
+
+/**
  * Response from backend when saving layout
  */
 export interface SaveLayoutResponse {

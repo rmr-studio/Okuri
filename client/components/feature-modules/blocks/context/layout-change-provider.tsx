@@ -12,8 +12,11 @@ import {
     useRef,
     useState,
 } from "react";
-import { LayoutSnapshot, SaveLayoutResponse } from "../interface/command.interface";
-import { EditorEnvironment } from "../interface/editor.interface";
+import {
+    LayoutSnapshot,
+    SaveLayoutResponse,
+    StructuralOperationRecord,
+} from "../interface/command.interface";
 import { cloneEnvironment } from "../util/environment/environment.util";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
@@ -89,6 +92,8 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         hasUnsavedChanges,
         setBaselineSnapshot,
         getBaselineSnapshot,
+        getStructuralOperations,
+        clearStructuralOperations,
     } = useLayoutHistory();
 
     const [publishedVersion, setPublishedVersion] = useState(blockTreeLayout?.version ?? 0);
@@ -287,13 +292,18 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 return false;
             }
 
+            // Get structural operations since last save
+            const operations = getStructuralOperations();
+
+            console.log(`💾 Saving layout with ${operations.length} structural operations`);
+
             // TODO: Call backend with version control
             // For now, simulate the response
             const response: SaveLayoutResponse = await saveBlockEnvironment(
                 layoutId,
                 currentLayout,
-                environment,
-                publishedVersion
+                publishedVersion,
+                operations
             );
 
             if (response.conflict) {
@@ -330,6 +340,9 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             setBaselineSnapshot(snapshot);
             updatePublishedVersion(nextVersion);
 
+            // Clear operations on successful save
+            clearStructuralOperations();
+
             requestAnimationFrame(() => {
                 discardLayoutChanges();
             });
@@ -356,6 +369,8 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         setBaselineSnapshot,
         updatePublishedVersion,
         discardLayoutChanges,
+        getStructuralOperations,
+        clearStructuralOperations,
     ]);
 
     /**
@@ -412,12 +427,14 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                         return false;
                     }
 
+                    const operations = getStructuralOperations();
+
                     // TODO: Send force save to backend with latest version number
                     const response: SaveLayoutResponse = await saveBlockEnvironment(
                         layoutId!,
                         currentLayout,
-                        environment,
                         conflictData.latestVersion!,
+                        operations,
                         true // force flag
                     );
 
@@ -432,6 +449,10 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
                         setBaselineSnapshot(snapshot);
                         updatePublishedVersion(nextVersion);
+
+                        // Clear operations on successful save
+                        clearStructuralOperations();
+
                         requestAnimationFrame(() => {
                             discardLayoutChanges();
                         });
@@ -465,9 +486,12 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             discardLayoutChanges,
             setBaselineSnapshot,
             updatePublishedVersion,
+            getStructuralOperations,
+            clearStructuralOperations,
         ]
     );
 
+    // TODO: Uncomment this eventually
     /**
      * Warn user before leaving page if there are unsaved changes
      */
@@ -519,6 +543,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     return <LayoutChangeContext.Provider value={value}>{children}</LayoutChangeContext.Provider>;
 };
 
+// Todo: Set up a more efficient and accurate diffing mechanism
 function areLayoutsEqual(a: GridStackOptions, b: GridStackOptions): boolean {
     try {
         return JSON.stringify(a) === JSON.stringify(b);
@@ -531,15 +556,21 @@ function areLayoutsEqual(a: GridStackOptions, b: GridStackOptions): boolean {
 async function saveBlockEnvironment(
     layoutId: string,
     layout: GridStackOptions,
-    environment: EditorEnvironment,
     currentVersion: number,
+    operations: StructuralOperationRecord[],
     force: boolean = false
 ): Promise<SaveLayoutResponse> {
     // Simulate network delay
-    console.log(environment);
+    console.log("💾 Saving layout:", {
+        layoutId,
+        version: currentVersion,
+        operationCount: operations.length,
+        operations,
+    });
+    console.log(operations);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Simulate 10% chance of conflict (for testing)
+    // Simulate 5% chance of conflict (for testing)
     const hasConflict = !force && Math.random() < 0.05;
 
     if (hasConflict) {
@@ -547,7 +578,7 @@ async function saveBlockEnvironment(
             success: false,
             conflict: true,
             latestLayout: layout, // In real scenario, this would be from backend
-            latestEnvironment: environment,
+            // latestEnvironment: environment,
             latestVersion: currentVersion + 1,
             lastModifiedBy: "john@example.com",
             lastModifiedAt: new Date().toISOString(),

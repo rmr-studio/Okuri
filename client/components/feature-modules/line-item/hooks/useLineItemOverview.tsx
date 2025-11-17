@@ -1,4 +1,4 @@
-import { getLineItemById } from "@/components/feature-modules/line-item/controller/lineitem.controller";
+import { getLineItemById } from "@/components/feature-modules/line-item/service/item.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";

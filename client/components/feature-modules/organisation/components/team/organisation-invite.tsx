@@ -8,8 +8,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { inviteToOrganisation } from "@/components/feature-modules/organisation/controller/organisation.controller";
 import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
+import { inviteToOrganisation } from "@/components/feature-modules/organisation/service/organisation.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";

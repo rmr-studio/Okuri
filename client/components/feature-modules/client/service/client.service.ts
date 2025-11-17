@@ -8,8 +8,8 @@ import {
     UpdateClientResponse,
 } from "@/components/feature-modules/client/interface/client.interface";
 import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
-import { handleError, validateSession, validateUuid } from "@/lib/util/controller/controller.util";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
+import { handleError, validateSession, validateUuid } from "@/lib/util/service/service.util";
 import { api } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
 

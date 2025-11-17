@@ -1,11 +1,11 @@
 "use client";
 
-import { createClient } from "@/components/feature-modules/client/controller/client.controller";
 import {
     Client,
     ClientCreationRequest,
     TemplateClientTemplateFieldStructure,
 } from "@/components/feature-modules/client/interface/client.interface";
+import { createClient } from "@/components/feature-modules/client/service/client.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { useOrganisation } from "@/hooks/useOrganisation";

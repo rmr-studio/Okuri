@@ -1,4 +1,4 @@
-import { getClient } from "@/components/feature-modules/client/controller/client.controller";
+import { getClient } from "@/components/feature-modules/client/service/client.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";

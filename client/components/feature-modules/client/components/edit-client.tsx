@@ -1,8 +1,8 @@
 "use client";
 
-import { updateClient } from "@/components/feature-modules/client/controller/client.controller";
 import { useClient } from "@/components/feature-modules/client/hooks/useClient";
 import { UpdateClientRequest } from "@/components/feature-modules/client/interface/client.interface";
+import { updateClient } from "@/components/feature-modules/client/service/client.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { useOrganisation } from "@/hooks/useOrganisation";
