@@ -2,7 +2,7 @@ package okuri.core.models.block.request
 
 import okuri.core.models.block.layout.TreeLayout
 
-data class SaveLayoutSnapshotRequest(
+data class SaveEnvironmentRequest(
     val layoutId: String,
     val layout: TreeLayout,
     val version: Int,

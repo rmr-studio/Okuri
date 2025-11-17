@@ -7,7 +7,6 @@ import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.display.BlockDisplay
 import okuri.core.models.block.display.BlockTypeNesting
-import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.models.block.validation.BlockSchema
 import org.hibernate.annotations.Type
 import java.util.*

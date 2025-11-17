@@ -5,7 +5,6 @@ import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.organisation.OrganisationRoles
-import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.repository.block.BlockTypeRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService

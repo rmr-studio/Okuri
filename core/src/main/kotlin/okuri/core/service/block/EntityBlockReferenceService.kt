@@ -1,8 +1,6 @@
 package okuri.core.service.block
 
 import okuri.core.enums.core.EntityType
-import okuri.core.models.block.request.AttachBlockRequest
-import okuri.core.models.block.request.DetachBlockRequest
 import okuri.core.models.block.tree.BlockTree
 import okuri.core.repository.block.EntityBlockReferenceRepository
 import org.springframework.stereotype.Service

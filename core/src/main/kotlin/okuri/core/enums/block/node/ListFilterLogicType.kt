@@ -1,6 +1,6 @@
 package okuri.core.enums.block.node
 
-enum class ListFilterSpec {
+enum class ListFilterLogicType {
     AND,
     OR
 }

@@ -1,5 +1,6 @@
 package okuri.core.models.block.metadata
 
+import okuri.core.enums.block.node.ListFilterLogicType
 import okuri.core.enums.block.structure.BlockListOrderingMode
 
 interface ListMetadata<T> {
@@ -13,7 +14,8 @@ data class OrderingConfig(
     val mode: BlockListOrderingMode = BlockListOrderingMode.MANUAL,
     // Used when mode=SORTED
     val sort: SortSpec? = null,
-    val filters: List<FilterSpec>? = null
+    val filters: List<FilterSpec>? = null,
+    val filterLogic: ListFilterLogicType? = null,
 )
 
 

@@ -9,7 +9,6 @@ import okuri.core.enums.util.OperationType
 import okuri.core.models.block.Block
 import okuri.core.models.block.Reference
 import okuri.core.models.block.metadata.*
-import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.tree.*
 import okuri.core.models.common.json.JsonObject
 import okuri.core.repository.block.BlockRepository

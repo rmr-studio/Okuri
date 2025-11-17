@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import okuri.core.models.block.BlockType
-import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.service.block.BlockTypeService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

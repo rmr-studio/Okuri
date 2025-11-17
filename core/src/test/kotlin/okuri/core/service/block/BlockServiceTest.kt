@@ -12,7 +12,6 @@ import okuri.core.models.block.Block
 import okuri.core.models.block.Reference
 import okuri.core.models.block.display.BlockTypeNesting
 import okuri.core.models.block.metadata.*
-import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.tree.BlockTreeReference
 import okuri.core.models.block.tree.ContentNode
 import okuri.core.models.block.tree.EntityReference

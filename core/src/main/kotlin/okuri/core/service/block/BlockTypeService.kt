@@ -5,7 +5,6 @@ import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.activity.Activity
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.BlockType
-import okuri.core.models.block.request.CreateBlockTypeRequest
 import okuri.core.repository.block.BlockTypeRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
