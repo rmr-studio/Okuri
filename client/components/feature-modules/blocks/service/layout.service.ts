@@ -1,4 +1,5 @@
 import { GridStackOptions } from "gridstack";
+import { StructuralOperationRecord } from "../interface/command.interface";
 import { BlockTreeLayout } from "../interface/layout.interface";
 
 /**
@@ -64,7 +65,10 @@ export class LayoutService {
      */
     static async saveLayoutSnapshot(
         layoutId: string,
-        layout: GridStackOptions
+        layout: GridStackOptions,
+        currentVersion: number,
+        operations: StructuralOperationRecord[],
+        force: boolean = false
     ): Promise<void> {
         console.log(`[STUB] LayoutService.saveLayoutSnapshot(${layoutId})`, layout);
         // TODO: Implement with TanStack Query mutation

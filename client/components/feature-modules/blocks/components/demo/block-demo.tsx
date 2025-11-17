@@ -16,10 +16,10 @@ import "../../styles/gridstack-custom.css";
 
 import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/block-focus-provider";
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
-import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { LayoutChangeProvider } from "@/components/feature-modules/blocks/context/layout-change-provider";
+import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { BlockTreeLayout, EntityType, LayoutScope } from "../../interface/layout.interface";
 import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-handler";
 
@@ -30,8 +30,8 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
-import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
 import { LayoutHistoryProvider } from "../../context/layout-history-provider";
+import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import {
     BlockComponentNode,
@@ -138,12 +138,12 @@ const BlockEnvironmentWorkspace: React.FC = () => {
 
     return (
         <>
-            <BlockFocusProvider>
-                <BlockEditProvider>
-                    <GridProvider initialOptions={gridOptions}>
-                        <LayoutHistoryProvider>
-                            <LayoutChangeProvider>
-                                <TrackedEnvironmentProvider>
+            <GridProvider initialOptions={gridOptions}>
+                <LayoutHistoryProvider>
+                    <LayoutChangeProvider>
+                        <TrackedEnvironmentProvider>
+                            <BlockFocusProvider>
+                                <BlockEditProvider>
                                     <EditModeIndicator />
                                     <KeyboardNavigationHandler />
                                     <WorkspaceToolbar />
@@ -153,12 +153,12 @@ const BlockEnvironmentWorkspace: React.FC = () => {
                                         <BlockRenderer />
                                     </GridContainerProvider>
                                     <BlockEditDrawer />
-                                </TrackedEnvironmentProvider>
-                            </LayoutChangeProvider>
-                        </LayoutHistoryProvider>
-                    </GridProvider>
-                </BlockEditProvider>
-            </BlockFocusProvider>
+                                </BlockEditProvider>
+                            </BlockFocusProvider>
+                        </TrackedEnvironmentProvider>
+                    </LayoutChangeProvider>
+                </LayoutHistoryProvider>
+            </GridProvider>
             <DebugInfo />
         </>
     );
