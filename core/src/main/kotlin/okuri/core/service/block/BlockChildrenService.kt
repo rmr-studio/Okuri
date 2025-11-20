@@ -29,10 +29,15 @@ class BlockChildrenService(
      * Public read operations
      * ========================= */
 
-    /** Returns the ordered list of children in a single slot. */
+    /** Returns the ordered list of children */
     fun listChildren(parentId: UUID): List<BlockChildEntity> =
         edgeRepository.findByParentIdOrderByOrderIndexAsc(parentId)
 
+    /** Returns a map of parentId to their ordered list of children */
+    fun getChildrenForBlocks(blockIds: Collection<UUID>): Map<UUID, List<BlockChildEntity>> {
+        val edges = edgeRepository.findByParentIdInOrderByParentIdAndOrderIndex(blockIds)
+        return edges.groupBy { it.parentId }
+    }
 
     /* =========================
      * Helpers / Validation

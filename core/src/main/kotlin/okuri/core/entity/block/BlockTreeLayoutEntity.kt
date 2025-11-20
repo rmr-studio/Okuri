@@ -58,6 +58,9 @@ data class BlockTreeLayoutEntity(
     @Column(name = "organisation_id", nullable = false, columnDefinition = "uuid")
     val organisationId: UUID,
 
+    @Column(name = "version", nullable = false)
+    var version: Int = 1,
+
     /**
      * Scope of this layout (ORGANIZATION, USER, or TEAM)
      */
@@ -89,6 +92,7 @@ data class BlockTreeLayoutEntity(
             organisationId = this.organisationId,
             scope = this.scope,
             layout = this.layout,
+            version = this.version,
             createdAt = if (audit) this.createdAt else null,
             updatedAt = if (audit) this.updatedAt else null,
             createdBy = if (audit) this.createdBy else null,

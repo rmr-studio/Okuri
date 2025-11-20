@@ -12,6 +12,7 @@ data class BlockTreeLayout(
     val organisationId: UUID,
     val scope: LayoutScope,
     val layout: TreeLayout,
+    val version: Int = 1,
     // Keep these hidden unless within an internal organisation context
     override val createdAt: ZonedDateTime? = null,
     override val updatedAt: ZonedDateTime? = null,

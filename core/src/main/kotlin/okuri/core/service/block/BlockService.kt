@@ -199,8 +199,22 @@ class BlockService(
         return saved.toModel()
     }
 
-    // ---------- READ (tree) ----------
-    fun getBlock(blockId: UUID): BlockTree {
+
+    // ---------- READ ----------
+    fun getBlock(blockId: UUID): BlockEntity {
+        return blockRepository.findById(blockId).orElseThrow()
+    }
+
+    fun getBlocks(blockIds: Set<UUID>): Map<UUID, BlockEntity> {
+        return blockRepository.findAllById(blockIds)
+            .mapNotNull { block ->
+                val id = block.id ?: return@mapNotNull null
+                id to block
+            }
+            .toMap()
+    }
+
+    fun getBlockTree(blockId: UUID): BlockTree {
         val root = blockRepository.findById(blockId).orElseThrow()
         val node = buildNode(root.toModel(), visited = mutableSetOf())
         return BlockTree(
@@ -221,7 +235,7 @@ class BlockService(
                     if (it == BlockReferenceFetchPolicy.LAZY || edge == null) return@let ref
 
                     // Build block tree for EAGER fetch
-                    val tree = getBlock(ref.entityId)
+                    val tree = getBlockTree(ref.entityId)
                     ref.copy(
                         entity = tree,
                         warning = null,

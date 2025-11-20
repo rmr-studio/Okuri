@@ -26,7 +26,7 @@ class OrganisationSecurity {
 
     }
 
-    fun hasOrg(organisationId: UUID): Boolean {
+    fun hasOrg(organisationId: UUID?): Boolean {
         SecurityContextHolder.getContext().authentication.let {
             if (it == null || !it.isAuthenticated) {
                 return false
@@ -38,7 +38,7 @@ class OrganisationSecurity {
             return it.authorities.any { claim -> claim.authority.startsWith("ROLE_$organisationId") }
         }
     }
-    
+
     fun hasOrgRoleOrHigher(
         organisationId: UUID,
         targetRole: OrganisationRoles

@@ -558,7 +558,7 @@ class BlockServiceTest {
 
         whenever(blockChildrenService.listChildren(rootId)).thenReturn(edges)
 
-        val tree = service.getBlock(rootId)
+        val tree = service.getBlockTree(rootId)
 
         assertNotNull(tree)
         assertTrue(tree.root is ContentNode)
@@ -595,7 +595,7 @@ class BlockServiceTest {
 
         whenever(blockChildrenService.listChildren(blockId)).thenReturn(edges)
 
-        val tree = service.getBlock(blockId)
+        val tree = service.getBlockTree(blockId)
 
         // Should detect cycle
 
@@ -920,7 +920,7 @@ class BlockServiceTest {
         whenever(blockReferenceService.findListReferences(blockId, entity.payload as EntityReferenceMetadata))
             .thenReturn(references)
 
-        val tree = service.getBlock(blockId)
+        val tree = service.getBlockTree(blockId)
 
         assertNotNull(tree)
         assertTrue(tree.root is ReferenceNode)
@@ -973,7 +973,7 @@ class BlockServiceTest {
         whenever(blockReferenceService.findBlockLink(blockId, entity.payload as BlockReferenceMetadata))
             .thenReturn(blockRef to edge)
 
-        val tree = service.getBlock(blockId)
+        val tree = service.getBlockTree(blockId)
         assertNotNull(tree).run {
             this.root.run {
                 assertIs<ReferenceNode>(this).run {

@@ -9,7 +9,7 @@ enum class Activity {
     INVOICE,
     BLOCK,
     BLOCK_TYPE,
-    BLOCK_LINK,
+    BLOCK_OPERATION,
     COMPANY,
     REPORT,
     TEMPLATE

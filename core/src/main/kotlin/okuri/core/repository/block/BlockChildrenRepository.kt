@@ -20,4 +20,16 @@ interface BlockChildrenRepository : JpaRepository<BlockChildEntity, UUID> {
         """
     )
     fun findParentIdsByChildId(childId: UUID): List<UUID>
+
+    @Query(
+        """
+    select e
+    from BlockChildEntity e
+    where e.parentId in :parentIds
+    order by e.parentId, e.orderIndex asc
+    """
+    )
+    fun findByParentIdInOrderByParentIdAndOrderIndex(
+        parentIds: Collection<UUID>
+    ): List<BlockChildEntity>
 }

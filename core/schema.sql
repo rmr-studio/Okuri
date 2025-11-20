@@ -350,7 +350,8 @@ create table public.block_tree_layouts
     entity_id       uuid        not null, -- id of client, line item, etc,
     entity_type     varchar(50) not null, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
     scope           varchar(50) not null, -- e.g. "ORGANISATION", "TEAM", "USER"
-    owner_id        uuid,                 -- null for organisation-wide, team id for team, user id for user
+    owner_id        uuid,                 -- null for organisation-wide, team id for team, user id for user,
+    version         integer     not null     default 1,
     created_at      timestamp with time zone default current_timestamp,
     updated_at      timestamp with time zone default current_timestamp,
     "created_by"    uuid        references public.users (id) ON DELETE SET NULL,
@@ -433,6 +434,28 @@ ALTER TABLE public.line_item
 
 create index if not exists idx_line_item_organisation_id
     on public.line_item (organisation_id);
+
+-- Logs
+create table if not exists "activity_logs"
+(
+    "id"              uuid primary key         not null default uuid_generate_v4(),
+    "activity"        varchar(100)             not null,
+    "operation"       varchar(10)              not null check (operation in
+                                                               ('CREATE', 'UPDATE', 'DELETE', 'READ', 'ARCHIVE',
+                                                                'RESTORE')),
+    "organisation_id" uuid                     not null references public.organisations (id) on delete cascade,
+    "user_id"         uuid                     references public.users (id) on delete set null,
+    "entity_type"     varchar(50)              not null,
+    "entity_id"       uuid,
+    "details"         JSONB                    not null default '{}'::jsonb,
+    "timestamp"       timestamp with time zone not null default current_timestamp
+);
+
+create index if not exists idx_activity_logs_organisation_id
+    on public.activity_logs (organisation_id);
+
+create index if not exists idx_activity_logs_user_id
+    on public.activity_logs (user_id);
 
 
 -- Invoice

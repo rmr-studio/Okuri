@@ -4,8 +4,7 @@ import okuri.core.entity.block.BlockTreeLayoutEntity
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.layout.TreeLayout
 import okuri.core.repository.block.BlockTreeLayoutRepository
-import okuri.core.service.auth.AuthTokenService
-import org.springframework.security.access.prepost.PostAuthorize
+import okuri.core.util.ServiceUtil.findOrThrow
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -23,8 +22,13 @@ import java.util.*
 @Service
 class BlockTreeLayoutService(
     private val layoutRepository: BlockTreeLayoutRepository,
-    private val authTokenService: AuthTokenService
 ) {
+
+    fun fetchLayoutById(
+        id: UUID,
+    ): BlockTreeLayoutEntity {
+        return findOrThrow { layoutRepository.findById(id) }
+    }
 
     /**
      * Resolves the appropriate layout for a page given a user context.
@@ -36,7 +40,6 @@ class BlockTreeLayoutService(
      * @param entityId The page to find a layout for
      * @return The resolved layout, or null if no layout exists
      */
-    @PostAuthorize("@organisationSecurity.hasOrg(returnObject?.organisationId)")
     fun fetchPageLayouts(
         entityId: UUID,
         entityType: EntityType,
@@ -53,12 +56,26 @@ class BlockTreeLayoutService(
      * @return The saved layout entity
      */
     @Transactional
-    fun saveOrganizationLayout(
+    fun saveLayout(
         blockId: UUID,
         organisationId: UUID,
         layout: TreeLayout
     ): BlockTreeLayoutEntity {
         TODO()
+    }
+
+    @Transactional
+    fun updateLayoutSnapshot(
+        prev: BlockTreeLayoutEntity,
+        layout: TreeLayout,
+        version: Int
+    ): BlockTreeLayoutEntity {
+        prev.apply {
+            this.layout = layout
+            this.version = version
+        }.run {
+            return layoutRepository.save(this)
+        }
     }
 
     /**
