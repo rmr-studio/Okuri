@@ -364,6 +364,29 @@ class BlockService(
         TODO()
     }
 
+    // ---------- BATCH OPERATIONS ----------
+
+    /**
+     * Batch save blocks - used for efficient bulk operations.
+     */
+    fun saveAll(blocks: List<BlockEntity>): List<BlockEntity> {
+        return blockRepository.saveAll(blocks).toList()
+    }
+
+    /**
+     * Batch delete blocks by IDs.
+     */
+    fun deleteAllById(blockIds: Set<UUID>) {
+        blockRepository.deleteAllById(blockIds)
+    }
+
+    /**
+     * Get BlockTypeEntity by ID - helper for ADD operations.
+     */
+    fun getBlockTypeEntity(typeId: UUID): BlockTypeEntity {
+        return blockTypeService.getById(typeId)
+    }
+
     // ---------- helpers ----------
     @Suppress("UNCHECKED_CAST")
     private fun deepMergeJson(a: Map<String, Any?>, b: Map<String, Any?>): Map<String, Any?> {

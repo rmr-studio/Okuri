@@ -66,49 +66,33 @@ class BlockEnvironmentService(
             // Fetch all involved blocks, references and children ahead of processing
             // Fetch blocks that have operations after normalization
             val blockIds = normalizedOperations.entries.filter { it.value.isNotEmpty() }.map { it.key }.toSet()
-
-            // Fetch references for blocks that were affected by re-parenting or re-ordering operations
-            val dependentBlockIds = normalizedOperations.entries.filter { entry ->
-                entry.value.any {
-                    it.data.type == BlockOperationType.MOVE_BLOCK ||
-                            it.data.type == BlockOperationType.REORDER_BLOCK
-                }
-            }.flatMap { entry ->
-                entry.value.filter {
-                    it.data.type == BlockOperationType.MOVE_BLOCK ||
-                            it.data.type == BlockOperationType.REORDER_BLOCK
-                }.flatMap {
-                    when (it.data) {
-                        is MoveBlockOperation -> listOfNotNull(it.data.fromParentId, it.data.toParentId)
-                        is ReorderBlockOperation -> listOf(it.data.parentId)
-                        else -> emptyList()
-                    }
-                }
-            }.toSet()
-
             val blocks: Map<UUID, BlockEntity> = blockService.getBlocks(blockIds)
-            val edges: Map<UUID, List<BlockChildEntity>> = blockChildrenService.getChildrenForBlocks(blockIds)
 
-            // 2a. Execute Operations
+            // 2a. Execute Operations and collect ID mappings
+            val allIdMappings = mutableMapOf<UUID, UUID>()
+
             normalizedOperations.entries.forEach { entry ->
                 val (blockId, operations) = entry
                 val block: BlockEntity? = blocks[blockId]
-                val childEdges: List<BlockChildEntity> = edges[blockId] ?: emptyList()
-                executeOperations(
-                    id = blockId,
+
+                val mappings = executeOperations(
                     operations = operations,
                     block = block,
-                    children = childEdges
                 )
+
+                allIdMappings.putAll(mappings)
             }
+
             // Save layout snapshot
             blockTreeLayoutService.updateLayoutSnapshot(layout, request.layout, request.version)
             return SaveEnvironmentResponse(
                 success = true,
                 conflict = false,
+                newVersion = request.version,
                 latestVersion = request.version,
                 lastModifiedAt = layout.updatedAt,
-                lastModifiedBy = layout.updatedBy?.toString()
+                lastModifiedBy = layout.updatedBy?.toString(),
+                idMappings = allIdMappings
             )
         }
     }
@@ -237,12 +221,190 @@ class BlockEnvironmentService(
     }
 
     private fun executeOperations(
-        id: UUID,
         operations: List<StructuralOperationRequest>,
         block: BlockEntity? = null,
-        children: List<BlockChildEntity>
-    ) {
+    ): Map<UUID, UUID> {
+        // PHASE 1: Handle REMOVE operations (cascade delete)
+        val removeOps = operations.filter { it.data.type == BlockOperationType.REMOVE_BLOCK }
+        if (removeOps.isNotEmpty()) {
+            val blockIdsToRemove = removeOps.map { it.data.blockId }.toSet()
+            val cascadeResult = blockChildrenService.prepareRemovalCascade(blockIdsToRemove)
 
+            // Batch delete children entities
+            if (cascadeResult.childEntitiesToDelete.isNotEmpty()) {
+                blockChildrenService.deleteAllInBatch(cascadeResult.childEntitiesToDelete)
+            }
+
+            // Batch delete blocks
+            if (cascadeResult.blocksToDelete.isNotEmpty()) {
+                blockService.deleteAllById(cascadeResult.blocksToDelete)
+            }
+
+            return emptyMap() // No ID mappings needed if block is deleted
+        }
+
+        // PHASE 2: Handle ADD operations (create blocks + children)
+        val addOps = operations.filter { it.data.type == BlockOperationType.ADD_BLOCK }
+            .map { it.data as AddBlockOperation }
+
+        val newBlocks = mutableListOf<BlockEntity>()
+        val childAdditions = mutableListOf<ChildAddition>()
+
+        addOps.forEach { addOp ->
+            val blockData = addOp.block.block
+            val blockTypeEntity = blockService.getBlockTypeEntity(blockData.type.id)
+
+            val entity = BlockEntity(
+                id = null, // Let DB generate new ID
+                organisationId = blockData.organisationId,
+                type = blockTypeEntity,
+                name = blockData.name,
+                payload = blockData.payload,
+                archived = false
+            )
+
+            newBlocks.add(entity)
+
+            // Track parent-child relationship if parent exists
+            addOp.parentId?.let { parentId ->
+                childAdditions.add(
+                    ChildAddition(
+                        childId = blockData.id, // Temporary ID, will be replaced after save
+                        parentId = parentId,
+                        index = addOp.index
+                    )
+                )
+            }
+        }
+
+        // Batch save new blocks
+        val savedBlocks = if (newBlocks.isNotEmpty()) {
+            blockService.saveAll(newBlocks)
+        } else {
+            emptyList()
+        }
+
+        // Map temporary IDs to real IDs
+        val idMapping = mutableMapOf<UUID, UUID>()
+        addOps.zip(savedBlocks).forEach { (addOp, savedBlock) ->
+            idMapping[addOp.blockId] = savedBlock.id!!
+        }
+
+        // Helper function to resolve IDs (temp -> real)
+        val resolveId: (UUID) -> UUID = { id -> idMapping[id] ?: id }
+
+        // Update child additions with real IDs (resolve both child and parent)
+        val resolvedChildAdditions = childAdditions.map { addition ->
+            addition.copy(
+                childId = resolveId(addition.childId),
+                parentId = resolveId(addition.parentId) // Also resolve parent in case it was newly added
+            )
+        }
+
+        // Batch save parent-child relationships
+        if (resolvedChildAdditions.isNotEmpty()) {
+            val allChildren = blockChildrenService.getChildrenForBlocks(
+                resolvedChildAdditions.map { it.parentId }.toSet()
+            )
+            val childEntities = blockChildrenService.prepareChildAdditions(
+                resolvedChildAdditions,
+                allChildren
+            )
+            if (childEntities.isNotEmpty()) {
+                blockChildrenService.saveAll(childEntities)
+            }
+        }
+
+        // PHASE 3: Handle UPDATE operations (modify existing blocks)
+        val updateOps = operations.filter { it.data.type == BlockOperationType.UPDATE_BLOCK }
+            .map { it.data as UpdateBlockOperation }
+
+        val blocksToUpdate = mutableListOf<BlockEntity>()
+        updateOps.forEach { updateOp ->
+            // Resolve block ID in case it was newly added
+            val resolvedBlockId = resolveId(updateOp.blockId)
+
+            // Try to find in existing blocks first, or in newly saved blocks
+            val existingBlock = block?.takeIf { it.id == resolvedBlockId }
+                ?: savedBlocks.find { it.id == resolvedBlockId }
+
+            existingBlock?.let { existing ->
+                val updatedContent = updateOp.updatedContent.block
+
+                // Update payload with new content
+                val updated = existing.copy(
+                    name = updatedContent.name ?: existing.name,
+                    payload = updatedContent.payload
+                )
+                blocksToUpdate.add(updated)
+            }
+        }
+
+        // Batch save updated blocks
+        if (blocksToUpdate.isNotEmpty()) {
+            blockService.saveAll(blocksToUpdate)
+        }
+
+        // PHASE 4: Handle MOVE operations (reparent blocks)
+        val moveOps = operations.filter { it.data.type == BlockOperationType.MOVE_BLOCK }
+            .map { it.data as MoveBlockOperation }
+
+        if (moveOps.isNotEmpty()) {
+            val moves = moveOps.map { moveOp ->
+                ChildMove(
+                    childId = resolveId(moveOp.blockId), // Resolve child ID
+                    fromParentId = moveOp.fromParentId?.let { resolveId(it) }, // Resolve parent IDs
+                    toParentId = moveOp.toParentId?.let { resolveId(it) },
+                    index = null // Index will be determined during move preparation
+                )
+            }
+
+            val affectedParents = moveOps.flatMap {
+                listOfNotNull(
+                    it.fromParentId?.let { resolveId(it) },
+                    it.toParentId?.let { resolveId(it) }
+                )
+            }.toSet()
+
+            val existingChildren = blockChildrenService.getChildrenForBlocks(affectedParents)
+            val moveResult = blockChildrenService.prepareChildMoves(moves, existingChildren)
+
+            // Batch delete old edges
+            if (moveResult.childEntitiesToDelete.isNotEmpty()) {
+                blockChildrenService.deleteAllInBatch(moveResult.childEntitiesToDelete)
+            }
+
+            // Batch save new edges
+            if (moveResult.childEntitiesToSave.isNotEmpty()) {
+                blockChildrenService.saveAll(moveResult.childEntitiesToSave)
+            }
+        }
+
+        // PHASE 5: Handle REORDER operations (change indices within parent)
+        val reorderOps = operations.filter { it.data.type == BlockOperationType.REORDER_BLOCK }
+            .map { it.data as ReorderBlockOperation }
+
+        if (reorderOps.isNotEmpty()) {
+            val reorders = reorderOps.map { reorderOp ->
+                ChildReorder(
+                    childId = resolveId(reorderOp.blockId), // Resolve child ID
+                    parentId = resolveId(reorderOp.parentId), // Resolve parent ID
+                    fromIndex = reorderOp.fromIndex,
+                    toIndex = reorderOp.toIndex
+                )
+            }
+
+            val affectedParents = reorders.map { resolveId(it.parentId) }.toSet()
+            val existingChildren = blockChildrenService.getChildrenForBlocks(affectedParents)
+            val reorderedEntities = blockChildrenService.prepareChildReorders(reorders, existingChildren)
+
+            // Batch save reordered edges
+            if (reorderedEntities.isNotEmpty()) {
+                blockChildrenService.saveAll(reorderedEntities)
+            }
+        }
+
+        return idMapping
     }
 
 

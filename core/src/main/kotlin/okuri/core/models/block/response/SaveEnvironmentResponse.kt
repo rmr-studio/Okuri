@@ -1,6 +1,7 @@
 package okuri.core.models.block.response
 
 import java.time.ZonedDateTime
+import java.util.*
 
 data class SaveEnvironmentResponse(
     val success: Boolean,
@@ -11,4 +12,6 @@ data class SaveEnvironmentResponse(
     val latestVersion: Int? = null,
     val lastModifiedBy: String? = null,
     val lastModifiedAt: ZonedDateTime? = null,
+    // Maps temporary client IDs to permanent database IDs for newly created blocks
+    val idMappings: Map<UUID, UUID> = emptyMap()
 )

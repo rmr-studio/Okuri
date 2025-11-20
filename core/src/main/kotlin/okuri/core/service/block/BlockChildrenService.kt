@@ -227,4 +227,273 @@ class BlockChildrenService(
             if (r.orderIndex != idx) edgeRepository.save(r.copy(orderIndex = idx))
         }
     }
+
+    /* =========================
+     * Batch Preparation Methods
+     * ========================= */
+
+    /**
+     * Recursively collects all descendant block IDs for cascade deletion.
+     * Returns a set of all block IDs that should be deleted (including the root blocks).
+     */
+    fun prepareRemovalCascade(blockIds: Set<UUID>): CascadeRemovalResult {
+        val toDelete = mutableSetOf<UUID>()
+        val queue = ArrayDeque(blockIds)
+        val visited = mutableSetOf<UUID>()
+
+        while (queue.isNotEmpty()) {
+            val currentId = queue.removeFirst()
+            if (!visited.add(currentId)) continue // Skip if already processed (cycle protection)
+
+            toDelete.add(currentId)
+
+            // Find all children of this block
+            val children = edgeRepository.findByParentIdOrderByOrderIndexAsc(currentId)
+            children.forEach { edge ->
+                queue.add(edge.childId)
+            }
+        }
+
+        // Collect all BlockChildEntity records to delete:
+        // 1. Where these blocks are parents (already handled by finding children above)
+        // 2. Where these blocks are children (edges pointing to them)
+        val childEntitiesToDelete = mutableListOf<BlockChildEntity>()
+
+        // Find all edges where blocks in toDelete are children
+        toDelete.forEach { blockId ->
+            edgeRepository.findByChildId(blockId)?.let { edge ->
+                childEntitiesToDelete.add(edge)
+            }
+        }
+
+        // Find all edges where blocks in toDelete are parents
+        val childrenOfDeleted = edgeRepository.findByParentIdInOrderByParentIdAndOrderIndex(toDelete)
+        childEntitiesToDelete.addAll(childrenOfDeleted)
+
+        return CascadeRemovalResult(
+            blocksToDelete = toDelete,
+            childEntitiesToDelete = childEntitiesToDelete.distinctBy { it.id }
+        )
+    }
+
+    /**
+     * Prepares BlockChildEntity records for blocks being added with parents.
+     * Handles both List blocks (with numerical indices) and layout containers (without).
+     */
+    fun prepareChildAdditions(
+        additions: List<ChildAddition>,
+        existingChildren: Map<UUID, List<BlockChildEntity>>
+    ): List<BlockChildEntity> {
+        val toSave = mutableListOf<BlockChildEntity>()
+
+        // Group additions by parent for efficient index management
+        val additionsByParent = additions.groupBy { it.parentId }
+
+        additionsByParent.forEach { (parentId, childAdditions) ->
+            val siblings = existingChildren[parentId]?.toMutableList() ?: mutableListOf()
+
+            childAdditions.forEach { addition ->
+                val insertAt = when (addition.index) {
+                    null -> null // No index for layout containers - let them append without order
+                    else -> addition.index.coerceIn(0, siblings.size)
+                }
+
+                val newEdge = BlockChildEntity(
+                    id = null,
+                    parentId = parentId,
+                    childId = addition.childId,
+                    orderIndex = insertAt ?: 0 // Use 0 as placeholder for non-ordered containers
+                )
+
+                if (insertAt != null) {
+                    // For List blocks, shift siblings and maintain order
+                    siblings.add(insertAt, newEdge)
+                } else {
+                    // For layout containers, just add without shifting
+                    siblings.add(newEdge)
+                }
+            }
+
+            // Renumber if any additions had indices (List blocks)
+            if (childAdditions.any { it.index != null }) {
+                siblings.forEachIndexed { idx, edge ->
+                    toSave.add(edge.copy(orderIndex = idx))
+                }
+            } else {
+                // For layout containers, just add the new edges
+                toSave.addAll(siblings.filter { it.id == null })
+            }
+        }
+
+        return toSave
+    }
+
+    /**
+     * Prepares move operations: removes old parent-child edges and creates new ones.
+     * Returns entities to delete and entities to save.
+     */
+    fun prepareChildMoves(
+        moves: List<ChildMove>,
+        existingChildren: Map<UUID, List<BlockChildEntity>>
+    ): MovePreparationResult {
+        val toDelete = mutableListOf<BlockChildEntity>()
+        val toSave = mutableListOf<BlockChildEntity>()
+
+        // Track modified parents for renumbering
+        val affectedOldParents = mutableMapOf<UUID, MutableList<BlockChildEntity>>()
+        val affectedNewParents = mutableMapOf<UUID, MutableList<BlockChildEntity>>()
+
+        moves.forEach { move ->
+            // Find and mark old edge for deletion
+            move.fromParentId?.let { oldParentId ->
+                existingChildren[oldParentId]?.find { it.childId == move.childId }?.let { oldEdge ->
+                    toDelete.add(oldEdge)
+
+                    // Track siblings in old parent for renumbering
+                    if (!affectedOldParents.containsKey(oldParentId)) {
+                        affectedOldParents[oldParentId] = existingChildren[oldParentId]
+                            ?.filter { it.childId != move.childId }
+                            ?.toMutableList() ?: mutableListOf()
+                    }
+                }
+            }
+
+            // Create new edge for new parent
+            move.toParentId?.let { newParentId ->
+                val newSiblings = affectedNewParents.getOrPut(newParentId) {
+                    existingChildren[newParentId]?.toMutableList() ?: mutableListOf()
+                }
+
+                val insertAt = move.index?.coerceIn(0, newSiblings.size) ?: newSiblings.size
+
+                val newEdge = BlockChildEntity(
+                    id = null,
+                    parentId = newParentId,
+                    childId = move.childId,
+                    orderIndex = insertAt
+                )
+
+                newSiblings.add(insertAt, newEdge)
+            }
+        }
+
+        // Renumber affected old parents (compact remaining children)
+        affectedOldParents.forEach { (parentId, siblings) ->
+            siblings.forEachIndexed { idx, edge ->
+                if (edge.orderIndex != idx) {
+                    toSave.add(edge.copy(orderIndex = idx))
+                }
+            }
+        }
+
+        // Renumber affected new parents (insert and shift)
+        affectedNewParents.forEach { (parentId, siblings) ->
+            siblings.forEachIndexed { idx, edge ->
+                toSave.add(edge.copy(orderIndex = idx))
+            }
+        }
+
+        return MovePreparationResult(
+            childEntitiesToDelete = toDelete,
+            childEntitiesToSave = toSave
+        )
+    }
+
+    /**
+     * Prepares reorder operations: updates order indices within the same parent.
+     * Returns entities to save with updated indices.
+     */
+    fun prepareChildReorders(
+        reorders: List<ChildReorder>,
+        existingChildren: Map<UUID, List<BlockChildEntity>>
+    ): List<BlockChildEntity> {
+        val toSave = mutableListOf<BlockChildEntity>()
+
+        // Group by parent for efficient processing
+        val reordersByParent = reorders.groupBy { it.parentId }
+
+        reordersByParent.forEach { (parentId, parentReorders) ->
+            val siblings = existingChildren[parentId]?.toMutableList() ?: return@forEach
+
+            parentReorders.forEach { reorder ->
+                val currentIndex = siblings.indexOfFirst { it.childId == reorder.childId }
+                if (currentIndex == -1) return@forEach
+
+                val boundedNewIndex = reorder.toIndex.coerceIn(0, siblings.size - 1)
+                if (currentIndex == boundedNewIndex) return@forEach
+
+                // Remove and reinsert
+                val edge = siblings.removeAt(currentIndex)
+                siblings.add(boundedNewIndex, edge)
+            }
+
+            // Renumber all siblings in this parent
+            siblings.forEachIndexed { idx, edge ->
+                toSave.add(edge.copy(orderIndex = idx))
+            }
+        }
+
+        return toSave
+    }
+
+    /**
+     * Validates that parent and child belong to the same organisation (critical constraint).
+     */
+    fun validateOrganisationBoundary(parent: BlockEntity, child: BlockEntity) {
+        require(parent.organisationId == child.organisationId) {
+            "Cannot attach child from different organisation (parent: ${parent.organisationId}, child: ${child.organisationId})"
+        }
+    }
+
+    /* =========================
+     * Batch persistence operations
+     * ========================= */
+
+    /**
+     * Batch delete child entities without individual SELECT queries.
+     */
+    fun deleteAllInBatch(entities: List<BlockChildEntity>) {
+        edgeRepository.deleteAllInBatch(entities)
+    }
+
+    /**
+     * Batch save child entities.
+     */
+    fun saveAll(entities: List<BlockChildEntity>): List<BlockChildEntity> {
+        return edgeRepository.saveAll(entities).toList()
+    }
 }
+
+/* =========================
+ * Data classes for batch operations
+ * ========================= */
+
+data class CascadeRemovalResult(
+    val blocksToDelete: Set<UUID>,
+    val childEntitiesToDelete: List<BlockChildEntity>
+)
+
+data class ChildAddition(
+    val childId: UUID,
+    val parentId: UUID,
+    val index: Int? // null for layout containers, set for List blocks
+)
+
+data class ChildMove(
+    val childId: UUID,
+    val fromParentId: UUID?,
+    val toParentId: UUID?,
+    val index: Int? = null
+)
+
+data class ChildReorder(
+    val childId: UUID,
+    val parentId: UUID,
+    val fromIndex: Int,
+    val toIndex: Int
+)
+
+data class MovePreparationResult(
+    val childEntitiesToDelete: List<BlockChildEntity>,
+    val childEntitiesToSave: List<BlockChildEntity>
+)
