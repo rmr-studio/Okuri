@@ -20,18 +20,20 @@ class EntityBlockReferenceService(
      *
      * @param request Details of the block to attach and where it should be attached (target entity, position, and any attachment metadata).
      */
-    fun attachBlock(request: AttachBlockRequest) {
-        TODO()
-    }
+    // TODO: Implement when AttachBlockRequest is defined
+    // fun attachBlock(request: AttachBlockRequest) {
+    //     TODO()
+    // }
 
     /**
      * Removes a block reference from an entity according to the provided request.
      *
      * @param request Details identifying the entity and the block reference to detach.
      */
-    fun detachBlock(request: DetachBlockRequest) {
-        TODO()
-    }
+    // TODO: Implement when DetachBlockRequest is defined
+    // fun detachBlock(request: DetachBlockRequest) {
+    //     TODO()
+    // }
 
     /**
      * Retrieve the block tree rooted at the specified entity.

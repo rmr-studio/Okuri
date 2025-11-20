@@ -4,6 +4,7 @@ import io.ktor.server.plugins.*
 import okuri.core.entity.client.ClientEntity
 import okuri.core.entity.company.CompanyEntity
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.models.client.Client
 import okuri.core.models.client.request.ClientCreationRequest
@@ -101,7 +102,11 @@ class ClientService(
                     operation = OperationType.CREATE,
                     userId = authTokenService.getUserId(),
                     organisationId = entity.organisationId,
-                    additionalDetails = "Created client with ID: ${entity.id}"
+                    entityType = EntityType.CLIENT,
+                    entityId = entity.id,
+                    details = mapOf(
+                        "clientId" to entity.id.toString()
+                    )
                 )
                 return entity.toModel()
             }
@@ -155,7 +160,11 @@ class ClientService(
                 operation = OperationType.DELETE,
                 userId = authTokenService.getUserId(),
                 organisationId = client.organisationId,
-                additionalDetails = "Deleted client with ID: ${client.id}"
+                entityType = EntityType.CLIENT,
+                entityId = client.id,
+                details = mapOf(
+                    "clientId" to client.id.toString()
+                )
             )
         }
     }
@@ -178,7 +187,12 @@ class ClientService(
                     operation = if (archive) OperationType.ARCHIVE else OperationType.RESTORE,
                     userId = authTokenService.getUserId(),
                     organisationId = this.organisationId,
-                    additionalDetails = "${if (archive) "Archived" else "Unarchived"} client with ID: ${this.id}"
+                    entityType = EntityType.CLIENT,
+                    entityId = this.id,
+                    details = mapOf(
+                        "clientId" to this.id.toString(),
+                        "archiveStatus" to archive
+                    )
                 )
                 return this.toModel()
             }

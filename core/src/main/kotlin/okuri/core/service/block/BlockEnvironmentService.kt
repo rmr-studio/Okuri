@@ -66,13 +66,25 @@ class BlockEnvironmentService(
             // Fetch all involved blocks, references and children ahead of processing
             // Fetch blocks that have operations after normalization
             val blockIds = normalizedOperations.entries.filter { it.value.isNotEmpty() }.map { it.key }.toSet()
-            // Fetch references for blocks that had re-parenting or re-ordering operations (need to fetch child entity refs)
-            normalizedOperations.entries.filter { entry ->
+
+            // Fetch references for blocks that were affected by re-parenting or re-ordering operations
+            val dependentBlockIds = normalizedOperations.entries.filter { entry ->
                 entry.value.any {
                     it.data.type == BlockOperationType.MOVE_BLOCK ||
                             it.data.type == BlockOperationType.REORDER_BLOCK
                 }
-            }.map { it.key }.toSet()
+            }.flatMap { entry ->
+                entry.value.filter {
+                    it.data.type == BlockOperationType.MOVE_BLOCK ||
+                            it.data.type == BlockOperationType.REORDER_BLOCK
+                }.flatMap {
+                    when (it.data) {
+                        is MoveBlockOperation -> listOfNotNull(it.data.fromParentId, it.data.toParentId)
+                        is ReorderBlockOperation -> listOf(it.data.parentId)
+                        else -> emptyList()
+                    }
+                }
+            }.toSet()
 
             val blocks: Map<UUID, BlockEntity> = blockService.getBlocks(blockIds)
             val edges: Map<UUID, List<BlockChildEntity>> = blockChildrenService.getChildrenForBlocks(blockIds)
@@ -162,7 +174,7 @@ class BlockEnvironmentService(
 
     }
 
-    private fun normalizeOperations(operations: List<StructuralOperationRequest>): Map<UUID, List<StructuralOperationRequest>> {
+    fun normalizeOperations(operations: List<StructuralOperationRequest>): Map<UUID, List<StructuralOperationRequest>> {
 
         // 2. Group by blockId
         return operations.groupBy { it.data.blockId }.values.flatMap { blockOperations ->
@@ -170,7 +182,7 @@ class BlockEnvironmentService(
         }.groupBy { it.data.blockId }
     }
 
-    private fun reduceBlockOperations(ops: List<StructuralOperationRequest>): List<StructuralOperationRequest> {
+    fun reduceBlockOperations(ops: List<StructuralOperationRequest>): List<StructuralOperationRequest> {
 
         // If block is added then removed → skip both
         val hasAdd = ops.any { it.data.type == BlockOperationType.ADD_BLOCK }

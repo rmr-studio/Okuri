@@ -5,6 +5,7 @@ import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
 import okuri.core.enums.block.structure.isStrict
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.Block
 import okuri.core.models.block.Reference
@@ -35,6 +36,8 @@ class BlockService(
     private val activityService: ActivityService
 ) {
     // ---------- CREATE ----------
+    // TODO: Uncomment when CreateBlockRequest is defined
+    /*
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     @Transactional
     fun createBlock(request: CreateBlockRequest): Block {
@@ -112,13 +115,18 @@ class BlockService(
                 operation = OperationType.CREATE,
                 userId = authTokenService.getUserId(),
                 organisationId = this.organisationId,
-                targetId = this.id,
-                additionalDetails = "Created Block '${this.id}' of type '${type.key}'"
+                entityType = EntityType.BLOCK,
+                entityId = this.id,
+                details = mapOf(
+                    "blockId" to this.id.toString(),
+                    "typeKey" to type.key
+                )
             )
 
             return this.toModel()
         }
     }
+    */
 
     // ---------- UPDATE ----------
     @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
@@ -192,8 +200,12 @@ class BlockService(
             operation = OperationType.UPDATE,
             userId = authTokenService.getUserId(),
             organisationId = saved.organisationId,
-            targetId = saved.id,
-            additionalDetails = "Updated Block '${saved.id}' of type '${saved.type.key}'"
+            entityType = EntityType.BLOCK,
+            entityId = saved.id,
+            details = mapOf(
+                "blockId" to saved.id.toString(),
+                "typeKey" to saved.type.key
+            )
         )
 
         return saved.toModel()
@@ -283,6 +295,8 @@ class BlockService(
     }
 
     // ---------- helpers ----------
+    // TODO: Uncomment when CreateBlockRequest is defined
+    /*
     private fun resolveType(request: CreateBlockRequest): BlockTypeEntity =
         when {
             request.typeId != null -> blockTypeService.getById(request.typeId)
@@ -294,6 +308,7 @@ class BlockService(
 
             else -> throw IllegalArgumentException("Either typeId or typeKey must be provided")
         }
+    */
 
     private fun dispatchReferenceUpsert(saved: BlockEntity, meta: ReferenceMetadata) {
         meta.let {
@@ -331,8 +346,12 @@ class BlockService(
             operation = if (status) OperationType.ARCHIVE else OperationType.RESTORE,
             userId = authTokenService.getUserId(),
             organisationId = updated.organisationId,
-            targetId = updated.id,
-            additionalDetails = "Block '${updated.id}' archive status set to $status"
+            entityType = EntityType.BLOCK,
+            entityId = updated.id,
+            details = mapOf(
+                "blockId" to updated.id.toString(),
+                "archiveStatus" to status
+            )
         )
     }
 

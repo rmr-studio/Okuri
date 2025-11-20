@@ -2,18 +2,26 @@ package okuri.core.service.util.factory.block
 
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
+import okuri.core.enums.block.node.NodeType
 import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.core.ComponentType
+import okuri.core.models.block.Block
+import okuri.core.models.block.BlockType
 import okuri.core.models.block.display.BlockComponentNode
 import okuri.core.models.block.display.BlockDisplay
 import okuri.core.models.block.display.BlockRenderStructure
 import okuri.core.models.block.display.BlockTypeNesting
 import okuri.core.models.block.metadata.BlockContentMetadata
 import okuri.core.models.block.metadata.BlockMeta
+import okuri.core.models.block.operation.*
+import okuri.core.models.block.request.StructuralOperationRequest
+import okuri.core.models.block.tree.ContentNode
+import okuri.core.models.block.tree.Node
 import okuri.core.models.block.validation.BlockFormStructure
 import okuri.core.models.block.validation.BlockSchema
 import okuri.core.models.common.grid.GridRect
 import okuri.core.models.common.grid.LayoutGrid
+import java.time.ZonedDateTime
 import java.util.*
 
 object BlockFactory {
@@ -98,5 +106,124 @@ object BlockFactory {
      */
     fun generateDisplay(): BlockDisplay = BlockDisplayFactory.display(
         render = BlockDisplayFactory.contactWithAccountSummary()
+    )
+
+    /**
+     * Creates a simple Block model for testing.
+     */
+    fun createBlockModel(
+        id: UUID = UUID.randomUUID(),
+        orgId: UUID,
+        type: BlockType,
+        name: String? = "Test Block",
+        payload: BlockContentMetadata = BlockContentMetadata(data = emptyMap(), meta = BlockMeta()),
+        archived: Boolean = false
+    ): Block = Block(
+        id = id,
+        name = name,
+        organisationId = orgId,
+        type = type,
+        payload = payload,
+        archived = archived
+    )
+
+    /**
+     * Creates a simple ContentNode for testing.
+     */
+    fun createNode(
+        orgId: UUID,
+        blockId: UUID = UUID.randomUUID(),
+        type: BlockType,
+        name: String? = "Test Node",
+        children: List<Node>? = null
+    ): ContentNode = ContentNode(
+        type = NodeType.CONTENT,
+        block = createBlockModel(
+            id = blockId,
+            orgId = orgId,
+            type = type,
+            name = name
+        ),
+        children = children
+    )
+
+    /**
+     * Creates an AddBlockOperation for testing.
+     */
+    fun createAddOperation(
+        blockId: UUID = UUID.randomUUID(),
+        orgId: UUID,
+        type: BlockType,
+        parentId: UUID? = null,
+        index: Int? = null
+    ): AddBlockOperation = AddBlockOperation(
+        blockId = blockId,
+        block = createNode(orgId = orgId, blockId = blockId, type = type),
+        parentId = parentId,
+        index = index
+    )
+
+    /**
+     * Creates a RemoveBlockOperation for testing.
+     */
+    fun createRemoveOperation(
+        blockId: UUID,
+        parentId: UUID? = null
+    ): RemoveBlockOperation = RemoveBlockOperation(
+        blockId = blockId,
+        parentId = parentId
+    )
+
+    /**
+     * Creates an UpdateBlockOperation for testing.
+     */
+    fun createUpdateOperation(
+        blockId: UUID,
+        orgId: UUID,
+        type: BlockType
+    ): UpdateBlockOperation = UpdateBlockOperation(
+        blockId = blockId,
+        updatedContent = createNode(orgId = orgId, blockId = blockId, type = type)
+    )
+
+    /**
+     * Creates a MoveBlockOperation for testing.
+     */
+    fun createMoveOperation(
+        blockId: UUID,
+        fromParentId: UUID? = null,
+        toParentId: UUID? = null
+    ): MoveBlockOperation = MoveBlockOperation(
+        blockId = blockId,
+        fromParentId = fromParentId,
+        toParentId = toParentId
+    )
+
+    /**
+     * Creates a ReorderBlockOperation for testing.
+     */
+    fun createReorderOperation(
+        blockId: UUID,
+        parentId: UUID,
+        fromIndex: Int,
+        toIndex: Int
+    ): ReorderBlockOperation = ReorderBlockOperation(
+        blockId = blockId,
+        parentId = parentId,
+        fromIndex = fromIndex,
+        toIndex = toIndex
+    )
+
+    /**
+     * Creates a StructuralOperationRequest for testing.
+     */
+    fun createOperationRequest(
+        operation: BlockOperation,
+        timestamp: ZonedDateTime = ZonedDateTime.now(),
+        id: UUID = UUID.randomUUID()
+    ): StructuralOperationRequest = StructuralOperationRequest(
+        id = id,
+        timestamp = timestamp,
+        data = operation
     )
 }

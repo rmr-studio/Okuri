@@ -6,6 +6,7 @@ import java.util.*
 
 data class AddBlockOperation(
     override val type: BlockOperationType = BlockOperationType.ADD_BLOCK,
+    // Temporary ID for the new block for local frontend referencing.. Will be replaced by the server with a permanent ID.
     override val blockId: UUID,
     val block: Node,
     val parentId: UUID? = null,

@@ -72,7 +72,7 @@ class BlockTypeServiceTest {
 
         whenever(blockTypeRepository.save(any<BlockTypeEntity>())).thenReturn(type)
 
-        val req = CreateBlockTypeRequest(
+        val req = okuri.core.models.block.request.CreateBlockTypeRequest(
             key = "invoice_header",
             name = "Invoice Header",
             description = "desc",
@@ -86,7 +86,11 @@ class BlockTypeServiceTest {
         verify(activityService).logActivity(
             activity = eq(okuri.core.enums.activity.Activity.BLOCK_TYPE),
             operation = eq(okuri.core.enums.util.OperationType.CREATE),
-            userId = any(), organisationId = eq(orgId), targetId = eq(saved.id), additionalDetails = any()
+            userId = any(),
+            organisationId = eq(orgId),
+            entityType = any(),
+            entityId = eq(saved.id),
+            details = any()
         )
 
         // Also capture what was saved to ensure request → entity mapping is sane
@@ -148,9 +152,10 @@ class BlockTypeServiceTest {
             activity = eq(okuri.core.enums.activity.Activity.BLOCK_TYPE),
             operation = eq(okuri.core.enums.util.OperationType.CREATE),
             userId = any(),
-            organisationId = eq(type.organisationId),
-            targetId = any(),
-            additionalDetails = Mockito.contains("forked to v4 from")
+            organisationId = eq(requireNotNull(type.organisationId)),
+            entityType = any(),
+            entityId = any(),
+            details = any()
         )
     }
 
@@ -181,9 +186,10 @@ class BlockTypeServiceTest {
             activity = eq(okuri.core.enums.activity.Activity.BLOCK_TYPE),
             operation = eq(okuri.core.enums.util.OperationType.ARCHIVE),
             userId = any(),
-            organisationId = eq(type.organisationId),
-            targetId = eq(type.id),
-            additionalDetails = Mockito.contains("archive=true")
+            organisationId = eq(requireNotNull(type.organisationId)),
+            entityType = any(),
+            entityId = eq(type.id),
+            details = any()
         )
     }
 
@@ -211,9 +217,10 @@ class BlockTypeServiceTest {
             activity = eq(okuri.core.enums.activity.Activity.BLOCK_TYPE),
             operation = eq(okuri.core.enums.util.OperationType.RESTORE),
             userId = any(),
-            organisationId = eq(existing.organisationId),
-            targetId = eq(existing.id),
-            additionalDetails = Mockito.contains("archive=false")
+            organisationId = eq(requireNotNull(existing.organisationId)),
+            entityType = any(),
+            entityId = eq(existing.id),
+            details = any()
         )
     }
 
@@ -232,6 +239,6 @@ class BlockTypeServiceTest {
         blockTypeService.archiveBlockType(existing.id!!, true)
 
         verify(blockTypeRepository, never()).save(any())
-        verify(activityService, never()).logActivity(any(), any(), any(), any(), any(), any())
+        verify(activityService, never()).logActivity(any(), any(), any(), any(), any(), any(), any(), any())
     }
 }
