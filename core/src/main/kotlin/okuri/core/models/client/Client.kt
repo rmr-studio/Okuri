@@ -6,7 +6,6 @@ import okuri.core.entity.util.AuditableModel
 import okuri.core.enums.client.ClientType
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Referenceable
-import okuri.core.models.block.tree.BlockTree
 import okuri.core.models.common.Contact
 import okuri.core.models.company.Company
 import java.time.ZonedDateTime
@@ -18,6 +17,8 @@ data class Client(
     override val type: EntityType = EntityType.CLIENT,
     val id: UUID,
     val organisationId: UUID,
+
+    // Basic compulsory details
     val name: String,
     var contact: Contact,
     var clientType: ClientType? = null,
@@ -25,8 +26,8 @@ data class Client(
     var company: Company? = null,
     var role: String? = null,
     var archived: Boolean = false,
-    var metadata: ClientTypeMetadata? = null,
-    var attributes: Map<String, BlockTree>? = null,
+    
+    // Auditing fields
     override val createdAt: ZonedDateTime? = null,
     override val updatedAt: ZonedDateTime? = null,
     override val createdBy: UUID? = null,

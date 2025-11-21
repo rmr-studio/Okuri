@@ -1,24 +1,31 @@
 package okuri.core.service.block
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.transaction.Transactional
 import okuri.core.entity.activity.ActivityLogEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.block.node.BlockReferenceWarning
 import okuri.core.enums.block.request.BlockOperationType
 import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
+import okuri.core.models.block.BlockEnvironment
+import okuri.core.models.block.layout.TreeLayout
+import okuri.core.models.block.layout.Widget
 import okuri.core.models.block.operation.*
 import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.request.StructuralOperationRequest
 import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
+import okuri.core.models.block.tree.BlockTree
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
+import okuri.core.service.client.ClientService
+import org.springframework.security.access.prepost.PostAuthorize
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
 import java.util.*
-import kotlin.collections.emptyList
 
 @Service
 class BlockEnvironmentService(
@@ -27,6 +34,8 @@ class BlockEnvironmentService(
     private val blockChildrenService: BlockChildrenService,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
+    private val defaultEnvironmentService: DefaultBlockEnvironmentService,
+    private val clientService: ClientService,
 ) {
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
@@ -161,6 +170,171 @@ class BlockEnvironmentService(
      */
     fun overwriteBlockEnvironment(request: OverwriteEnvironmentRequest): OverwriteEnvironmentResponse {
         throw NotImplementedError()
+    }
+
+    /**
+     * Loads the complete block environment for an entity.
+     * Implements lazy initialization - creates default environment if none exists.
+     *
+     * @param entityId The ID of the entity (e.g., client ID)
+     * @param entityType The type of entity (e.g., CLIENT, ORGANISATION)
+     * @return BlockEnvironment with layout, trees, and entity data
+     */
+    @PostAuthorize("@organisationSecurity.hasOrg(returnObject.layout.organisationId)")
+    fun loadBlockEnvironment(
+        entityId: UUID,
+        entityType: EntityType
+    ): BlockEnvironment {
+        // 1. Try to load existing layout, or create default if it doesn't exist
+        val layoutEntity = try {
+            blockTreeLayoutService.fetchLayoutForEntity(entityId, entityType)
+        } catch (e: NoSuchElementException) {
+            // Lazy initialization: create default environment
+            val organisationId = getOrganisationIdForEntity(entityId, entityType)
+            defaultEnvironmentService.createDefaultEnvironmentForEntity(
+                entityId = entityId,
+                entityType = entityType,
+                organisationId = organisationId
+            )
+            // Fetch the newly created layout
+            blockTreeLayoutService.fetchLayoutForEntity(entityId, entityType)
+        }
+
+        // 2. Build block trees from layout
+        val trees = buildBlockTreesFromLayout(layoutEntity.layout)
+
+
+        // 4. Return complete BlockEnvironment
+        return BlockEnvironment(
+            layout = layoutEntity.toModel(),
+            trees = trees,
+        )
+    }
+
+    /**
+     * Builds block trees from the layout structure (layout-driven approach).
+     *
+     * This is more efficient than BFS when layout is available because:
+     * - Single bulk query for all blocks (instead of recursive queries)
+     * - No need to query block_children table (layout has relationships)
+     * - Layout already contains the structural hierarchy
+     *
+     * Note: Falls back to empty list if layout has no widgets.
+     */
+    private fun buildBlockTreesFromLayout(layout: TreeLayout): List<BlockTree> {
+
+        // If no widgets in layout, return empty (default layouts start empty)
+        if (layout.children.isNullOrEmpty()) return emptyList()
+
+        // Extract ALL block IDs from layout (including nested in subGridOpts)
+        val blockIds = blockTreeLayoutService.extractBlockIdsFromTreeLayout(layout)
+        if (blockIds.isEmpty()) return emptyList()
+
+        // Bulk load all blocks in a single query
+        val blocksById = blockService.getBlocks(blockIds)
+
+        // Build trees from top-level widgets using layout structure
+        return layout.children.mapNotNull { widget ->
+            buildTreeFromWidget(widget, blocksById)
+        }
+    }
+
+
+    /**
+     * Builds a BlockTree from a widget using pre-loaded blocks.
+     * Recursively handles children from subGridOpts (nested layouts).
+     *
+     * Note: This uses the layout structure for relationships instead of querying block_children.
+     */
+    private fun buildTreeFromWidget(
+        widget: Widget,
+        blocksById: Map<UUID, BlockEntity>
+    ): BlockTree? {
+        val blockId = widget.content?.id?.let {
+            try {
+                UUID.fromString(it)
+            } catch (e: Exception) {
+                null
+            }
+        } ?: return null
+
+        val blockEntity = blocksById[blockId] ?: return null
+
+        // Use BlockService.buildNode to handle all node types (content, reference, entity reference)
+        // This delegates to existing BFS logic for building individual nodes
+        // But we supply children from layout instead of querying DB
+        val rootNode = buildNodeFromLayoutWidget(blockEntity, widget, blocksById)
+
+        return BlockTree(root = rootNode)
+    }
+
+    /**
+     * Builds a Node from a block entity using layout structure for children.
+     * This is a layout-aware variant that doesn't query block_children.
+     */
+    private fun buildNodeFromLayoutWidget(
+        blockEntity: BlockEntity,
+        widget: Widget,
+        blocksById: Map<UUID, BlockEntity>
+    ): okuri.core.models.block.tree.Node {
+        val block = blockEntity.toModel()
+
+        return when (val meta = block.payload) {
+            is okuri.core.models.block.metadata.BlockReferenceMetadata -> {
+                // Handle block references
+                // TODO: Integrate with BlockReferenceService when available
+                okuri.core.models.block.tree.ReferenceNode(
+                    block = block,
+                    reference = okuri.core.models.block.tree.BlockTreeReference(
+                        reference = okuri.core.models.block.Reference(
+                            entityId = block.id,
+                            entityType = EntityType.BLOCK,
+                            entity = null,
+                            warning = BlockReferenceWarning.UNSUPPORTED
+                        )
+                    )
+                )
+            }
+
+            is okuri.core.models.block.metadata.EntityReferenceMetadata -> {
+                // Handle entity references
+                // TODO: Integrate with BlockReferenceService when available
+                okuri.core.models.block.tree.ReferenceNode(
+                    block = block,
+                    reference = okuri.core.models.block.tree.EntityReference(
+                        reference = emptyList()
+                    )
+                )
+            }
+
+            is okuri.core.models.block.metadata.BlockContentMetadata -> {
+                // Content blocks: children come from layout subGridOpts, not DB!
+                val childNodes = widget.subGridOpts?.children?.mapNotNull { childWidget ->
+                    buildTreeFromWidget(childWidget, blocksById)?.root
+                } ?: emptyList()
+
+                okuri.core.models.block.tree.ContentNode(
+                    block = block,
+                    children = childNodes
+                )
+            }
+        }
+    }
+
+
+    /**
+     * Gets the organisation ID for a given entity.
+     * This is needed for lazy initialization of layouts.
+     */
+    private fun getOrganisationIdForEntity(entityId: UUID, entityType: EntityType): UUID {
+        return when (entityType) {
+            EntityType.CLIENT -> clientService.getEntityById(entityId).organisationId
+            // TODO: Add other entity types as needed
+            EntityType.ORGANISATION -> entityId // Organisation is its own org
+            EntityType.PROJECT -> throw NotImplementedError("Project organisation lookup not implemented")
+            EntityType.INVOICE -> throw NotImplementedError("Invoice organisation lookup not implemented")
+            else -> throw IllegalArgumentException("Cannot determine organisation for entity type: $entityType")
+        }
     }
 
     /**

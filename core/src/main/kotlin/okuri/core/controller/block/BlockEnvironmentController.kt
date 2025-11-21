@@ -64,17 +64,19 @@ class BlockEnvironmentController(
     @GetMapping("/type/{type}/id/{entityId}")
     @Operation(
         summary = "Get Block Environment",
-        description = "Retrieves the block environment for the specified page"
+        description = "Retrieves the block environment for the specified entity. Creates a default layout if none exists (lazy initialization)."
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Environment retrieved successfully"),
-        ApiResponse(responseCode = "404", description = "Block environment not found"),
-        ApiResponse(responseCode = "401", description = "Unauthorized access")
+        ApiResponse(responseCode = "404", description = "Entity not found"),
+        ApiResponse(responseCode = "401", description = "Unauthorized access"),
+        ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions")
     )
     fun getBlockEnvironment(
         @PathVariable type: EntityType,
         @PathVariable entityId: UUID,
     ): ResponseEntity<BlockEnvironment> {
-        TODO()
+        val environment = environmentService.loadBlockEnvironment(entityId, type)
+        return ResponseEntity.ok(environment)
     }
 }
