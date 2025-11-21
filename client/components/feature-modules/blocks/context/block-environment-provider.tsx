@@ -17,8 +17,8 @@ import {
     EditorEnvironment,
 } from "../interface/editor.interface";
 import {
-    collectDescendantIds,
     cloneEnvironment,
+    collectDescendantIds,
     createEmptyEnvironment,
     detachNode,
     findNodeById,
@@ -561,8 +561,8 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
 
     /** Collect all descendant ids beneath a block. */
     const getDescendants = useCallback(
-        (blockId: string): string[] => {
-            const descendants: string[] = [];
+        (blockId: string): Record<string, string> => {
+            const descendants: Map<string, string> = new Map();
             const queue: string[] = [blockId];
 
             while (queue.length > 0) {
@@ -570,11 +570,13 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 const children = Array.from(environment.hierarchy.entries())
                     .filter(([, parent]) => parent === current)
                     .map(([id]) => id);
-                descendants.push(...children);
+                children.forEach((childId) => {
+                    descendants.set(childId, current);
+                });
                 queue.push(...children);
             }
 
-            return descendants;
+            return Object.fromEntries(descendants);
         },
         [environment]
     );
@@ -618,51 +620,48 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
      * Reorder a block to a specific index within its parent's children array.
      * Used by dnd-kit list components for drag-and-drop reordering.
      */
-    const reorderBlock = useCallback(
-        (blockId: string, parentId: string, targetIndex: number) => {
-            setEnvironment((prev) => {
-                const parentTreeId = prev.treeIndex.get(parentId);
-                if (!parentTreeId) {
-                    console.warn(`Parent block ${parentId} not found in tree index`);
-                    return prev;
-                }
+    const reorderBlock = useCallback((blockId: string, parentId: string, targetIndex: number) => {
+        setEnvironment((prev) => {
+            const parentTreeId = prev.treeIndex.get(parentId);
+            if (!parentTreeId) {
+                console.warn(`Parent block ${parentId} not found in tree index`);
+                return prev;
+            }
 
-                const parentTree = findTree(prev, parentTreeId);
-                if (!parentTree) {
-                    console.warn(`Tree ${parentTreeId} not found`);
-                    return prev;
-                }
+            const parentTree = findTree(prev, parentTreeId);
+            if (!parentTree) {
+                console.warn(`Tree ${parentTreeId} not found`);
+                return prev;
+            }
 
-                const { success, payload: updatedRoot } = reorderNode(
-                    parentTree.root,
-                    parentId,
-                    blockId,
-                    targetIndex
+            const { success, payload: updatedRoot } = reorderNode(
+                parentTree.root,
+                parentId,
+                blockId,
+                targetIndex
+            );
+
+            if (!success) {
+                console.warn(
+                    `Failed to reorder block ${blockId} to index ${targetIndex} in parent ${parentId}`
                 );
+                return prev;
+            }
 
-                if (!success) {
-                    console.warn(
-                        `Failed to reorder block ${blockId} to index ${targetIndex} in parent ${parentId}`
-                    );
-                    return prev;
-                }
+            const updatedTree = {
+                ...parentTree,
+                root: updatedRoot,
+            };
 
-                const updatedTree = {
-                    ...parentTree,
-                    root: updatedRoot,
-                };
+            const trees = updateTrees(prev, updatedTree);
 
-                const trees = updateTrees(prev, updatedTree);
-
-                return {
-                    ...prev,
-                    trees,
-                    metadata: updateMetadata(prev.metadata),
-                };
-            });
-        },
-        []
-    );
+            return {
+                ...prev,
+                trees,
+                metadata: updateMetadata(prev.metadata),
+            };
+        });
+    }, []);
 
     const hydrateEnvironment = useCallback((snapshot: EditorEnvironment) => {
         setEnvironment(cloneEnvironment(snapshot));

@@ -1,4 +1,4 @@
-import { nowIso, uniqueId } from "@/lib/util/utils";
+import { now, uniqueId } from "@/lib/util/utils";
 import {
     Block,
     BlockContentMetadata,
@@ -116,8 +116,8 @@ export const createBlockBase = ({
     type,
     payload,
     archived,
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
+    createdAt: now(),
+    updatedAt: now(),
 });
 
 export const createContentNode = ({
@@ -260,6 +260,6 @@ export const createBlockType = ({
     schema,
     display,
     nesting: nesting ?? undefined,
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
+    createdAt: now(),
+    updatedAt: now(),
 });

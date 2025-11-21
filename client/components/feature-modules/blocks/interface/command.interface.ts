@@ -1,3 +1,4 @@
+import { components } from "@/lib/types/types";
 import { GridStackOptions, GridStackWidget } from "gridstack";
 import { BatchCommand } from "../util/command/commands";
 import { BlockNode } from "./block.interface";
@@ -188,11 +189,7 @@ export interface ConflictResolution {
  * Serializable operation record for audit trail
  * Only tracks structural changes - layout changes are captured in GridStack snapshot
  */
-export interface StructuralOperationRecord {
-    id: string;
-    timestamp: number;
-    data: StructuralOperationData;
-}
+export type StructuralOperationRequest = components["schemas"]["StructuralOperationRequest"];
 
 export type StructuralOperationType =
     | LayoutCommandType.ADD_BLOCK
@@ -208,63 +205,14 @@ export type StructuralOperationData =
     | UpdateBlockOperation
     | ReorderBlockOperation;
 
-export interface AddBlockOperation {
-    type: "ADD_BLOCK";
-    blockId: string;
-    block: BlockNode;
-    parentId: string | null;
-    index?: number | null;
-}
-
-export interface RemoveBlockOperation {
-    type: "REMOVE_BLOCK";
-    blockId: string;
-    previousParentId: string | null;
-}
-
-export interface MoveBlockOperation {
-    type: "MOVE_BLOCK";
-    blockId: string;
-    fromParentId: string | null;
-    toParentId: string | null;
-}
-
-export interface UpdateBlockOperation {
-    type: "UPDATE_BLOCK";
-    blockId: string;
-    updatedContent: BlockNode;
-}
-
-export interface ReorderBlockOperation {
-    type: "REORDER_BLOCK";
-    blockId: string;
-    parentId: string;
-    fromIndex: number;
-    toIndex: number;
-}
+export type AddBlockOperation = components["schemas"]["AddBlockOperation"];
+export type RemoveBlockOperation = components["schemas"]["RemoveBlockOperation"];
+export type MoveBlockOperation = components["schemas"]["MoveBlockOperation"];
+export type UpdateBlockOperation = components["schemas"]["UpdateBlockOperation"];
+export type ReorderBlockOperation = components["schemas"]["ReorderBlockOperation"];
 
 /**
  * Response from backend when saving layout
  */
-export interface SaveEnvironmentResponse {
-    /** Whether save was successful */
-    success: boolean;
-
-    /** New version number after successful save */
-    newVersion?: number;
-
-    /** Whether there was a conflict (version mismatch) */
-    conflict?: boolean;
-
-    /** Version of the conflicting layout */
-    latestVersion?: number;
-
-    /** Who made the conflicting change */
-    lastModifiedBy?: string;
-
-    /** When the conflicting change was made */
-    lastModifiedAt?: string;
-
-    /** Error message if save failed */
-    error?: string;
-}
+export type SaveEnvironmentRequest = components["schemas"]["SaveEnvironmentRequest"];
+export type SaveEnvironmentResponse = components["schemas"]["SaveEnvironmentResponse"];

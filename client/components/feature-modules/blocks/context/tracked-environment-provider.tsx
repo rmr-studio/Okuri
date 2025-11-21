@@ -1,8 +1,9 @@
 "use client";
 
+import { now } from "@/lib/util/utils";
 import { createContext, FC, PropsWithChildren, useCallback, useContext, useMemo } from "react";
 import { BlockNode } from "../interface/block.interface";
-import { StructuralOperationRecord } from "../interface/command.interface";
+import { StructuralOperationRequest } from "../interface/command.interface";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
 import { useLayoutChange } from "./layout-change-provider";
@@ -40,17 +41,19 @@ export const useTrackedEnvironment = (): TrackedEnvironmentContextValue => {
  */
 export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) => {
     const blockEnvironment = useBlockEnvironment();
+    const {
+        addBlock,
+        removeBlock,
+        moveBlock,
+        updateBlock,
+        reorderBlock,
+        getChildren,
+        getParentId,
+        getDescendants,
+    } = blockEnvironment;
     const gridStack = useGrid();
     const { trackStructuralChange } = useLayoutChange();
     const { recordStructuralOperation } = useLayoutHistory();
-
-    const addBlock = blockEnvironment.addBlock;
-    const removeBlock = blockEnvironment.removeBlock;
-    const moveBlock = blockEnvironment.moveBlock;
-    const updateBlock = blockEnvironment.updateBlock;
-    const reorderBlock = blockEnvironment.reorderBlock;
-    const getParentId = blockEnvironment.getParentId;
-    const getChildren = blockEnvironment.getChildren;
 
     /**
      * Add a block using a command
@@ -62,15 +65,16 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             const id = addBlock(block, parentId);
 
             // Record the operation
-            const operation: StructuralOperationRecord = {
+            const operation: StructuralOperationRequest = {
                 id: crypto.randomUUID(),
-                timestamp: Date.now(),
+                timestamp: now(),
                 data: {
                     type: "ADD_BLOCK",
                     blockId: id,
                     block,
-                    parentId,
-                    index,
+                    parentId: parentId || undefined,
+                    // Non falsey check to avoid 0 mishap
+                    index: index !== undefined && index !== null ? index : undefined,
                 },
             };
             recordStructuralOperation(operation);
@@ -86,17 +90,19 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
      */
     const removeTrackedBlock = useCallback(
         (blockId: string): void => {
-            const previousParentId = getParentId(blockId);
+            const previousParentId = getParentId(blockId) || undefined;
+            const children = getDescendants(blockId);
             removeBlock(blockId);
 
             // Record the operation
-            const operation: StructuralOperationRecord = {
+            const operation: StructuralOperationRequest = {
                 id: crypto.randomUUID(),
-                timestamp: Date.now(),
+                timestamp: now(),
                 data: {
                     type: "REMOVE_BLOCK",
+                    childrenIds: children,
                     blockId,
-                    previousParentId,
+                    parentId: previousParentId,
                 },
             };
             recordStructuralOperation(operation);
@@ -111,18 +117,18 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
      */
     const moveTrackedBlock = useCallback(
         (blockId: string, targetParentId: string | null): void => {
-            const fromParentId = getParentId(blockId);
+            const fromParentId = getParentId(blockId) || undefined;
             moveBlock(blockId, targetParentId);
 
             // Record the operation
-            const operation: StructuralOperationRecord = {
+            const operation: StructuralOperationRequest = {
                 id: crypto.randomUUID(),
-                timestamp: Date.now(),
+                timestamp: now(),
                 data: {
                     type: "MOVE_BLOCK",
                     blockId,
                     fromParentId,
-                    toParentId: targetParentId,
+                    toParentId: targetParentId || undefined,
                 },
             };
             recordStructuralOperation(operation);
@@ -140,9 +146,9 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             updateBlock(blockId, updatedContent);
 
             // Record the operation
-            const operation: StructuralOperationRecord = {
+            const operation: StructuralOperationRequest = {
                 id: crypto.randomUUID(),
-                timestamp: Date.now(),
+                timestamp: now(),
                 data: {
                     type: "UPDATE_BLOCK",
                     blockId,
@@ -180,9 +186,9 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
             reorderBlock(blockId, parentId, targetIndex);
 
             // Record the operation
-            const operation: StructuralOperationRecord = {
+            const operation: StructuralOperationRequest = {
                 id: crypto.randomUUID(),
-                timestamp: Date.now(),
+                timestamp: now(),
                 data: {
                     type: "REORDER_BLOCK",
                     blockId,

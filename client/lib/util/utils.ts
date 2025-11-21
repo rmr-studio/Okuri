@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import dayjs from "dayjs";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -12,9 +13,6 @@ export const uniqueId = (prefix: string) =>
             : Math.random().toString(36).slice(2)
     }`;
 
-export const nowIso = (): string => {
-    return new Date().toISOString();
-};
 
 export function undefinedIfNull<T>(value: T | null): T | undefined {
     return value === null ? undefined : value;
@@ -74,6 +72,10 @@ export const isValidCurrency = (value: string): boolean => {
     if (!value) return false;
     const validCurrencies = currency();
     return validCurrencies.has(value.toUpperCase());
+};
+
+export const now = (): string => {
+    return dayjs().toISOString();
 };
 
 export const hexToRgb = (hex: string): string => {

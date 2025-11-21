@@ -1,5 +1,4 @@
-import { GridStackOptions } from "gridstack";
-import { StructuralOperationRecord } from "../interface/command.interface";
+import { SaveEnvironmentRequest, SaveEnvironmentResponse } from "../interface/command.interface";
 import { BlockTreeLayout } from "../interface/layout.interface";
 
 /**
@@ -64,13 +63,8 @@ export class LayoutService {
      * - Response: { success: boolean, updatedAt: string }
      */
     static async saveLayoutSnapshot(
-        layoutId: string,
-        layout: GridStackOptions,
-        currentVersion: number,
-        operations: StructuralOperationRecord[],
-        force: boolean = false
-    ): Promise<void> {
-        console.log(`[STUB] LayoutService.saveLayoutSnapshot(${layoutId})`, layout);
+        request: SaveEnvironmentRequest
+    ): Promise<SaveEnvironmentResponse> {
         // TODO: Implement with TanStack Query mutation
         // Example:
         // await fetch(`/api/block-tree-layouts/${layoutId}/layout`, {

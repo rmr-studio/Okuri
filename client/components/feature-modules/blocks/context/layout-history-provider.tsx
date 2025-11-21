@@ -10,7 +10,7 @@ import {
     useRef,
     useState,
 } from "react";
-import { LayoutSnapshot, StructuralOperationRecord } from "../interface/command.interface";
+import { LayoutSnapshot, StructuralOperationRequest } from "../interface/command.interface";
 
 interface LayoutHistoryContextValue {
     /** Track that a non-structural layout change occurred (resize, reposition). */
@@ -38,10 +38,10 @@ interface LayoutHistoryContextValue {
     getBaselineSnapshot: () => LayoutSnapshot | null;
 
     /** Record a structural operation in the audit trail */
-    recordStructuralOperation: (operation: StructuralOperationRecord) => void;
+    recordStructuralOperation: (operation: StructuralOperationRequest) => void;
 
     /** Get all structural operations since last save */
-    getStructuralOperations: () => StructuralOperationRecord[];
+    getStructuralOperations: () => StructuralOperationRequest[];
 
     /** Clear structural operations (after successful save) */
     clearStructuralOperations: () => void;
@@ -63,7 +63,7 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     const baselineSnapshotRef = useRef<LayoutSnapshot | null>(null);
-    const structuralOperationsRef = useRef<StructuralOperationRecord[]>([]);
+    const structuralOperationsRef = useRef<StructuralOperationRequest[]>([]);
 
     const markLayoutChange = useCallback(() => {
         setLayoutChangeCount((prev) => prev + 1);
@@ -75,7 +75,7 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
         setHasUnsavedChanges(true);
     }, []);
 
-    const recordStructuralOperation = useCallback((operation: StructuralOperationRecord) => {
+    const recordStructuralOperation = useCallback((operation: StructuralOperationRequest) => {
         structuralOperationsRef.current.push(operation);
     }, []);
 

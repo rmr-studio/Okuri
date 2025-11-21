@@ -1,4 +1,4 @@
-import { nowIso } from "@/lib/util/utils";
+import { now } from "@/lib/util/utils";
 import { BlockNode, BlockTree, isContentNode } from "../../interface/block.interface";
 import {
     DetachResult,
@@ -396,7 +396,7 @@ export const reorderNode = (
 export const updateMetadata = (metadata: EditorEnvironmentMetadata): EditorEnvironmentMetadata => {
     return {
         ...metadata,
-        updatedAt: nowIso(),
+        updatedAt: now(),
     };
 };
 
@@ -404,7 +404,7 @@ export const updateMetadata = (metadata: EditorEnvironmentMetadata): EditorEnvir
  * Initialise an empty editor environment for the given organisation id.
  */
 export function createEmptyEnvironment(organisationId: string): EditorEnvironment {
-    const timestamp = nowIso();
+    const timestamp = now();
 
     return {
         trees: [],
@@ -464,8 +464,8 @@ export const init = (
                 name: "Untitled Environment",
                 description: undefined,
                 organisationId,
-                createdAt: nowIso(),
-                updatedAt: nowIso(),
+                createdAt: now(),
+                updatedAt: now(),
             },
         },
     };

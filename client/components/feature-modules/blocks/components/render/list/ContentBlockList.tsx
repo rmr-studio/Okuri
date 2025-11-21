@@ -8,24 +8,28 @@
 "use client";
 
 import {
+    closestCenter,
     DndContext,
     DragEndEvent,
     KeyboardSensor,
     PointerSensor,
-    closestCenter,
     useSensor,
     useSensors,
 } from "@dnd-kit/core";
 import {
-    SortableContext,
     arrayMove,
+    SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBlockFocus } from "../../../context/block-focus-provider";
 import { useTrackedEnvironment } from "../../../context/tracked-environment-provider";
-import { BlockListConfiguration, BlockNode, isContentNode } from "../../../interface/block.interface";
+import {
+    BlockListConfiguration,
+    BlockNode,
+    isContentNode,
+} from "../../../interface/block.interface";
 import {
     filterChildren,
     FilterSpec,
@@ -148,6 +152,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     const { reorderTrackedBlock, updateTrackedBlock, blockEnvironment } = useTrackedEnvironment();
     const { getBlock } = blockEnvironment;
     const { acquireLock } = useBlockFocus();
+    const { config: listConfig } = config;
 
     const dragLockRef = useRef<(() => void) | null>(null);
     const configUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -161,9 +166,9 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     );
 
     // Runtime sort/filter/mode overrides (starts with config defaults)
-    const [activeSort, setActiveSort] = useState<SortSpec | undefined>(config.order.sort);
-    const [activeFilters, setActiveFilters] = useState<FilterSpec[]>(config.filters || []);
-    const [activeMode, setActiveMode] = useState<"MANUAL" | "SORTED">(config.order.mode);
+    const [activeSort, setActiveSort] = useState<SortSpec | undefined>(listConfig.sort);
+    const [activeFilters, setActiveFilters] = useState<FilterSpec[]>(listConfig.filters || []);
+    const [activeMode, setActiveMode] = useState<"MANUAL" | "SORTED">(listConfig.mode);
 
     // Determine effective mode - force MANUAL if not uni-block
     const effectiveMode = isUniBlock ? activeMode : "MANUAL";
@@ -177,9 +182,9 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
 
         // Check if config has changed from the original
         const configChanged =
-            activeMode !== config.order.mode ||
-            JSON.stringify(activeSort) !== JSON.stringify(config.order.sort) ||
-            JSON.stringify(activeFilters) !== JSON.stringify(config.filters || []);
+            activeMode !== listConfig.mode ||
+            JSON.stringify(activeSort) !== JSON.stringify(listConfig.sort) ||
+            JSON.stringify(activeFilters) !== JSON.stringify(listConfig.filters || []);
 
         if (!configChanged) {
             return; // No changes to persist
@@ -200,7 +205,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                         listConfig: {
                             ...config,
                             order: {
-                                ...config.order,
+                                ...listConfig,
                                 mode: activeMode,
                                 sort: activeSort,
                             },
@@ -236,7 +241,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
 
         // Apply filters first
         if (activeFilters.length > 0 && uniformType) {
-            result = filterChildren(result, activeFilters, config.filterLogic || "AND");
+            result = filterChildren(result, activeFilters, listConfig.filterLogic || "AND");
         }
 
         // Apply sorting
@@ -245,7 +250,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
         }
 
         return result;
-    }, [children, effectiveMode, activeSort, activeFilters, config.filterLogic, uniformType]);
+    }, [children, effectiveMode, activeSort, activeFilters, listConfig.filterLogic, uniformType]);
 
     // Configure dnd-kit sensors for pointer and keyboard interaction
     const sensors = useSensors(
@@ -326,12 +331,11 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                         setActiveSort={setActiveSort}
                         activeFilters={activeFilters}
                         setActiveFilters={setActiveFilters}
-                        filterLogic={config.filterLogic || "AND"}
+                        filterLogic={listConfig.filterLogic || "AND"}
                     />
                 ) : undefined
             }
         >
-
             {isEmpty && (
                 <div className="p-4 text-sm text-muted-foreground">
                     No items yet. Add one to get started!

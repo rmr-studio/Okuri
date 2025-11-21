@@ -1,4 +1,4 @@
-import { nowIso, uniqueId } from "@/lib/util/utils";
+import { now, uniqueId } from "@/lib/util/utils";
 import {
     BlockComponentNode,
     BlockDisplay,
@@ -64,8 +64,8 @@ const createBaseBlockType = ({
     schema,
     display,
     nesting: nesting ?? undefined,
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
+    createdAt: now(),
+    updatedAt: now(),
 });
 
 export const ALL_BLOCK_COMPONENT_TYPES: NonNullable<BlockType["nesting"]>["allowedTypes"] = [

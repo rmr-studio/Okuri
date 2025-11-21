@@ -52,6 +52,7 @@
     "cmdk": "^1.1.1",
     "color": "^5.0.2",
     "date-fns": "^4.1.0",
+    "dayjs": "^1.11.19",
     "framer-motion": "^12.23.24",
     "gridstack": "^12.3.3",
     "input-otp": "^1.4.2",

@@ -1,5 +1,7 @@
 "use client";
 
+import { now } from "@/lib/util/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GridStackOptions } from "gridstack";
 import {
     createContext,
@@ -14,9 +16,10 @@ import {
 } from "react";
 import {
     LayoutSnapshot,
+    SaveEnvironmentRequest,
     SaveEnvironmentResponse,
-    StructuralOperationRecord,
 } from "../interface/command.interface";
+import { LayoutService } from "../service/layout.service";
 import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
 import { useLayoutHistory } from "./layout-history-provider";
@@ -102,6 +105,15 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         "idle" | "saving" | "success" | "error" | "conflict"
     >("idle");
     const [conflictData, setConflictData] = useState<SaveEnvironmentResponse | null>(null);
+    const queryClient = useQueryClient();
+
+    const { mutate: saveLayout } = useMutation({
+        mutationFn: (request: SaveEnvironmentRequest) => LayoutService.saveLayoutSnapshot(request),
+        onError: (error: Error) => {},
+        onSuccess: (response: SaveEnvironmentResponse) => {
+            queryClient.invalidateQueries({ queryKey: ["layout", layoutId] });
+        },
+    });
 
     const updatePublishedVersion = useCallback(
         (nextVersion: number) => {
@@ -140,7 +152,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         const snapshot: LayoutSnapshot = {
             blockEnvironment: getEnvironmentSnapshot(),
             gridLayout: structuredClone(blockTreeLayout.layout),
-            timestamp: Date.now(),
+            timestamp: now(),
             version: blockTreeLayout.version ?? 0,
         };
 
@@ -564,25 +576,11 @@ async function saveBlockEnvironment(
         operationCount: operations.length,
         operations,
     });
-    console.log(operations);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Simulate 5% chance of conflict (for testing)
-    const hasConflict = !force && Math.random() < 0.05;
-
-    if (hasConflict) {
-        return {
-            success: false,
-            conflict: true,
-            latestVersion: currentVersion + 1,
-            lastModifiedBy: "john@example.com",
-            lastModifiedAt: new Date().toISOString(),
-        };
-    }
-
-    return {
-        success: true,
-        newVersion: currentVersion + 1,
-        conflict: false,
+    const request: SaveEnvironmentRequest = {
+        layoutId,
+        layout,
+        version: currentVersion,
+        operations,
+        force,
     };
 }
