@@ -1,19 +1,25 @@
 package okuri.core.service.util.factory.block
 
+import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
+import okuri.core.entity.block.BlockTreeLayoutEntity
 import okuri.core.entity.block.BlockTypeEntity
+import okuri.core.enums.block.layout.LayoutScope
 import okuri.core.enums.block.node.NodeType
 import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.core.ComponentType
+import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Block
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.display.BlockComponentNode
 import okuri.core.models.block.display.BlockDisplay
 import okuri.core.models.block.display.BlockRenderStructure
 import okuri.core.models.block.display.BlockTypeNesting
+import okuri.core.models.block.layout.TreeLayout
 import okuri.core.models.block.metadata.BlockContentMetadata
 import okuri.core.models.block.metadata.BlockMeta
 import okuri.core.models.block.operation.*
+import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.request.StructuralOperationRequest
 import okuri.core.models.block.tree.ContentNode
 import okuri.core.models.block.tree.Node
@@ -226,4 +232,78 @@ object BlockFactory {
         timestamp = timestamp,
         data = operation
     )
+
+    /**
+     * Creates a BlockTreeLayoutEntity for testing.
+     */
+    fun createTreeLayoutEntity(
+        id: UUID? = UUID.randomUUID(),
+        entityId: UUID = UUID.randomUUID(),
+        entityType: EntityType = EntityType.BLOCK,
+        organisationId: UUID,
+        version: Int = 1,
+        scope: LayoutScope = LayoutScope.ORGANIZATION,
+        ownerId: UUID? = null,
+        layout: TreeLayout = TreeLayout()
+    ): BlockTreeLayoutEntity = BlockTreeLayoutEntity(
+        id = id,
+        entityId = entityId,
+        entityType = entityType,
+        organisationId = organisationId,
+        version = version,
+        scope = scope,
+        ownerId = ownerId,
+        layout = layout
+    )
+
+    /**
+     * Creates a BlockChildEntity for testing.
+     */
+    fun createBlockChildEntity(
+        parentId: UUID,
+        childId: UUID,
+        orderIndex: Int = 0
+    ): BlockChildEntity = BlockChildEntity(
+        id = UUID.randomUUID(),
+        parentId = parentId,
+        childId = childId,
+        orderIndex = orderIndex
+    )
+
+    /**
+     * Creates a SaveEnvironmentRequest for testing.
+     */
+    fun createSaveEnvironmentRequest(
+        layoutId: UUID,
+        organisationId: UUID,
+        operations: List<StructuralOperationRequest>,
+        version: Int = 1,
+        layout: TreeLayout = TreeLayout(),
+        force: Boolean = false
+    ): SaveEnvironmentRequest = SaveEnvironmentRequest(
+        layoutId = layoutId,
+        organisationId = organisationId,
+        layout = layout,
+        version = version,
+        operations = operations,
+        force = force
+    )
+
+    /**
+     * Creates a BlockTypeEntity for testing (alias for createType).
+     */
+    fun createTypeEntity(
+        orgId: UUID,
+        key: String = "test_block",
+        version: Int = 1
+    ): BlockTypeEntity = createType(orgId = orgId, key = key, version = version)
+
+    /**
+     * Creates a BlockEntity for testing (alias for createBlock).
+     */
+    fun createBlockEntity(
+        id: UUID = UUID.randomUUID(),
+        organisationId: UUID,
+        type: BlockTypeEntity
+    ): BlockEntity = createBlock(id = id, orgId = organisationId, type = type)
 }

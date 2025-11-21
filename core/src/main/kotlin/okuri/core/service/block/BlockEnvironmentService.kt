@@ -2,7 +2,6 @@ package okuri.core.service.block
 
 import jakarta.transaction.Transactional
 import okuri.core.entity.activity.ActivityLogEntity
-import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.enums.activity.Activity
 import okuri.core.enums.block.request.BlockOperationType
@@ -42,8 +41,9 @@ class BlockEnvironmentService(
                 )
             }
 
-            // Need to overwrite the layout and associated blocks. Would need to recreate and re-map forced data onto existing blocks as-well.
-            // This would need to accommodate for block operations that may have occurred or negated previous operations in a confliction version
+            /** Need to overwrite the layout and associated blocks.
+             * Would need to recreate and re-map forced data onto existing blocks as-well.
+             * This would need to accommodate for block operations that may have occurred or negated previous operations in a conflicted version **/
             if (request.force) {
                 TODO()
             }
@@ -224,10 +224,12 @@ class BlockEnvironmentService(
         operations: List<StructuralOperationRequest>,
         block: BlockEntity? = null,
     ): Map<UUID, UUID> {
-        // PHASE 1: Handle REMOVE operations (cascade delete)
+        // PHASE 1: Handle REMOVE operations (will need to cascade delete children)
         val removeOps = operations.filter { it.data.type == BlockOperationType.REMOVE_BLOCK }
         if (removeOps.isNotEmpty()) {
             val blockIdsToRemove = removeOps.map { it.data.blockId }.toSet()
+
+            // Collect all blocks and children to delete
             val cascadeResult = blockChildrenService.prepareRemovalCascade(blockIdsToRemove)
 
             // Batch delete children entities
@@ -248,7 +250,7 @@ class BlockEnvironmentService(
             .map { it.data as AddBlockOperation }
 
         val newBlocks = mutableListOf<BlockEntity>()
-        val childAdditions = mutableListOf<ChildAddition>()
+        val childAdditions: List<AddBlockOperation> = addOps.filter { it.parentId != null }
 
         addOps.forEach { addOp ->
             val blockData = addOp.block.block
@@ -264,17 +266,6 @@ class BlockEnvironmentService(
             )
 
             newBlocks.add(entity)
-
-            // Track parent-child relationship if parent exists
-            addOp.parentId?.let { parentId ->
-                childAdditions.add(
-                    ChildAddition(
-                        childId = blockData.id, // Temporary ID, will be replaced after save
-                        parentId = parentId,
-                        index = addOp.index
-                    )
-                )
-            }
         }
 
         // Batch save new blocks
@@ -296,15 +287,15 @@ class BlockEnvironmentService(
         // Update child additions with real IDs (resolve both child and parent)
         val resolvedChildAdditions = childAdditions.map { addition ->
             addition.copy(
-                childId = resolveId(addition.childId),
-                parentId = resolveId(addition.parentId) // Also resolve parent in case it was newly added
+                blockId = resolveId(addition.blockId),
+                parentId = resolveId(addition.parentId!!) // Also resolve parent in case it was newly added
             )
         }
 
         // Batch save parent-child relationships
         if (resolvedChildAdditions.isNotEmpty()) {
             val allChildren = blockChildrenService.getChildrenForBlocks(
-                resolvedChildAdditions.map { it.parentId }.toSet()
+                resolvedChildAdditions.mapNotNull { it.parentId }
             )
             val childEntities = blockChildrenService.prepareChildAdditions(
                 resolvedChildAdditions,
@@ -327,6 +318,8 @@ class BlockEnvironmentService(
             // Try to find in existing blocks first, or in newly saved blocks
             val existingBlock = block?.takeIf { it.id == resolvedBlockId }
                 ?: savedBlocks.find { it.id == resolvedBlockId }
+
+            // TODO: Validate content of new block
 
             existingBlock?.let { existing ->
                 val updatedContent = updateOp.updatedContent.block
@@ -351,18 +344,18 @@ class BlockEnvironmentService(
 
         if (moveOps.isNotEmpty()) {
             val moves = moveOps.map { moveOp ->
-                ChildMove(
-                    childId = resolveId(moveOp.blockId), // Resolve child ID
-                    fromParentId = moveOp.fromParentId?.let { resolveId(it) }, // Resolve parent IDs
-                    toParentId = moveOp.toParentId?.let { resolveId(it) },
-                    index = null // Index will be determined during move preparation
+                moveOp.copy(
+                    blockId = resolveId(moveOp.blockId), // Resolve child ID
+                    fromParentId = moveOp.fromParentId?.let { resolveId(it) }, // Resolve old parent ID
+                    toParentId = moveOp.toParentId?.let { resolveId(it) } // Resolve new parent ID
                 )
+
             }
 
             val affectedParents = moveOps.flatMap {
                 listOfNotNull(
-                    it.fromParentId?.let { resolveId(it) },
-                    it.toParentId?.let { resolveId(it) }
+                    it.fromParentId?.let { parentId -> resolveId(parentId) },
+                    it.toParentId?.let { parentId -> resolveId(parentId) }
                 )
             }.toSet()
 
@@ -386,11 +379,9 @@ class BlockEnvironmentService(
 
         if (reorderOps.isNotEmpty()) {
             val reorders = reorderOps.map { reorderOp ->
-                ChildReorder(
-                    childId = resolveId(reorderOp.blockId), // Resolve child ID
-                    parentId = resolveId(reorderOp.parentId), // Resolve parent ID
-                    fromIndex = reorderOp.fromIndex,
-                    toIndex = reorderOp.toIndex
+                reorderOp.copy(
+                    blockId = resolveId(reorderOp.blockId), // Resolve child ID
+                    parentId = resolveId(reorderOp.parentId) // Resolve parent ID
                 )
             }
 

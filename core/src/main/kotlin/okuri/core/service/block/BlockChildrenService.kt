@@ -5,6 +5,11 @@ import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.models.block.display.BlockTypeNesting
 import okuri.core.models.block.metadata.BlockContentMetadata
+import okuri.core.models.block.operation.AddBlockOperation
+import okuri.core.models.block.operation.MoveBlockOperation
+import okuri.core.models.block.operation.ReorderBlockOperation
+import okuri.core.models.block.response.internal.CascadeRemovalResult
+import okuri.core.models.block.response.internal.MovePreparationResult
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
 import org.springframework.stereotype.Service
@@ -72,8 +77,9 @@ class BlockChildrenService(
 
         // Shift down indexes >= insertAt
         siblings.asReversed().forEach { s ->
-            if (s.orderIndex >= insertAt) {
-                edgeRepository.save(s.copy(orderIndex = s.orderIndex + 1))
+            val currentIndex = s.orderIndex ?: 0
+            if (currentIndex >= insertAt) {
+                edgeRepository.save(s.copy(orderIndex = currentIndex + 1))
             }
         }
 
@@ -90,7 +96,7 @@ class BlockChildrenService(
     }
 
     /**
-     * Move a child to a new absolute index within the same slot.
+     * Move a child to a new absolute index within the same parent. This is only accessible to `LIST` types.
      */
     @Transactional
     fun reorderChildren(parentId: UUID, childId: UUID, newIndex: Int) {
@@ -112,7 +118,7 @@ class BlockChildrenService(
 
 
     /**
-     * Reparent a child under a new parent/slot/index.
+     * Reparent a child under a new parent. This is only accessible to `LAYOUT_CONTAINER` types.
      * - Validates org, allowed types, max children.
      * - Updates child's parent pointer if maintained.
      */
@@ -120,7 +126,6 @@ class BlockChildrenService(
     fun reparentChild(
         childId: UUID,
         newParentId: UUID,
-        index: Int? = null,
         nesting: BlockTypeNesting
     ) {
         val child = load(childId)
@@ -137,23 +142,11 @@ class BlockChildrenService(
             renumber(existingEdge.parentId, oldSiblings)
         }
 
-        // Insert new edge
-        val siblings = edgeRepository.findByParentIdOrderByOrderIndexAsc(newParentId)
-        val insertAt = index?.coerceIn(0, siblings.size) ?: siblings.size
-
-        // Shift siblings
-        siblings.asReversed().forEach { s ->
-            if (s.orderIndex >= insertAt) {
-                edgeRepository.save(s.copy(orderIndex = s.orderIndex + 1))
-            }
-        }
-
         edgeRepository.save(
             BlockChildEntity(
                 id = null,
                 parentId = newParentId,
                 childId = childId,
-                orderIndex = insertAt
             )
         )
     }
@@ -281,13 +274,14 @@ class BlockChildrenService(
      * Handles both List blocks (with numerical indices) and layout containers (without).
      */
     fun prepareChildAdditions(
-        additions: List<ChildAddition>,
+        additions: List<AddBlockOperation>,
         existingChildren: Map<UUID, List<BlockChildEntity>>
     ): List<BlockChildEntity> {
         val toSave = mutableListOf<BlockChildEntity>()
 
         // Group additions by parent for efficient index management
-        val additionsByParent = additions.groupBy { it.parentId }
+        val additionsByParent: Map<UUID, List<AddBlockOperation>> =
+            additions.filter { it.parentId != null }.groupBy { it.parentId!! }
 
         additionsByParent.forEach { (parentId, childAdditions) ->
             val siblings = existingChildren[parentId]?.toMutableList() ?: mutableListOf()
@@ -301,8 +295,8 @@ class BlockChildrenService(
                 val newEdge = BlockChildEntity(
                     id = null,
                     parentId = parentId,
-                    childId = addition.childId,
-                    orderIndex = insertAt ?: 0 // Use 0 as placeholder for non-ordered containers
+                    childId = addition.blockId,
+                    orderIndex = insertAt
                 )
 
                 if (insertAt != null) {
@@ -333,7 +327,7 @@ class BlockChildrenService(
      * Returns entities to delete and entities to save.
      */
     fun prepareChildMoves(
-        moves: List<ChildMove>,
+        operations: List<MoveBlockOperation>,
         existingChildren: Map<UUID, List<BlockChildEntity>>
     ): MovePreparationResult {
         val toDelete = mutableListOf<BlockChildEntity>()
@@ -343,16 +337,16 @@ class BlockChildrenService(
         val affectedOldParents = mutableMapOf<UUID, MutableList<BlockChildEntity>>()
         val affectedNewParents = mutableMapOf<UUID, MutableList<BlockChildEntity>>()
 
-        moves.forEach { move ->
+        operations.forEach { move ->
             // Find and mark old edge for deletion
             move.fromParentId?.let { oldParentId ->
-                existingChildren[oldParentId]?.find { it.childId == move.childId }?.let { oldEdge ->
+                existingChildren[oldParentId]?.find { it.childId == move.blockId }?.let { oldEdge ->
                     toDelete.add(oldEdge)
 
                     // Track siblings in old parent for renumbering
                     if (!affectedOldParents.containsKey(oldParentId)) {
                         affectedOldParents[oldParentId] = existingChildren[oldParentId]
-                            ?.filter { it.childId != move.childId }
+                            ?.filter { it.childId != move.blockId }
                             ?.toMutableList() ?: mutableListOf()
                     }
                 }
@@ -364,32 +358,13 @@ class BlockChildrenService(
                     existingChildren[newParentId]?.toMutableList() ?: mutableListOf()
                 }
 
-                val insertAt = move.index?.coerceIn(0, newSiblings.size) ?: newSiblings.size
-
                 val newEdge = BlockChildEntity(
                     id = null,
                     parentId = newParentId,
-                    childId = move.childId,
-                    orderIndex = insertAt
+                    childId = move.blockId,
                 )
 
-                newSiblings.add(insertAt, newEdge)
-            }
-        }
-
-        // Renumber affected old parents (compact remaining children)
-        affectedOldParents.forEach { (parentId, siblings) ->
-            siblings.forEachIndexed { idx, edge ->
-                if (edge.orderIndex != idx) {
-                    toSave.add(edge.copy(orderIndex = idx))
-                }
-            }
-        }
-
-        // Renumber affected new parents (insert and shift)
-        affectedNewParents.forEach { (parentId, siblings) ->
-            siblings.forEachIndexed { idx, edge ->
-                toSave.add(edge.copy(orderIndex = idx))
+                newSiblings.add(newEdge)
             }
         }
 
@@ -404,7 +379,7 @@ class BlockChildrenService(
      * Returns entities to save with updated indices.
      */
     fun prepareChildReorders(
-        reorders: List<ChildReorder>,
+        reorders: List<ReorderBlockOperation>,
         existingChildren: Map<UUID, List<BlockChildEntity>>
     ): List<BlockChildEntity> {
         val toSave = mutableListOf<BlockChildEntity>()
@@ -416,7 +391,7 @@ class BlockChildrenService(
             val siblings = existingChildren[parentId]?.toMutableList() ?: return@forEach
 
             parentReorders.forEach { reorder ->
-                val currentIndex = siblings.indexOfFirst { it.childId == reorder.childId }
+                val currentIndex = siblings.indexOfFirst { it.childId == reorder.blockId }
                 if (currentIndex == -1) return@forEach
 
                 val boundedNewIndex = reorder.toIndex.coerceIn(0, siblings.size - 1)
@@ -434,15 +409,6 @@ class BlockChildrenService(
         }
 
         return toSave
-    }
-
-    /**
-     * Validates that parent and child belong to the same organisation (critical constraint).
-     */
-    fun validateOrganisationBoundary(parent: BlockEntity, child: BlockEntity) {
-        require(parent.organisationId == child.organisationId) {
-            "Cannot attach child from different organisation (parent: ${parent.organisationId}, child: ${child.organisationId})"
-        }
     }
 
     /* =========================
@@ -464,36 +430,3 @@ class BlockChildrenService(
     }
 }
 
-/* =========================
- * Data classes for batch operations
- * ========================= */
-
-data class CascadeRemovalResult(
-    val blocksToDelete: Set<UUID>,
-    val childEntitiesToDelete: List<BlockChildEntity>
-)
-
-data class ChildAddition(
-    val childId: UUID,
-    val parentId: UUID,
-    val index: Int? // null for layout containers, set for List blocks
-)
-
-data class ChildMove(
-    val childId: UUID,
-    val fromParentId: UUID?,
-    val toParentId: UUID?,
-    val index: Int? = null
-)
-
-data class ChildReorder(
-    val childId: UUID,
-    val parentId: UUID,
-    val fromIndex: Int,
-    val toIndex: Int
-)
-
-data class MovePreparationResult(
-    val childEntitiesToDelete: List<BlockChildEntity>,
-    val childEntitiesToSave: List<BlockChildEntity>
-)

@@ -116,7 +116,7 @@ class BlockChildrenServiceTest {
 
         // Verify siblings with orderIndex >= 1 were shifted up
         verify(edgeRepository, times(2)).save(argThat<BlockChildEntity> {
-            this.orderIndex >= 2 // original indices 1 and 2 should become 2 and 3
+            (this.orderIndex ?: 0) >= 2 // original indices 1 and 2 should become 2 and 3
         })
     }
 

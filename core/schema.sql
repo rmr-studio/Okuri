@@ -260,13 +260,13 @@ CREATE TABLE public.block_references
 );
 
 
-
 CREATE TABLE public.block_children
 (
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "parent_id"   uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
-    "child_id"    uuid    NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
-    "order_index" integer NOT NULL DEFAULT 0
+    "parent_id"   uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    "child_id"    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
+    -- Order index to maintain the order of children within the parent block, given the parent is of 'list' type
+    "order_index" integer          DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_block_children_parent ON block_children (parent_id);

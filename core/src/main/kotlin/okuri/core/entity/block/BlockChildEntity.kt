@@ -32,7 +32,7 @@ data class BlockChildEntity(
     @Column(name = "child_id", nullable = false, columnDefinition = "uuid")
     val childId: UUID,
 
-
-    @Column(name = "order_index", nullable = false)
-    var orderIndex: Int
+    /* Blocks numerical position inside a `list` type parent block. Only applicable to List type blocks. */
+    @Column(name = "order_index", nullable = true)
+    var orderIndex: Int? = null
 )

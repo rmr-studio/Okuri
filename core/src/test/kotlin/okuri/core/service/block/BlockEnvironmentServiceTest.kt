@@ -567,4 +567,777 @@ class BlockEnvironmentServiceTest {
         assertEquals(1, normalizeResult.size)
         assertEquals(reduceResult, normalizeResult[blockId])
     }
+
+    // ------------------------------------------------------------------
+    // saveBlockEnvironment: Basic Operations
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `saveBlockEnvironment with ADD operation returns ID mapping`() {
+        // Scenario: Add a new block
+        // Expect: Success response with temp ID → real ID mapping
+        val layoutId = UUID.randomUUID()
+        val tempBlockId = UUID.randomUUID()
+        val realBlockId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val addOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = tempBlockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val savedBlock = BlockFactory.createBlockEntity(
+            id = realBlockId,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val typeEntity = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
+        whenever(blockService.getBlockTypeEntity(any())).thenReturn(typeEntity)
+        whenever(blockService.saveAll(any())).thenReturn(listOf(savedBlock))
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(addOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertFalse(response.conflict)
+        assertEquals(1, response.idMappings.size)
+        assertTrue(response.idMappings.containsKey(tempBlockId))
+        assertEquals(realBlockId, response.idMappings[tempBlockId])
+
+        verify(blockService).saveAll(any())
+        verify(activityService).logActivities(any())
+    }
+
+    @Test
+    fun `saveBlockEnvironment with UPDATE operation modifies existing block`() {
+        // Scenario: Update an existing block
+        // Expect: Block is updated, no ID mappings
+        val layoutId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val existingBlock = BlockFactory.createBlockEntity(
+            id = blockId,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val updateOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = blockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(setOf(blockId))).thenReturn(mapOf(blockId to existingBlock))
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockService.saveAll(any())).thenReturn(listOf(existingBlock))
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(updateOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(0, response.idMappings.size)
+        verify(blockService).saveAll(any())
+    }
+
+    @Test
+    fun `saveBlockEnvironment with REMOVE operation deletes block and children`() {
+        // Scenario: Remove a block with children
+        // Expect: Cascade delete triggered
+        val layoutId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val childId = UUID.randomUUID()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val removeOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(blockId = blockId),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val childEntity = BlockFactory.createBlockChildEntity(
+            parentId = blockId,
+            childId = childId
+        )
+
+        val cascadeResult = CascadeRemovalResult(
+            blocksToDelete = setOf(blockId, childId),
+            childEntitiesToDelete = listOf(childEntity)
+        )
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(setOf(blockId))).thenReturn(emptyMap())
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.prepareRemovalCascade(setOf(blockId))).thenReturn(cascadeResult)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(removeOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        verify(blockChildrenService).deleteAllInBatch(listOf(childEntity))
+        verify(blockService).deleteAllById(setOf(blockId, childId))
+    }
+
+    @Test
+    fun `saveBlockEnvironment with MOVE operation updates parent-child relationships`() {
+        // Scenario: Move block from one parent to another
+        // Expect: Old edge deleted, new edge created
+        val layoutId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val oldParentId = UUID.randomUUID()
+        val newParentId = UUID.randomUUID()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val moveOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createMoveOperation(
+                blockId = blockId,
+                fromParentId = oldParentId,
+                toParentId = newParentId
+            ),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val oldEdge = BlockFactory.createBlockChildEntity(parentId = oldParentId, childId = blockId)
+        val newEdge = BlockFactory.createBlockChildEntity(parentId = newParentId, childId = blockId)
+
+        val moveResult = MovePreparationResult(
+            childEntitiesToDelete = listOf(oldEdge),
+            childEntitiesToSave = listOf(newEdge)
+        )
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(setOf(blockId))).thenReturn(emptyMap())
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.prepareChildMoves(any(), any())).thenReturn(moveResult)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(moveOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        verify(blockChildrenService).deleteAllInBatch(listOf(oldEdge))
+        verify(blockChildrenService).saveAll(listOf(newEdge))
+    }
+
+    @Test
+    fun `saveBlockEnvironment with REORDER operation updates child indices`() {
+        // Scenario: Reorder child within parent
+        // Expect: Child indices updated
+        val layoutId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val parentId = UUID.randomUUID()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val reorderOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createReorderOperation(
+                blockId = blockId,
+                parentId = parentId,
+                fromIndex = 0,
+                toIndex = 2
+            ),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val reorderedEdges = listOf(
+            BlockFactory.createBlockChildEntity(parentId = parentId, childId = UUID.randomUUID(), orderIndex = 0),
+            BlockFactory.createBlockChildEntity(parentId = parentId, childId = UUID.randomUUID(), orderIndex = 1),
+            BlockFactory.createBlockChildEntity(parentId = parentId, childId = blockId, orderIndex = 2)
+        )
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(setOf(blockId))).thenReturn(emptyMap())
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.prepareChildReorders(any(), any())).thenReturn(reorderedEdges)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(reorderOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        verify(blockChildrenService).saveAll(reorderedEdges)
+    }
+
+    // ------------------------------------------------------------------
+    // saveBlockEnvironment: ID Mapping Resolution
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `saveBlockEnvironment resolves temp ID in UPDATE after ADD`() {
+        // Scenario: ADD block with temp ID, then UPDATE it
+        // Expect: UPDATE uses real ID, both operations succeed
+        val layoutId = UUID.randomUUID()
+        val tempBlockId = UUID.randomUUID()
+        val realBlockId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val addOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = tempBlockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val updateOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = tempBlockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now().plusSeconds(1)
+        )
+
+        val savedBlock = BlockFactory.createBlockEntity(
+            id = realBlockId,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val typeEntity = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
+        whenever(blockService.getBlockTypeEntity(any())).thenReturn(typeEntity)
+        whenever(blockService.saveAll(any())).thenAnswer { invocation ->
+            val blocks = invocation.getArgument<List<BlockEntity>>(0)
+            if (blocks.any { it.id == null }) {
+                listOf(savedBlock) // First call: ADD
+            } else {
+                blocks // Second call: UPDATE
+            }
+        }
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(addOp, updateOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(1, response.idMappings.size)
+        assertEquals(realBlockId, response.idMappings[tempBlockId])
+        verify(blockService, times(2)).saveAll(any()) // Once for ADD, once for UPDATE
+    }
+
+    @Test
+    fun `saveBlockEnvironment resolves temp ID in MOVE after ADD`() {
+        // Scenario: ADD block with temp ID, then MOVE it
+        // Expect: MOVE uses real ID for child
+        val layoutId = UUID.randomUUID()
+        val tempBlockId = UUID.randomUUID()
+        val realBlockId = UUID.randomUUID()
+        val newParentId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val addOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = tempBlockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val moveOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createMoveOperation(
+                blockId = tempBlockId,
+                fromParentId = null,
+                toParentId = newParentId
+            ),
+            timestamp = ZonedDateTime.now().plusSeconds(1)
+        )
+
+        val savedBlock = BlockFactory.createBlockEntity(
+            id = realBlockId,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val typeEntity = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        val newEdge = BlockFactory.createBlockChildEntity(parentId = newParentId, childId = realBlockId)
+
+        val moveResult = MovePreparationResult(
+            childEntitiesToDelete = emptyList(),
+            childEntitiesToSave = listOf(newEdge)
+        )
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
+        whenever(blockService.getBlockTypeEntity(any())).thenReturn(typeEntity)
+        whenever(blockService.saveAll(any())).thenReturn(listOf(savedBlock))
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.prepareChildMoves(any(), any())).thenReturn(moveResult)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(addOp, moveOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(realBlockId, response.idMappings[tempBlockId])
+        verify(blockChildrenService).saveAll(listOf(newEdge))
+    }
+
+    @Test
+    fun `saveBlockEnvironment resolves temp parent ID in nested ADD`() {
+        // Scenario: ADD parent with temp ID, ADD child with parent = temp ID
+        // Expect: Child's parent reference resolved to real parent ID
+        val layoutId = UUID.randomUUID()
+        val tempParentId = UUID.randomUUID()
+        val tempChildId = UUID.randomUUID()
+        val realParentId = UUID.randomUUID()
+        val realChildId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val parentAddOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = tempParentId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val childAddOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(
+                blockId = tempChildId,
+                orgId = orgId,
+                type = type,
+                parentId = tempParentId
+            ),
+            timestamp = ZonedDateTime.now().plusSeconds(1)
+        )
+
+        val savedParent = BlockFactory.createBlockEntity(
+            id = realParentId,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val savedChild = BlockFactory.createBlockEntity(
+            id = realChildId,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val typeEntity = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        val childEdge = BlockFactory.createBlockChildEntity(parentId = realParentId, childId = realChildId)
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
+        whenever(blockService.getBlockTypeEntity(any())).thenReturn(typeEntity)
+        whenever(blockService.saveAll(any())).thenAnswer { invocation ->
+            val blocks = invocation.getArgument<List<BlockEntity>>(0)
+            if (blocks.size == 1 && blocks[0].id == null) {
+                listOf(if (blocks[0].name == savedParent.name) savedParent else savedChild)
+            } else {
+                blocks.map { if (it.id == null) savedChild else it }
+            }
+        }
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.prepareChildAdditions(any(), any())).thenReturn(listOf(childEdge))
+        whenever(blockChildrenService.saveAll(any())).thenReturn(listOf(childEdge))
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(parentAddOp, childAddOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(2, response.idMappings.size)
+        assertTrue(response.idMappings.containsKey(tempParentId))
+        assertTrue(response.idMappings.containsKey(tempChildId))
+    }
+
+    @Test
+    fun `saveBlockEnvironment with multiple ADDs returns all ID mappings`() {
+        // Scenario: Add multiple blocks in one request
+        // Expect: All temp → real ID mappings returned
+        val layoutId = UUID.randomUUID()
+        val tempId1 = UUID.randomUUID()
+        val tempId2 = UUID.randomUUID()
+        val tempId3 = UUID.randomUUID()
+        val realId1 = UUID.randomUUID()
+        val realId2 = UUID.randomUUID()
+        val realId3 = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val ops = listOf(tempId1, tempId2, tempId3).map { tempId ->
+            BlockFactory.createOperationRequest(
+                operation = BlockFactory.createAddOperation(blockId = tempId, orgId = orgId, type = type),
+                timestamp = ZonedDateTime.now()
+            )
+        }
+
+        val savedBlocks = listOf(
+            BlockFactory.createBlockEntity(id = realId1, organisationId = orgId, type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")),
+            BlockFactory.createBlockEntity(id = realId2, organisationId = orgId, type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")),
+            BlockFactory.createBlockEntity(id = realId3, organisationId = orgId, type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block"))
+        )
+
+        val typeEntity = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+
+        // Mock service calls
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
+        whenever(blockService.getBlockTypeEntity(any())).thenReturn(typeEntity)
+        whenever(blockService.saveAll(any())).thenReturn(savedBlocks)
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = ops,
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(3, response.idMappings.size)
+        assertEquals(realId1, response.idMappings[tempId1])
+        assertEquals(realId2, response.idMappings[tempId2])
+        assertEquals(realId3, response.idMappings[tempId3])
+    }
+
+    // ------------------------------------------------------------------
+    // saveBlockEnvironment: Edge Cases
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `saveBlockEnvironment with empty operations succeeds`() {
+        // Scenario: Save with no operations
+        // Expect: Success with no changes
+        val layoutId = UUID.randomUUID()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = emptyList(),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(0, response.idMappings.size)
+        verify(blockService, never()).saveAll(any())
+        verify(blockService, never()).deleteAllById(any())
+    }
+
+    @Test
+    fun `saveBlockEnvironment with version conflict returns conflict response`() {
+        // Scenario: Request version <= layout version
+        // Expect: Conflict response with latest metadata
+        val layoutId = UUID.randomUUID()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 5
+        )
+
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = emptyList(),
+            version = 4 // Lower than layout version
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertFalse(response.success)
+        assertTrue(response.conflict)
+        assertEquals(5, response.latestVersion)
+        verify(blockService, never()).saveAll(any())
+    }
+
+    @Test
+    fun `saveBlockEnvironment cascade deletes all descendants`() {
+        // Scenario: Remove parent with nested children
+        // Expect: All descendants deleted
+        val layoutId = UUID.randomUUID()
+        val parentId = UUID.randomUUID()
+        val child1Id = UUID.randomUUID()
+        val child2Id = UUID.randomUUID()
+        val grandchildId = UUID.randomUUID()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val removeOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(blockId = parentId),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val cascadeResult = CascadeRemovalResult(
+            blocksToDelete = setOf(parentId, child1Id, child2Id, grandchildId),
+            childEntitiesToDelete = listOf(
+                BlockFactory.createBlockChildEntity(parentId = parentId, childId = child1Id),
+                BlockFactory.createBlockChildEntity(parentId = parentId, childId = child2Id),
+                BlockFactory.createBlockChildEntity(parentId = child1Id, childId = grandchildId)
+            )
+        )
+
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.prepareRemovalCascade(setOf(parentId))).thenReturn(cascadeResult)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(removeOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        verify(blockService).deleteAllById(setOf(parentId, child1Id, child2Id, grandchildId))
+    }
+
+    @Test
+    fun `saveBlockEnvironment with ADD then REMOVE returns empty mappings`() {
+        // Scenario: Block added and removed in same request
+        // Expect: Normalization drops both, no mappings
+        val layoutId = UUID.randomUUID()
+        val blockId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val addOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = blockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val removeOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(blockId = blockId),
+            timestamp = ZonedDateTime.now().plusSeconds(1)
+        )
+
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(addOp, removeOp),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(0, response.idMappings.size)
+        verify(blockService, never()).saveAll(any())
+        verify(blockService, never()).deleteAllById(any())
+    }
+
+    // ------------------------------------------------------------------
+    // saveBlockEnvironment: Complex Scenarios
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `saveBlockEnvironment with complex multi-block scenario`() {
+        // Scenario: Multiple blocks with different operation types
+        // - Block A: ADD
+        // - Block B: UPDATE
+        // - Block C: REMOVE
+        // - Block D: MOVE
+        // Expect: All operations processed correctly
+        val layoutId = UUID.randomUUID()
+        val tempIdA = UUID.randomUUID()
+        val realIdA = UUID.randomUUID()
+        val blockBId = UUID.randomUUID()
+        val blockCId = UUID.randomUUID()
+        val blockDId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val layout = BlockFactory.createTreeLayoutEntity(
+            id = layoutId,
+            organisationId = orgId,
+            version = 1
+        )
+
+        val opA = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = tempIdA, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val opB = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = blockBId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val opC = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(blockId = blockCId),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val opD = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createMoveOperation(
+                blockId = blockDId,
+                fromParentId = UUID.randomUUID(),
+                toParentId = UUID.randomUUID()
+            ),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val savedBlockA = BlockFactory.createBlockEntity(
+            id = realIdA,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val existingBlockB = BlockFactory.createBlockEntity(
+            id = blockBId,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+        val typeEntity = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+
+        val cascadeResult = CascadeRemovalResult(
+            blocksToDelete = setOf(blockCId),
+            childEntitiesToDelete = emptyList()
+        )
+
+        val moveResult = MovePreparationResult(
+            childEntitiesToDelete = emptyList(),
+            childEntitiesToSave = emptyList()
+        )
+
+        whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
+        whenever(blockService.getBlocks(any())).thenAnswer { invocation ->
+            val ids = invocation.getArgument<Set<UUID>>(0)
+            mapOf(blockBId to existingBlockB).filterKeys { it in ids }
+        }
+        whenever(blockService.getBlockTypeEntity(any())).thenReturn(typeEntity)
+        whenever(blockService.saveAll(any())).thenAnswer { invocation ->
+            val blocks = invocation.getArgument<List<BlockEntity>>(0)
+            if (blocks.any { it.id == null }) listOf(savedBlockA) else blocks
+        }
+        whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
+        whenever(blockChildrenService.prepareRemovalCascade(setOf(blockCId))).thenReturn(cascadeResult)
+        whenever(blockChildrenService.prepareChildMoves(any(), any())).thenReturn(moveResult)
+
+        val request = BlockFactory.createSaveEnvironmentRequest(
+            layoutId = layoutId,
+            organisationId = orgId,
+            operations = listOf(opA, opB, opC, opD),
+            version = 2
+        )
+
+        val response = blockEnvironmentService.saveBlockEnvironment(request)
+
+        assertTrue(response.success)
+        assertEquals(1, response.idMappings.size)
+        assertEquals(realIdA, response.idMappings[tempIdA])
+    }
 }
