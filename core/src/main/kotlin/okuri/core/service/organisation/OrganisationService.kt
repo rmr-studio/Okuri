@@ -6,6 +6,7 @@ import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.entity.organisation.OrganisationMemberEntity
 import okuri.core.entity.organisation.toModel
 import okuri.core.entity.user.toModel
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.organisation.OrganisationRoles
 import okuri.core.exceptions.NotFoundException
 import okuri.core.models.organisation.Organisation
@@ -92,7 +93,12 @@ class OrganisationService(
                         operation = okuri.core.enums.util.OperationType.CREATE,
                         userId = userId,
                         organisationId = this.id,
-                        additionalDetails = "Created organisation with name: $name"
+                        entityType = EntityType.ORGANISATION,
+                        entityId = this.id,
+                        details = mapOf(
+                            "organisationId" to this.id.toString(),
+                            "name" to name
+                        )
                     )
 
                     // Add the creator as the first member/owner of the organisation
@@ -153,8 +159,13 @@ class OrganisationService(
                         activity = okuri.core.enums.activity.Activity.ORGANISATION,
                         operation = okuri.core.enums.util.OperationType.UPDATE,
                         userId = userId,
-                        organisationId = updatedEntity.id,
-                        additionalDetails = "Updated organisation with name: ${updatedEntity.name}"
+                        organisationId = requireNotNull(updatedEntity.id),
+                        entityType = EntityType.ORGANISATION,
+                        entityId = updatedEntity.id,
+                        details = mapOf(
+                            "organisationId" to updatedEntity.id.toString(),
+                            "name" to updatedEntity.name
+                        )
                     )
                     return updatedEntity.toModel()
                 }
@@ -189,7 +200,12 @@ class OrganisationService(
                     operation = okuri.core.enums.util.OperationType.DELETE,
                     userId = userId,
                     organisationId = organisationId,
-                    additionalDetails = "Deleted organisation with name: ${organisation.name}"
+                    entityType = EntityType.ORGANISATION,
+                    entityId = organisationId,
+                    details = mapOf(
+                        "organisationId" to organisationId.toString(),
+                        "name" to organisation.name
+                    )
                 )
 
             }
@@ -248,8 +264,12 @@ class OrganisationService(
                     operation = okuri.core.enums.util.OperationType.DELETE,
                     userId = userId,
                     organisationId = organisationId,
-                    targetId = member.user.id,
-                    additionalDetails = "Removed member with ID ${member.user.id} from organisation $organisationId"
+                    entityType = EntityType.USER,
+                    entityId = member.user.id,
+                    details = mapOf(
+                        "userId" to member.user.id.toString(),
+                        "organisationId" to organisationId.toString()
+                    )
                 )
             }
         }
@@ -298,8 +318,13 @@ class OrganisationService(
                         operation = okuri.core.enums.util.OperationType.UPDATE,
                         userId = userId,
                         organisationId = organisationId,
-                        targetId = member.user.id,
-                        additionalDetails = "Updated member with ID ${member.user.id} to role $role in organisation $organisationId"
+                        entityType = EntityType.USER,
+                        entityId = member.user.id,
+                        details = mapOf(
+                            "userId" to member.user.id.toString(),
+                            "organisationId" to organisationId.toString(),
+                            "role" to role.toString()
+                        )
                     )
                     return this.toModel()
                 }

@@ -10,7 +10,7 @@ import {
     useRef,
     useState,
 } from "react";
-import { LayoutSnapshot } from "../interface/command.interface";
+import { LayoutSnapshot, StructuralOperationRequest } from "../interface/command.interface";
 
 interface LayoutHistoryContextValue {
     /** Track that a non-structural layout change occurred (resize, reposition). */
@@ -36,6 +36,15 @@ interface LayoutHistoryContextValue {
 
     /** Retrieve the last persisted snapshot if it exists. */
     getBaselineSnapshot: () => LayoutSnapshot | null;
+
+    /** Record a structural operation in the audit trail */
+    recordStructuralOperation: (operation: StructuralOperationRequest) => void;
+
+    /** Get all structural operations since last save */
+    getStructuralOperations: () => StructuralOperationRequest[];
+
+    /** Clear structural operations (after successful save) */
+    clearStructuralOperations: () => void;
 }
 
 const LayoutHistoryContext = createContext<LayoutHistoryContextValue | undefined>(undefined);
@@ -54,6 +63,7 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     const baselineSnapshotRef = useRef<LayoutSnapshot | null>(null);
+    const structuralOperationsRef = useRef<StructuralOperationRequest[]>([]);
 
     const markLayoutChange = useCallback(() => {
         setLayoutChangeCount((prev) => prev + 1);
@@ -65,11 +75,24 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
         setHasUnsavedChanges(true);
     }, []);
 
+    const recordStructuralOperation = useCallback((operation: StructuralOperationRequest) => {
+        structuralOperationsRef.current.push(operation);
+    }, []);
+
+    const getStructuralOperations = useCallback(() => {
+        return [...structuralOperationsRef.current];
+    }, []);
+
+    const clearStructuralOperations = useCallback(() => {
+        structuralOperationsRef.current = [];
+    }, []);
+
     const clearHistory = useCallback(() => {
         setLayoutChangeCount(0);
         setStructuralChangeCount(0);
         setHasUnsavedChanges(false);
-    }, []);
+        clearStructuralOperations();
+    }, [clearStructuralOperations]);
 
     const setBaselineSnapshot = useCallback((snapshot: LayoutSnapshot) => {
         baselineSnapshotRef.current = snapshot;
@@ -87,6 +110,9 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
             structuralChangeCount,
             setBaselineSnapshot,
             getBaselineSnapshot,
+            recordStructuralOperation,
+            getStructuralOperations,
+            clearStructuralOperations,
         }),
         [
             markLayoutChange,
@@ -97,6 +123,9 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
             structuralChangeCount,
             setBaselineSnapshot,
             getBaselineSnapshot,
+            recordStructuralOperation,
+            getStructuralOperations,
+            clearStructuralOperations,
         ]
     );
 

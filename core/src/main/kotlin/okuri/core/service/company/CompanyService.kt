@@ -3,6 +3,7 @@ package okuri.core.service.company
 import io.ktor.server.plugins.*
 import okuri.core.entity.company.CompanyEntity
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.models.company.Company
 import okuri.core.models.company.request.CompanyCreationRequest
@@ -73,7 +74,11 @@ class CompanyService(
                     operation = OperationType.CREATE,
                     userId = authTokenService.getUserId(),
                     organisationId = entity.organisationId,
-                    additionalDetails = "Created company with ID: ${entity.id}"
+                    entityType = EntityType.COMPANY,
+                    entityId = entity.id,
+                    details = mapOf(
+                        "companyId" to entity.id.toString()
+                    )
                 )
                 return entity.toModel()
             }
@@ -105,7 +110,11 @@ class CompanyService(
                     operation = OperationType.UPDATE,
                     userId = authTokenService.getUserId(),
                     organisationId = this.organisationId,
-                    additionalDetails = "Updated company with ID: ${this.id}"
+                    entityType = EntityType.COMPANY,
+                    entityId = this.id,
+                    details = mapOf(
+                        "companyId" to this.id.toString()
+                    )
                 )
                 return this.toModel()
             }
@@ -127,7 +136,11 @@ class CompanyService(
                 operation = OperationType.DELETE,
                 userId = authTokenService.getUserId(),
                 organisationId = company.organisationId,
-                additionalDetails = "Deleted company with ID: ${company.id}"
+                entityType = EntityType.COMPANY,
+                entityId = company.id,
+                details = mapOf(
+                    "companyId" to company.id.toString()
+                )
             )
         }
     }
@@ -150,7 +163,12 @@ class CompanyService(
                     operation = if (archive) OperationType.ARCHIVE else OperationType.RESTORE,
                     userId = authTokenService.getUserId(),
                     organisationId = this.organisationId,
-                    additionalDetails = "${if (archive) "Archived" else "Unarchived"} company with ID: ${this.id}"
+                    entityType = EntityType.COMPANY,
+                    entityId = this.id,
+                    details = mapOf(
+                        "companyId" to this.id.toString(),
+                        "archiveStatus" to archive
+                    )
                 )
                 return this.toModel()
             }

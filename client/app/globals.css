@@ -130,3 +130,12 @@
 .h-screen-without-header {
     height: calc(100dvh - 5rem - 1px);
 }
+
+:root {
+    body[data-scroll-locked][data-scroll-locked] {
+        overflow: auto !important;
+    }
+    body[data-scroll-locked] {
+        margin-right: 0 !important;
+    }
+}

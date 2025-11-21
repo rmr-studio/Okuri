@@ -1,7 +1,7 @@
 "use client";
 
-import { createLineItem } from "@/components/feature-modules/line-item/controller/lineitem.controller";
 import { LineItemCreationRequest } from "@/components/feature-modules/line-item/interface/item.interface";
+import { createLineItem } from "@/components/feature-modules/line-item/service/item.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { useOrganisation } from "@/hooks/useOrganisation";
 import { zodResolver } from "@hookform/resolvers/zod";

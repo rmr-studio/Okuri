@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
 import { useLayoutChange } from "../../context/layout-change-provider";
-import { isContentNode } from "../../interface/block.interface";
+import { isContentNode, TreeLayout, Widget } from "../../interface/block.interface";
 import { WidgetRenderStructure } from "../../interface/render.interface";
 import { getDefaultDimensions } from "../../util/block/block.util";
 import { findNodeById, getTreeId } from "../../util/environment/environment.util";
@@ -16,7 +16,7 @@ import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
  * Recursively extracts all widget configurations from a layout, including nested subgrids.
  * Returns a map of widgetId -> GridStackWidget for quick lookup and a parent map.
  */
-function buildLayoutWidgetMap(layout?: GridStackOptions): {
+function buildLayoutWidgetMap(layout?: TreeLayout): {
     widgetMap: Map<string, GridStackWidget>;
     parentMap: Map<string, string>;
 } {
@@ -24,10 +24,13 @@ function buildLayoutWidgetMap(layout?: GridStackOptions): {
     const parentMap = new Map<string, string>();
     if (!layout?.children) return { widgetMap, parentMap };
 
-    const processChildren = (children: GridStackWidget[], parentId?: string) => {
+    const processChildren = (children: Widget[], parentId?: string) => {
         children.forEach((widget) => {
             if (widget.id) {
-                widgetMap.set(widget.id, widget);
+                widgetMap.set(widget.id, {
+                    ...widget,
+                    content: JSON.stringify(widget.content || {}),
+                });
                 if (parentId) {
                     parentMap.set(widget.id, parentId);
                 }

@@ -15,15 +15,19 @@ export type BlockComponentNode = components["schemas"]["BlockComponentNode"];
 export type ComponentType = components["schemas"]["BlockComponentNode"]["type"];
 export type BlockMeta = components["schemas"]["BlockMeta"];
 export type BlockTypeNesting = components["schemas"]["BlockType"]["nesting"];
-export type BlockListConfiguration = components["schemas"]["BlockListConfiguration"];
 
+export type BlockListConfiguration = components["schemas"]["BlockListConfiguration"];
 export type NodeType = components["schemas"]["Node"]["type"];
 
 /* -------------------------------------------------------------------------- */
 /*                              Tree Type Helpers                             */
 /* -------------------------------------------------------------------------- */
 
+export type BlockEnvironment = components["schemas"]["BlockEnvironment"];
+
 export type BlockTree = components["schemas"]["BlockTree"];
+export type TreeLayout = components["schemas"]["TreeLayout"];
+export type Widget = components["schemas"]['Widget'];
 
 export type Referenceable = components["schemas"]["Referenceable"];
 
@@ -61,10 +65,7 @@ export type EntityReferenceMetadata = components["schemas"]["EntityReferenceMeta
 /*                        Requests / Response Convenience                     */
 /* -------------------------------------------------------------------------- */
 
-export type CreateBlockRequest = components["schemas"]["CreateBlockRequest"];
 export type CreateBlockTypeRequest = components["schemas"]["CreateBlockTypeRequest"];
-
-export type GetBlockResponse = operations["getBlock"]["responses"]["200"]["content"]["*/*"];
 export type GetBlockTypesResponse =
     operations["getBlockTypes"]["responses"]["200"]["content"]["*/*"];
 

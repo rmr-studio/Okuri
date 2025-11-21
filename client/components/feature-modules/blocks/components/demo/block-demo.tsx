@@ -16,10 +16,10 @@ import "../../styles/gridstack-custom.css";
 
 import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/block-focus-provider";
 import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
-import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { LayoutChangeProvider } from "@/components/feature-modules/blocks/context/layout-change-provider";
+import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { BlockTreeLayout, EntityType, LayoutScope } from "../../interface/layout.interface";
 import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-handler";
 
@@ -30,8 +30,8 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
-import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
 import { LayoutHistoryProvider } from "../../context/layout-history-provider";
+import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import {
     BlockComponentNode,
@@ -39,6 +39,7 @@ import {
     BlockRenderStructure,
     BlockTree,
     BlockType,
+    TreeLayout,
 } from "../../interface/block.interface";
 import { EditorEnvironment } from "../../interface/editor.interface";
 import { SlashMenuItem } from "../../interface/panel.interface";
@@ -138,12 +139,12 @@ const BlockEnvironmentWorkspace: React.FC = () => {
 
     return (
         <>
-            <BlockFocusProvider>
-                <BlockEditProvider>
-                    <GridProvider initialOptions={gridOptions}>
-                        <LayoutHistoryProvider>
-                            <LayoutChangeProvider>
-                                <TrackedEnvironmentProvider>
+            <GridProvider initialOptions={gridOptions}>
+                <LayoutHistoryProvider>
+                    <LayoutChangeProvider>
+                        <TrackedEnvironmentProvider>
+                            <BlockFocusProvider>
+                                <BlockEditProvider>
                                     <EditModeIndicator />
                                     <KeyboardNavigationHandler />
                                     <WorkspaceToolbar />
@@ -153,12 +154,12 @@ const BlockEnvironmentWorkspace: React.FC = () => {
                                         <BlockRenderer />
                                     </GridContainerProvider>
                                     <BlockEditDrawer />
-                                </TrackedEnvironmentProvider>
-                            </LayoutChangeProvider>
-                        </LayoutHistoryProvider>
-                    </GridProvider>
-                </BlockEditProvider>
-            </BlockFocusProvider>
+                                </BlockEditProvider>
+                            </BlockFocusProvider>
+                        </TrackedEnvironmentProvider>
+                    </LayoutChangeProvider>
+                </LayoutHistoryProvider>
+            </GridProvider>
             <DebugInfo />
         </>
     );
@@ -522,8 +523,13 @@ function createTaskListNodeWithId(organisationId: string, id: string): BlockNode
                     showDragHandles: true,
                     emptyMessage: "No tasks yet. Add one to get started!",
                 },
-                order: {
-                    mode: "MANUAL",
+                config: {
+                    mode: "SORTED",
+                    sort: {
+                        by: "data.dueDate",
+                        dir: "ASC",
+                    },
+                    filterLogic: "AND",
                 },
             },
         },
@@ -611,7 +617,7 @@ function createDemoEnvironment(): DemoEnvironmentResult {
         root: noteNode,
     };
 
-    const gridLayout: GridStackOptions = {
+    const gridLayout: TreeLayout = {
         sizeToContent: true,
         resizable: {
             handles: "se, sw",
@@ -642,8 +648,12 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                 y: 0,
                 w: 12,
                 h: 4,
-                content:
-                    '{"id":"block-c5745236-a506-4410-994d-4ee9d17c07f2","key":"note","renderType":"component","blockType":"content_node"}',
+                content: {
+                    id: "block-c5745236-a506-4410-994d-4ee9d17c07f2",
+                    key: "note",
+                    renderType: "component",
+                    blockType: "content_node",
+                },
             },
             {
                 id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16",
@@ -673,8 +683,12 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                             y: 1,
                             w: 6,
                             h: 4,
-                            content:
-                                '{"id":"block-2eb29c0a-a7c8-4033-be94-7977466feaf4","key":"note","renderType":"component","blockType":"content_node"}',
+                            content: {
+                                id: "block-2eb29c0a-a7c8-4033-be94-7977466feaf4",
+                                key: "note",
+                                renderType: "component",
+                                blockType: "content_node",
+                            },
                         },
                         {
                             id: "block-4b907540-2d30-43a8-a12c-b7c574ef2f32",
@@ -682,13 +696,21 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                             y: 5,
                             w: 6,
                             h: 5,
-                            content:
-                                '{"id":"block-4b907540-2d30-43a8-a12c-b7c574ef2f32","key":"note","renderType":"component","blockType":"content_node"}',
+                            content: {
+                                id: "block-4b907540-2d30-43a8-a12c-b7c574ef2f32",
+                                key: "note",
+                                renderType: "component",
+                                blockType: "content_node",
+                            },
                         },
                     ],
                 },
-                content:
-                    '{"id":"block-7b648d3c-94d1-4988-8530-fc49f6fc2b16","key":"layout_container","renderType":"container","blockType":"content_node"}',
+                content: {
+                    id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16",
+                    key: "layout_container",
+                    renderType: "container",
+                    blockType: "content_node",
+                },
             },
             {
                 id: "block-f79f702b-f858-479a-a415-261a76d81bdb",
@@ -696,8 +718,12 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                 y: 4,
                 w: 6,
                 h: 11,
-                content:
-                    '{"id":"block-f79f702b-f858-479a-a415-261a76d81bdb","key":"content_block_list","renderType":"list","blockType":"content_node"}',
+                content: {
+                    id: "block-f79f702b-f858-479a-a415-261a76d81bdb",
+                    key: "content_block_list",
+                    renderType: "list",
+                    blockType: "content_node",
+                },
             },
         ],
     };
@@ -706,8 +732,6 @@ function createDemoEnvironment(): DemoEnvironmentResult {
     const blockTreeLayout: BlockTreeLayout = {
         version: 1,
         id: "demo-layout-12345", // Mock ID for demo
-        entityId: "demo-entity",
-        entityType: EntityType.DEMO,
         organisationId: DEMO_ORG_ID,
         scope: LayoutScope.ORGANIZATION,
         layout: gridLayout,

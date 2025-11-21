@@ -9,6 +9,7 @@ import { defaultSlashItems, PanelWrapper } from "../../panel/panel-wrapper";
 
 interface Props extends ChildNodeProps {
     blockId: string;
+    listControls?: React.ReactNode;
 }
 
 /**
@@ -16,7 +17,7 @@ interface Props extends ChildNodeProps {
  * So it is best to have a dedicated panel for list-specific settings and controls.
  * @returns
  */
-export const ListPanel: FC<Props> = ({ blockId, children }) => {
+export const ListPanel: FC<Props> = ({ blockId, children, listControls }) => {
     const { getBlock } = useBlockEnvironment();
     const { removeTrackedBlock, addTrackedBlock } = useTrackedEnvironment();
 
@@ -80,6 +81,7 @@ export const ListPanel: FC<Props> = ({ blockId, children }) => {
             allowInsert={!!type.nesting}
             onInsert={handleInsert}
             onDelete={handleDelete}
+            customControls={listControls}
         >
             {children}
         </PanelWrapper>

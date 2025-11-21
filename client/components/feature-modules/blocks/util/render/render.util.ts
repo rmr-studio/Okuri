@@ -3,7 +3,7 @@ import { WidgetRenderStructure } from "../../interface/render.interface";
 export function parseContent(widget: GridStackWidget): WidgetRenderStructure | null {
     try {
         if (!widget.content) return null;
-        const payload = JSON.parse(widget.content);
+        const payload = JSON.parse(JSON.stringify(widget.content));
         if (!payload) return null;
         return {
             id: payload["id"],

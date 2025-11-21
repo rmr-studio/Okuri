@@ -1,4 +1,4 @@
-import { nowIso } from "@/lib/util/utils";
+import { now } from "@/lib/util/utils";
 import { BlockNode, BlockTree, isContentNode } from "../../interface/block.interface";
 import {
     DetachResult,
@@ -307,11 +307,99 @@ export const replaceNode = (curr: BlockNode, replacement: BlockNode): BlockNode 
     };
 };
 
+/**
+ * Reorder a child within a parent's children array.
+ * Used for list reordering where the parent doesn't change, only the child's index.
+ */
+export const reorderNode = (
+    curr: BlockNode,
+    parentId: string,
+    childId: string,
+    targetIndex: number
+): InsertResult<BlockNode> => {
+    // If we found the parent
+    if (curr.block.id === parentId) {
+        if (!isContentNode(curr) || !curr.children) {
+            return {
+                success: false,
+                payload: curr,
+            };
+        }
+
+        // Find the child's current index
+        const currentIndex = curr.children.findIndex((child) => child.block.id === childId);
+
+        if (currentIndex === -1) {
+            return {
+                success: false,
+                payload: curr,
+            };
+        }
+
+        // If already at target index, no change needed
+        if (currentIndex === targetIndex) {
+            return {
+                success: true,
+                payload: curr,
+            };
+        }
+
+        // Reorder the children array
+        const newChildren = [...curr.children];
+        const [movedChild] = newChildren.splice(currentIndex, 1);
+
+        // Clamp targetIndex to [0, newChildren.length]
+        const clampedIndex = Math.max(0, Math.min(targetIndex, newChildren.length));
+        newChildren.splice(clampedIndex, 0, movedChild);
+
+        return {
+            success: true,
+            payload: {
+                ...curr,
+                children: newChildren,
+            },
+        };
+    }
+
+    // If curr is not a content node or has no children, can't recurse
+    if (!isContentNode(curr) || !curr.children) {
+        return {
+            success: false,
+            payload: curr,
+        };
+    }
+
+    // Recurse into children to find the parent
+    let success = false;
+    const updatedChildren: BlockNode[] = [];
+
+    for (const child of curr.children) {
+        if (success) {
+            updatedChildren.push(child);
+            continue;
+        }
+
+        const result = reorderNode(child, parentId, childId, targetIndex);
+        if (result.success) {
+            success = true;
+        }
+        updatedChildren.push(result.payload);
+    }
+
+    return {
+        success,
+        payload: {
+            ...curr,
+            children: updatedChildren,
+        },
+    };
+};
+
 /** Update environment metadata timestamp after a mutation. */
 export const updateMetadata = (metadata: EditorEnvironmentMetadata): EditorEnvironmentMetadata => {
     return {
         ...metadata,
-        updatedAt: nowIso(),
+        updatedAt: now(),
     };
 };
 
@@ -319,7 +407,7 @@ export const updateMetadata = (metadata: EditorEnvironmentMetadata): EditorEnvir
  * Initialise an empty editor environment for the given organisation id.
  */
 export function createEmptyEnvironment(organisationId: string): EditorEnvironment {
-    const timestamp = nowIso();
+    const timestamp = now();
 
     return {
         trees: [],
@@ -379,8 +467,8 @@ export const init = (
                 name: "Untitled Environment",
                 description: undefined,
                 organisationId,
-                createdAt: nowIso(),
-                updatedAt: nowIso(),
+                createdAt: now(),
+                updatedAt: now(),
             },
         },
     };

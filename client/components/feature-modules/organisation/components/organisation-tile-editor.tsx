@@ -1,11 +1,11 @@
 "use client";
 
-import { updateOrganisation } from "@/components/feature-modules/organisation/controller/organisation.controller";
 import {
     Organisation,
     TileLayoutConfig,
     TileSection,
 } from "@/components/feature-modules/organisation/interface/organisation.interface";
+import { updateOrganisation } from "@/components/feature-modules/organisation/service/organisation.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import {

@@ -5,11 +5,11 @@ import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
 import okuri.core.enums.block.structure.isStrict
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.Block
 import okuri.core.models.block.Reference
 import okuri.core.models.block.metadata.*
-import okuri.core.models.block.request.CreateBlockRequest
 import okuri.core.models.block.tree.*
 import okuri.core.models.common.json.JsonObject
 import okuri.core.repository.block.BlockRepository
@@ -36,6 +36,8 @@ class BlockService(
     private val activityService: ActivityService
 ) {
     // ---------- CREATE ----------
+    // TODO: Uncomment when CreateBlockRequest is defined
+    /*
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
     @Transactional
     fun createBlock(request: CreateBlockRequest): Block {
@@ -113,13 +115,18 @@ class BlockService(
                 operation = OperationType.CREATE,
                 userId = authTokenService.getUserId(),
                 organisationId = this.organisationId,
-                targetId = this.id,
-                additionalDetails = "Created Block '${this.id}' of type '${type.key}'"
+                entityType = EntityType.BLOCK,
+                entityId = this.id,
+                details = mapOf(
+                    "blockId" to this.id.toString(),
+                    "typeKey" to type.key
+                )
             )
 
             return this.toModel()
         }
     }
+    */
 
     // ---------- UPDATE ----------
     @PreAuthorize("@organisationSecurity.hasOrg(#block.organisationId)")
@@ -193,15 +200,33 @@ class BlockService(
             operation = OperationType.UPDATE,
             userId = authTokenService.getUserId(),
             organisationId = saved.organisationId,
-            targetId = saved.id,
-            additionalDetails = "Updated Block '${saved.id}' of type '${saved.type.key}'"
+            entityType = EntityType.BLOCK,
+            entityId = saved.id,
+            details = mapOf(
+                "blockId" to saved.id.toString(),
+                "typeKey" to saved.type.key
+            )
         )
 
         return saved.toModel()
     }
 
-    // ---------- READ (tree) ----------
-    fun getBlock(blockId: UUID): BlockTree {
+
+    // ---------- READ ----------
+    fun getBlock(blockId: UUID): BlockEntity {
+        return blockRepository.findById(blockId).orElseThrow()
+    }
+
+    fun getBlocks(blockIds: Set<UUID>): Map<UUID, BlockEntity> {
+        return blockRepository.findAllById(blockIds)
+            .mapNotNull { block ->
+                val id = block.id ?: return@mapNotNull null
+                id to block
+            }
+            .toMap()
+    }
+
+    fun getBlockTree(blockId: UUID): BlockTree {
         val root = blockRepository.findById(blockId).orElseThrow()
         val node = buildNode(root.toModel(), visited = mutableSetOf())
         return BlockTree(
@@ -222,7 +247,7 @@ class BlockService(
                     if (it == BlockReferenceFetchPolicy.LAZY || edge == null) return@let ref
 
                     // Build block tree for EAGER fetch
-                    val tree = getBlock(ref.entityId)
+                    val tree = getBlockTree(ref.entityId)
                     ref.copy(
                         entity = tree,
                         warning = null,
@@ -270,6 +295,8 @@ class BlockService(
     }
 
     // ---------- helpers ----------
+    // TODO: Uncomment when CreateBlockRequest is defined
+    /*
     private fun resolveType(request: CreateBlockRequest): BlockTypeEntity =
         when {
             request.typeId != null -> blockTypeService.getById(request.typeId)
@@ -281,6 +308,7 @@ class BlockService(
 
             else -> throw IllegalArgumentException("Either typeId or typeKey must be provided")
         }
+    */
 
     private fun dispatchReferenceUpsert(saved: BlockEntity, meta: ReferenceMetadata) {
         meta.let {
@@ -318,8 +346,12 @@ class BlockService(
             operation = if (status) OperationType.ARCHIVE else OperationType.RESTORE,
             userId = authTokenService.getUserId(),
             organisationId = updated.organisationId,
-            targetId = updated.id,
-            additionalDetails = "Block '${updated.id}' archive status set to $status"
+            entityType = EntityType.BLOCK,
+            entityId = updated.id,
+            details = mapOf(
+                "blockId" to updated.id.toString(),
+                "archiveStatus" to status
+            )
         )
     }
 
@@ -330,6 +362,29 @@ class BlockService(
     @Transactional
     fun deleteBlock(tree: BlockTree) {
         TODO()
+    }
+
+    // ---------- BATCH OPERATIONS ----------
+
+    /**
+     * Batch save blocks - used for efficient bulk operations.
+     */
+    fun saveAll(blocks: List<BlockEntity>): List<BlockEntity> {
+        return blockRepository.saveAll(blocks).toList()
+    }
+
+    /**
+     * Batch delete blocks by IDs.
+     */
+    fun deleteAllById(blockIds: Set<UUID>) {
+        blockRepository.deleteAllById(blockIds)
+    }
+
+    /**
+     * Get BlockTypeEntity by ID - helper for ADD operations.
+     */
+    fun getBlockTypeEntity(typeId: UUID): BlockTypeEntity {
+        return blockTypeService.getById(typeId)
     }
 
     // ---------- helpers ----------

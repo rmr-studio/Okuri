@@ -3,8 +3,8 @@ import {
     CreateBlockTypeRequest,
     GetBlockTypesResponse,
 } from "@/components/feature-modules/blocks/interface/block.interface";
-import { handleError, validateSession, validateUuid } from "@/lib/util/controller/controller.util";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
+import { handleError, validateSession, validateUuid } from "@/lib/util/service/service.util";
 import { api } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
 
@@ -182,7 +182,7 @@ export const lintBlockType = async (session: Session | null, blockType: BlockTyp
     try {
         validateSession(session);
         const url = api();
-        
+
         const response = await fetch(`${url}/v1/block/schema/lint/`, {
             method: "POST",
             headers: {

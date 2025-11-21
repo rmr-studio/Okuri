@@ -82,7 +82,7 @@ export interface BlockEnvironmentContextValue {
 
     // Children Retrieval
     getChildren(blockId: string): string[];
-    getDescendants(blockId: string): string[];
+    getDescendants(blockId: string): Record<string, string>;
     isDescendantOf(blockId: string, ancestorId: string): boolean;
     updateHierarchy(blockId: string, newParentId: string | null): void;
 

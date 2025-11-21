@@ -1,4 +1,4 @@
-import { getOrganisation } from "@/components/feature-modules/organisation/controller/organisation.controller";
+import { getOrganisation } from "@/components/feature-modules/organisation/service/organisation.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";

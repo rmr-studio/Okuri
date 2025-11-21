@@ -11,12 +11,25 @@ import React, {
     useState,
 } from "react";
 import { BlockNode, isContentNode } from "../interface/block.interface";
-import { useBlockEnvironment } from "./block-environment-provider";
+import { useTrackedEnvironment } from "./tracked-environment-provider";
 import { useBlockFocus } from "./block-focus-provider";
 
 /* -------------------------------------------------------------------------- */
 /*                              Type Definitions                              */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Deep equality check for block payload data
+ * Returns true if the objects are deeply equal
+ */
+function isPayloadEqual(a: any, b: any): boolean {
+    try {
+        return JSON.stringify(a) === JSON.stringify(b);
+    } catch (error) {
+        console.warn("Failed to compare payloads:", error);
+        return false;
+    }
+}
 
 export interface EditSession {
     blockId: string;
@@ -88,7 +101,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         expandedSections: new Set(),
     });
 
-    const { getBlock, updateBlock, getChildren } = useBlockEnvironment();
+    const { blockEnvironment, updateTrackedBlock } = useTrackedEnvironment();
+    const { getBlock, getChildren } = blockEnvironment;
     const { acquireLock } = useBlockFocus();
     const lockRef = useRef<(() => void) | null>(null);
 
@@ -314,17 +328,25 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 return false;
             }
 
-            // Create updated node with draft data
-            const updatedNode: BlockNode = {
-                ...block,
-                block: {
-                    ...block.block,
-                    payload: draft,
-                },
-            };
+            // Check if the draft is actually different from the current block
+            const hasChanges = !isPayloadEqual(block.block.payload, draft);
 
-            // Commit to BlockEnvironment
-            updateBlock(blockId, updatedNode);
+            if (hasChanges) {
+                // Create updated node with draft data
+                const updatedNode: BlockNode = {
+                    ...block,
+                    block: {
+                        ...block.block,
+                        payload: draft,
+                    },
+                };
+
+                // Commit to BlockEnvironment (using tracked version to record operation)
+                updateTrackedBlock(blockId, updatedNode);
+                console.log(`✅ Saved block ${blockId} (changes detected)`);
+            } else {
+                console.log(`⏭️ Skipped saving block ${blockId} (no changes detected)`);
+            }
 
             // Clean up session and draft
             setEditingSessions((prev) => {
@@ -341,7 +363,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
             return true;
         },
-        [editingSessions, drafts, getBlock, updateBlock, validateBlock]
+        [editingSessions, drafts, getBlock, updateTrackedBlock, validateBlock]
     );
 
     const cancelEdit = useCallback((blockId: string) => {
@@ -377,7 +399,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             return false;
         }
 
-        // Update all blocks in the environment
+        // Update all blocks in the environment (only if they have changes)
+        let savedCount = 0;
         allBlockIds.forEach((blockId) => {
             const draft = drafts.get(blockId);
             if (!draft) return;
@@ -385,27 +408,33 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const block = getBlock(blockId);
             if (!block || !isContentNode(block)) return;
 
-            // Create updated node with draft data
-            const updatedNode: BlockNode = {
-                ...block,
-                block: {
-                    ...block.block,
-                    payload: draft,
-                },
-            };
+            // Check if the draft is actually different from the current block
+            const hasChanges = !isPayloadEqual(block.block.payload, draft);
 
-            // Commit to BlockEnvironment
-            updateBlock(blockId, updatedNode);
-            console.log(`Saved block ${blockId}`);
+            if (hasChanges) {
+                // Create updated node with draft data
+                const updatedNode: BlockNode = {
+                    ...block,
+                    block: {
+                        ...block.block,
+                        payload: draft,
+                    },
+                };
+
+                // Commit to BlockEnvironment (using tracked version to record operation)
+                updateTrackedBlock(blockId, updatedNode);
+                savedCount++;
+            }
         });
+
+        console.log(`Saved ${savedCount} of ${allBlockIds.length} blocks (skipped ${allBlockIds.length - savedCount} unchanged)`);
+
 
         // Clean up ALL sessions and drafts at once
         setEditingSessions(new Map());
         setDrafts(new Map());
-
-        console.log(`Saved all ${allBlockIds.length} blocks`);
         return true;
-    }, [editingSessions, drafts, validateBlock, getBlock, updateBlock]);
+    }, [editingSessions, drafts, validateBlock, getBlock, updateTrackedBlock]);
 
     const discardAllEdits = useCallback(() => {
         const allBlockIds = Array.from(editingSessions.keys());
@@ -514,7 +543,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     return;
                 }
 
-                // Update all blocks in the environment
+                // Update all blocks in the environment (only if they have changes)
+                let savedCount = 0;
                 blocksInDrawer.forEach((blockId) => {
                     const draft = drafts.get(blockId);
                     if (!draft) return;
@@ -522,19 +552,26 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     const block = getBlock(blockId);
                     if (!block || !isContentNode(block)) return;
 
-                    // Create updated node with draft data
-                    const updatedNode: BlockNode = {
-                        ...block,
-                        block: {
-                            ...block.block,
-                            payload: draft,
-                        },
-                    };
+                    // Check if the draft is actually different from the current block
+                    const hasChanges = !isPayloadEqual(block.block.payload, draft);
 
-                    // Commit to BlockEnvironment
-                    updateBlock(blockId, updatedNode);
-                    console.log(`Saved block ${blockId}`);
+                    if (hasChanges) {
+                        // Create updated node with draft data
+                        const updatedNode: BlockNode = {
+                            ...block,
+                            block: {
+                                ...block.block,
+                                payload: draft,
+                            },
+                        };
+
+                        // Commit to BlockEnvironment (using tracked version to record operation)
+                        updateTrackedBlock(blockId, updatedNode);
+                        savedCount++;
+                    }
                 });
+
+                console.log(`Drawer: Saved ${savedCount} of ${blocksInDrawer.length} blocks (skipped ${blocksInDrawer.length - savedCount} unchanged)`);
             }
 
             // Clean up ALL sessions and drafts within the drawer tree at once
@@ -570,7 +607,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             validateBlock,
             getChildren,
             getBlock,
-            updateBlock,
+            updateTrackedBlock,
         ]
     );
 

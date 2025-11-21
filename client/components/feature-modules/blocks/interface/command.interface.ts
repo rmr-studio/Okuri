@@ -1,7 +1,8 @@
+import { components } from "@/lib/types/types";
 import { GridStackOptions, GridStackWidget } from "gridstack";
+import { BatchCommand } from "../util/command/commands";
 import { BlockNode } from "./block.interface";
 import { EditorEnvironment } from "./editor.interface";
-import { BatchCommand } from "../util/command/commands";
 
 /**
  * Snapshot of the entire layout state at a point in time
@@ -15,7 +16,7 @@ export interface LayoutSnapshot {
     gridLayout: GridStackOptions;
 
     /** Timestamp when snapshot was created */
-    timestamp: number;
+    timestamp: string;
 
     /** Version number from backend (for optimistic locking) */
     version: number;
@@ -70,8 +71,11 @@ export enum LayoutCommandType {
     /** Resizing a block (width/height change) */
     RESIZE_BLOCK = "RESIZE_BLOCK",
 
-    /** Repositioning a block within same parent (x/y change) */
+    /** Repositioning a block within same parent (x/y change in GridStack) */
     REPOSITION_BLOCK = "REPOSITION_BLOCK",
+
+    /** Reordering a block within a list (orderIndex change) */
+    REORDER_BLOCK = "REORDER_BLOCK",
 
     /** Updating block content/configuration */
     UPDATE_BLOCK = "UPDATE_BLOCK",
@@ -93,6 +97,8 @@ export function isStructuralCommand(type: LayoutCommandType): boolean {
         LayoutCommandType.ADD_BLOCK,
         LayoutCommandType.REMOVE_BLOCK,
         LayoutCommandType.MOVE_BLOCK,
+        LayoutCommandType.UPDATE_BLOCK,
+        LayoutCommandType.REORDER_BLOCK,
     ].includes(type);
 }
 
@@ -180,33 +186,27 @@ export interface ConflictResolution {
 }
 
 /**
- * Response from backend when saving layout
+ * Serializable operation record for audit trail
+ * Only tracks structural changes - layout changes are captured in GridStack snapshot
  */
-export interface SaveLayoutResponse {
-    /** Whether save was successful */
-    success: boolean;
+export type StructuralOperationRequest = components["schemas"]["StructuralOperationRequest"];
 
-    /** New version number after successful save */
-    newVersion?: number;
+export type StructuralOperationType =
+    | LayoutCommandType.ADD_BLOCK
+    | LayoutCommandType.REMOVE_BLOCK
+    | LayoutCommandType.MOVE_BLOCK
+    | LayoutCommandType.UPDATE_BLOCK
+    | LayoutCommandType.REORDER_BLOCK; // For list reordering (orderIndex changes)
 
-    /** Whether there was a conflict (version mismatch) */
-    conflict?: boolean;
+export type StructuralOperationData = StructuralOperationRequest["data"];
+export type AddBlockOperation = components["schemas"]["AddBlockOperation"];
+export type RemoveBlockOperation = components["schemas"]["RemoveBlockOperation"];
+export type MoveBlockOperation = components["schemas"]["MoveBlockOperation"];
+export type UpdateBlockOperation = components["schemas"]["UpdateBlockOperation"];
+export type ReorderBlockOperation = components["schemas"]["ReorderBlockOperation"];
 
-    /** Latest layout from backend (if conflict) */
-    latestLayout?: GridStackOptions;
-
-    /** Latest environment from backend (if conflict) */
-    latestEnvironment?: EditorEnvironment;
-
-    /** Version of the conflicting layout */
-    latestVersion?: number;
-
-    /** Who made the conflicting change */
-    lastModifiedBy?: string;
-
-    /** When the conflicting change was made */
-    lastModifiedAt?: string;
-
-    /** Error message if save failed */
-    error?: string;
-}
+/**
+ * Request and Response from backend when saving layout
+ */
+export type SaveEnvironmentRequest = components["schemas"]["SaveEnvironmentRequest"];
+export type SaveEnvironmentResponse = components["schemas"]["SaveEnvironmentResponse"];

@@ -3,6 +3,7 @@ package okuri.core.service.organisation
 import okuri.core.entity.organisation.OrganisationInviteEntity
 import okuri.core.entity.organisation.toModel
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.organisation.OrganisationInviteStatus
 import okuri.core.enums.organisation.OrganisationRoles
 import okuri.core.enums.util.OperationType
@@ -87,7 +88,13 @@ class OrganisationInviteService(
                     operation = OperationType.CREATE,
                     userId = authTokenService.getUserId(),
                     organisationId = organisationId,
-                    additionalDetails = "Invited $email with role $role to organisation $organisationId => Invite ID: ${this.id}"
+                    entityType = EntityType.ORGANISATION,
+                    entityId = this.id,
+                    details = mapOf(
+                        "inviteId" to this.id.toString(),
+                        "email" to email,
+                        "role" to role.toString()
+                    )
                 )
                 return this.toModel()
             }

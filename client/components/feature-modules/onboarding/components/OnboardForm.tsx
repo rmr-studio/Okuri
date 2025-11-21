@@ -1,6 +1,6 @@
-import { updateUser } from "@/components/feature-modules/user/controller/user.controller";
 import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
 import { User } from "@/components/feature-modules/user/interface/user.interface";
+import { updateUser } from "@/components/feature-modules/user/service/user.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";

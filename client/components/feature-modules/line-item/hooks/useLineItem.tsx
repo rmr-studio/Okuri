@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchOrganisationLineItems } from "@/components/feature-modules/line-item/controller/lineitem.controller";
+import { fetchOrganisationLineItems } from "@/components/feature-modules/line-item/service/item.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { useQuery } from "@tanstack/react-query";

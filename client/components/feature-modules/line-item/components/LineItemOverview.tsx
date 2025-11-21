@@ -1,6 +1,6 @@
 import { LineItem } from "@/components/feature-modules/invoice/interface/invoice.interface";
-import { updateLineItem } from "@/components/feature-modules/line-item/controller/lineitem.controller";
 import { useLineItemOverview } from "@/components/feature-modules/line-item/hooks/useLineItemOverview";
+import { updateLineItem } from "@/components/feature-modules/line-item/service/item.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useOrganisation } from "@/hooks/useOrganisation";

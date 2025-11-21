@@ -1,7 +1,7 @@
 "use client";
 
-import { updateOrganisation } from "@/components/feature-modules/organisation/controller/organisation.controller";
 import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
+import { updateOrganisation } from "@/components/feature-modules/organisation/service/organisation.service";
 import { useAuth } from "@/components/provider/auth-context";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { useMutation, useQueryClient } from "@tanstack/react-query";

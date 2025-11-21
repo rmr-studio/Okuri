@@ -1,7 +1,7 @@
 "use client";
 
-import { createOrganisation } from "@/components/feature-modules/organisation/controller/organisation.controller";
 import { OrganisationCreationRequest } from "@/components/feature-modules/organisation/interface/organisation.interface";
+import { createOrganisation } from "@/components/feature-modules/organisation/service/organisation.service";
 import { useProfile } from "@/components/feature-modules/user/hooks/useProfile";
 import { useAuth } from "@/components/provider/auth-context";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";

@@ -3,7 +3,6 @@ package okuri.core.entity.block
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType
 import jakarta.persistence.*
 import okuri.core.entity.util.AuditableEntity
-import okuri.core.enums.block.layout.LayoutScope
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.layout.TreeLayout
 import okuri.core.models.block.tree.BlockTreeLayout
@@ -58,22 +57,9 @@ data class BlockTreeLayoutEntity(
     @Column(name = "organisation_id", nullable = false, columnDefinition = "uuid")
     val organisationId: UUID,
 
-    /**
-     * Scope of this layout (ORGANIZATION, USER, or TEAM)
-     */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "scope", nullable = false, length = 50)
-    val scope: LayoutScope,
-
-    /**
-     * Owner of this layout based on scope:
-     * - ORGANIZATION scope: should be null (or org admin user id)
-     * - USER scope: user's UUID
-     * - TEAM scope: team's UUID
-     */
-    @Column(name = "owner_id", nullable = true, columnDefinition = "uuid")
-    val ownerId: UUID? = null,
-
+    @Column(name = "version", nullable = false)
+    var version: Int = 1,
+    
     /**
      * The complete Gridstack layout configuration
      * Stores all positioning, dimensions, grid options, and nested sub-grids
@@ -87,8 +73,8 @@ data class BlockTreeLayoutEntity(
         return BlockTreeLayout(
             id = id,
             organisationId = this.organisationId,
-            scope = this.scope,
             layout = this.layout,
+            version = this.version,
             createdAt = if (audit) this.createdAt else null,
             updatedAt = if (audit) this.updatedAt else null,
             createdBy = if (audit) this.createdBy else null,

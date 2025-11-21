@@ -38,7 +38,7 @@ class OrganisationSecurity {
             return it.authorities.any { claim -> claim.authority.startsWith("ROLE_$organisationId") }
         }
     }
-    
+
     fun hasOrgRoleOrHigher(
         organisationId: UUID,
         targetRole: OrganisationRoles

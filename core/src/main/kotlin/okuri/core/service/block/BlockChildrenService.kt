@@ -5,6 +5,11 @@ import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.models.block.display.BlockTypeNesting
 import okuri.core.models.block.metadata.BlockContentMetadata
+import okuri.core.models.block.operation.AddBlockOperation
+import okuri.core.models.block.operation.MoveBlockOperation
+import okuri.core.models.block.operation.ReorderBlockOperation
+import okuri.core.models.block.response.internal.CascadeRemovalResult
+import okuri.core.models.block.response.internal.MovePreparationResult
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
 import org.springframework.stereotype.Service
@@ -29,10 +34,15 @@ class BlockChildrenService(
      * Public read operations
      * ========================= */
 
-    /** Returns the ordered list of children in a single slot. */
+    /** Returns the ordered list of children */
     fun listChildren(parentId: UUID): List<BlockChildEntity> =
         edgeRepository.findByParentIdOrderByOrderIndexAsc(parentId)
 
+    /** Returns a map of parentId to their ordered list of children */
+    fun getChildrenForBlocks(blockIds: Collection<UUID>): Map<UUID, List<BlockChildEntity>> {
+        val edges = edgeRepository.findByParentIdInOrderByParentIdAndOrderIndex(blockIds)
+        return edges.groupBy { it.parentId }
+    }
 
     /* =========================
      * Helpers / Validation
@@ -67,8 +77,9 @@ class BlockChildrenService(
 
         // Shift down indexes >= insertAt
         siblings.asReversed().forEach { s ->
-            if (s.orderIndex >= insertAt) {
-                edgeRepository.save(s.copy(orderIndex = s.orderIndex + 1))
+            val currentIndex = s.orderIndex ?: 0
+            if (currentIndex >= insertAt) {
+                edgeRepository.save(s.copy(orderIndex = currentIndex + 1))
             }
         }
 
@@ -85,7 +96,7 @@ class BlockChildrenService(
     }
 
     /**
-     * Move a child to a new absolute index within the same slot.
+     * Move a child to a new absolute index within the same parent. This is only accessible to `LIST` types.
      */
     @Transactional
     fun reorderChildren(parentId: UUID, childId: UUID, newIndex: Int) {
@@ -107,7 +118,7 @@ class BlockChildrenService(
 
 
     /**
-     * Reparent a child under a new parent/slot/index.
+     * Reparent a child under a new parent. This is only accessible to `LAYOUT_CONTAINER` types.
      * - Validates org, allowed types, max children.
      * - Updates child's parent pointer if maintained.
      */
@@ -115,7 +126,6 @@ class BlockChildrenService(
     fun reparentChild(
         childId: UUID,
         newParentId: UUID,
-        index: Int? = null,
         nesting: BlockTypeNesting
     ) {
         val child = load(childId)
@@ -132,23 +142,11 @@ class BlockChildrenService(
             renumber(existingEdge.parentId, oldSiblings)
         }
 
-        // Insert new edge
-        val siblings = edgeRepository.findByParentIdOrderByOrderIndexAsc(newParentId)
-        val insertAt = index?.coerceIn(0, siblings.size) ?: siblings.size
-
-        // Shift siblings
-        siblings.asReversed().forEach { s ->
-            if (s.orderIndex >= insertAt) {
-                edgeRepository.save(s.copy(orderIndex = s.orderIndex + 1))
-            }
-        }
-
         edgeRepository.save(
             BlockChildEntity(
                 id = null,
                 parentId = newParentId,
                 childId = childId,
-                orderIndex = insertAt
             )
         )
     }
@@ -222,4 +220,218 @@ class BlockChildrenService(
             if (r.orderIndex != idx) edgeRepository.save(r.copy(orderIndex = idx))
         }
     }
+
+    /* =========================
+     * Batch Preparation Methods
+     * ========================= */
+
+    /**
+     * Recursively collects all descendant block IDs for cascade deletion.
+     * Returns a set of all block IDs that should be deleted (including the root blocks).
+     */
+    fun prepareRemovalCascade(blockIds: Set<UUID>): CascadeRemovalResult {
+        val toDelete = mutableSetOf<UUID>()
+        val queue = ArrayDeque(blockIds)
+        val visited = mutableSetOf<UUID>()
+
+        while (queue.isNotEmpty()) {
+            val currentId = queue.removeFirst()
+            if (!visited.add(currentId)) continue // Skip if already processed (cycle protection)
+
+            toDelete.add(currentId)
+
+            // Find all children of this block
+            val children = edgeRepository.findByParentIdOrderByOrderIndexAsc(currentId)
+            children.forEach { edge ->
+                queue.add(edge.childId)
+            }
+        }
+
+        // Collect all BlockChildEntity records to delete:
+        // 1. Where these blocks are parents (already handled by finding children above)
+        // 2. Where these blocks are children (edges pointing to them)
+        val childEntitiesToDelete = mutableListOf<BlockChildEntity>()
+
+        // Find all edges where blocks in toDelete are children
+        toDelete.forEach { blockId ->
+            edgeRepository.findByChildId(blockId)?.let { edge ->
+                childEntitiesToDelete.add(edge)
+            }
+        }
+
+        // Find all edges where blocks in toDelete are parents
+        val childrenOfDeleted = edgeRepository.findByParentIdInOrderByParentIdAndOrderIndex(toDelete)
+        childEntitiesToDelete.addAll(childrenOfDeleted)
+
+        return CascadeRemovalResult(
+            blocksToDelete = toDelete,
+            childEntitiesToDelete = childEntitiesToDelete.distinctBy { it.id }
+        )
+    }
+
+    /**
+     * Prepares BlockChildEntity records for blocks being added with parents.
+     * Handles both List blocks (with numerical indices) and layout containers (without).
+     */
+    fun prepareChildAdditions(
+        additions: List<AddBlockOperation>,
+        existingChildren: Map<UUID, List<BlockChildEntity>>
+    ): List<BlockChildEntity> {
+        val toSave = mutableListOf<BlockChildEntity>()
+
+        // Group additions by parent for efficient index management
+        val additionsByParent: Map<UUID, List<AddBlockOperation>> =
+            additions.filter { it.parentId != null }.groupBy { it.parentId!! }
+
+        additionsByParent.forEach { (parentId, childAdditions) ->
+            val siblings = existingChildren[parentId]?.toMutableList() ?: mutableListOf()
+
+            childAdditions.forEach { addition ->
+                val insertAt = when (addition.index) {
+                    null -> null // No index for layout containers - let them append without order
+                    else -> addition.index.coerceIn(0, siblings.size)
+                }
+
+                val newEdge = BlockChildEntity(
+                    id = null,
+                    parentId = parentId,
+                    childId = addition.blockId,
+                    orderIndex = insertAt
+                )
+
+                if (insertAt != null) {
+                    // For List blocks, shift siblings and maintain order
+                    siblings.add(insertAt, newEdge)
+                } else {
+                    // For layout containers, just add without shifting
+                    siblings.add(newEdge)
+                }
+            }
+
+            // Renumber if any additions had indices (List blocks)
+            if (childAdditions.any { it.index != null }) {
+                siblings.forEachIndexed { idx, edge ->
+                    toSave.add(edge.copy(orderIndex = idx))
+                }
+            } else {
+                // For layout containers, just add the new edges
+                toSave.addAll(siblings.filter { it.id == null })
+            }
+        }
+
+        return toSave
+    }
+
+    /**
+     * Prepares move operations: removes old parent-child edges and creates new ones.
+     * Returns entities to delete and entities to save.
+     */
+    fun prepareChildMoves(
+        operations: List<MoveBlockOperation>,
+        existingChildren: Map<UUID, List<BlockChildEntity>>
+    ): MovePreparationResult {
+        val toDelete = mutableListOf<BlockChildEntity>()
+        val toSave = mutableListOf<BlockChildEntity>()
+
+        // Track modified parents for renumbering
+        val affectedOldParents = mutableMapOf<UUID, MutableList<BlockChildEntity>>()
+        val affectedNewParents = mutableMapOf<UUID, MutableList<BlockChildEntity>>()
+
+        operations.forEach { move ->
+            // Find and mark old edge for deletion
+            move.fromParentId?.let { oldParentId ->
+                existingChildren[oldParentId]?.find { it.childId == move.blockId }?.let { oldEdge ->
+                    toDelete.add(oldEdge)
+
+                    // Track siblings in old parent for renumbering
+                    if (!affectedOldParents.containsKey(oldParentId)) {
+                        affectedOldParents[oldParentId] = existingChildren[oldParentId]
+                            ?.filter { it.childId != move.blockId }
+                            ?.toMutableList() ?: mutableListOf()
+                    }
+                }
+            }
+
+            // Create new edge for new parent
+            move.toParentId?.let { newParentId ->
+                val newSiblings = affectedNewParents.getOrPut(newParentId) {
+                    existingChildren[newParentId]?.toMutableList() ?: mutableListOf()
+                }
+
+                val newEdge = BlockChildEntity(
+                    id = null,
+                    parentId = newParentId,
+                    childId = move.blockId,
+                )
+
+                newSiblings.add(newEdge)
+                toSave.add(newEdge)
+            }
+        }
+
+        return MovePreparationResult(
+            childEntitiesToDelete = toDelete,
+            childEntitiesToSave = toSave
+        )
+    }
+
+    /**
+     * Prepares reorder operations: updates order indices within the same parent.
+     * Returns entities to save with updated indices.
+     */
+    fun prepareChildReorders(
+        reorders: List<ReorderBlockOperation>,
+        existingChildren: Map<UUID, List<BlockChildEntity>>
+    ): List<BlockChildEntity> {
+        val toSave = mutableListOf<BlockChildEntity>()
+
+        // Group by parent for efficient processing
+        val reordersByParent = reorders.groupBy { it.parentId }
+
+        reordersByParent.forEach { (parentId, parentReorders) ->
+            val siblings = existingChildren[parentId]?.toMutableList() ?: return@forEach
+
+            parentReorders.forEach { reorder ->
+                val currentIndex = siblings.indexOfFirst { it.childId == reorder.blockId }
+                if (currentIndex == -1) return@forEach
+
+                val boundedNewIndex = reorder.toIndex.coerceIn(0, siblings.size - 1)
+                if (currentIndex == boundedNewIndex) return@forEach
+
+                // Remove and reinsert
+                val edge = siblings.removeAt(currentIndex)
+                siblings.add(boundedNewIndex, edge)
+            }
+
+            // Renumber all siblings in this parent
+            siblings.forEachIndexed { idx, edge ->
+                toSave.add(edge.copy(orderIndex = idx))
+            }
+        }
+
+        return toSave
+    }
+
+    /* =========================
+     * Batch persistence operations
+     * ========================= */
+
+    /**
+     * Batch delete child entities without individual SELECT queries.
+     */
+    fun deleteAllInBatch(entities: List<BlockChildEntity>) {
+        edgeRepository.deleteAllInBatch(entities)
+    }
+
+    fun deleteAllInBatch(entities: Collection<UUID>) {
+        edgeRepository.deleteAllByParentIdIn(entities)
+    }
+
+    /**
+     * Batch save child entities.
+     */
+    fun saveAll(entities: List<BlockChildEntity>): List<BlockChildEntity> {
+        return edgeRepository.saveAll(entities).toList()
+    }
 }
+

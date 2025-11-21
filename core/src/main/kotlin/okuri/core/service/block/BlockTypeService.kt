@@ -3,6 +3,7 @@ package okuri.core.service.block
 import okuri.core.configuration.auth.OrganisationSecurity
 import okuri.core.entity.block.BlockTypeEntity
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.BlockType
 import okuri.core.models.block.request.CreateBlockTypeRequest
@@ -24,7 +25,7 @@ class BlockTypeService(
     private val blockTypeRepository: BlockTypeRepository,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
-    private val organisationSecurity: OrganisationSecurity
+    private val organisationSecurity: OrganisationSecurity,
 ) {
     /**
      * Creates and publishes a new block type from the provided request and records an audit activity.
@@ -41,9 +42,13 @@ class BlockTypeService(
                     activity = Activity.BLOCK_TYPE,
                     operation = OperationType.CREATE,
                     userId = userId,
-                    organisationId = this.organisationId,
-                    targetId = this.id,
-                    additionalDetails = "Block Type '${this.key}' created with ID: ${this.id}"
+                    organisationId = request.organisationId,
+                    entityId = this.id,
+                    entityType = EntityType.BLOCK_TYPE,
+                    details = mapOf(
+                        "type" to this.key,
+                        "version" to this.version
+                    )
                 )
 
                 return this.toModel()
@@ -58,10 +63,18 @@ class BlockTypeService(
      *
      * @param type The BlockType containing the new values and the id of the existing version to fork from.
      */
-    @PreAuthorize("@organisationSecurity.hasOrg(#type.organisationId)")
+
     fun updateBlockType(type: BlockType) {
         val userId = authTokenService.getUserId()
         val existing = findOrThrow { blockTypeRepository.findById(type.id) }
+
+        // Ensure a user is only updating a non-system organisation block type
+        val orgId = requireNotNull(existing.organisationId) { "Cannot update system block type" }
+        
+        // Assert that they have access to said organisation
+        if (!organisationSecurity.hasOrg(orgId)) {
+            throw AccessDeniedException("Unauthorized to update block type for organisation $orgId")
+        }
 
         // compute next version number (could also query max)
         val nextVersion = existing.version + 1
@@ -87,9 +100,14 @@ class BlockTypeService(
                 activity = Activity.BLOCK_TYPE,
                 operation = OperationType.CREATE,
                 userId = userId,
-                organisationId = this.organisationId,
-                targetId = this.id,
-                additionalDetails = "Block Type '${this.key}' forked to v${this.version} from ${existing.id}"
+                organisationId = orgId,
+                entityId = this.id,
+                entityType = EntityType.BLOCK_TYPE,
+                details = mapOf(
+                    "type" to this.key,
+                    "version" to this.version,
+                    "sourceVersion" to existing.version
+                )
             )
         }
     }
@@ -107,12 +125,12 @@ class BlockTypeService(
     fun archiveBlockType(id: UUID, status: Boolean) {
         val userId = authTokenService.getUserId()
         val existing = findOrThrow { blockTypeRepository.findById(id) }
-        existing.organisationId.let {
-            require(it != null) { "Cannot archive system block types" }
-            organisationSecurity.hasOrg(it).run {
-                if (!this) {
-                    throw AccessDeniedException("Unauthorized to archive block type for organisation $it")
-                }
+        val orgId = requireNotNull(existing.organisationId)
+
+
+        organisationSecurity.hasOrg(orgId).run {
+            if (!this) {
+                throw AccessDeniedException("Unauthorized to archive block type for organisation $orgId")
             }
         }
 
@@ -124,9 +142,13 @@ class BlockTypeService(
             operation = if (status) OperationType.ARCHIVE
             else OperationType.RESTORE,
             userId = userId,
-            organisationId = existing.organisationId,
-            targetId = existing.id,
-            additionalDetails = "Block Type '${existing.key}' archive=${status}"
+            organisationId = orgId,
+            entityId = existing.id,
+            entityType = EntityType.BLOCK_TYPE,
+            details = mapOf(
+                "type" to existing.key,
+                "archiveStatus" to status
+            ),
         )
     }
 

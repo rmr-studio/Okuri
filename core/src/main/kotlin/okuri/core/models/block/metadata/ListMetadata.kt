@@ -1,19 +1,21 @@
 package okuri.core.models.block.metadata
 
+import okuri.core.enums.block.node.ListFilterLogicType
 import okuri.core.enums.block.structure.BlockListOrderingMode
 
 interface ListMetadata<T> {
-    val order: OrderingConfig
+    val config: ListConfig
     val display: ListDisplayConfig
     val allowDuplicates: Boolean
     val allowedTypes: List<T>?
 }
 
-data class OrderingConfig(
+data class ListConfig(
     val mode: BlockListOrderingMode = BlockListOrderingMode.MANUAL,
     // Used when mode=SORTED
     val sort: SortSpec? = null,
-    val filters: List<FilterSpec>? = null
+    val filters: List<FilterSpec> = listOf(),
+    val filterLogic: ListFilterLogicType = ListFilterLogicType.AND,
 )
 
 

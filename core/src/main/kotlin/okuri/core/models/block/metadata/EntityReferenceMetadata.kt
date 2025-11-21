@@ -19,7 +19,7 @@ data class EntityReferenceMetadata(
     val projection: Projection = Projection(),
     override val allowedTypes: List<EntityType>? = null,
     override val display: ListDisplayConfig = ListDisplayConfig(),
-    override val order: OrderingConfig = OrderingConfig(),
+    override val config: ListConfig = ListConfig(),
     override val allowDuplicates: Boolean = false,          // <— optional guard
     override val meta: BlockMeta = BlockMeta()
 ) : ReferenceMetadata, ListMetadata<EntityType>

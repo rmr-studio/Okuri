@@ -4,6 +4,7 @@ import io.ktor.server.plugins.*
 import okuri.core.entity.invoice.LineItemEntity
 import okuri.core.entity.invoice.toModel
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.models.client.request.LineItemCreationRequest
 import okuri.core.models.invoice.LineItem
@@ -73,7 +74,11 @@ class LineItemService(
                     operation = OperationType.CREATE,
                     userId = authTokenService.getUserId(),
                     organisationId = entity.organisationId,
-                    additionalDetails = "Created line item with ID: ${entity.id}"
+                    entityType = EntityType.LINE_ITEM,
+                    entityId = entity.id,
+                    details = mapOf(
+                        "lineItemId" to entity.id.toString()
+                    )
                 )
                 return entity.toModel()
             }
@@ -105,7 +110,11 @@ class LineItemService(
                 operation = OperationType.UPDATE,
                 userId = authTokenService.getUserId(),
                 organisationId = this.organisationId,
-                additionalDetails = "Updated line item with ID: ${this.id}"
+                entityType = EntityType.LINE_ITEM,
+                entityId = this.id,
+                details = mapOf(
+                    "lineItemId" to this.id.toString()
+                )
             )
 
 
@@ -123,7 +132,11 @@ class LineItemService(
                 operation = OperationType.DELETE,
                 userId = authTokenService.getUserId(),
                 organisationId = lineItem.organisationId,
-                additionalDetails = "Deleted line item with ID: ${lineItem.id}"
+                entityType = EntityType.LINE_ITEM,
+                entityId = lineItem.id,
+                details = mapOf(
+                    "lineItemId" to lineItem.id.toString()
+                )
             )
         }
 

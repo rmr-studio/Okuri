@@ -5,6 +5,7 @@ import okuri.core.entity.invoice.InvoiceEntity
 import okuri.core.entity.invoice.toModel
 import okuri.core.entity.organisation.OrganisationEntity
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.core.EntityType
 import okuri.core.enums.invoice.InvoiceStatus
 import okuri.core.enums.util.OperationType
 import okuri.core.models.client.Client
@@ -102,8 +103,13 @@ class InvoiceService(
                     activity = Activity.INVOICE,
                     operation = OperationType.CREATE,
                     userId = authTokenService.getUserId(),
-                    organisationId = organisation.id,
-                    additionalDetails = "Created invoice with number: ${entity.invoiceNumber}, ID: ${entity.id}",
+                    organisationId = requireNotNull(organisation.id),
+                    entityType = EntityType.INVOICE,
+                    entityId = entity.id,
+                    details = mapOf(
+                        "invoiceId" to entity.id.toString(),
+                        "invoiceNumber" to entity.invoiceNumber
+                    )
                 )
                 entity.toModel()
             }
@@ -137,7 +143,12 @@ class InvoiceService(
                     operation = OperationType.UPDATE,
                     userId = authTokenService.getUserId(),
                     organisationId = invoice.organisation.id,
-                    additionalDetails = "Updated invoice with number: ${this.invoiceNumber}, ID: ${this.id}",
+                    entityType = EntityType.INVOICE,
+                    entityId = this.id,
+                    details = mapOf(
+                        "invoiceId" to this.id.toString(),
+                        "invoiceNumber" to this.invoiceNumber
+                    )
                 )
                 this.toModel()
             }
@@ -175,7 +186,12 @@ class InvoiceService(
                     operation = OperationType.ARCHIVE,
                     userId = authTokenService.getUserId(),
                     organisationId = invoice.organisation.id,
-                    additionalDetails = "Cancelled invoice with number: ${this.invoiceNumber}, ID: ${this.id}",
+                    entityType = EntityType.INVOICE,
+                    entityId = this.id,
+                    details = mapOf(
+                        "invoiceId" to this.id.toString(),
+                        "invoiceNumber" to this.invoiceNumber
+                    )
                 )
                 this.toModel()
             }
@@ -205,7 +221,12 @@ class InvoiceService(
                 operation = OperationType.DELETE,
                 userId = authTokenService.getUserId(),
                 organisationId = invoice.organisation.id,
-                additionalDetails = "Deleted invoice with number: ${this.invoiceNumber}, ID: ${this.id}",
+                entityType = EntityType.INVOICE,
+                entityId = this.id,
+                details = mapOf(
+                    "invoiceId" to this.id.toString(),
+                    "invoiceNumber" to this.invoiceNumber
+                )
             )
             invoiceRepository.deleteById(invoice.id)
         }

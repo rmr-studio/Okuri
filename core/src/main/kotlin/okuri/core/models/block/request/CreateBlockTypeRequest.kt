@@ -5,9 +5,6 @@ import okuri.core.models.block.display.BlockDisplay
 import okuri.core.models.block.validation.BlockSchema
 import java.util.*
 
-/**
- * Request to create a new block type.
- */
 data class CreateBlockTypeRequest(
     // The unique key for the block type.
     val key: String,
