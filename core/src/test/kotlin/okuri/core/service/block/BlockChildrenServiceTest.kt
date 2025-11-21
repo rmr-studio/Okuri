@@ -291,7 +291,7 @@ class BlockChildrenServiceTest {
         whenever(edgeRepository.countByParentId(newParentId)).thenReturn(0)
         whenever(edgeRepository.save(any())).thenAnswer { it.arguments[0] }
 
-        service.reparentChild(childId, newParentId, 0, nesting)
+        service.reparentChild(childId, newParentId, nesting)
 
         // Verify old edge deleted
         verify(edgeRepository).delete(existingEdge)

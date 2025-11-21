@@ -13,7 +13,6 @@ import okuri.core.service.util.WithUserPersona
 import okuri.core.service.util.factory.block.BlockFactory
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import org.mockito.kotlin.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -90,6 +89,7 @@ class BlockTypeServiceTest {
             organisationId = eq(orgId),
             entityType = any(),
             entityId = eq(saved.id),
+            timestamp = any(),
             details = any()
         )
 
@@ -155,6 +155,7 @@ class BlockTypeServiceTest {
             organisationId = eq(requireNotNull(type.organisationId)),
             entityType = any(),
             entityId = any(),
+            timestamp = any(),
             details = any()
         )
     }
@@ -189,6 +190,7 @@ class BlockTypeServiceTest {
             organisationId = eq(requireNotNull(type.organisationId)),
             entityType = any(),
             entityId = eq(type.id),
+            timestamp = any(),
             details = any()
         )
     }
@@ -220,6 +222,7 @@ class BlockTypeServiceTest {
             organisationId = eq(requireNotNull(existing.organisationId)),
             entityType = any(),
             entityId = eq(existing.id),
+            timestamp = any(),
             details = any()
         )
     }
@@ -239,6 +242,15 @@ class BlockTypeServiceTest {
         blockTypeService.archiveBlockType(existing.id!!, true)
 
         verify(blockTypeRepository, never()).save(any())
-        verify(activityService, never()).logActivity(any(), any(), any(), any(), any(), any(), any(), any())
+        verify(activityService, never()).logActivity(
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+        )
     }
 }

@@ -8,6 +8,8 @@ import okuri.core.entity.block.BlockTreeLayoutEntity
 import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.organisation.OrganisationRoles
 import okuri.core.models.block.request.StructuralOperationRequest
+import okuri.core.models.block.response.internal.CascadeRemovalResult
+import okuri.core.models.block.response.internal.MovePreparationResult
 import okuri.core.repository.block.BlockChildrenRepository
 import okuri.core.repository.block.BlockRepository
 import okuri.core.repository.block.BlockTreeLayoutRepository
@@ -1057,11 +1059,25 @@ class BlockEnvironmentServiceTest {
             )
         }
 
-        val savedBlocks = listOf(
-            BlockFactory.createBlockEntity(id = realId1, organisationId = orgId, type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")),
-            BlockFactory.createBlockEntity(id = realId2, organisationId = orgId, type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")),
-            BlockFactory.createBlockEntity(id = realId3, organisationId = orgId, type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block"))
+        val savedBlock1 = BlockFactory.createBlockEntity(
+            id = realId1,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
         )
+
+        val savedBlock2 = BlockFactory.createBlockEntity(
+            id = realId2,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
+
+        val savedBlock3 = BlockFactory.createBlockEntity(
+            id = realId3,
+            organisationId = orgId,
+            type = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
+        )
+
 
         val typeEntity = BlockFactory.createTypeEntity(orgId = orgId, key = "test_block")
 
@@ -1069,7 +1085,7 @@ class BlockEnvironmentServiceTest {
         whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
         whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
         whenever(blockService.getBlockTypeEntity(any())).thenReturn(typeEntity)
-        whenever(blockService.saveAll(any())).thenReturn(savedBlocks)
+        whenever(blockService.saveAll(any())).thenReturn(listOf(savedBlock1), listOf(savedBlock2), listOf(savedBlock3))
         whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
 
         val request = BlockFactory.createSaveEnvironmentRequest(
