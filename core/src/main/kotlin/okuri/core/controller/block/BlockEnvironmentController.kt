@@ -5,15 +5,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import okuri.core.enums.core.EntityType
+import okuri.core.models.block.BlockEnvironment
 import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.response.SaveEnvironmentResponse
 import okuri.core.service.block.BlockEnvironmentService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
 @RequestMapping("/api/v1/block/environment")
@@ -42,5 +42,22 @@ class BlockEnvironmentController(
         }
 
         return ResponseEntity.status(HttpStatus.OK).body(response)
+    }
+
+    @GetMapping("/{type}/{entityId}")
+    @Operation(
+        summary = "Get Block Environment",
+        description = "Retrieves the block environment for the specified page"
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Environment retrieved successfully"),
+        ApiResponse(responseCode = "404", description = "Block environment not found"),
+        ApiResponse(responseCode = "401", description = "Unauthorized access")
+    )
+    fun getBlockEnvironment(
+        @PathVariable type: EntityType,
+        @PathVariable entityId: UUID,
+    ): ResponseEntity<BlockEnvironment> {
+        TODO()
     }
 }

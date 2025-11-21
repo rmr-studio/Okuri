@@ -16,6 +16,7 @@ import okuri.core.service.auth.AuthTokenService
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
 import java.util.*
+import kotlin.collections.emptyList
 
 @Service
 class BlockEnvironmentService(
@@ -58,10 +59,12 @@ class BlockEnvironmentService(
                 activityService.logActivities(this)
             }
 
+            // 1. Filter out operations for blocks that will be cascade deleted
+            val filteredOperations = filterCascadeDeletedOperations(request.operations)
 
-            // 1.  Filter and de-duplicate operations => Ensure that only one operation per block per type is processed
+            // 2. Filter and de-duplicate operations => Ensure that only one operation per block per type is processed
             val normalizedOperations: Map<UUID, List<StructuralOperationRequest>> =
-                normalizeOperations(request.operations)
+                normalizeOperations(filteredOperations)
 
             // Fetch all involved blocks, references and children ahead of processing
             // Fetch blocks that have operations after normalization
@@ -158,6 +161,32 @@ class BlockEnvironmentService(
 
     }
 
+    /**
+     * Filters out operations for blocks that will be cascade deleted when their parent is removed.
+     * This prevents creating/updating blocks that will immediately be deleted.
+     * Note: This only filters CASCADE deletions (children of removed blocks), not direct removals.
+     * Direct ADD+REMOVE combinations are handled by reduceBlockOperations.
+     */
+    internal fun filterCascadeDeletedOperations(operations: List<StructuralOperationRequest>): List<StructuralOperationRequest> {
+        // 1. Collect only CASCADE deleted blocks (children of blocks being removed)
+        // Do NOT include blocks with direct REMOVE operations (those are handled by reduceBlockOperations)
+        val cascadeDeletedBlocks = operations
+            .filter { it.data.type == BlockOperationType.REMOVE_BLOCK }
+            .flatMap { (it.data as RemoveBlockOperation).childrenIds.keys }
+            .toSet()
+
+        // 2. Filter out any ADD/UPDATE/MOVE/REORDER operations for cascade deleted blocks
+        return operations.filter { op ->
+            // Keep all REMOVE operations
+            if (op.data.type == BlockOperationType.REMOVE_BLOCK) {
+                return@filter true
+            }
+
+            // Drop operations for blocks that will be CASCADE deleted
+            !cascadeDeletedBlocks.contains(op.data.blockId)
+        }
+    }
+
     fun normalizeOperations(operations: List<StructuralOperationRequest>): Map<UUID, List<StructuralOperationRequest>> {
 
         // 2. Group by blockId
@@ -227,19 +256,31 @@ class BlockEnvironmentService(
         // PHASE 1: Handle REMOVE operations (will need to cascade delete children)
         val removeOps = operations.filter { it.data.type == BlockOperationType.REMOVE_BLOCK }
         if (removeOps.isNotEmpty()) {
-            val blockIdsToRemove = removeOps.map { it.data.blockId }.toSet()
+            // Collect all blocks to remove (parents + all children from childrenIds map)
+            val blockIdsToRemove = removeOps.flatMap { op ->
+                val data = op.data as RemoveBlockOperation
+                listOf(data.blockId) + data.childrenIds.keys
+            }.toSet()
 
-            // Collect all blocks and children to delete
-            val cascadeResult = blockChildrenService.prepareRemovalCascade(blockIdsToRemove)
+            // Collect all parent IDs that have children to delete their relationship records
+            val parentsToRemove = removeOps.flatMap { op ->
+                val data = op.data as RemoveBlockOperation
+                if (data.childrenIds.isNotEmpty()) {
+                    // Include the parent block and any nested parents (from the values of childrenIds)
+                    (listOf(data.blockId) + data.childrenIds.values).toSet()
+                } else {
+                    emptyList()
+                }
+            }.toSet()
 
-            // Batch delete children entities
-            if (cascadeResult.childEntitiesToDelete.isNotEmpty()) {
-                blockChildrenService.deleteAllInBatch(cascadeResult.childEntitiesToDelete)
+            // Delete all records of children relationships for these parents
+            if (parentsToRemove.isNotEmpty()) {
+                blockChildrenService.deleteAllInBatch(parentsToRemove)
             }
 
-            // Batch delete blocks
-            if (cascadeResult.blocksToDelete.isNotEmpty()) {
-                blockService.deleteAllById(cascadeResult.blocksToDelete)
+            // Batch delete all blocks (parents and children)
+            if (blockIdsToRemove.isNotEmpty()) {
+                blockService.deleteAllById(blockIdsToRemove)
             }
 
             return emptyMap() // No ID mappings needed if block is deleted

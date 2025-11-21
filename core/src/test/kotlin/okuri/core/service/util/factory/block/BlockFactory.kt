@@ -174,10 +174,12 @@ object BlockFactory {
      */
     fun createRemoveOperation(
         blockId: UUID,
-        parentId: UUID? = null
+        parentId: UUID? = null,
+        childrenIds: Map<UUID, UUID> = emptyMap()
     ): RemoveBlockOperation = RemoveBlockOperation(
         blockId = blockId,
-        parentId = parentId
+        parentId = parentId,
+        childrenIds = childrenIds
     )
 
     /**

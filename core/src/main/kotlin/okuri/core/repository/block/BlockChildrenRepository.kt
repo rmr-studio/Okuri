@@ -9,7 +9,7 @@ interface BlockChildrenRepository : JpaRepository<BlockChildEntity, UUID> {
     fun findByParentIdOrderByOrderIndexAsc(parentId: UUID): List<BlockChildEntity>
     fun findByParentIdAndChildId(parentId: UUID, childId: UUID): BlockChildEntity?
     fun findByChildId(childId: UUID): BlockChildEntity?
-    fun deleteAllByParentId(parentId: UUID)
+    fun deleteAllByParentIdIn(parentIds: Collection<UUID>)
     fun countByParentId(parentId: UUID): Int
 
     @Query(

@@ -18,5 +18,5 @@ data class BlockListConfiguration(
     override val allowedTypes: List<String>? = null,
     override val allowDuplicates: Boolean = false,
     override val display: ListDisplayConfig = ListDisplayConfig(),
-    override val order: OrderingConfig = OrderingConfig()
+    override val config: ListConfig = ListConfig()
 ) : ListMetadata<String>

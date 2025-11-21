@@ -422,6 +422,10 @@ class BlockChildrenService(
         edgeRepository.deleteAllInBatch(entities)
     }
 
+    fun deleteAllInBatch(entities: Collection<UUID>) {
+        edgeRepository.deleteAllByParentIdIn(entities)
+    }
+
     /**
      * Batch save child entities.
      */

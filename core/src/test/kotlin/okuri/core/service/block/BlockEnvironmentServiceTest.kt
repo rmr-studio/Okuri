@@ -571,6 +571,330 @@ class BlockEnvironmentServiceTest {
     }
 
     // ------------------------------------------------------------------
+    // filterCascadeDeletedOperations: Edge Cases
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `filterCascadeDeletedOperations with ADD then cascade REMOVE filters all operations for child`() {
+        // Scenario: Block is added, moved to parent, then parent is removed (cascade deletes child)
+        // Expect: ADD and MOVE operations for child are filtered out, only parent REMOVE remains
+        val parentId = UUID.randomUUID()
+        val childId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val t1 = ZonedDateTime.now()
+        val t2 = t1.plusSeconds(1)
+        val t3 = t2.plusSeconds(1)
+
+        val childAdd = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = childId, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val childMove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createMoveOperation(
+                blockId = childId,
+                fromParentId = null,
+                toParentId = parentId
+            ),
+            timestamp = t2
+        )
+
+        val parentRemove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parentId,
+                childrenIds = mapOf(childId to parentId)
+            ),
+            timestamp = t3
+        )
+
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(
+            listOf(childAdd, childMove, parentRemove)
+        )
+
+        assertEquals(1, result.size, "Only parent REMOVE should remain")
+        assertEquals(parentRemove, result[0])
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations with UPDATE before cascade REMOVE filters UPDATE`() {
+        // Scenario: Block exists, is updated, then parent is removed (cascade deletes child)
+        // Expect: UPDATE is filtered out, only parent REMOVE remains
+        val parentId = UUID.randomUUID()
+        val childId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val t1 = ZonedDateTime.now()
+        val t2 = t1.plusSeconds(1)
+
+        val childUpdate = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = childId, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val parentRemove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parentId,
+                childrenIds = mapOf(childId to parentId)
+            ),
+            timestamp = t2
+        )
+
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(
+            listOf(childUpdate, parentRemove)
+        )
+
+        assertEquals(1, result.size, "Only parent REMOVE should remain")
+        assertEquals(parentRemove, result[0])
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations with nested cascade deletion filters all descendants`() {
+        // Scenario: Parent removed with multiple levels of children
+        // Expect: All operations for descendants are filtered out
+        val parentId = UUID.randomUUID()
+        val child1Id = UUID.randomUUID()
+        val child2Id = UUID.randomUUID()
+        val grandchildId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val t1 = ZonedDateTime.now()
+
+        val child1Update = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = child1Id, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val child2Update = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = child2Id, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val grandchildUpdate = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = grandchildId, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val parentRemove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parentId,
+                childrenIds = mapOf(
+                    child1Id to parentId,
+                    child2Id to parentId,
+                    grandchildId to child1Id
+                )
+            ),
+            timestamp = t1.plusSeconds(1)
+        )
+
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(
+            listOf(child1Update, child2Update, grandchildUpdate, parentRemove)
+        )
+
+        assertEquals(1, result.size, "Only parent REMOVE should remain")
+        assertEquals(parentRemove, result[0])
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations with multiple parents removed filters correctly`() {
+        // Scenario: Two separate parents removed, each with children
+        // Expect: Only operations for non-removed blocks remain
+        val parent1Id = UUID.randomUUID()
+        val parent2Id = UUID.randomUUID()
+        val child1Id = UUID.randomUUID()
+        val child2Id = UUID.randomUUID()
+        val independentBlockId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val t1 = ZonedDateTime.now()
+
+        val child1Update = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = child1Id, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val child2Update = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = child2Id, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val independentUpdate = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = independentBlockId, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val parent1Remove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parent1Id,
+                childrenIds = mapOf(child1Id to parent1Id)
+            ),
+            timestamp = t1.plusSeconds(1)
+        )
+
+        val parent2Remove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parent2Id,
+                childrenIds = mapOf(child2Id to parent2Id)
+            ),
+            timestamp = t1.plusSeconds(1)
+        )
+
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(
+            listOf(child1Update, child2Update, independentUpdate, parent1Remove, parent2Remove)
+        )
+
+        assertEquals(3, result.size, "Should keep independent update and both parent removes")
+        assertTrue(result.contains(independentUpdate))
+        assertTrue(result.contains(parent1Remove))
+        assertTrue(result.contains(parent2Remove))
+        assertFalse(result.contains(child1Update), "child1 update should be filtered")
+        assertFalse(result.contains(child2Update), "child2 update should be filtered")
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations with ADD UPDATE MOVE REORDER then cascade REMOVE filters all`() {
+        // Scenario: Block has all operation types, then is cascade deleted
+        // Expect: All operations for the block are filtered out
+        val parentId = UUID.randomUUID()
+        val childId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val t1 = ZonedDateTime.now()
+
+        val addOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = childId, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val updateOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = childId, orgId = orgId, type = type),
+            timestamp = t1.plusSeconds(1)
+        )
+
+        val moveOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createMoveOperation(
+                blockId = childId,
+                fromParentId = null,
+                toParentId = parentId
+            ),
+            timestamp = t1.plusSeconds(2)
+        )
+
+        val reorderOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createReorderOperation(
+                blockId = childId,
+                parentId = parentId,
+                fromIndex = 0,
+                toIndex = 1
+            ),
+            timestamp = t1.plusSeconds(3)
+        )
+
+        val parentRemove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parentId,
+                childrenIds = mapOf(childId to parentId)
+            ),
+            timestamp = t1.plusSeconds(4)
+        )
+
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(
+            listOf(addOp, updateOp, moveOp, reorderOp, parentRemove)
+        )
+
+        assertEquals(1, result.size, "Only parent REMOVE should remain")
+        assertEquals(parentRemove, result[0])
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations with no REMOVE operations returns all operations`() {
+        // Scenario: No remove operations present
+        // Expect: All operations returned unchanged
+        val blockId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val addOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = blockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val updateOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = blockId, orgId = orgId, type = type),
+            timestamp = ZonedDateTime.now().plusSeconds(1)
+        )
+
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(listOf(addOp, updateOp))
+
+        assertEquals(2, result.size)
+        assertTrue(result.contains(addOp))
+        assertTrue(result.contains(updateOp))
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations with empty list returns empty list`() {
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(emptyList())
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations with direct REMOVE keeps operation`() {
+        // Scenario: Block is directly removed (not cascade)
+        // Expect: REMOVE operation is kept
+        val blockId = UUID.randomUUID()
+
+        val removeOp = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(blockId = blockId),
+            timestamp = ZonedDateTime.now()
+        )
+
+        val result = blockEnvironmentService.filterCascadeDeletedOperations(listOf(removeOp))
+
+        assertEquals(1, result.size)
+        assertEquals(removeOp, result[0])
+    }
+
+    @Test
+    fun `filterCascadeDeletedOperations integrates with normalizeOperations correctly`() {
+        // Scenario: Complete flow from filtering through normalization
+        // Block is added, updated, then cascade deleted
+        // Expect: After filtering, normalization should only see parent REMOVE
+        val parentId = UUID.randomUUID()
+        val childId = UUID.randomUUID()
+        val type = createTestBlockType()
+
+        val t1 = ZonedDateTime.now()
+
+        val childAdd = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createAddOperation(blockId = childId, orgId = orgId, type = type),
+            timestamp = t1
+        )
+
+        val childUpdate = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createUpdateOperation(blockId = childId, orgId = orgId, type = type),
+            timestamp = t1.plusSeconds(1)
+        )
+
+        val parentRemove = BlockFactory.createOperationRequest(
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parentId,
+                childrenIds = mapOf(childId to parentId)
+            ),
+            timestamp = t1.plusSeconds(2)
+        )
+
+        val filtered = blockEnvironmentService.filterCascadeDeletedOperations(
+            listOf(childAdd, childUpdate, parentRemove)
+        )
+
+        val normalized = blockEnvironmentService.normalizeOperations(filtered)
+
+        assertEquals(1, normalized.size, "Should only have parent block")
+        assertTrue(normalized.containsKey(parentId))
+        assertEquals(1, normalized[parentId]?.size)
+        assertEquals(parentRemove, normalized[parentId]?.get(0))
+    }
+
+    // ------------------------------------------------------------------
     // saveBlockEnvironment: Basic Operations
     // ------------------------------------------------------------------
 
@@ -675,7 +999,7 @@ class BlockEnvironmentServiceTest {
 
     @Test
     fun `saveBlockEnvironment with REMOVE operation deletes block and children`() {
-        // Scenario: Remove a block with children
+        // Scenario: Remove a block with children (childrenIds provided in operation)
         // Expect: Cascade delete triggered
         val layoutId = UUID.randomUUID()
         val blockId = UUID.randomUUID()
@@ -688,25 +1012,17 @@ class BlockEnvironmentServiceTest {
         )
 
         val removeOp = BlockFactory.createOperationRequest(
-            operation = BlockFactory.createRemoveOperation(blockId = blockId),
+            operation = BlockFactory.createRemoveOperation(
+                blockId = blockId,
+                childrenIds = mapOf(childId to blockId)
+            ),
             timestamp = ZonedDateTime.now()
-        )
-
-        val childEntity = BlockFactory.createBlockChildEntity(
-            parentId = blockId,
-            childId = childId
-        )
-
-        val cascadeResult = CascadeRemovalResult(
-            blocksToDelete = setOf(blockId, childId),
-            childEntitiesToDelete = listOf(childEntity)
         )
 
         // Mock service calls
         whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
         whenever(blockService.getBlocks(setOf(blockId))).thenReturn(emptyMap())
         whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
-        whenever(blockChildrenService.prepareRemovalCascade(setOf(blockId))).thenReturn(cascadeResult)
 
         val request = BlockFactory.createSaveEnvironmentRequest(
             layoutId = layoutId,
@@ -718,7 +1034,7 @@ class BlockEnvironmentServiceTest {
         val response = blockEnvironmentService.saveBlockEnvironment(request)
 
         assertTrue(response.success)
-        verify(blockChildrenService).deleteAllInBatch(listOf(childEntity))
+        verify(blockChildrenService).deleteAllInBatch(setOf(blockId))
         verify(blockService).deleteAllById(setOf(blockId, childId))
     }
 
@@ -1168,7 +1484,7 @@ class BlockEnvironmentServiceTest {
 
     @Test
     fun `saveBlockEnvironment cascade deletes all descendants`() {
-        // Scenario: Remove parent with nested children
+        // Scenario: Remove parent with nested children (childrenIds provided in operation)
         // Expect: All descendants deleted
         val layoutId = UUID.randomUUID()
         val parentId = UUID.randomUUID()
@@ -1183,23 +1499,20 @@ class BlockEnvironmentServiceTest {
         )
 
         val removeOp = BlockFactory.createOperationRequest(
-            operation = BlockFactory.createRemoveOperation(blockId = parentId),
+            operation = BlockFactory.createRemoveOperation(
+                blockId = parentId,
+                childrenIds = mapOf(
+                    child1Id to parentId,
+                    child2Id to parentId,
+                    grandchildId to child1Id
+                )
+            ),
             timestamp = ZonedDateTime.now()
-        )
-
-        val cascadeResult = CascadeRemovalResult(
-            blocksToDelete = setOf(parentId, child1Id, child2Id, grandchildId),
-            childEntitiesToDelete = listOf(
-                BlockFactory.createBlockChildEntity(parentId = parentId, childId = child1Id),
-                BlockFactory.createBlockChildEntity(parentId = parentId, childId = child2Id),
-                BlockFactory.createBlockChildEntity(parentId = child1Id, childId = grandchildId)
-            )
         )
 
         whenever(blockTreeLayoutService.fetchLayoutById(layoutId)).thenReturn(layout)
         whenever(blockService.getBlocks(any())).thenReturn(emptyMap())
         whenever(blockChildrenService.getChildrenForBlocks(any())).thenReturn(emptyMap())
-        whenever(blockChildrenService.prepareRemovalCascade(setOf(parentId))).thenReturn(cascadeResult)
 
         val request = BlockFactory.createSaveEnvironmentRequest(
             layoutId = layoutId,
@@ -1211,6 +1524,7 @@ class BlockEnvironmentServiceTest {
         val response = blockEnvironmentService.saveBlockEnvironment(request)
 
         assertTrue(response.success)
+        verify(blockChildrenService).deleteAllInBatch(setOf(parentId, child1Id))
         verify(blockService).deleteAllById(setOf(parentId, child1Id, child2Id, grandchildId))
     }
 
