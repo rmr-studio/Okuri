@@ -356,6 +356,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/block/environment/overwrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Overwrite Block Environment
+         * @description Overwrites the entire block environment with the provided data.
+         */
+        post: operations["overwriteBlockEnvironment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/block/environment/": {
         parameters: {
             query?: never;
@@ -568,7 +588,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/block/environment/{type}/{entityId}": {
+    "/api/v1/block/environment/type/{type}/id/{entityId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1069,9 +1089,9 @@ export interface components {
             /** @enum {string} */
             mode: "MANUAL" | "SORTED";
             sort?: components["schemas"]["SortSpec"];
-            filters?: components["schemas"]["FilterSpec"][];
+            filters: components["schemas"]["FilterSpec"][];
             /** @enum {string} */
-            filterLogic?: "AND" | "OR";
+            filterLogic: "AND" | "OR";
         };
         ListDisplayConfig: {
             /** Format: int32 */
@@ -1287,18 +1307,26 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
         };
-        AddBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
-            block: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
-            /** Format: uuid */
-            parentId?: string;
-            /** Format: int32 */
-            index?: number;
+        BlockEnvironment: {
+            layout: components["schemas"]["BlockTreeLayout"];
+            trees: components["schemas"]["BlockTree"][];
         };
-        BlockOperation: {
-            /** @enum {string} */
-            type: "ADD_BLOCK" | "REMOVE_BLOCK" | "MOVE_BLOCK" | "UPDATE_BLOCK" | "REORDER_BLOCK";
+        BlockTreeLayout: {
             /** Format: uuid */
-            blockId: string;
+            id: string;
+            /** Format: uuid */
+            organisationId: string;
+            layout: components["schemas"]["TreeLayout"];
+            /** Format: int32 */
+            version: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            updatedBy?: string;
         };
         BreakpointConfig: {
             /** Format: int32 */
@@ -1318,18 +1346,14 @@ export interface components {
             appendTo?: string;
             scroll?: boolean;
         };
-        MoveBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
+        OverwriteEnvironmentRequest: {
             /** Format: uuid */
-            fromParentId?: string;
+            layoutId: string;
             /** Format: uuid */
-            toParentId?: string;
-        };
-        RemoveBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
-            childrenIds: {
-                [key: string]: string;
-            };
-            /** Format: uuid */
-            parentId?: string;
+            organisationId: string;
+            /** Format: int32 */
+            version: number;
+            environment: components["schemas"]["BlockEnvironment"];
         };
         RenderContent: {
             id: string;
@@ -1339,35 +1363,9 @@ export interface components {
             /** @enum {string} */
             blockType: "reference_node" | "content_node";
         };
-        ReorderBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
-            /** Format: uuid */
-            parentId: string;
-            /** Format: int32 */
-            fromIndex: number;
-            /** Format: int32 */
-            toIndex: number;
-        };
         ResizableOptions: {
             handles?: string;
             autoHide?: boolean;
-        };
-        SaveEnvironmentRequest: {
-            /** Format: uuid */
-            layoutId: string;
-            /** Format: uuid */
-            organisationId: string;
-            layout: components["schemas"]["TreeLayout"];
-            /** Format: int32 */
-            version: number;
-            operations: components["schemas"]["StructuralOperationRequest"][];
-            force: boolean;
-        };
-        StructuralOperationRequest: {
-            /** Format: uuid */
-            id: string;
-            /** Format: date-time */
-            timestamp: string;
-            data: components["schemas"]["AddBlockOperation"] | components["schemas"]["MoveBlockOperation"] | components["schemas"]["RemoveBlockOperation"] | components["schemas"]["ReorderBlockOperation"] | components["schemas"]["UpdateBlockOperation"];
         };
         TreeLayout: {
             resizable?: components["schemas"]["ResizableOptions"];
@@ -1418,9 +1416,6 @@ export interface components {
             class?: string;
             children?: components["schemas"]["Widget"][];
         };
-        UpdateBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
-            updatedContent: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
-        };
         Widget: {
             id: string;
             /** Format: int32 */
@@ -1446,6 +1441,64 @@ export interface components {
             content?: components["schemas"]["RenderContent"];
             subGridOpts?: components["schemas"]["TreeLayout"];
         };
+        OverwriteEnvironmentResponse: {
+            success: boolean;
+            environment: components["schemas"]["BlockEnvironment"];
+        };
+        AddBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
+            block: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
+            /** Format: uuid */
+            parentId?: string;
+            /** Format: int32 */
+            index?: number;
+        };
+        BlockOperation: {
+            /** @enum {string} */
+            type: "ADD_BLOCK" | "REMOVE_BLOCK" | "MOVE_BLOCK" | "UPDATE_BLOCK" | "REORDER_BLOCK";
+            /** Format: uuid */
+            blockId: string;
+        };
+        MoveBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
+            /** Format: uuid */
+            fromParentId?: string;
+            /** Format: uuid */
+            toParentId?: string;
+        };
+        RemoveBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
+            childrenIds: {
+                [key: string]: string;
+            };
+            /** Format: uuid */
+            parentId?: string;
+        };
+        ReorderBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
+            /** Format: uuid */
+            parentId: string;
+            /** Format: int32 */
+            fromIndex: number;
+            /** Format: int32 */
+            toIndex: number;
+        };
+        SaveEnvironmentRequest: {
+            /** Format: uuid */
+            layoutId: string;
+            /** Format: uuid */
+            organisationId: string;
+            layout: components["schemas"]["TreeLayout"];
+            /** Format: int32 */
+            version: number;
+            operations: components["schemas"]["StructuralOperationRequest"][];
+        };
+        StructuralOperationRequest: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            timestamp: string;
+            data: components["schemas"]["AddBlockOperation"] | components["schemas"]["MoveBlockOperation"] | components["schemas"]["RemoveBlockOperation"] | components["schemas"]["ReorderBlockOperation"] | components["schemas"]["UpdateBlockOperation"];
+        };
+        UpdateBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
+            updatedContent: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
+        };
         SaveEnvironmentResponse: {
             success: boolean;
             error?: string;
@@ -1460,29 +1513,6 @@ export interface components {
             idMappings: {
                 [key: string]: string;
             };
-        };
-        BlockEnvironment: {
-            layout: components["schemas"]["BlockTreeLayout"];
-            trees: components["schemas"]["BlockTree"][];
-        };
-        BlockTreeLayout: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            organisationId: string;
-            /** @enum {string} */
-            scope: "ORGANIZATION" | "USER" | "TEAM";
-            layout: components["schemas"]["TreeLayout"];
-            /** Format: int32 */
-            version: number;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            /** Format: uuid */
-            createdBy?: string;
-            /** Format: uuid */
-            updatedBy?: string;
         };
     };
     responses: never;
@@ -2560,6 +2590,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["BlockType"];
+                };
+            };
+        };
+    };
+    overwriteBlockEnvironment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverwriteEnvironmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Environment overwritten successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OverwriteEnvironmentResponse"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OverwriteEnvironmentResponse"];
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OverwriteEnvironmentResponse"];
                 };
             };
         };

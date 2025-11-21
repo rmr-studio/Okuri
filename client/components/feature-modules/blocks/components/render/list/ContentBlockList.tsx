@@ -7,6 +7,8 @@
 
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/util/utils";
 import {
     closestCenter,
     DndContext,
@@ -88,26 +90,30 @@ export const ListControls: React.FC<ListControlsProps> = ({
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">List Mode:</span>
                     <div className="flex items-center gap-2">
-                        <button
-                            className={`px-3 py-1 text-xs rounded transition-colors ${
+                        <Button
+                            type="button"
+                            size="xs"
+                            className={cn(
                                 isManualMode
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted text-muted-foreground hover:bg-muted/80"
-                            }`}
+                            )}
                             onClick={() => onModeChange("MANUAL")}
                         >
                             Manual Order
-                        </button>
-                        <button
-                            className={`px-3 py-1 text-xs rounded transition-colors ${
+                        </Button>
+                        <Button
+                            type="button"
+                            size="xs"
+                            className={cn(
                                 isSortedMode
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted text-muted-foreground hover:bg-muted/80"
-                            }`}
+                            )}
                             onClick={() => onModeChange("SORTED")}
                         >
                             Sorted View
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
@@ -144,7 +150,7 @@ export const ListControls: React.FC<ListControlsProps> = ({
  */
 export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     id,
-    config,
+    config: blockListConfig,
     children = [],
     render,
     renderControlsInWrapper = false,
@@ -152,7 +158,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     const { reorderTrackedBlock, updateTrackedBlock, blockEnvironment } = useTrackedEnvironment();
     const { getBlock } = blockEnvironment;
     const { acquireLock } = useBlockFocus();
-    const { config: listConfig } = config;
+    const { config: listConfig } = blockListConfig;
 
     const dragLockRef = useRef<(() => void) | null>(null);
     const configUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -195,6 +201,16 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
             const block = getBlock(id);
             if (!block || !isContentNode(block)) return;
 
+            const updatedConfig: BlockListConfiguration = {
+                ...blockListConfig,
+                config: {
+                    ...listConfig,
+                    mode: activeMode,
+                    sort: activeSort,
+                    filters: activeFilters,
+                },
+            };
+
             // Update the listConfig in the block's payload
             const updatedBlock: BlockNode = {
                 ...block,
@@ -202,15 +218,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                     ...block.block,
                     payload: {
                         ...block.block.payload,
-                        listConfig: {
-                            ...config,
-                            order: {
-                                ...listConfig,
-                                mode: activeMode,
-                                sort: activeSort,
-                            },
-                            filters: activeFilters,
-                        } as BlockListConfiguration,
+                        listConfig: updatedConfig,
                     },
                 },
             };
@@ -231,7 +239,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                 clearTimeout(configUpdateTimerRef.current);
             }
         };
-    }, [activeMode, activeSort, activeFilters, config, id, getBlock, updateTrackedBlock]);
+    }, [activeMode, activeSort, activeFilters, blockListConfig, id, getBlock, updateTrackedBlock]);
 
     // Apply sorting/filtering to children
     const processedChildren = useMemo(() => {
@@ -345,12 +353,14 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
             {isFiltered && (
                 <div className="p-4 text-sm text-muted-foreground text-center">
                     No items match the current filters.
-                    <button
+                    <Button
                         onClick={() => setActiveFilters([])}
-                        className="ml-2 text-primary underline"
+                        className="underline ml-2"
+                        variant={"ghost"}
+                        size={"sm"}
                     >
                         Clear filters
-                    </button>
+                    </Button>
                 </div>
             )}
 
@@ -372,7 +382,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                                     key={child.block.id}
                                     id={child.block.id}
                                     item={child}
-                                    config={config}
+                                    config={blockListConfig}
                                     isDraggable={true}
                                     render={render}
                                 />
@@ -387,7 +397,7 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
                             key={child.block.id}
                             id={child.block.id}
                             item={child}
-                            config={config}
+                            config={blockListConfig}
                             isDraggable={false}
                             render={render}
                         />

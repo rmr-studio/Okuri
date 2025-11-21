@@ -219,30 +219,32 @@ function evaluateCondition(value: unknown, condition: unknown): boolean {
     const operators = condition as Record<string, unknown>;
 
     for (const [op, expected] of Object.entries(operators)) {
-        switch (op) {
-            case "$eq":
-                return value === expected;
-            case "$ne":
-                return value !== expected;
-            case "$gt":
-                return (value as number) > (expected as number);
-            case "$gte":
-                return (value as number) >= (expected as number);
-            case "$lt":
-                return (value as number) < (expected as number);
-            case "$lte":
-                return (value as number) <= (expected as number);
-            case "$in":
-                return (expected as unknown[]).includes(value);
-            case "$nin":
-                return !(expected as unknown[]).includes(value);
-            case "$contains":
-                return String(value)
-                    .toLowerCase()
-                    .includes(String(expected).toLowerCase());
-            default:
-                return false;
-        }
+        const ok = (() => {
+            switch (op) {
+                case "$eq":
+                    return value === expected;
+                case "$ne":
+                    return value !== expected;
+                case "$gt":
+                    return (value as number) > (expected as number);
+                case "$gte":
+                    return (value as number) >= (expected as number);
+                case "$lt":
+                    return (value as number) < (expected as number);
+                case "$lte":
+                    return (value as number) <= (expected as number);
+                case "$in":
+                    return Array.isArray(expected) && expected.includes(value);
+                case "$nin":
+                    return Array.isArray(expected) && !expected.includes(value);
+                case "$contains":
+                    return String(value).toLowerCase().includes(String(expected).toLowerCase());
+                default:
+                    return false;
+            }
+        })();
+
+        if (!ok) return false;
     }
 
     return true;

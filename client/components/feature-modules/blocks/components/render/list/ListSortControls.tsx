@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { FC } from "react";
 import { BlockType } from "../../../interface/block.interface";
 import { getSortableFields, SortSpec } from "../../../util/list/list-sorting.util";
@@ -48,8 +49,10 @@ export const ListSortControls: FC<ListSortControlsProps> = ({
             </select>
 
             {currentSort && (
-                <button
-                    className="px-2 py-1 border rounded text-sm hover:bg-muted"
+                <Button
+                    type="button"
+                    size={"xs"}
+                    variant={"secondary"}
                     onClick={() =>
                         onSortChange({
                             ...currentSort,
@@ -59,16 +62,18 @@ export const ListSortControls: FC<ListSortControlsProps> = ({
                     title={currentSort.dir === "ASC" ? "Sort descending" : "Sort ascending"}
                 >
                     {currentSort.dir === "ASC" ? "↑ A-Z" : "↓ Z-A"}
-                </button>
+                </Button>
             )}
 
             {currentSort && (
-                <button
-                    className="px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
+                <Button
+                    type="button"
+                    variant={"secondary"}
+                    size={"xs"}
                     onClick={() => onSortChange(undefined)}
                 >
                     Clear
-                </button>
+                </Button>
             )}
         </div>
     );

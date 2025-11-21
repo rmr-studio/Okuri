@@ -347,7 +347,10 @@ export const reorderNode = (
         // Reorder the children array
         const newChildren = [...curr.children];
         const [movedChild] = newChildren.splice(currentIndex, 1);
-        newChildren.splice(targetIndex, 0, movedChild);
+
+        // Clamp targetIndex to [0, newChildren.length]
+        const clampedIndex = Math.max(0, Math.min(targetIndex, newChildren.length));
+        newChildren.splice(clampedIndex, 0, movedChild);
 
         return {
             success: true,

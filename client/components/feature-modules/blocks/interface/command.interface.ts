@@ -198,13 +198,7 @@ export type StructuralOperationType =
     | LayoutCommandType.UPDATE_BLOCK
     | LayoutCommandType.REORDER_BLOCK; // For list reordering (orderIndex changes)
 
-export type StructuralOperationData =
-    | AddBlockOperation
-    | RemoveBlockOperation
-    | MoveBlockOperation
-    | UpdateBlockOperation
-    | ReorderBlockOperation;
-
+export type StructuralOperationData = StructuralOperationRequest["data"];
 export type AddBlockOperation = components["schemas"]["AddBlockOperation"];
 export type RemoveBlockOperation = components["schemas"]["RemoveBlockOperation"];
 export type MoveBlockOperation = components["schemas"]["MoveBlockOperation"];
@@ -212,7 +206,7 @@ export type UpdateBlockOperation = components["schemas"]["UpdateBlockOperation"]
 export type ReorderBlockOperation = components["schemas"]["ReorderBlockOperation"];
 
 /**
- * Response from backend when saving layout
+ * Request and Response from backend when saving layout
  */
 export type SaveEnvironmentRequest = components["schemas"]["SaveEnvironmentRequest"];
 export type SaveEnvironmentResponse = components["schemas"]["SaveEnvironmentResponse"];

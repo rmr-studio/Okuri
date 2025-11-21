@@ -109,7 +109,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
 
             trackStructuralChange();
         },
-        [removeBlock, trackStructuralChange, recordStructuralOperation, getParentId]
+        [removeBlock, trackStructuralChange, recordStructuralOperation, getParentId, getDescendants]
     );
 
     /**
@@ -174,6 +174,10 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
 
             if (fromIndex === -1) {
                 console.warn(`Block ${blockId} not found in parent ${parentId}`);
+                return;
+            }
+            if (targetIndex < 0 || targetIndex >= children.length) {
+                console.warn(`Target index ${targetIndex} is out of bounds for parent ${parentId}`);
                 return;
             }
 

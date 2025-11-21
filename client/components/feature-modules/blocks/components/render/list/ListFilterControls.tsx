@@ -1,7 +1,15 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/forms/date-picker/date-picker";
 import { DateTimeInput } from "@/components/ui/forms/date-picker/date-picker-input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { FC, useMemo, useState } from "react";
 import { BlockType } from "../../../interface/block.interface";
 import { FilterSpec, getSortableFields } from "../../../util/list/list-sorting.util";
@@ -138,12 +146,13 @@ export const ListFilterControls: FC<ListFilterControlsProps> = ({
                 )}
 
                 {!showAddFilter && (
-                    <button
-                        className="px-2 py-1 text-xs border rounded hover:bg-muted"
+                    <Button
+                        size={"xs"}
+                        variant={"secondary"}
                         onClick={() => setShowAddFilter(true)}
                     >
                         + Add filter
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -194,12 +203,14 @@ export const ListFilterControls: FC<ListFilterControlsProps> = ({
                                 <span>
                                     {fieldName} {operator} {formattedValue}
                                 </span>
-                                <button
+                                <Button
+                                    size={"xs"}
+                                    variant={"outline"}
                                     className="ml-1 text-muted-foreground hover:text-foreground"
                                     onClick={() => handleRemoveFilter(index)}
                                 >
                                     ×
-                                </button>
+                                </Button>
                             </div>
                         );
                     })}
@@ -209,37 +220,46 @@ export const ListFilterControls: FC<ListFilterControlsProps> = ({
             {/* Add filter form */}
             {showAddFilter && (
                 <div className="flex items-center gap-2 p-2 border rounded bg-muted/50">
-                    <select
-                        className="px-2 py-1 border rounded text-sm bg-background"
+                    <Select
                         value={selectedField}
-                        onChange={(e) => {
-                            setSelectedField(e.target.value);
+                        onValueChange={(e) => {
+                            setSelectedField(e);
                             setSelectedOperator("$eq"); // Reset operator when field changes
                             setFilterValue(""); // Reset text value
                             setDateValue(undefined); // Reset date value
                         }}
                     >
-                        <option value="">Select field...</option>
-                        {sortableFields.map((field) => (
-                            <option key={field.key} value={`data.${field.key}`}>
-                                {field.name}
-                            </option>
-                        ))}
-                    </select>
+                        <SelectTrigger>
+                            <SelectValue placeholder={filterLogic === "AND" ? "AND" : "OR"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {sortableFields.map((field) => (
+                                <SelectItem key={field.key} value={`data.${field.key}`}>
+                                    {field.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
                     {/* Operator selector */}
                     {selectedField && (
-                        <select
-                            className="px-2 py-1 border rounded text-sm bg-background"
+                        <Select
                             value={selectedOperator}
-                            onChange={(e) => setSelectedOperator(e.target.value as FilterOperator)}
+                            onValueChange={(e) => {
+                                setSelectedOperator(e as FilterOperator);
+                            }}
                         >
-                            {availableOperators.map((op) => (
-                                <option key={op.value} value={op.value}>
-                                    {op.symbol} {op.label}
-                                </option>
-                            ))}
-                        </select>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableOperators.map((op) => (
+                                    <SelectItem key={op.value} value={op.value}>
+                                        {op.symbol} {op.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     )}
 
                     {!selectedField && <span>=</span>}
@@ -266,18 +286,18 @@ export const ListFilterControls: FC<ListFilterControlsProps> = ({
                         />
                     ) : isEnumField ? (
                         /* Dropdown for enum fields */
-                        <select
-                            className="px-2 py-1 border rounded text-sm bg-background flex-1"
-                            value={filterValue}
-                            onChange={(e) => setFilterValue(e.target.value)}
-                        >
-                            <option value="">Select value...</option>
-                            {selectedFieldMeta?.enumValues?.map((enumValue) => (
-                                <option key={enumValue} value={enumValue}>
-                                    {enumValue}
-                                </option>
-                            ))}
-                        </select>
+                        <Select value={filterValue} onValueChange={(e) => setFilterValue(e)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select value..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {selectedFieldMeta?.enumValues?.map((enumValue) => (
+                                    <SelectItem key={enumValue} value={enumValue}>
+                                        {enumValue}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     ) : (
                         /* Text/number input for other fields */
                         <input
@@ -299,19 +319,17 @@ export const ListFilterControls: FC<ListFilterControlsProps> = ({
                         />
                     )}
 
-                    <button
-                        className="px-2 py-1 text-xs border rounded bg-background hover:bg-muted"
+                    <Button
+                        size={"xs"}
                         onClick={handleAddFilter}
-                        disabled={
-                            !selectedField ||
-                            (isDateField ? !dateValue : !filterValue)
-                        }
+                        disabled={!selectedField || (isDateField ? !dateValue : !filterValue)}
                     >
                         Add
-                    </button>
+                    </Button>
 
-                    <button
-                        className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                    <Button
+                        size={"xs"}
+                        variant={"secondary"}
                         onClick={() => {
                             setShowAddFilter(false);
                             setSelectedField("");
@@ -321,7 +339,7 @@ export const ListFilterControls: FC<ListFilterControlsProps> = ({
                         }}
                     >
                         Cancel
-                    </button>
+                    </Button>
                 </div>
             )}
         </div>

@@ -37,7 +37,7 @@ export class LayoutService {
      *
      * Backend API:
      * - Endpoint: POST /api/v1/block/environment/
-     * - Request Body: { request: SaveEnvironmentRequest }
+     * - Request Body:  SaveEnvironmentRequest
      * - Response: SaveEnvironmentResponse
      */
     static async saveLayoutSnapshot(
