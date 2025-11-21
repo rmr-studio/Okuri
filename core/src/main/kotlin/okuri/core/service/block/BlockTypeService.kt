@@ -65,17 +65,16 @@ class BlockTypeService(
      */
 
     fun updateBlockType(type: BlockType) {
-        // Ensure a user is only updated a non-system organisation block type
-        val orgId = requireNotNull(type.organisationId)
-        // Assert that they have access to said organisation
-        organisationSecurity.hasOrg(orgId).run {
-            if (!this) {
-                throw AccessDeniedException("Unauthorized to update block type for organisation $orgId")
-            }
-        }
-
         val userId = authTokenService.getUserId()
         val existing = findOrThrow { blockTypeRepository.findById(type.id) }
+
+        // Ensure a user is only updating a non-system organisation block type
+        val orgId = requireNotNull(existing.organisationId) { "Cannot update system block type" }
+        
+        // Assert that they have access to said organisation
+        if (!organisationSecurity.hasOrg(orgId)) {
+            throw AccessDeniedException("Unauthorized to update block type for organisation $orgId")
+        }
 
         // compute next version number (could also query max)
         val nextVersion = existing.version + 1

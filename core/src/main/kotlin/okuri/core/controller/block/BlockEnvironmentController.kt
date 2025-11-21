@@ -61,7 +61,7 @@ class BlockEnvironmentController(
         return ResponseEntity.status(HttpStatus.OK).body(response)
     }
 
-    @GetMapping("/type/{type}/id/   {entityId}")
+    @GetMapping("/type/{type}/id/{entityId}")
     @Operation(
         summary = "Get Block Environment",
         description = "Retrieves the block environment for the specified page"

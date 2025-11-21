@@ -14,8 +14,8 @@ data class ListConfig(
     val mode: BlockListOrderingMode = BlockListOrderingMode.MANUAL,
     // Used when mode=SORTED
     val sort: SortSpec? = null,
-    val filters: List<FilterSpec>? = null,
-    val filterLogic: ListFilterLogicType? = null,
+    val filters: List<FilterSpec> = listOf(),
+    val filterLogic: ListFilterLogicType = ListFilterLogicType.AND,
 )
 
 

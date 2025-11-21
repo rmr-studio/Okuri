@@ -4,7 +4,6 @@ import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.entity.block.BlockTreeLayoutEntity
 import okuri.core.entity.block.BlockTypeEntity
-import okuri.core.enums.block.layout.LayoutScope
 import okuri.core.enums.block.node.NodeType
 import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.core.ComponentType
@@ -244,8 +243,6 @@ object BlockFactory {
         entityType: EntityType = EntityType.BLOCK,
         organisationId: UUID,
         version: Int = 1,
-        scope: LayoutScope = LayoutScope.ORGANIZATION,
-        ownerId: UUID? = null,
         layout: TreeLayout = TreeLayout()
     ): BlockTreeLayoutEntity = BlockTreeLayoutEntity(
         id = id,
@@ -253,8 +250,6 @@ object BlockFactory {
         entityType = entityType,
         organisationId = organisationId,
         version = version,
-        scope = scope,
-        ownerId = ownerId,
         layout = layout
     )
 
@@ -288,7 +283,6 @@ object BlockFactory {
         layout = layout,
         version = version,
         operations = operations,
-        force = force
     )
 
     /**

@@ -365,6 +365,7 @@ class BlockChildrenService(
                 )
 
                 newSiblings.add(newEdge)
+                toSave.add(newEdge)
             }
         }
 

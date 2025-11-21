@@ -209,7 +209,6 @@ CREATE POLICY "block_types_write_by_org" ON public.block_types
     WITH CHECK (organisation_id IN (SELECT organisation_id
                                     FROM public.organisation_members
                                     WHERE user_id = auth.uid()));
-
 -- Blocks: first-class rows, tenant-scoped
 create table if not exists public.blocks
 (
@@ -227,7 +226,6 @@ create table if not exists public.blocks
 
 CREATE INDEX IF NOT EXISTS idx_blocks_org ON public.blocks (organisation_id);
 CREATE INDEX IF NOT EXISTS idx_blocks_type ON public.blocks (type_id);
-CREATE INDEX IF NOT EXISTS idx_blocks_parent ON public.blocks (parent_id);
 CREATE INDEX IF NOT EXISTS idx_blocks_archived ON public.blocks (archived);
 
 -- RLS
@@ -260,13 +258,18 @@ CREATE TABLE public.block_references
 );
 
 
+CREATE INDEX IF NOT EXISTS idx_blocks_references_block ON block_references (block_id);
+CREATE INDEX IF NOT EXISTS idx_block_references_entity ON block_references (entity_type, entity_id);;
+CREATE INDEX IF NOT EXISTS idx_block_references_path_order ON block_references (path, order_index);
+
+
 CREATE TABLE public.block_children
 (
     "id"          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     "parent_id"   uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
     "child_id"    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
     -- Order index to maintain the order of children within the parent block, given the parent is of 'list' type
-    "order_index" integer          DEFAULT 0
+    "order_index" integer          DEFAULT null
 );
 
 CREATE INDEX IF NOT EXISTS idx_block_children_parent ON block_children (parent_id);
@@ -279,44 +282,6 @@ alter table public.block_children
 alter table public.block_children
     add constraint uq_parent_order_index unique (parent_id, order_index);
 
-
--- Mapping an entity (client, line item, etc) to the parent level blocks it should display
-CREATE TABLE entity_blocks
-(
-    id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    entity_id   uuid NOT NULL, -- id of client, line item, etc
-    entity_type text NOT NULL, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
-    block_id    uuid NOT NULL REFERENCES blocks (id) ON DELETE CASCADE,
-    key         text NOT NULL,
-    UNIQUE (entity_id, entity_type, key)
-);
-
--- RLS scoped by parent block's organisation
-ALTER TABLE public.entity_blocks
-    ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "entity_blocks_select_by_org" ON public.entity_blocks
-    FOR SELECT TO authenticated
-    USING (EXISTS (SELECT 1
-                   FROM public.blocks b
-                   WHERE b.id = block_id
-                     AND b.organisation_id IN
-                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
-CREATE POLICY "entity_blocks_write_by_org" ON public.entity_blocks
-    FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1
-                   FROM public.blocks b
-                   WHERE b.id = block_id
-                     AND b.organisation_id IN
-                         (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())))
-    WITH CHECK (EXISTS (SELECT 1
-                        FROM public.blocks b
-                        WHERE b.id = block_id
-                          AND b.organisation_id IN
-                              (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
-
-CREATE INDEX IF NOT EXISTS idx_blocks_references_block ON block_references (block_id);
-CREATE INDEX IF NOT EXISTS idx_block_references_entity ON block_references (entity_type, entity_id);;
-CREATE INDEX IF NOT EXISTS idx_block_references_path_order ON block_references (path, order_index);
 
 -- RLS scoped by parent block's organisation
 ALTER TABLE public.block_references
@@ -349,8 +314,6 @@ create table public.block_tree_layouts
     layout          jsonb       not null,
     entity_id       uuid        not null, -- id of client, line item, etc,
     entity_type     varchar(50) not null, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
-    scope           varchar(50) not null, -- e.g. "ORGANISATION", "TEAM", "USER"
-    owner_id        uuid,                 -- null for organisation-wide, team id for team, user id for user,
     version         integer     not null     default 1,
     created_at      timestamp with time zone default current_timestamp,
     updated_at      timestamp with time zone default current_timestamp,
