@@ -1,4 +1,8 @@
 package okuri.core.models.block.response
 
-class OverwriteEnvironmentResponse {
-}
+import okuri.core.models.block.BlockEnvironment
+
+data class OverwriteEnvironmentResponse(
+    val success: Boolean,
+    val environment: BlockEnvironment
+)

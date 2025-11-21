@@ -9,5 +9,4 @@ data class SaveEnvironmentRequest(
     val layout: TreeLayout,
     val version: Int,
     val operations: List<StructuralOperationRequest>,
-    val force: Boolean = false,
 )

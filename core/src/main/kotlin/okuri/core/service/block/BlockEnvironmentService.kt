@@ -8,8 +8,10 @@ import okuri.core.enums.block.request.BlockOperationType
 import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.models.block.operation.*
+import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.request.StructuralOperationRequest
+import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -32,7 +34,7 @@ class BlockEnvironmentService(
     fun saveBlockEnvironment(request: SaveEnvironmentRequest): SaveEnvironmentResponse {
         authTokenService.getUserId().let { userId ->
             val layout = blockTreeLayoutService.fetchLayoutById(request.layoutId)
-            if (request.version <= layout.version && !request.force) {
+            if (request.version <= layout.version) {
                 return SaveEnvironmentResponse(
                     success = false,
                     conflict = true,
@@ -40,13 +42,6 @@ class BlockEnvironmentService(
                     lastModifiedAt = layout.updatedAt,
                     lastModifiedBy = layout.updatedBy?.toString()
                 )
-            }
-
-            /** Need to overwrite the layout and associated blocks.
-             * Would need to recreate and re-map forced data onto existing blocks as-well.
-             * This would need to accommodate for block operations that may have occurred or negated previous operations in a conflicted version **/
-            if (request.force) {
-                TODO()
             }
 
             request.operations.map { operation ->
@@ -157,8 +152,15 @@ class BlockEnvironmentService(
                 }
             }
         )
+    }
 
-
+    /**
+     * Handles overwriting the entire block environment in the event of a conflict.
+     * Would involve deleting all existing blocks and recreating them from the provided layout.
+     * To avoid situations where blocks were deleted in a conflicted version, and would no longer exist.
+     */
+    fun overwriteBlockEnvironment(request: OverwriteEnvironmentRequest): OverwriteEnvironmentResponse {
+        throw NotImplementedError()
     }
 
     /**

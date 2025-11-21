@@ -7,7 +7,9 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.BlockEnvironment
+import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
+import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
 import okuri.core.service.block.BlockEnvironmentService
 import org.springframework.http.HttpStatus
@@ -44,7 +46,22 @@ class BlockEnvironmentController(
         return ResponseEntity.status(HttpStatus.OK).body(response)
     }
 
-    @GetMapping("/{type}/{entityId}")
+    @PostMapping("/overwrite")
+    @Operation(
+        summary = "Overwrite Block Environment",
+        description = "Overwrites the entire block environment with the provided data."
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Environment overwritten successfully"),
+        ApiResponse(responseCode = "401", description = "Unauthorized access"),
+        ApiResponse(responseCode = "400", description = "Invalid request data")
+    )
+    fun overwriteBlockEnvironment(@Valid @RequestBody request: OverwriteEnvironmentRequest): ResponseEntity<OverwriteEnvironmentResponse> {
+        val response = environmentService.overwriteBlockEnvironment(request)
+        return ResponseEntity.status(HttpStatus.OK).body(response)
+    }
+
+    @GetMapping("/type/{type}/id/   {entityId}")
     @Operation(
         summary = "Get Block Environment",
         description = "Retrieves the block environment for the specified page"
