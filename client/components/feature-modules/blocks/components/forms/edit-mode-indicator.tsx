@@ -34,27 +34,8 @@ export const EditModeIndicator: FC = () => {
         }
         setIsSaving(true);
         try {
-            let allSuccess = true;
-
-            if (hasDataChanges) {
-                const dataSuccess = await saveAllEdits();
-                if (!dataSuccess) {
-                    console.error("Failed to save block data edits");
-                    allSuccess = false;
-                }
-            }
-
-            if (hasLayout && allSuccess) {
-                const layoutSuccess = await saveLayoutChanges();
-                if (!layoutSuccess) {
-                    console.error("Failed to save layout changes");
-                    allSuccess = false;
-                }
-            }
-
-            if (allSuccess && (hasDataChanges || hasLayout)) {
-                console.log("✅ All changes saved successfully");
-            }
+            if (hasDataChanges) await saveAllEdits();
+            if (hasLayout) await saveLayoutChanges();
         } catch (error) {
             console.error("Error saving all changes:", error);
         } finally {

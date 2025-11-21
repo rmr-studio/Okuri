@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/components/provider/auth-context";
 import { now } from "@/lib/util/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GridStackOptions } from "gridstack";
@@ -14,6 +15,7 @@ import {
     useRef,
     useState,
 } from "react";
+import { toast } from "sonner";
 import {
     LayoutSnapshot,
     SaveEnvironmentRequest,
@@ -98,6 +100,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         clearStructuralOperations,
     } = useLayoutHistory();
 
+    const { session } = useAuth();
     const [publishedVersion, setPublishedVersion] = useState(blockTreeLayout?.version ?? 0);
     const [localVersion, setLocalVersion] = useState(0);
     const [changeCount, setChangeCount] = useState(0);
@@ -107,13 +110,66 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     const [conflictData, setConflictData] = useState<SaveEnvironmentResponse | null>(null);
     const queryClient = useQueryClient();
 
-    const { mutate: saveLayout } = useMutation({
-        mutationFn: (request: SaveEnvironmentRequest) => LayoutService.saveLayoutSnapshot(request),
-        onError: (error: Error) => {},
+    const { mutateAsync: saveLayout } = useMutation({
+        mutationFn: (request: SaveEnvironmentRequest) =>
+            LayoutService.saveLayoutSnapshot(session, request),
+        onMutate: () => {
+            setSaveStatus("saving");
+        },
+        onError: (error: Error) => {
+            console.warn("Failed to save layout:", error);
+            toast.error("Failed to save layout changes.");
+            setSaveStatus("error");
+            setTimeout(() => setSaveStatus("idle"), 3000);
+            return;
+        },
         onSuccess: (response: SaveEnvironmentResponse) => {
-            queryClient.invalidateQueries({ queryKey: ["layout", layoutId] });
+            const layout = saveGridLayout();
+            if (!layout) {
+                console.warn("Failed to get layout from GridStack after save");
+                setSaveStatus("error");
+                setTimeout(() => setSaveStatus("idle"), 3000);
+                return;
+            }
+
+            if (response.conflict) {
+                console.warn("⚠️ [SAVE] Conflict detected - version mismatch", {
+                    ourVersion: publishedVersion,
+                    theirVersion: response.latestVersion,
+                    lastModifiedBy: response.lastModifiedBy,
+                });
+
+                setSaveStatus("conflict");
+                setConflictData(response);
+                return;
+            }
+
+            // Todo: Invalid Layout fetch query to refresh cached layout (Once we have integration)
+            // queryClient.invalidateQueries({ queryKey: ["layout", layoutId] });
+
+            const nextVersion = response.newVersion ?? publishedVersion + 1;
+            const snapshot: LayoutSnapshot = {
+                blockEnvironment: getEnvironmentSnapshot(),
+                gridLayout: layout,
+                timestamp: now(),
+                version: nextVersion,
+            };
+            setBaselineSnapshot(snapshot);
+            updatePublishedVersion(nextVersion);
+
+            // Clear operations on successful save
+            clearStructuralOperations();
+
+            requestAnimationFrame(() => {
+                discardLayoutChanges();
+            });
+
+            setSaveStatus("success");
+            setTimeout(() => setSaveStatus("idle"), 2000);
         },
     });
+
+    const { mutate: overwriteLayout } = useMutation({});
 
     const updatePublishedVersion = useCallback(
         (nextVersion: number) => {
@@ -151,7 +207,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
 
         const snapshot: LayoutSnapshot = {
             blockEnvironment: getEnvironmentSnapshot(),
-            gridLayout: structuredClone(blockTreeLayout.layout),
+            gridLayout: structuredClone(blockTreeLayout.layout) as GridStackOptions,
             timestamp: now(),
             version: blockTreeLayout.version ?? 0,
         };
@@ -291,83 +347,28 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             return false;
         }
 
-        setSaveStatus("saving");
+        // Get structural operations since last save
+        const operations = getStructuralOperations();
+
+        // Get current layout from GridStack with preserved JSON content
+        const currentLayout = saveGridLayout();
+        if (!currentLayout) {
+            console.warn("Cannot save layout: failed to get current layout from GridStack");
+            return false;
+        }
+
+        // Prepare save request
+        const saveRequest: SaveEnvironmentRequest = {
+            layoutId,
+            layout: currentLayout,
+            baseVersion: publishedVersion,
+            structuralOperations: operations,
+        };
 
         try {
-            // Get current layout from GridStack with preserved JSON content
-            const currentLayout = saveGridLayout();
-
-            if (!currentLayout) {
-                console.warn("Failed to get layout from GridStack");
-                setSaveStatus("error");
-                return false;
-            }
-
-            // Get structural operations since last save
-            const operations = getStructuralOperations();
-
-            console.log(`💾 Saving layout with ${operations.length} structural operations`);
-
-            // TODO: Call backend with version control
-            // For now, simulate the response
-            const response: SaveEnvironmentResponse = await saveBlockEnvironment(
-                layoutId,
-                currentLayout,
-                publishedVersion,
-                operations
-            );
-
-            if (response.conflict) {
-                // Version mismatch - another user saved first
-                console.warn("⚠️ [SAVE] Conflict detected - version mismatch", {
-                    ourVersion: publishedVersion,
-                    theirVersion: response.latestVersion,
-                    lastModifiedBy: response.lastModifiedBy,
-                });
-
-                setSaveStatus("conflict");
-                setConflictData(response);
-
-                // Don't clear changes - let user resolve conflict
-                return false;
-            }
-
-            if (!response.success) {
-                console.error("Failed to save layout:", response.error);
-                setSaveStatus("error");
-                setTimeout(() => setSaveStatus("idle"), 3000);
-                return false;
-            }
-
-            // Success - update version and clear history
-            const nextVersion = response.newVersion ?? publishedVersion + 1;
-
-            const snapshot: LayoutSnapshot = {
-                blockEnvironment: getEnvironmentSnapshot(),
-                gridLayout: currentLayout,
-                timestamp: Date.now(),
-                version: nextVersion,
-            };
-            setBaselineSnapshot(snapshot);
-            updatePublishedVersion(nextVersion);
-
-            // Clear operations on successful save
-            clearStructuralOperations();
-
-            requestAnimationFrame(() => {
-                discardLayoutChanges();
-            });
-
-            setSaveStatus("success");
-
-            // Reset success status after 2 seconds
-            setTimeout(() => setSaveStatus("idle"), 2000);
-
-            return true;
+            const { success, conflict } = await saveLayout(saveRequest);
+            return success && !conflict;
         } catch (error) {
-            console.error("Failed to save layout:", error);
-            setSaveStatus("error");
-            setTimeout(() => setSaveStatus("idle"), 3000);
             return false;
         }
     }, [
@@ -382,6 +383,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         discardLayoutChanges,
         getStructuralOperations,
         clearStructuralOperations,
+        saveLayout,
     ]);
 
     /**
@@ -403,77 +405,18 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 }
 
                 if (action === "use-theirs") {
-                    //TODO
-                    // Discard local changes and reload server version
-                    // if (conflictData.latestLayout && conflictData.latestVersion) {
-                    //     const serverSnapshot: LayoutSnapshot = {
-                    //         blockEnvironment: cloneEnvironment(conflictData.latestEnvironment!),
-                    //         gridLayout: structuredClone(
-                    //             conflictData.latestLayout
-                    //         ) as GridStackOptions,
-                    //         timestamp: Date.now(),
-                    //         version: conflictData.latestVersion,
-                    //     };
-                    //     setBaselineSnapshot(serverSnapshot);
-                    //     requestAnimationFrame(() => {
-                    //         if (!conflictData.latestVersion) return;
-                    //         discardLayoutChanges();
-                    //         updatePublishedVersion(conflictData.latestVersion);
-                    //     });
-                    //     setSaveStatus("success");
-                    //     setConflictData(null);
-                    //     setTimeout(() => setSaveStatus("idle"), 2000);
-                    //     return true;
-                    // }
+                    //TODO: Load and reinit environment with server version
                 }
 
                 if (action === "keep-mine") {
-                    // Force overwrite with our version
-
                     const currentLayout = saveGridLayout();
                     if (!currentLayout) {
                         setSaveStatus("error");
                         return false;
                     }
 
-                    const operations = getStructuralOperations();
-
-                    // TODO: Send force save to backend with latest version number
-                    const response: SaveEnvironmentResponse = await saveBlockEnvironment(
-                        layoutId!,
-                        currentLayout,
-                        conflictData.latestVersion!,
-                        operations,
-                        true // force flag
-                    );
-
-                    if (response.success) {
-                        const nextVersion = response.newVersion ?? publishedVersion + 1;
-                        const snapshot: LayoutSnapshot = {
-                            blockEnvironment: getEnvironmentSnapshot(),
-                            gridLayout: currentLayout,
-                            timestamp: Date.now(),
-                            version: nextVersion,
-                        };
-
-                        setBaselineSnapshot(snapshot);
-                        updatePublishedVersion(nextVersion);
-
-                        // Clear operations on successful save
-                        clearStructuralOperations();
-
-                        requestAnimationFrame(() => {
-                            discardLayoutChanges();
-                        });
-
-                        setSaveStatus("success");
-                        setConflictData(null);
-                        setTimeout(() => setSaveStatus("idle"), 2000);
-                        return true;
-                    } else {
-                        setSaveStatus("error");
-                        return false;
-                    }
+                    // TODO: Send Entire Snapshot and Environment to backend to overwrite server version
+                    overwriteLayout();
                 }
 
                 return false;
@@ -560,27 +503,4 @@ function areLayoutsEqual(a: GridStackOptions, b: GridStackOptions): boolean {
         console.debug("Failed to compare layouts:", error);
         return false;
     }
-}
-
-async function saveBlockEnvironment(
-    layoutId: string,
-    layout: GridStackOptions,
-    currentVersion: number,
-    operations: StructuralOperationRecord[],
-    force: boolean = false
-): Promise<SaveEnvironmentResponse> {
-    // Simulate network delay
-    console.log("💾 Saving layout:", {
-        layoutId,
-        version: currentVersion,
-        operationCount: operations.length,
-        operations,
-    });
-    const request: SaveEnvironmentRequest = {
-        layoutId,
-        layout,
-        version: currentVersion,
-        operations,
-        force,
-    };
 }

@@ -16,7 +16,7 @@ export interface LayoutSnapshot {
     gridLayout: GridStackOptions;
 
     /** Timestamp when snapshot was created */
-    timestamp: number;
+    timestamp: string;
 
     /** Version number from backend (for optimistic locking) */
     version: number;
