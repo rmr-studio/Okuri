@@ -1,5 +1,5 @@
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
-import { handleError, validateSession } from "@/lib/util/service/service.util";
+import { handleError, validateSession, validateUuid } from "@/lib/util/service/service.util";
 import { api } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
 import { BlockEnvironment } from "../interface/block.interface";
@@ -12,17 +12,58 @@ export class LayoutService {
     /**
      * Load a specific layout for an entity
      *
+     * @param session - User session for authentication
      * @param entityId - UUID of the entity (client, invoice, etc.)
-     * @Param entityType - Type of entity (CLIENT, INVOICE, PROJECT)
+     * @param entityType - Type of entity (CLIENT, INVOICE, PROJECT)
      * @returns Promise<BlockEnvironment>
      *
      * Backend API:
      * - Endpoint: GET /api/v1/block/environment/type/:entityType/id/:entityId
      * - Response: BlockEnvironment object
      */
-    static async loadLayout(entityId: string, entityType: string): Promise<BlockEnvironment> {
-        console.log(`[STUB] LayoutService.loadLayout(${entityId}, ${entityType})`);
-        throw Error("Not implemented");
+    static async loadLayout(
+        session: Session | null,
+        organisationId: string | undefined,
+        entityId: string | undefined,
+        entityType: string
+    ): Promise<BlockEnvironment> {
+        try {
+            if (!organisationId || !entityId) {
+                throw fromError({
+                    message: "Organisation ID and Entity ID are required to load layout",
+                    status: 400,
+                    error: "MISSING_PARAMETERS",
+                });
+            }
+
+            validateUuid(organisationId);
+            validateUuid(entityId);
+            validateSession(session);
+
+            const url = api();
+            const response = await fetch(
+                `${url}/v1/block/environment/organisation/${organisationId}/type/${entityType}/id/${entityId}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                }
+            );
+
+            if (response.ok) {
+                return await response.json();
+            }
+
+            throw await handleError(
+                response,
+                (res) => `Failed to load block environment: ${res.status} ${res.statusText}`
+            );
+        } catch (error) {
+            if (isResponseError(error)) throw error;
+            throw fromError(error);
+        }
     }
 
     /**

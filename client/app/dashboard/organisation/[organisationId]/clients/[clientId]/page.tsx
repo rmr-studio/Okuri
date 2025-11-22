@@ -1,4 +1,4 @@
-import { ClientOverview } from "@/components/feature-modules/client/client-overview";
+import { ClientOverview } from "@/components/feature-modules/client/components/client-overview";
 
 const ClientOverviewPage = () => {
     return <ClientOverview />;

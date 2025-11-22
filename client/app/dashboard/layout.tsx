@@ -13,7 +13,7 @@ const layout: FC<ChildNodeProps> = ({ children }) => {
                 <SidebarProvider>
                     <DashboardSidebar />
                     <SidebarInset className="bg-transparent">
-                        <BGPattern variant="grid" mask="fade-edges" className="opacity-60" />
+                        <BGPattern variant="grid" mask="fade-edges" className="opacity-5" />
                         <header className="relative">
                             <AppNavbar />
                         </header>

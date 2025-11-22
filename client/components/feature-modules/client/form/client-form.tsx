@@ -31,22 +31,16 @@ export interface ClientStepFormProps {
 
 const clientCreationSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    contactDetails: z
-        .object({
-            email: z.string().email().optional().or(z.literal("")),
-            phone: z
-                .string()
-                .min(10, "Please enter a valid phone number for the specified country")
-                .refine(
-                    isMobilePhone,
-                    "Please enter a valid phone number for the specified country"
-                )
-                .optional()
-                .or(z.literal("")),
-            address: AddressFormSchema.optional(),
-        })
-        .optional(),
-    attributes: z.record(z.any()).default({}).optional(),
+    contact: z.object({
+        email: z.string().email(),
+        phone: z
+            .string()
+            .min(10, "Please enter a valid phone number for the specified country")
+            .refine(isMobilePhone, "Please enter a valid phone number for the specified country")
+            .optional()
+            .or(z.literal("")),
+        address: AddressFormSchema.optional(),
+    }),
 });
 
 export type ClientCreation = z.infer<typeof clientCreationSchema>;
@@ -75,18 +69,17 @@ export const ClientForm: FC<ClientFormProps> = ({
         resolver: zodResolver(clientCreationSchema),
         defaultValues: {
             name: client?.name || "",
-            contactDetails: {
-                email: client?.contactDetails?.email || "",
-                phone: client?.contactDetails?.phone || "",
+            contact: {
+                email: client?.contact.email || "",
+                phone: client?.contact?.phone || "",
                 address: {
-                    street: client?.contactDetails?.address?.street || "",
-                    city: client?.contactDetails?.address?.city || "",
-                    state: client?.contactDetails?.address?.state || "",
-                    postalCode: client?.contactDetails?.address?.postalCode || "",
-                    country: client?.contactDetails?.address?.country || "AU",
+                    street: client?.contact?.address?.street || "",
+                    city: client?.contact?.address?.city || "",
+                    state: client?.contact?.address?.state || "",
+                    postalCode: client?.contact?.address?.postalCode || "",
+                    country: client?.contact?.address?.country || "AU",
                 },
             },
-            attributes: client?.attributes || {},
         },
         mode: "onBlur",
     });
@@ -154,7 +147,7 @@ export const ClientForm: FC<ClientFormProps> = ({
     // TODO: Allow for Template selection here
 
     return (
-        <div className="flex flex-col md:flex-row p-2 min-h-[100dvh]">
+        <div className="flex flex-col md:flex-row p-2 min-h-[100dvh] backdrop-blur-sm">
             {/* Form Section */}
             <div className={cn("w-full md:w-2/5", className)}>
                 <header>{renderHeader()}</header>

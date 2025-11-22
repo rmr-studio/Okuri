@@ -8,6 +8,7 @@ import { useBlockEnvironment } from "./block-environment-provider";
 import { useGrid } from "./grid-provider";
 import { useLayoutChange } from "./layout-change-provider";
 import { useLayoutHistory } from "./layout-history-provider";
+import { useBlockDeletionGuard } from "../hooks/use-block-deletion-guard";
 
 interface TrackedEnvironmentContextValue {
     /** Change-aware operations that will mark the layout as dirty */
@@ -54,6 +55,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
     const gridStack = useGrid();
     const { trackStructuralChange } = useLayoutChange();
     const { recordStructuralOperation } = useLayoutHistory();
+    const { canDeleteBlock } = useBlockDeletionGuard();
 
     /**
      * Add a block using a command
@@ -90,6 +92,11 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
      */
     const removeTrackedBlock = useCallback(
         (blockId: string): void => {
+            // Check deletion guard before proceeding
+            if (!canDeleteBlock(blockId)) {
+                return; // Block is protected, abort deletion
+            }
+
             const previousParentId = getParentId(blockId) || undefined;
             const children = getDescendants(blockId);
             removeBlock(blockId);
@@ -109,7 +116,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
 
             trackStructuralChange();
         },
-        [removeBlock, trackStructuralChange, recordStructuralOperation, getParentId, getDescendants]
+        [removeBlock, trackStructuralChange, recordStructuralOperation, getParentId, getDescendants, canDeleteBlock]
     );
 
     /**
