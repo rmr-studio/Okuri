@@ -306,14 +306,14 @@ CREATE POLICY "block_refs_write_by_org" ON public.block_references
                           AND b.organisation_id IN
                               (SELECT organisation_id FROM public.organisation_members WHERE user_id = auth.uid())));
 
-
+drop table if exists public.block_tree_layouts cascade;
 create table public.block_tree_layouts
 (
     id              uuid primary key         default uuid_generate_v4(),
     organisation_id uuid        not null references organisations (id) on delete cascade,
     layout          jsonb       not null,
-    entity_id       uuid        not null, -- id of client, line item, etc,
-    entity_type     varchar(50) not null, -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
+    entity_id       uuid        not null UNIQUE, -- id of client, line item, etc,
+    entity_type     varchar(50) not null,        -- e.g. "CLIENT", "COMPANY", "LINE_ITEM"
     version         integer     not null     default 1,
     created_at      timestamp with time zone default current_timestamp,
     updated_at      timestamp with time zone default current_timestamp,
@@ -326,11 +326,6 @@ create index if not exists idx_block_tree_layouts_entity_id_entity_type
 
 create index if not exists idx_block_tree_layouts_organisation_id
     on public.block_tree_layouts (organisation_id);
-
-alter table public.block_tree_layouts
-    add constraint uq_block_tree_layouts_entity_scope_owner unique (entity_id, scope, owner_id);
-
-
 
 drop table if exists public.companies cascade;
 create table if not exists public.companies

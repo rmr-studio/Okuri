@@ -11,6 +11,7 @@ data class BlockContentMetadata(
     var data: JsonObject = emptyMap(),
     override val type: BlockMetadataType = BlockMetadataType.CONTENT,
     override val meta: BlockMeta = BlockMeta(),
+    override val deletable: Boolean = true,
     val listConfig: BlockListConfiguration? = null
 ) : Metadata
 

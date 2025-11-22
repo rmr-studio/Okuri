@@ -7,4 +7,5 @@ import okuri.core.enums.block.structure.BlockMetadataType
 sealed interface Metadata {
     val type: BlockMetadataType
     val meta: BlockMeta
+    val deletable: Boolean
 }

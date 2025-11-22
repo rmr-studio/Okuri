@@ -34,6 +34,7 @@ class BlockTreeLayoutService(
         id: UUID,
         type: EntityType
     ): BlockTreeLayoutEntity {
+        
         return findOrThrow { layoutRepository.findByEntityIdAndEntityType(id, type) }
     }
 

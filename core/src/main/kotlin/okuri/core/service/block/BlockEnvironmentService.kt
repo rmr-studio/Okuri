@@ -9,6 +9,7 @@ import okuri.core.enums.block.node.BlockReferenceWarning
 import okuri.core.enums.block.request.BlockOperationType
 import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
+import okuri.core.exceptions.NotFoundException
 import okuri.core.models.block.BlockEnvironment
 import okuri.core.models.block.layout.TreeLayout
 import okuri.core.models.block.layout.Widget
@@ -35,7 +36,6 @@ class BlockEnvironmentService(
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
     private val defaultEnvironmentService: DefaultBlockEnvironmentService,
-    private val clientService: ClientService,
 ) {
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
@@ -180,17 +180,16 @@ class BlockEnvironmentService(
      * @param entityType The type of entity (e.g., CLIENT, ORGANISATION)
      * @return BlockEnvironment with layout, trees, and entity data
      */
-    @PostAuthorize("@organisationSecurity.hasOrg(returnObject.layout.organisationId)")
+    @PostAuthorize("@organisationSecurity.hasOrg(#organisationId)")
     fun loadBlockEnvironment(
         entityId: UUID,
-        entityType: EntityType
+        entityType: EntityType,
+        organisationId: UUID
     ): BlockEnvironment {
         // 1. Try to load existing layout, or create default if it doesn't exist
         val layoutEntity = try {
             blockTreeLayoutService.fetchLayoutForEntity(entityId, entityType)
-        } catch (e: NoSuchElementException) {
-            // Lazy initialization: create default environment
-            val organisationId = getOrganisationIdForEntity(entityId, entityType)
+        } catch (e: NotFoundException) {
             defaultEnvironmentService.createDefaultEnvironmentForEntity(
                 entityId = entityId,
                 entityType = entityType,
@@ -198,6 +197,10 @@ class BlockEnvironmentService(
             )
             // Fetch the newly created layout
             blockTreeLayoutService.fetchLayoutForEntity(entityId, entityType)
+        }
+
+        require(layoutEntity.organisationId == organisationId) {
+            "Layout organisation ID does not match requested organisation ID"
         }
 
         // 2. Build block trees from layout
@@ -321,21 +324,6 @@ class BlockEnvironmentService(
         }
     }
 
-
-    /**
-     * Gets the organisation ID for a given entity.
-     * This is needed for lazy initialization of layouts.
-     */
-    private fun getOrganisationIdForEntity(entityId: UUID, entityType: EntityType): UUID {
-        return when (entityType) {
-            EntityType.CLIENT -> clientService.getEntityById(entityId).organisationId
-            // TODO: Add other entity types as needed
-            EntityType.ORGANISATION -> entityId // Organisation is its own org
-            EntityType.PROJECT -> throw NotImplementedError("Project organisation lookup not implemented")
-            EntityType.INVOICE -> throw NotImplementedError("Invoice organisation lookup not implemented")
-            else -> throw IllegalArgumentException("Cannot determine organisation for entity type: $entityType")
-        }
-    }
 
     /**
      * Filters out operations for blocks that will be cascade deleted when their parent is removed.

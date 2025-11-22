@@ -29,8 +29,8 @@ import java.util.*
     uniqueConstraints = [
         // Ensure only one layout per scope combination
         UniqueConstraint(
-            name = "uq_block_tree_layouts_entity_scope_owner",
-            columnNames = ["entity_id", "scope", "owner_id"]
+            name = "uq_block_tree_layouts_entity",
+            columnNames = ["entity_id"]
         )
     ],
     indexes = [
@@ -59,7 +59,7 @@ data class BlockTreeLayoutEntity(
 
     @Column(name = "version", nullable = false)
     var version: Int = 1,
-    
+
     /**
      * The complete Gridstack layout configuration
      * Stores all positioning, dimensions, grid options, and nested sub-grids

@@ -44,15 +44,6 @@ class DefaultBlockEnvironmentService(
         entityType: EntityType,
         organisationId: UUID
     ): BlockTreeLayout {
-        // Check if layout already exists
-        blockTreeLayoutRepository.findByEntityIdAndEntityType(entityId, entityType)
-            .ifPresent {
-                throw IllegalStateException(
-                    "Layout already exists for ${entityType.type} $entityId"
-                )
-            }
-
-        // Build default layout based on entity type
         val defaultLayout = buildDefaultLayoutForEntityType(entityId, entityType)
 
         // Persist layout entity
@@ -186,7 +177,7 @@ class DefaultBlockEnvironmentService(
                 id = referenceBlockId,
                 key = "reference",
                 renderType = RenderType.COMPONENT,
-                blockType = NodeType.REFERENCE_NODE
+                blockType = NodeType.REFERENCE
             )
         )
     }

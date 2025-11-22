@@ -11,6 +11,7 @@ import okuri.core.enums.block.structure.BlockReferenceFetchPolicy
 data class BlockReferenceMetadata(
     override val type: BlockMetadataType = BlockMetadataType.BLOCK_REFERENCE,
     override val fetchPolicy: BlockReferenceFetchPolicy = BlockReferenceFetchPolicy.LAZY,
+    override val deletable: Boolean = true,
     override val meta: BlockMeta = BlockMeta(),
     override val path: String = "\$.block",
     val expandDepth: Int = 1,

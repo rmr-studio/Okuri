@@ -3,10 +3,14 @@ package okuri.core.configuration.audit
 import okuri.core.configuration.auth.SecurityAuditorAware
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.data.auditing.DateTimeProvider
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing
+import java.time.ZonedDateTime
+import java.time.temporal.TemporalAccessor
+import java.util.*
 
 @Configuration
-@EnableJpaAuditing(auditorAwareRef = "auditorProvider")
+@EnableJpaAuditing(auditorAwareRef = "auditorProvider", dateTimeProviderRef = "dateTimeProvider")
 class AuditConfig {
 
     /**
@@ -19,4 +23,17 @@ class AuditConfig {
      */
     @Bean
     fun auditorProvider(): SecurityAuditorAware = SecurityAuditorAware()
+
+    /**
+     * Provides ZonedDateTime instances for JPA auditing timestamps.
+     *
+     * This bean ensures that @CreatedDate and @LastModifiedDate annotations
+     * receive ZonedDateTime values instead of the default LocalDateTime.
+     *
+     * @return a DateTimeProvider that supplies the current ZonedDateTime.
+     */
+    @Bean
+    fun dateTimeProvider(): DateTimeProvider {
+        return DateTimeProvider { Optional.of(ZonedDateTime.now() as TemporalAccessor) }
+    }
 }
