@@ -11,14 +11,26 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/util/utils";
-import { CommandIcon, InfoIcon, PlusIcon, Edit3, Check, X } from "lucide-react";
-import { FC, RefObject } from "react";
+import { Check, CommandIcon, Edit3, InfoIcon, PlusIcon, X } from "lucide-react";
+import { FC, RefObject, ReactNode } from "react";
 
 import { motion } from "framer-motion";
 import { QuickActionItem, SlashMenuItem } from "../../../interface/panel.interface";
 import PanelActions from "./panel-actions";
 import PanelDetails from "./panel-details";
 import PanelQuickInsert from "./panel-quick-insert";
+
+/**
+ * Custom toolbar action - allows injecting additional buttons into the toolbar
+ */
+export interface CustomToolbarAction {
+    id: string;
+    icon: ReactNode;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    badge?: string | number; // Optional badge (e.g., count of selected items)
+}
 
 interface PanelToolbarProps {
     visible: boolean;
@@ -51,6 +63,7 @@ interface PanelToolbarProps {
     hasChildren?: boolean;
     onSaveEditClick?: () => void;
     onDiscardEditClick?: () => void;
+    customActions?: CustomToolbarAction[]; // Custom toolbar actions (e.g., entity selector)
 }
 
 const toolbarButtonClass =
@@ -86,6 +99,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     hasChildren = false,
     onSaveEditClick,
     onDiscardEditClick,
+    customActions = [],
 }) => {
     // Helper to get button class with focus highlight
     const getButtonClass = (index: number) => {
@@ -101,6 +115,8 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
     const quickActionsIndex = buttonIndex++;
     const insertIndex = allowInsert ? buttonIndex++ : -1;
     const editIndex = onEditClick ? buttonIndex++ : -1;
+    const customActionsStartIndex = buttonIndex;
+    const customActionsIndices = customActions.map(() => buttonIndex++);
     const saveEditIndex = isEditMode && onSaveEditClick ? buttonIndex++ : -1;
     const discardEditIndex = isEditMode && onDiscardEditClick ? buttonIndex++ : -1;
     const detailsIndex = buttonIndex++;
@@ -114,26 +130,6 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                 "absolute -left-3 -top-3 flex items-center gap-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm transition-opacity z-[50]"
             )}
         >
-            <Tooltip>
-                {/* <TooltipTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={mode === "display" ? "Switch to form" : "Switch to display"}
-                        className={toolbarButtonClass}
-                        onClick={onToggleMode}
-                    >
-                        {mode === "display" ? (
-                            <LayoutDashboardIcon className="size-3.5" />
-                        ) : (
-                            <ListIcon className="size-3.5" />
-                        )}
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                    {mode === "display" ? "Switch to form view" : "Switch to display view"}
-                </TooltipContent> */}
-            </Tooltip>
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Button
@@ -197,7 +193,8 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                             aria-label={isEditMode ? "Save and exit edit mode" : "Edit block"}
                             className={cn(
                                 getButtonClass(editIndex),
-                                isEditMode && "bg-primary text-primary-foreground hover:bg-primary/90"
+                                isEditMode &&
+                                    "bg-primary text-primary-foreground hover:bg-primary/90"
                             )}
                             onClick={onEditClick}
                         >
@@ -217,6 +214,42 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                         )}
                     </TooltipContent>
                 </Tooltip>
+            )}
+
+            {/* Custom toolbar actions (e.g., entity selector) */}
+            {customActions.length > 0 && (
+                <>
+                    {/* Divider before custom actions */}
+                    <div className="h-5 w-px bg-border mx-0.5" />
+
+                    {customActions.map((action, index) => (
+                        <Tooltip key={action.id}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label={action.label}
+                                    className={cn(
+                                        getButtonClass(customActionsIndices[index]),
+                                        action.disabled && "opacity-50 cursor-not-allowed"
+                                    )}
+                                    onClick={action.onClick}
+                                    disabled={action.disabled}
+                                >
+                                    <div className="relative">
+                                        {action.icon}
+                                        {action.badge && (
+                                            <span className="absolute -top-1 -right-1 size-3 flex items-center justify-center text-[8px] font-semibold bg-primary text-primary-foreground rounded-full">
+                                                {action.badge}
+                                            </span>
+                                        )}
+                                    </div>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{action.label}</TooltipContent>
+                        </Tooltip>
+                    ))}
+                </>
             )}
 
             {/* Edit mode actions - Save and Discard */}

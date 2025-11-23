@@ -53,6 +53,7 @@ export interface BlockEnvironmentProviderProps extends ChildNodeProps {
 /** Context contract exposed to consumers. */
 export interface BlockEnvironmentContextValue {
     environment: EditorEnvironment;
+    organisationId: string;
 
     /** Full layout object with metadata */
     blockTreeLayout?: BlockTreeLayout;

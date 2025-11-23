@@ -1226,6 +1226,11 @@ export interface components {
         ColumnOptions: {
             breakpoints?: components["schemas"]["BreakpointConfig"][];
             layout?: string;
+            breakpointForWindow?: string;
+            /** Format: int32 */
+            columnMax?: number;
+            /** Format: int32 */
+            columnWidth?: number;
         };
         ContentNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
             children?: components["schemas"]["Node"][];
@@ -1358,6 +1363,12 @@ export interface components {
             dir: "ASC" | "DESC";
         };
         TreeLayout: {
+            acceptWidgets?: boolean;
+            alwaysShowResizeHandle?: boolean;
+            animate?: boolean;
+            auto?: boolean;
+            /** Format: int32 */
+            cellHeight?: number;
             resizable?: components["schemas"]["ResizableOptions"];
             draggable?: components["schemas"]["DraggableOptions"];
             /** Format: int32 */
@@ -1370,14 +1381,8 @@ export interface components {
             marginBottom?: number;
             /** Format: int32 */
             marginLeft?: number;
-            acceptWidgets?: boolean;
-            alwaysShowResizeHandle?: boolean;
-            animate?: boolean;
-            auto?: boolean;
-            /** Format: int32 */
-            cellHeight?: number;
-            /** Format: int32 */
-            column?: number;
+            /** @description Number of columns or the string 'auto' */
+            column?: number | string;
             columnOpts?: components["schemas"]["ColumnOptions"];
             disableDrag?: boolean;
             disableOneColumnMode?: boolean;

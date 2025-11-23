@@ -1,4 +1,5 @@
-import { now, uniqueId } from "@/lib/util/utils";
+import { now } from "@/lib/util/utils";
+import { v4 as uuid } from "uuid";
 import {
     Block,
     BlockContentMetadata,
@@ -110,7 +111,7 @@ export const createBlockBase = ({
     payload: Metadata;
     archived?: boolean;
 }): Block => ({
-    id: id ?? uniqueId("block"),
+    id: id ?? uuid(),
     name,
     organisationId,
     type,
@@ -184,7 +185,7 @@ export const createEntityReference = ({
                 type: entity.type,
                 // todo ensure all references have valid IDs
                 // currently things like block trees dont have a unique id property
-                entityId: (entity as any).id || uniqueId("entity"),
+                entityId: (entity as any).id || uuid(),
                 order: index,
                 entity,
             })
@@ -221,7 +222,7 @@ export const createReference = ({
     warning?: ReferenceWarning;
 }): Reference => {
     return {
-        id: uniqueId("ref"),
+        id: uuid(),
         entityType: type,
         entityId,
         path,
@@ -248,7 +249,7 @@ export const createBlockType = ({
     display: BlockDisplay;
     nesting?: BlockTypeNesting | null;
 }): BlockType => ({
-    id: uniqueId(`type-${key}`),
+    id: uuid(),
     key,
     version: 1,
     name,

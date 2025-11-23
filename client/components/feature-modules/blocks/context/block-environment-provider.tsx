@@ -674,6 +674,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const value = useMemo<BlockEnvironmentContextValue>(
         () => ({
             environment,
+            organisationId,
             initialLayout: layoutForGrid,
             blockTreeLayout,
             layoutId,
@@ -702,6 +703,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         [
             environment,
             layoutForGrid,
+            organisationId,
             blockTreeLayout,
             layoutId,
             isInitialized,
