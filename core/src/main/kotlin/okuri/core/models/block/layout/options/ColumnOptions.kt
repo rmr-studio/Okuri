@@ -10,5 +10,8 @@ import com.fasterxml.jackson.annotation.JsonInclude
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class ColumnOptions(
     val breakpoints: List<BreakpointConfig>? = null,
-    val layout: String? = null
+    val layout: String? = null,
+    val breakpointForWindow: String? = null,
+    val columnMax: Int? = null,
+    val columnWidth: Int? = null
 )

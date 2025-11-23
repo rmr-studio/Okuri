@@ -1,6 +1,5 @@
 package okuri.core.service.block
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.transaction.Transactional
 import okuri.core.entity.activity.ActivityLogEntity
 import okuri.core.entity.block.BlockEntity
@@ -11,18 +10,20 @@ import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
 import okuri.core.exceptions.NotFoundException
 import okuri.core.models.block.BlockEnvironment
+import okuri.core.models.block.Reference
 import okuri.core.models.block.layout.TreeLayout
 import okuri.core.models.block.layout.Widget
+import okuri.core.models.block.metadata.BlockReferenceMetadata
+import okuri.core.models.block.metadata.EntityReferenceMetadata
 import okuri.core.models.block.operation.*
 import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.request.StructuralOperationRequest
 import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
-import okuri.core.models.block.tree.BlockTree
+import okuri.core.models.block.tree.*
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
-import okuri.core.service.client.ClientService
 import org.springframework.security.access.prepost.PostAuthorize
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
@@ -279,17 +280,17 @@ class BlockEnvironmentService(
         blockEntity: BlockEntity,
         widget: Widget,
         blocksById: Map<UUID, BlockEntity>
-    ): okuri.core.models.block.tree.Node {
+    ): Node {
         val block = blockEntity.toModel()
 
         return when (val meta = block.payload) {
-            is okuri.core.models.block.metadata.BlockReferenceMetadata -> {
+            is BlockReferenceMetadata -> {
                 // Handle block references
                 // TODO: Integrate with BlockReferenceService when available
-                okuri.core.models.block.tree.ReferenceNode(
+                ReferenceNode(
                     block = block,
-                    reference = okuri.core.models.block.tree.BlockTreeReference(
-                        reference = okuri.core.models.block.Reference(
+                    reference = BlockTreeReference(
+                        reference = Reference(
                             entityId = block.id,
                             entityType = EntityType.BLOCK,
                             entity = null,
@@ -299,13 +300,15 @@ class BlockEnvironmentService(
                 )
             }
 
-            is okuri.core.models.block.metadata.EntityReferenceMetadata -> {
-                // Handle entity references
-                // TODO: Integrate with BlockReferenceService when available
-                okuri.core.models.block.tree.ReferenceNode(
+            is EntityReferenceMetadata -> {
+                // Handle entity references with LAZY loading for progressive hydration
+                // Entity data is NOT resolved here to keep initial load fast.
+                // Frontend calls POST /api/v1/block/environment/hydrate to progressively
+                // load entity data for specific blocks as needed.
+                ReferenceNode(
                     block = block,
-                    reference = okuri.core.models.block.tree.EntityReference(
-                        reference = emptyList()
+                    reference = EntityReference(
+                        reference = emptyList(), // Empty - will be hydrated separately
                     )
                 )
             }
@@ -316,7 +319,7 @@ class BlockEnvironmentService(
                     buildTreeFromWidget(childWidget, blocksById)?.root
                 } ?: emptyList()
 
-                okuri.core.models.block.tree.ContentNode(
+                ContentNode(
                     block = block,
                     children = childNodes
                 )
