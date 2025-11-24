@@ -14,7 +14,6 @@ import { PlusIcon, SaveIcon, TypeIcon } from "lucide-react";
 import React, { FC, Fragment, useEffect, useMemo, useState } from "react";
 import "../../styles/gridstack-custom.css";
 
-import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { LayoutChangeProvider } from "@/components/feature-modules/blocks/context/layout-change-provider";
@@ -30,6 +29,7 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
+import { RenderElementProvider } from "../../context/block-renderer-provider";
 import { LayoutHistoryProvider } from "../../context/layout-history-provider";
 import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
@@ -51,7 +51,6 @@ import {
     DEFAULT_GRID_LAYOUT,
 } from "../../util/block/factory/type.factory";
 import { BlockEditDrawer, EditModeIndicator } from "../forms";
-import { editorPanel } from "../panel/editor-panel";
 import { defaultSlashItems } from "../panel/panel-wrapper";
 import { WidgetEnvironmentSync } from "../sync/widget.sync";
 
@@ -151,7 +150,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
                                     <BlockEnvironmentGridSync />
                                     <WidgetEnvironmentSync />
                                     <GridContainerProvider>
-                                        <BlockRenderer />
+                                        <RenderElementProvider/>
                                     </GridContainerProvider>
                                     <BlockEditDrawer />
                                 </BlockEditProvider>
@@ -164,41 +163,6 @@ const BlockEnvironmentWorkspace: React.FC = () => {
         </>
     );
 };
-
-/**
- * Renders all blocks with proper wrapping (PanelWrapper for toolbar, slash menu, etc.)
- */
-const BlockRenderer: React.FC = () => {
-    const { getBlock, getParent, moveBlockUp, moveBlockDown } = useBlockEnvironment();
-    const { removeTrackedBlock, addTrackedBlock } = useTrackedEnvironment();
-
-    const { wrapper } = editorPanel({
-        getBlock,
-        insertBlock: (child, parentId, index) => addTrackedBlock(child, parentId, index),
-        removeBlock: removeTrackedBlock,
-        getParent,
-        moveBlockUp,
-        moveBlockDown,
-    });
-
-    return <RenderElementProvider wrapElement={wrapper} />;
-};
-
-/**
- * Helper to create a block node from a slash menu item
- */
-function createNodeFromSlashItem(item: SlashMenuItem, organisationId: string): BlockNode | null {
-    switch (item.id) {
-        case "LAYOUT_CONTAINER":
-        case "LINE_ITEM":
-            return createLayoutContainerNode(organisationId);
-        case "TEXT":
-        case "BLANK_NOTE":
-            return createNoteNode(organisationId);
-        default:
-            return createNoteNode(organisationId, `New ${item.label}`);
-    }
-}
 
 const DebugInfo = () => {
     "use client";

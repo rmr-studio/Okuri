@@ -633,6 +633,7 @@ export const PanelWrapper: FC<Props> = ({
                     ref={surfaceRef}
                     className={cn(
                         "group flex relative flex-col rounded-sm border text-card-foreground transition-colors w-full p-4",
+                        "break-words", // Fix for text overflow - ensure long text wraps
                         allowInsert
                             ? shouldHighlight
                                 ? "border-primary ring-2 ring-primary/30 bg-card shadow-sm"

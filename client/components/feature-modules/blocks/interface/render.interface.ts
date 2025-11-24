@@ -5,7 +5,7 @@ import { NodeType } from "./block.interface";
 
 export interface ProviderProps {
     onUnknownType?: (args: CallbackProvider) => void;
-    wrapElement: (args: WrapElementProvider) => ReactNode;
+    wrapElement?: (args: WrapElementProvider) => ReactNode;
 }
 
 /**
@@ -26,3 +26,11 @@ export interface CallbackProvider {
 }
 
 export interface WrapElementProvider extends CallbackProvider, ChildNodeProps {}
+
+export type RenderElementContextValue = {
+    widget: {
+        id: string;
+        container: HTMLElement | null;
+        requestResize: () => void;
+    };
+};

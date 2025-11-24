@@ -87,8 +87,6 @@ export interface BlockEnvironmentContextValue {
     isDescendantOf(blockId: string, ancestorId: string): boolean;
     updateHierarchy(blockId: string, newParentId: string | null): void;
 
-    moveBlockUp(blockId: string): void;
-    moveBlockDown(blockId: string): void;
     reorderBlock(blockId: string, parentId: string, targetIndex: number): void;
 
     clear(): void;

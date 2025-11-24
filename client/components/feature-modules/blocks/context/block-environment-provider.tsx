@@ -610,12 +610,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         setEnvironment(createEmptyEnvironment(organisationId));
     }, [organisationId]);
 
-    /** Move a block up in its parent's children array (for lists) */
-    const moveBlockUp = useCallback((blockId: string) => {}, []);
-
-    /** Move a block down in its parent's children array (for lists) */
-    const moveBlockDown = useCallback((blockId: string) => {}, []);
-
     /**
      * Reorder a block to a specific index within its parent's children array.
      * Used by dnd-kit list components for drag-and-drop reordering.
@@ -693,8 +687,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             getDescendants,
             isDescendantOf,
             updateHierarchy,
-            moveBlockUp,
-            moveBlockDown,
             reorderBlock,
             clear,
             hydrateEnvironment,
@@ -720,8 +712,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             getDescendants,
             isDescendantOf,
             updateHierarchy,
-            moveBlockUp,
-            moveBlockDown,
             reorderBlock,
             clear,
             hydrateEnvironment,

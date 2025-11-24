@@ -6,14 +6,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, PlusIcon } from "lucide-react";
 import { FC, useMemo, useState } from "react";
 import { BlockEditProvider } from "../../context/block-edit-provider";
-import { BlockEnvironmentProvider, useBlockEnvironment } from "../../context/block-environment-provider";
+import {
+    BlockEnvironmentProvider,
+    useBlockEnvironment,
+} from "../../context/block-environment-provider";
 import { BlockFocusProvider } from "../../context/block-focus-provider";
 import { RenderElementProvider } from "../../context/block-renderer-provider";
 import { GridContainerProvider } from "../../context/grid-container-provider";
 import { GridProvider } from "../../context/grid-provider";
 import { LayoutChangeProvider } from "../../context/layout-change-provider";
 import { LayoutHistoryProvider } from "../../context/layout-history-provider";
-import { TrackedEnvironmentProvider, useTrackedEnvironment } from "../../context/tracked-environment-provider";
+import {
+    TrackedEnvironmentProvider,
+    useTrackedEnvironment,
+} from "../../context/tracked-environment-provider";
 import { useEntityLayout } from "../../hooks/use-entity-layout";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import { BlockType } from "../../interface/block.interface";
@@ -121,6 +127,12 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
         );
     }
 
+    const toolbar = renderToolbar ? (
+        renderToolbar()
+    ) : (
+        <EntityToolbar organisationId={organisationId} entityType={entityType} />
+    );
+
     // Render the complete block environment with provider hierarchy
     const content = (
         <BlockEnvironmentProvider
@@ -136,13 +148,7 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
                                 <BlockEditProvider>
                                     <EditModeIndicator />
                                     <KeyboardNavigationHandler />
-                                    {renderToolbar?.()}
-                                    {!renderToolbar && showDefaultToolbar && (
-                                        <EntityToolbar
-                                            organisationId={organisationId}
-                                            entityType={entityType}
-                                        />
-                                    )}
+                                    {(showDefaultToolbar || renderToolbar) && toolbar}
                                     <BlockEnvironmentGridSync />
                                     <WidgetEnvironmentSync />
                                     <GridContainerProvider>
