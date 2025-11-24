@@ -9,11 +9,13 @@ import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Reference
 import okuri.core.models.block.metadata.BlockReferenceMetadata
 import okuri.core.models.block.metadata.EntityReferenceMetadata
-import okuri.core.models.block.response.BlockHydrationResult
+import okuri.core.models.block.response.internal.BlockHydrationResult
 import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.service.block.resolvers.ReferenceResolver
 import org.springframework.stereotype.Service
 import java.util.*
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 /**
  * Service for managing block links.
@@ -25,7 +27,6 @@ import java.util.*
 @Service
 class BlockReferenceService(
     private val blockReferenceRepository: BlockReferenceRepository,
-    private val blockService: BlockService,
     resolvers: List<ReferenceResolver>
 ) {
     private val resolverByType = resolvers.associateBy { it.type }
@@ -114,6 +115,57 @@ class BlockReferenceService(
         }
     }
 
+    fun hydrateBlockReferences(blocks: Map<UUID, BlockEntity>, organisationId: UUID): Map<UUID, BlockHydrationResult> {
+        // 2. Filter to only entity reference blocks and collect all entity IDs by type
+        val referencesByType = mutableMapOf<EntityType, MutableSet<UUID>>()
+        val blockMetadata = mutableMapOf<UUID, EntityReferenceMetadata>()
+
+        blocks.forEach { (blockId, block) ->
+            val payload = block.payload
+            if (payload is EntityReferenceMetadata) {
+                blockMetadata[blockId] = payload
+                payload.items.forEach { item ->
+                    referencesByType
+                        .getOrPut(item.type) { mutableSetOf() }
+                        .add(item.id)
+                }
+            }
+        }
+        // 3. Batch fetch all entities by type using resolvers
+        val resolvedEntities = referencesByType.mapValues { (entityType, ids) ->
+            resolverByType[entityType]?.fetch(ids, organisationId) ?: emptyMap()
+        }
+
+        // 4. Build hydration results for each block
+        return blockMetadata.mapValues { (blockId, meta) ->
+            try {
+                val references = meta.items.mapIndexed { idx, item ->
+                    val entity = resolvedEntities[item.type]?.get(item.id)
+                    Reference(
+                        id = null, // Not using persisted reference rows for hydration
+                        entityType = item.type,
+                        entityId = item.id,
+                        entity = entity,
+                        orderIndex = idx,
+                        warning = if (entity == null) BlockReferenceWarning.MISSING else null
+                    )
+                }
+
+                BlockHydrationResult(
+                    blockId = blockId,
+                    references = references,
+                    error = null
+                )
+            } catch (e: Exception) {
+                BlockHydrationResult(
+                    blockId = blockId,
+                    references = emptyList(),
+                    error = "Failed to hydrate block: ${e.message}"
+                )
+            }
+        }
+    }
+
     // -------- SINGLE BLOCK LINK --------
     @Transactional
     fun upsertBlockLinkFor(block: BlockEntity, meta: BlockReferenceMetadata) {
@@ -166,76 +218,6 @@ class BlockReferenceService(
                 entity = null,
                 warning = BlockReferenceWarning.REQUIRES_LOADING,
             ) to this
-        }
-    }
-
-    // -------- BLOCK HYDRATION --------
-    /**
-     * Hydrates (resolves entity references for) multiple blocks in a single batched operation.
-     *
-     * This method is optimized for performance by:
-     * 1. Loading all requested blocks in a single query
-     * 2. Grouping entity references by type for batch fetching
-     * 3. Using resolvers to fetch all entities of each type in parallel
-     *
-     * @param blockIds The list of block UUIDs to hydrate.
-     * @param organisationId The organisation context for authorization and filtering.
-     * @return A map from block ID to its hydration result. Blocks that aren't entity reference blocks are skipped.
-     */
-    fun hydrateBlocks(blockIds: List<UUID>, organisationId: UUID): Map<UUID, BlockHydrationResult> {
-        if (blockIds.isEmpty()) return emptyMap()
-
-        // 1. Load all blocks in a single query
-        val blocks = blockService.getBlocks(blockIds.toSet())
-
-        // 2. Filter to only entity reference blocks and collect all entity IDs by type
-        val referencesByType = mutableMapOf<EntityType, MutableSet<UUID>>()
-        val blockMetadata = mutableMapOf<UUID, EntityReferenceMetadata>()
-
-        blocks.forEach { (blockId, block) ->
-            val payload = block.payload
-            if (payload is EntityReferenceMetadata) {
-                blockMetadata[blockId] = payload
-                payload.items.forEach { item ->
-                    referencesByType
-                        .getOrPut(item.type) { mutableSetOf() }
-                        .add(item.id)
-                }
-            }
-        }
-
-        // 3. Batch fetch all entities by type using resolvers
-        val resolvedEntities = referencesByType.mapValues { (entityType, ids) ->
-            resolverByType[entityType]?.fetch(ids, organisationId) ?: emptyMap()
-        }
-
-        // 4. Build hydration results for each block
-        return blockMetadata.mapValues { (blockId, meta) ->
-            try {
-                val references = meta.items.mapIndexed { idx, item ->
-                    val entity = resolvedEntities[item.type]?.get(item.id)
-                    Reference(
-                        id = null, // Not using persisted reference rows for hydration
-                        entityType = item.type,
-                        entityId = item.id,
-                        entity = entity,
-                        orderIndex = idx,
-                        warning = if (entity == null) BlockReferenceWarning.MISSING else null
-                    )
-                }
-
-                BlockHydrationResult(
-                    blockId = blockId,
-                    references = references,
-                    error = null
-                )
-            } catch (e: Exception) {
-                BlockHydrationResult(
-                    blockId = blockId,
-                    references = emptyList(),
-                    error = "Failed to hydrate block: ${e.message}"
-                )
-            }
         }
     }
 }

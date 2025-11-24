@@ -1,4 +1,4 @@
-package okuri.core.models.block.response
+package okuri.core.models.block.response.internal
 
 import okuri.core.models.block.Reference
 import java.util.*

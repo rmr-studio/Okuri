@@ -16,11 +16,13 @@ import okuri.core.models.block.layout.Widget
 import okuri.core.models.block.metadata.BlockReferenceMetadata
 import okuri.core.models.block.metadata.EntityReferenceMetadata
 import okuri.core.models.block.operation.*
+import okuri.core.models.block.request.HydrateBlocksRequest
 import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.request.StructuralOperationRequest
 import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
+import okuri.core.models.block.response.internal.BlockHydrationResult
 import okuri.core.models.block.tree.*
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
@@ -213,6 +215,12 @@ class BlockEnvironmentService(
             layout = layoutEntity.toModel(),
             trees = trees,
         )
+    }
+
+    @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
+    fun hydrateEnvironment(request: HydrateBlocksRequest): Map<UUID, BlockHydrationResult> {
+        val (blockIds, organisationId) = request
+        return blockService.hydrateBlocks(blockIds, organisationId)
     }
 
     /**

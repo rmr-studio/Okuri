@@ -10,11 +10,10 @@ import okuri.core.models.block.BlockEnvironment
 import okuri.core.models.block.request.HydrateBlocksRequest
 import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
-import okuri.core.models.block.response.HydrateBlocksResponse
 import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
+import okuri.core.models.block.response.internal.BlockHydrationResult
 import okuri.core.service.block.BlockEnvironmentService
-import okuri.core.service.block.BlockReferenceService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -28,7 +27,6 @@ import java.util.*
 )
 class BlockEnvironmentController(
     private val environmentService: BlockEnvironmentService,
-    private val blockReferenceService: BlockReferenceService
 ) {
     @PostMapping("/")
     @Operation(
@@ -98,8 +96,8 @@ class BlockEnvironmentController(
         ApiResponse(responseCode = "401", description = "Unauthorized access"),
         ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions")
     )
-    fun hydrateBlocks(@Valid @RequestBody request: HydrateBlocksRequest): ResponseEntity<HydrateBlocksResponse> {
-        val results = blockReferenceService.hydrateBlocks(request.blockIds, request.organisationId)
+    fun hydrateBlocks(@Valid @RequestBody request: HydrateBlocksRequest): ResponseEntity<Map<UUID, BlockHydrationResult>> {
+        val results = environmentService.hydrateEnvironment(request)
         return ResponseEntity.ok(results)
     }
 }
