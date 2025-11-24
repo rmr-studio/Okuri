@@ -50,3 +50,7 @@ export interface SidebarGroupProps {
         isActive?: boolean;
     }>;
 }
+
+export type AuthenticatedQueryResult<TData, TError = Error> = UseQueryResult<TData, TError> & {
+    isLoadingAuth: boolean;
+};

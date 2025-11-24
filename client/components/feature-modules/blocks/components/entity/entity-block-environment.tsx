@@ -1,25 +1,29 @@
 "use client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
-import { FC, useMemo } from "react";
+import { AlertCircle, PlusIcon } from "lucide-react";
+import { FC, useMemo, useState } from "react";
 import { BlockEditProvider } from "../../context/block-edit-provider";
-import { BlockEnvironmentProvider } from "../../context/block-environment-provider";
+import { BlockEnvironmentProvider, useBlockEnvironment } from "../../context/block-environment-provider";
 import { BlockFocusProvider } from "../../context/block-focus-provider";
 import { RenderElementProvider } from "../../context/block-renderer-provider";
 import { GridContainerProvider } from "../../context/grid-container-provider";
 import { GridProvider } from "../../context/grid-provider";
 import { LayoutChangeProvider } from "../../context/layout-change-provider";
 import { LayoutHistoryProvider } from "../../context/layout-history-provider";
-import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
+import { TrackedEnvironmentProvider, useTrackedEnvironment } from "../../context/tracked-environment-provider";
 import { useEntityLayout } from "../../hooks/use-entity-layout";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
+import { BlockType } from "../../interface/block.interface";
 import { EntityType } from "../../interface/layout.interface";
+import { createBlockInstanceFromType } from "../../util/block/factory/instance.factory";
 import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
 import { BlockEditDrawer, EditModeIndicator } from "../forms";
 import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-handler";
 import { WidgetEnvironmentSync } from "../sync/widget.sync";
+import { AddBlockDialog } from "./add-block-dialog";
 
 /**
  * Props for EntityBlockEnvironment component.
@@ -35,6 +39,8 @@ export interface EntityBlockEnvironmentProps {
     organisationId: string;
     /** Optional toolbar component to render above the grid */
     renderToolbar?: () => React.ReactNode;
+    /** Whether to show the default "Add Block" toolbar (default: true) */
+    showDefaultToolbar?: boolean;
     /** Optional wrapper function to customize the outer container */
     renderWrapper?: (children: React.ReactNode) => React.ReactNode;
     /** Optional element wrapper for editor panels (slash menu, toolbar, etc.) */
@@ -64,6 +70,7 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
     entityType,
     organisationId,
     renderToolbar,
+    showDefaultToolbar = true,
     renderWrapper,
     wrapElement,
 }) => {
@@ -129,7 +136,13 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
                                 <BlockEditProvider>
                                     <EditModeIndicator />
                                     <KeyboardNavigationHandler />
-                                    {/* {renderToolbar?.()} */}
+                                    {renderToolbar?.()}
+                                    {!renderToolbar && showDefaultToolbar && (
+                                        <EntityToolbar
+                                            organisationId={organisationId}
+                                            entityType={entityType}
+                                        />
+                                    )}
                                     <BlockEnvironmentGridSync />
                                     <WidgetEnvironmentSync />
                                     <GridContainerProvider>
@@ -147,4 +160,76 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
 
     // Apply custom wrapper if provided
     return renderWrapper ? renderWrapper(content) : content;
+};
+
+/**
+ * Default toolbar component for entity block environments.
+ *
+ * Provides an "Add Block" button that opens a dialog for selecting
+ * and adding block types to the layout.
+ */
+interface EntityToolbarProps {
+    organisationId: string;
+    entityType: EntityType;
+}
+
+const EntityToolbar: FC<EntityToolbarProps> = ({ organisationId, entityType }) => {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const { addTrackedBlock } = useTrackedEnvironment();
+    const { environment } = useBlockEnvironment();
+
+    const handleBlockTypeSelect = (blockType: BlockType) => {
+        // Create a new block instance from the selected type
+        const newBlock = createBlockInstanceFromType(blockType, organisationId, {
+            name: blockType.name,
+        });
+
+        // Add the block to the environment
+        addTrackedBlock(newBlock);
+
+        // Close the dialog
+        setDialogOpen(false);
+    };
+
+    const hasBlocks = environment.trees.length > 0;
+
+    return (
+        <div className="mb-4">
+            {/* Show empty state if no blocks exist */}
+            {!hasBlocks && (
+                <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-border rounded-lg bg-muted/10">
+                    <div className="text-center space-y-3 max-w-md">
+                        <h3 className="text-lg font-semibold text-foreground">No blocks yet</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Get started by adding your first block. Choose from layout containers,
+                            lists, references, and more.
+                        </p>
+                        <Button onClick={() => setDialogOpen(true)} size="lg" className="mt-4">
+                            <PlusIcon className="size-4 mr-2" />
+                            Add Your First Block
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Show toolbar button if blocks exist */}
+            {hasBlocks && (
+                <div className="flex gap-2">
+                    <Button onClick={() => setDialogOpen(true)} variant="outline" size="sm">
+                        <PlusIcon className="size-4 mr-2" />
+                        Add Block
+                    </Button>
+                </div>
+            )}
+
+            {/* Add Block Dialog */}
+            <AddBlockDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                organisationId={organisationId}
+                entityType={entityType}
+                onBlockTypeSelect={handleBlockTypeSelect}
+            />
+        </div>
+    );
 };

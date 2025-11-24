@@ -16,10 +16,3 @@ data class BlockHydrationResult(
     val error: String? = null
 )
 
-/**
- * Response containing hydration results for multiple blocks.
- *
- * The response is a map from block ID to its hydration result.
- * This allows the frontend to easily look up results per block.
- */
-typealias HydrateBlocksResponse = Map<UUID, BlockHydrationResult>

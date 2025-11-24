@@ -1,14 +1,19 @@
 "use client";
 
+import { AddBlockDialog } from "@/components/feature-modules/blocks/components/entity/add-block-dialog";
 import { EntityBlockEnvironment } from "@/components/feature-modules/blocks/components/entity/entity-block-environment";
+import { useBlockEnvironment } from "@/components/feature-modules/blocks/context/block-environment-provider";
 import { useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
+import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
+import { BlockType } from "@/components/feature-modules/blocks/interface/block.interface";
 import { EntityType } from "@/components/feature-modules/blocks/interface/layout.interface";
+import { createBlockInstanceFromType } from "@/components/feature-modules/blocks/util/block/factory/instance.factory";
 import { useClient } from "@/components/feature-modules/client/hooks/useClient";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isResponseError } from "@/lib/util/error/error.util";
-import { SaveIcon } from "lucide-react";
+import { PlusIcon, SaveIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useOrganisation } from "../../organisation/hooks/useOrganisation";
@@ -16,10 +21,18 @@ import DeleteClient from "./delete-client";
 
 /**
  * Toolbar component for client block environment.
- * Provides save functionality for layout changes.
+ * Provides add block and save functionality for layout changes.
  */
-const ClientLayoutToolbar = () => {
+interface ClientLayoutToolbarProps {
+    clientId: string;
+    organisationId: string;
+}
+
+const ClientLayoutToolbar = ({ clientId, organisationId }: ClientLayoutToolbarProps) => {
     const { save } = useGrid();
+    const { addTrackedBlock } = useTrackedEnvironment();
+    const { environment } = useBlockEnvironment();
+    const [dialogOpen, setDialogOpen] = useState(false);
 
     const handleSave = () => {
         const result = save();
@@ -27,13 +40,63 @@ const ClientLayoutToolbar = () => {
         // TODO: Persist layout via LayoutService
     };
 
+    const handleBlockTypeSelect = (blockType: BlockType) => {
+        // Create a new block instance from the selected type
+        const newBlock = createBlockInstanceFromType(blockType, organisationId, {
+            name: blockType.name,
+        });
+
+        // Add the block to the environment
+        addTrackedBlock(newBlock);
+
+        // Close the dialog
+        setDialogOpen(false);
+    };
+
+    const hasBlocks = environment.trees.length > 0;
+
     return (
-        <div className="mb-4 flex gap-2">
-            <Button onClick={handleSave} size="sm">
-                <SaveIcon className="size-4 mr-2" />
-                Save Layout
-            </Button>
-        </div>
+        <>
+            <div className="mb-4 flex gap-2">
+                {/* Add Block Button */}
+                <Button onClick={() => setDialogOpen(true)} variant="outline" size="sm">
+                    <PlusIcon className="size-4 mr-2" />
+                    Add Block
+                </Button>
+
+                {/* Save Layout Button - only show if blocks exist */}
+                {hasBlocks && (
+                    <Button onClick={handleSave} size="sm">
+                        <SaveIcon className="size-4 mr-2" />
+                        Save Layout
+                    </Button>
+                )}
+            </div>
+
+            {/* Add Block Dialog */}
+            <AddBlockDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                organisationId={organisationId}
+                entityType={EntityType.CLIENT}
+                onBlockTypeSelect={handleBlockTypeSelect}
+            />
+
+            {/* Empty State - show when no blocks exist */}
+            {!hasBlocks && (
+                <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-border rounded-lg bg-muted/10 mb-4">
+                    <div className="text-center space-y-3 max-w-md">
+                        <h3 className="text-lg font-semibold text-foreground">
+                            No blocks added yet
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                            Start building your client overview by adding blocks. Choose from notes,
+                            tasks, addresses, and more to customize this client's information.
+                        </p>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 
@@ -161,7 +224,12 @@ export const ClientOverview = () => {
                     entityId={client.id}
                     entityType={EntityType.CLIENT}
                     organisationId={organisation.id}
-                    renderToolbar={() => <ClientLayoutToolbar />}
+                    renderToolbar={() => (
+                        <ClientLayoutToolbar
+                            clientId={client.id}
+                            organisationId={organisation.id}
+                        />
+                    )}
                 />
 
                 {/* <aside className="space-y-6">
