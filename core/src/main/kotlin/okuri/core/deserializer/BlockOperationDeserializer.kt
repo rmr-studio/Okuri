@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
 import okuri.core.enums.block.request.BlockOperationType
 import okuri.core.models.block.operation.*
+import okuri.core.util.getEnumFromField
 
 /**
  * Jackson deserializer for [BlockOperation].
@@ -14,9 +15,11 @@ import okuri.core.models.block.operation.*
 class BlockOperationDeserializer : JsonDeserializer<BlockOperation>() {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): BlockOperation {
         val operation = p.codec.readTree<JsonNode>(p)
-        val typeValue = operation.get("type")?.asText()
-
-        val operationType = BlockOperationType.valueOf(typeValue ?: throw IllegalArgumentException("Missing type"))
+        val operationType = ctxt.getEnumFromField<BlockOperationType>(
+            operation,
+            "type",
+            BlockOperation::class.java
+        )
 
         return when (operationType) {
             BlockOperationType.ADD_BLOCK -> p.codec.treeToValue(operation, AddBlockOperation::class.java)

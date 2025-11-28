@@ -33,7 +33,6 @@ class AuditConfig {
      * @return a DateTimeProvider that supplies the current ZonedDateTime.
      */
     @Bean
-    fun dateTimeProvider(): DateTimeProvider {
-        return DateTimeProvider { Optional.of(ZonedDateTime.now() as TemporalAccessor) }
-    }
+    fun dateTimeProvider(): DateTimeProvider =
+        DateTimeProvider { Optional.of<TemporalAccessor>(ZonedDateTime.now()) }
 }

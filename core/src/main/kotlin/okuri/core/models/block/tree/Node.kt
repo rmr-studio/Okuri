@@ -21,7 +21,6 @@ sealed interface Node {
 )
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None::class)
 data class ContentNode(
-    @field:Schema(implementation = NodeType::class, allowableValues = ["CONTENT"])
     override val type: NodeType = NodeType.CONTENT,
     override val block: Block,
     override val warnings: List<String> = emptyList(),
@@ -35,7 +34,6 @@ data class ContentNode(
 )
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None::class)
 data class ReferenceNode(
-    @field:Schema(implementation = NodeType::class, allowableValues = ["REFERENCE"])
     override val type: NodeType = NodeType.REFERENCE,
     override val block: Block,
     override val warnings: List<String> = emptyList(),

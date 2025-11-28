@@ -9,6 +9,7 @@ import okuri.core.models.block.metadata.BlockContentMetadata
 import okuri.core.models.block.metadata.BlockReferenceMetadata
 import okuri.core.models.block.metadata.EntityReferenceMetadata
 import okuri.core.models.block.metadata.Metadata
+import okuri.core.util.getEnumFromField
 
 /**
  * Jackson deserializer for [Metadata].
@@ -17,9 +18,11 @@ import okuri.core.models.block.metadata.Metadata
 class MetadataDeserializer : JsonDeserializer<Metadata>() {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Metadata {
         val node = p.codec.readTree<JsonNode>(p)
-        val type = node.get("type")?.asText() ?: throw IllegalArgumentException("Missing 'type' property")
-
-        val metadataType = BlockMetadataType.valueOf(type)
+        val metadataType = ctxt.getEnumFromField<BlockMetadataType>(
+            node,
+            "type",
+            Metadata::class.java
+        )
 
         return when (metadataType) {
             BlockMetadataType.CONTENT -> p.codec.treeToValue(node, BlockContentMetadata::class.java)

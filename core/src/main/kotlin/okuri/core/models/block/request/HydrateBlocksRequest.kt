@@ -1,5 +1,7 @@
 package okuri.core.models.block.request
 
+import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
 import java.util.*
 
 /**
@@ -12,6 +14,8 @@ import java.util.*
  * @param organisationId The organisation context for authorization and filtering.
  */
 data class HydrateBlocksRequest(
+    @field:NotEmpty(message = "blockIds must not be empty")
     val blockIds: List<UUID>,
-    val organisationId: UUID
+    @field:NotNull(message = "organisationId is required")
+    var organisationId: UUID
 )

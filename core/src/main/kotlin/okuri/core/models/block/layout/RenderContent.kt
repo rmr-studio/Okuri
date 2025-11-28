@@ -2,7 +2,6 @@ package okuri.core.models.block.layout
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
-import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.layout.RenderType
 import okuri.core.enums.block.node.NodeType
 
