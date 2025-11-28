@@ -61,6 +61,47 @@ interface LayoutHistoryContextValue {
 
 const LayoutHistoryContext = createContext<LayoutHistoryContextValue | undefined>(undefined);
 
+/**
+ * Checks if a block ID represents a placeholder block.
+ * Placeholder blocks have IDs ending with '-placeholder' and are used to keep subgrids active.
+ */
+function isPlaceholderId(id: string | undefined): boolean {
+    return id?.endsWith("-placeholder") ?? false;
+}
+
+/**
+ * Checks if a structural operation involves any placeholder blocks.
+ * Placeholder operations should not be sent to the backend as they're not real blocks.
+ */
+function isPlaceholderOperation(operation: StructuralOperationRequest): boolean {
+    const { data } = operation;
+
+    // Check the main blockId
+    if ("blockId" in data && isPlaceholderId(data.blockId)) {
+        return true;
+    }
+
+    // Check parent IDs (parentId, fromParentId, toParentId)
+    if ("parentId" in data && isPlaceholderId(data.parentId)) {
+        return true;
+    }
+    if ("fromParentId" in data && isPlaceholderId(data.fromParentId)) {
+        return true;
+    }
+    if ("toParentId" in data && isPlaceholderId(data.toParentId)) {
+        return true;
+    }
+
+    // Check childrenIds array (for REMOVE_BLOCK operations)
+    if ("childrenIds" in data && Array.isArray(data.childrenIds)) {
+        if (data.childrenIds.some((childId) => isPlaceholderId(childId))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export const useLayoutHistory = (): LayoutHistoryContextValue => {
     const context = useContext(LayoutHistoryContext);
     if (!context) {
@@ -103,7 +144,10 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
     }, []);
 
     const getStructuralOperations = useCallback(() => {
-        return [...structuralOperationsRef.current];
+        // Filter out operations involving placeholder blocks (they're not real blocks)
+        return structuralOperationsRef.current.filter((operation) => {
+            return !isPlaceholderOperation(operation);
+        });
     }, []);
 
     const clearStructuralOperations = useCallback(() => {

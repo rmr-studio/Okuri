@@ -94,6 +94,7 @@ export class LayoutService {
         session: Session | null,
         request: SaveEnvironmentRequest
     ): Promise<SaveEnvironmentResponse> {
+        console.log(request);
         try {
             validateSession(session);
             const url = api();
