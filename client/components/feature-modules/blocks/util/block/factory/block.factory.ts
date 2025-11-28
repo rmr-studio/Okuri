@@ -1,3 +1,10 @@
+import {
+    BlockMetadataType,
+    BlockValidationScope,
+    EntityType,
+    NodeType,
+    ReferenceType,
+} from "@/lib/types/types";
 import { now } from "@/lib/util/utils";
 import { v4 as uuid } from "uuid";
 import {
@@ -5,25 +12,17 @@ import {
     BlockContentMetadata,
     BlockDisplay,
     BlockMeta,
-    BlockNode,
-    BlockReferenceMetadata,
     BlockReferencePayload,
     BlockSchema,
     BlockTree,
     BlockType,
     BlockTypeNesting,
-    EntityReferenceMetadata,
-    EntityReferencePayload,
+    ContentNode,
     Metadata,
-    Node,
     Reference,
     Referenceable,
-    ReferenceItem,
-    ReferenceNode,
-    ReferencePayload,
     ReferenceWarning,
 } from "../../../interface/block.interface";
-import { NodeType } from "@/lib/types/types";
 
 const createMeta = (overrides?: Partial<BlockMeta>): BlockMeta => ({
     validationErrors: overrides?.validationErrors ?? [],
@@ -32,69 +31,14 @@ const createMeta = (overrides?: Partial<BlockMeta>): BlockMeta => ({
 });
 
 export const createContentMetadata = (
-    data: Record<string, unknown>,
-    overrides?: Partial<BlockMeta>
+    data?: Record<string, unknown>,
+    overrides?: Partial<BlockMeta>,
+    deletable: boolean = true
 ): BlockContentMetadata => ({
-    type: "content",
-    data,
+    type: BlockMetadataType.CONTENT,
+    deletable,
+    data: data ?? {},
     meta: createMeta(overrides),
-});
-
-export const createEntityReferenceMetadata = ({
-    items,
-    presentation = "SUMMARY",
-    projection,
-    sort,
-    paging,
-    filter,
-    allowDuplicates = false,
-    fetchPolicy = "LAZY",
-    path = "$.items",
-    meta,
-}: {
-    items: ReferenceItem[];
-    presentation?: EntityReferenceMetadata["presentation"];
-    projection?: EntityReferenceMetadata["projection"];
-    sort?: EntityReferenceMetadata["sort"];
-    paging?: EntityReferenceMetadata["paging"];
-    filter?: EntityReferenceMetadata["filter"];
-    allowDuplicates?: boolean;
-    fetchPolicy?: EntityReferenceMetadata["fetchPolicy"];
-    path?: string;
-    meta?: Partial<BlockMeta>;
-}): EntityReferenceMetadata => ({
-    type: "entity_reference",
-    fetchPolicy,
-    path,
-    items,
-    presentation,
-    projection,
-    sort,
-    filter,
-    paging,
-    allowDuplicates,
-    meta: createMeta(meta),
-});
-
-export const createBlockReferenceMetadata = ({
-    item,
-    expandDepth = 1,
-    fetchPolicy = "LAZY",
-    path = "$.block",
-    meta,
-}: {
-    item: ReferenceItem;
-    expandDepth?: number;
-    fetchPolicy?: BlockReferenceMetadata["fetchPolicy"];
-    path?: string;
-    meta?: Partial<BlockMeta>;
-}): BlockReferenceMetadata => ({
-    type: "block_reference",
-    fetchPolicy,
-    path,
-    expandDepth,
-    item,
-    meta: createMeta(meta),
 });
 
 export const createBlockBase = ({
@@ -130,38 +74,38 @@ export const createContentNode = ({
     id,
     children,
     payloadOverride,
+    deletable = true,
 }: {
     organisationId: string;
     type: BlockType;
     data?: Record<string, unknown>;
     name?: string;
     id?: string;
-    children?: Node[];
+    deletable?: boolean;
+    children?: ContentNode[];
     payloadOverride?: Metadata;
-}): BlockNode => ({
+}): ContentNode => ({
     type: NodeType.CONTENT,
     block: createBlockBase({
         id,
         organisationId,
         type,
         name,
-        payload: payloadOverride ?? createContentMetadata(data ?? {}),
+        payload: payloadOverride ?? createContentMetadata(data, undefined, deletable),
     }),
     children,
     warnings: [],
 });
 
-
-
 export const createBlockReference = ({ block }: { block: BlockTree }): BlockReferencePayload => {
     const reference = createReference({
-        type: "block_tree",
+        type: EntityType.BLOCK_TREE,
         entityId: block.root.block.id,
         entity: block,
     });
 
     return {
-        type: "block_reference",
+        type: ReferenceType.BLOCK,
         reference,
     };
 };
@@ -216,7 +160,7 @@ export const createBlockType = ({
     description,
     organisationId,
     archived: false,
-    strictness: "SOFT",
+    strictness: BlockValidationScope.SOFT,
     system: false,
     schema,
     display,

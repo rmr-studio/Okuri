@@ -10,7 +10,7 @@ import React, {
     useState,
 } from "react";
 
-import { BlockTreeType } from "@/lib/types/types";
+import { EntityType } from "@/lib/types/types";
 import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
     BlockEnvironmentContextValue,
@@ -149,7 +149,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 }
 
                 const tree: BlockTree = {
-                    type: BlockTreeType.block_tree,
+                    type: EntityType.BLOCK_TREE,
                     root: block,
                 };
 
@@ -489,7 +489,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         const treeIndex = new Map(environment.treeIndex);
 
         const newTree: BlockTree = {
-            type: BlockTreeType.block_tree,
+            type: EntityType.BLOCK_TREE,
             root: detachedNode!,
         };
 

@@ -1,4 +1,4 @@
-import { components, MetadataType, NodeType, operations } from "@/lib/types/types";
+import { BlockMetadataType, components, NodeType, operations } from "@/lib/types/types";
 
 /* -------------------------------------------------------------------------- */
 /*                               Core Re-exports                              */
@@ -41,6 +41,8 @@ export type ReferencePayload = EntityReferencePayload | BlockReferencePayload;
 export type Metadata = BlockContentMetadata | BlockReferenceMetadata | EntityReferenceMetadata;
 export type Node = components["schemas"]["Node"];
 export type BlockNode = ContentNode | ReferenceNode;
+export type WidgetRenderStructure = components["schemas"]["RenderContent"];
+
 
 /* -------------------------------------------------------------------------- */
 /*                           Reference Type Helpers                           */
@@ -72,14 +74,14 @@ export type GetBlockTypesResponse =
 /* -------------------------------------------------------------------------- */
 
 export const isContentMetadata = (payload: Block["payload"]): payload is BlockContentMetadata =>
-    payload?.type === MetadataType.CONTENT;
+    payload?.type === BlockMetadataType.CONTENT;
 
 export const isBlockReferenceMetadata = (
     payload: Block["payload"]
-): payload is BlockReferenceMetadata => payload?.type === MetadataType.BLOCK_REFERENCE;
+): payload is BlockReferenceMetadata => payload?.type === BlockMetadataType.BLOCK_REFERENCE;
 export const isEntityReferenceMetadata = (
     payload: Block["payload"]
-): payload is EntityReferenceMetadata => payload?.type === MetadataType.ENTITY_REFERENCE;
+): payload is EntityReferenceMetadata => payload?.type === BlockMetadataType.ENTITY_REFERENCE;
 
 export const isContentNode = (node: BlockNode): node is ContentNode =>
     !!node.block && node.type === NodeType.CONTENT;

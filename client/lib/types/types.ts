@@ -678,22 +678,16 @@ export interface components {
         EntityType: EntityType;
         MembershipDetails: {
             organisation?: components["schemas"]["Organisation"];
-            /** @enum {string} */
-            role: MembershipDetailsRole;
+            role: components["schemas"]["OrganisationRoles"];
             /** Format: date-time */
             memberSince: string;
         };
         Organisation: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: OrganisationType;
+            type: components["schemas"]["EntityType"];
             /** Format: uuid */
             id: string;
             name: string;
-            /** @enum {string} */
-            plan: OrganisationPlan;
+            plan: components["schemas"]["OrganisationPlan"];
             defaultCurrency: {
                 currencyCode?: string;
                 /** Format: int32 */
@@ -729,11 +723,11 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             expiresAt: string;
-            /** @enum {string} */
-            role: OrganisationInviteRole;
-            /** @enum {string} */
-            status: OrganisationInviteStatus;
+            role: components["schemas"]["OrganisationRoles"];
+            status: components["schemas"]["OrganisationInviteStatus"];
         };
+        /** @enum {string} */
+        OrganisationInviteStatus: OrganisationInviteStatus;
         OrganisationMember: {
             user: components["schemas"]["UserDisplay"];
             membershipDetails: components["schemas"]["MembershipDetails"];
@@ -743,6 +737,10 @@ export interface components {
             accountNumber?: string;
             accountName?: string;
         };
+        /** @enum {string} */
+        OrganisationPlan: OrganisationPlan;
+        /** @enum {string} */
+        OrganisationRoles: OrganisationRoles;
         User: {
             /** Format: uuid */
             id: string;
@@ -767,33 +765,30 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
             description?: string;
-            /** @enum {string} */
-            type: LineItemType;
+            type: components["schemas"]["LineItemType"];
             chargeRate: number;
         };
+        /** @enum {string} */
+        LineItemType: LineItemType;
         Billable: {
             /** Format: date-time */
             date: string;
             description: string;
             lineItem: components["schemas"]["LineItem"];
-            /** @enum {string} */
-            billableType: BillableBillableType;
+            billableType: components["schemas"]["BillableType"];
             quantity: number;
         };
+        /** @enum {string} */
+        BillableType: BillableType;
         Client: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: ClientType;
+            type: components["schemas"]["EntityType"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             organisationId: string;
             name: string;
             contact: components["schemas"]["Contact"];
-            /** @enum {string} */
-            clientType?: ClientClientType;
+            clientType?: components["schemas"]["ClientType"];
             company?: components["schemas"]["Company"];
             role?: string;
             archived: boolean;
@@ -806,6 +801,8 @@ export interface components {
             /** Format: uuid */
             updatedBy?: string;
         };
+        /** @enum {string} */
+        ClientType: ClientType;
         Company: {
             /** Format: uuid */
             id: string;
@@ -856,8 +853,7 @@ export interface components {
                 /** Format: int32 */
                 defaultFractionDigits?: number;
             };
-            /** @enum {string} */
-            status: InvoiceStatus;
+            status: components["schemas"]["InvoiceStatus"];
             dates: components["schemas"]["InvoiceDates"];
             customFields: {
                 [key: string]: Record<string, never>;
@@ -877,17 +873,21 @@ export interface components {
             /** Format: date-time */
             invoiceUpdatedAt?: string;
         };
+        InvoiceFieldType: string;
+        /** @enum {string} */
+        InvoiceStatus: InvoiceStatus;
         InvoiceTemplateFieldStructure: {
             name: string;
             description?: string;
-            type: string;
+            type: components["schemas"]["InvoiceFieldType"];
             required: boolean;
             children: components["schemas"]["InvoiceTemplateFieldStructure"][];
         };
+        ReportFieldType: string;
         ReportTemplateFieldStructure: {
             name: string;
             description?: string;
-            type: string;
+            type: components["schemas"]["ReportFieldType"];
             required: boolean;
             children: components["schemas"]["ReportTemplateFieldStructure"][];
         };
@@ -898,8 +898,7 @@ export interface components {
             userId?: string;
             name: string;
             description?: string;
-            /** @enum {string} */
-            type: TemplateInvoiceTemplateFieldStructureType;
+            type: components["schemas"]["TemplateType"];
             structure: {
                 [key: string]: components["schemas"]["InvoiceTemplateFieldStructure"];
             };
@@ -917,8 +916,7 @@ export interface components {
             userId?: string;
             name: string;
             description?: string;
-            /** @enum {string} */
-            type: TemplateReportTemplateFieldStructureType;
+            type: components["schemas"]["TemplateType"];
             structure: {
                 [key: string]: components["schemas"]["ReportTemplateFieldStructure"];
             };
@@ -929,6 +927,8 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        /** @enum {string} */
+        TemplateType: TemplateType;
         BindingSource: {
             type: string;
         };
@@ -938,8 +938,7 @@ export interface components {
         };
         BlockComponentNode: {
             id: string;
-            /** @enum {string} */
-            type: BlockComponentNodeType;
+            type: components["schemas"]["ComponentType"];
             props: {
                 [key: string]: unknown;
             };
@@ -954,18 +953,21 @@ export interface components {
                 [key: string]: Record<string, never>;
             };
             visible?: components["schemas"]["Condition"];
-            /** @enum {string} */
-            fetchPolicy: BlockComponentNodeFetchPolicy;
+            fetchPolicy: components["schemas"]["BlockFetchPolicy"];
         };
         BlockDisplay: {
             form: components["schemas"]["BlockFormStructure"];
             render: components["schemas"]["BlockRenderStructure"];
         };
+        /** @enum {string} */
+        BlockFetchPolicy: BlockFetchPolicy;
         BlockFormStructure: {
             fields: {
                 [key: string]: components["schemas"]["FormWidgetConfig"];
             };
         };
+        /** @enum {string} */
+        BlockFormWidgetType: BlockFormWidgetType;
         BlockRenderStructure: {
             /** Format: int32 */
             version: number;
@@ -978,10 +980,8 @@ export interface components {
         BlockSchema: {
             name: string;
             description?: string;
-            /** @enum {string} */
-            type: BlockSchemaType;
-            /** @enum {string} */
-            format?: BlockSchemaFormat;
+            type: components["schemas"]["DataType"];
+            format?: components["schemas"]["DataFormat"];
             required: boolean;
             properties?: {
                 [key: string]: components["schemas"]["BlockSchema"];
@@ -1002,8 +1002,7 @@ export interface components {
             /** Format: uuid */
             organisationId?: string;
             archived: boolean;
-            /** @enum {string} */
-            strictness: BlockTypeStrictness;
+            strictness: components["schemas"]["BlockValidationScope"];
             system: boolean;
             schema: components["schemas"]["BlockSchema"];
             display: components["schemas"]["BlockDisplay"];
@@ -1021,6 +1020,10 @@ export interface components {
             max?: number;
             allowedTypes: string[];
         };
+        /** @enum {string} */
+        BlockValidationScope: BlockValidationScope;
+        /** @enum {string} */
+        ComponentType: ComponentType;
         Computed: {
             type: "Computed";
         } & (Omit<components["schemas"]["BindingSource"], "type"> & {
@@ -1028,19 +1031,21 @@ export interface components {
             engine: string;
         });
         Condition: {
-            /** @enum {string} */
-            op: ConditionOp;
+            op: components["schemas"]["Op"];
             left: components["schemas"]["Path"] | components["schemas"]["Value"];
             right?: components["schemas"]["Path"] | components["schemas"]["Value"];
         };
+        /** @enum {string} */
+        DataFormat: DataFormat;
         DataPath: {
             type: "DataPath";
         } & (Omit<components["schemas"]["BindingSource"], "type"> & {
             path: string;
         });
+        /** @enum {string} */
+        DataType: DataType;
         FormWidgetConfig: {
-            /** @enum {string} */
-            type: FormWidgetConfigType;
+            type: components["schemas"]["BlockFormWidgetType"];
             label: string;
             description?: string;
             tooltip?: string;
@@ -1068,6 +1073,8 @@ export interface components {
             id: string;
             rect: components["schemas"]["GridRect"];
         };
+        /** @enum {string} */
+        Op: Op;
         Operand: {
             kind: string;
         };
@@ -1093,8 +1100,7 @@ export interface components {
         OrganisationCreationRequest: {
             name: string;
             avatarUrl?: string;
-            /** @enum {string} */
-            plan: OrganisationCreationRequestPlan;
+            plan: components["schemas"]["OrganisationPlan"];
             defaultCurrency: string;
             isDefault: boolean;
             businessNumber?: string;
@@ -1132,8 +1138,7 @@ export interface components {
                 /** Format: int32 */
                 defaultFractionDigits?: number;
             };
-            /** @enum {string} */
-            status: InvoiceCreationRequestStatus;
+            status: components["schemas"]["InvoiceStatus"];
             /** Format: date-time */
             startDate?: string;
             /** Format: date-time */
@@ -1159,8 +1164,7 @@ export interface components {
             key: string;
             name: string;
             description?: string;
-            /** @enum {string} */
-            mode: CreateBlockTypeRequestMode;
+            mode: components["schemas"]["BlockValidationScope"];
             schema: components["schemas"]["BlockSchema"];
             display: components["schemas"]["BlockDisplay"];
             /** Format: uuid */
@@ -1201,6 +1205,8 @@ export interface components {
             display: components["schemas"]["ListDisplayConfig"];
             config: components["schemas"]["ListConfig"];
         };
+        /** @enum {string} */
+        BlockListOrderingMode: BlockListOrderingMode;
         BlockMeta: {
             validationErrors: string[];
             computedFields?: {
@@ -1209,17 +1215,19 @@ export interface components {
             /** Format: int32 */
             lastValidatedVersion?: number;
         };
+        /** @enum {string} */
+        BlockMetadataType: BlockMetadataType;
+        /** @enum {string} */
+        BlockReferenceFetchPolicy: BlockReferenceFetchPolicy;
         BlockReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
             /** Format: int32 */
             expandDepth: number;
             item: components["schemas"]["ReferenceItem"];
         };
+        /** @enum {string} */
+        BlockReferenceWarning: BlockReferenceWarning;
         BlockTree: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: BlockTreeType;
+            type: components["schemas"]["EntityType"];
             root: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
         };
         BlockTreeLayout: {
@@ -1259,7 +1267,9 @@ export interface components {
         };
         /** @description Content node containing a block with optional children */
         ContentNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
-            children?: components["schemas"]["Node"][] & (components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"]);
+            /** @enum {unknown} */
+            type: components["schemas"]["NodeType"];
+            children?: components["schemas"]["Node"][];
         };
         DraggableOptions: {
             cancel?: string;
@@ -1273,8 +1283,7 @@ export interface components {
             reference: components["schemas"]["Reference"][];
         };
         EntityReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
-            /** @enum {string} */
-            presentation: EntityReferenceMetadataPresentation;
+            presentation: components["schemas"]["Presentation"];
             items: components["schemas"]["ReferenceItem"][];
             projection: components["schemas"]["Projection"];
             allowedTypes?: components["schemas"]["EntityType"][];
@@ -1288,12 +1297,10 @@ export interface components {
             };
         };
         ListConfig: {
-            /** @enum {string} */
-            mode: ListConfigMode;
+            mode: components["schemas"]["BlockListOrderingMode"];
             sort?: components["schemas"]["SortSpec"];
             filters: components["schemas"]["FilterSpec"][];
-            /** @enum {string} */
-            filterLogic: ListConfigFilterLogic;
+            filterLogic: components["schemas"]["ListFilterLogicType"];
         };
         ListDisplayConfig: {
             /** Format: int32 */
@@ -1302,18 +1309,20 @@ export interface components {
             emptyMessage: string;
             paging?: components["schemas"]["PagingSpec"];
         };
+        /** @enum {string} */
+        ListFilterLogicType: ListFilterLogicType;
         Metadata: {
-            /** @enum {string} */
-            type: MetadataType;
-            deletable: boolean;
+            type: components["schemas"]["BlockMetadataType"];
             meta: components["schemas"]["BlockMeta"];
+            deletable: boolean;
         };
         Node: {
             warnings: string[];
-            /** @enum {string} */
-            type: NodeType;
+            type: components["schemas"]["NodeType"];
             block: components["schemas"]["Block"];
         };
+        /** @enum {string} */
+        NodeType: NodeType;
         OverwriteEnvironmentRequest: {
             /** Format: uuid */
             layoutId: string;
@@ -1327,6 +1336,8 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
         };
+        /** @enum {string} */
+        Presentation: Presentation;
         Projection: {
             fields: string[];
             /** Format: uuid */
@@ -1341,10 +1352,8 @@ export interface components {
             path?: string;
             /** Format: int32 */
             orderIndex?: number;
-            /** @description Inline, discriminated entity */
             entity?: components["schemas"]["Referenceable"];
-            /** @enum {string} */
-            warning?: ReferenceWarning;
+            warning?: components["schemas"]["BlockReferenceWarning"];
         };
         ReferenceItem: {
             type: components["schemas"]["EntityType"];
@@ -1355,36 +1364,39 @@ export interface components {
         };
         ReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "deletable" | "meta" | "type"> & {
             path: string;
-            /** @enum {string} */
-            fetchPolicy: ReferenceMetadataFetchPolicy;
+            fetchPolicy: components["schemas"]["BlockReferenceFetchPolicy"];
         };
         /** @description Reference node containing a block with entity or block tree references */
         ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
+            /** @enum {unknown} */
+            type: components["schemas"]["NodeType"];
             reference: components["schemas"]["EntityReference"] | components["schemas"]["BlockTreeReference"];
         };
         ReferencePayload: {
-            /** @enum {string} */
-            type: ReferencePayloadType;
+            type: components["schemas"]["ReferenceType"];
         };
+        /** @enum {string} */
+        ReferenceType: ReferenceType;
         Referenceable: {
             type: components["schemas"]["EntityType"];
-        } & (components["schemas"]["Client"] | components["schemas"]["Organisation"] | components["schemas"]["BlockTree"]);
+        };
         RenderContent: {
             id: string;
             key: string;
-            /** @enum {string} */
-            renderType: RenderContentRenderType;
-            /** @enum {string} */
-            blockType: RenderContentBlockType;
+            renderType: components["schemas"]["RenderType"];
+            blockType: components["schemas"]["NodeType"];
         };
+        /** @enum {string} */
+        RenderType: RenderType;
         ResizableOptions: {
             handles?: string;
             autoHide?: boolean;
         };
+        /** @enum {string} */
+        SortDir: SortDir;
         SortSpec: {
             by: string;
-            /** @enum {string} */
-            dir: SortSpecDir;
+            dir: components["schemas"]["SortDir"];
         };
         TreeLayout: {
             acceptWidgets?: boolean;
@@ -1663,7 +1675,7 @@ export interface operations {
             header?: never;
             path: {
                 organisationId: string;
-                role: PathsApiV1OrganisationOrganisationIdMemberRoleRolePutParametersPathRole;
+                role: components["schemas"]["OrganisationRoles"];
             };
             cookie?: never;
         };
@@ -2332,7 +2344,7 @@ export interface operations {
             path: {
                 organisationId: string;
                 email: string;
-                role: PathsApiV1OrganisationInviteOrganisationOrganisationIdEmailEmailRoleRolePostParametersPathRole;
+                role: components["schemas"]["OrganisationRoles"];
             };
             cookie?: never;
         };
@@ -3297,16 +3309,6 @@ export interface operations {
         };
     };
 }
-export enum PathsApiV1OrganisationOrganisationIdMemberRoleRolePutParametersPathRole {
-    OWNER = "OWNER",
-    ADMIN = "ADMIN",
-    MEMBER = "MEMBER"
-}
-export enum PathsApiV1OrganisationInviteOrganisationOrganisationIdEmailEmailRoleRolePostParametersPathRole {
-    OWNER = "OWNER",
-    ADMIN = "ADMIN",
-    MEMBER = "MEMBER"
-}
 export enum EntityType {
     LINE_ITEM = "LINE_ITEM",
     CLIENT = "CLIENT",
@@ -3322,13 +3324,11 @@ export enum EntityType {
     BLOCK = "BLOCK",
     USER = "USER"
 }
-export enum MembershipDetailsRole {
-    OWNER = "OWNER",
-    ADMIN = "ADMIN",
-    MEMBER = "MEMBER"
-}
-export enum OrganisationType {
-    organisation = "organisation"
+export enum OrganisationInviteStatus {
+    PENDING = "PENDING",
+    ACCEPTED = "ACCEPTED",
+    DECLINED = "DECLINED",
+    EXPIRED = "EXPIRED"
 }
 export enum OrganisationPlan {
     FREE = "FREE",
@@ -3336,16 +3336,10 @@ export enum OrganisationPlan {
     SCALE = "SCALE",
     ENTERPRISE = "ENTERPRISE"
 }
-export enum OrganisationInviteRole {
+export enum OrganisationRoles {
     OWNER = "OWNER",
     ADMIN = "ADMIN",
     MEMBER = "MEMBER"
-}
-export enum OrganisationInviteStatus {
-    PENDING = "PENDING",
-    ACCEPTED = "ACCEPTED",
-    DECLINED = "DECLINED",
-    EXPIRED = "EXPIRED"
 }
 export enum LineItemType {
     SERVICE = "SERVICE",
@@ -3353,16 +3347,13 @@ export enum LineItemType {
     FEE = "FEE",
     DISCOUNT = "DISCOUNT"
 }
-export enum BillableBillableType {
+export enum BillableType {
     HOURS = "HOURS",
     DISTANCE = "DISTANCE",
     QUANTITY = "QUANTITY",
     FIXED = "FIXED"
 }
 export enum ClientType {
-    client = "client"
-}
-export enum ClientClientType {
     PROSPECT = "PROSPECT",
     CUSTOMER = "CUSTOMER",
     SUBSCRIBER = "SUBSCRIBER",
@@ -3383,70 +3374,17 @@ export enum InvoiceStatus {
     OUTDATED = "OUTDATED",
     CANCELLED = "CANCELLED"
 }
-export enum TemplateInvoiceTemplateFieldStructureType {
+export enum TemplateType {
     CLIENT = "CLIENT",
     INVOICE = "INVOICE",
     REPORT = "REPORT"
 }
-export enum TemplateReportTemplateFieldStructureType {
-    CLIENT = "CLIENT",
-    INVOICE = "INVOICE",
-    REPORT = "REPORT"
-}
-export enum BlockComponentNodeType {
-    LAYOUT_CONTAINER = "LAYOUT_CONTAINER",
-    LIST = "LIST",
-    CONTACT_CARD = "CONTACT_CARD",
-    ADDRESS_CARD = "ADDRESS_CARD",
-    LINE_ITEM = "LINE_ITEM",
-    TABLE = "TABLE",
-    IMAGE = "IMAGE",
-    BUTTON = "BUTTON",
-    ATTACHMENT = "ATTACHMENT",
-    TEXT = "TEXT",
-    FALLBACK = "FALLBACK"
-}
-export enum BlockComponentNodeFetchPolicy {
+export enum BlockFetchPolicy {
     INHERIT = "INHERIT",
     LAZY = "LAZY",
     EAGER = "EAGER"
 }
-export enum BlockSchemaType {
-    STRING = "STRING",
-    NUMBER = "NUMBER",
-    BOOLEAN = "BOOLEAN",
-    OBJECT = "OBJECT",
-    ARRAY = "ARRAY",
-    NULL = "NULL"
-}
-export enum BlockSchemaFormat {
-    DATE = "DATE",
-    DATETIME = "DATETIME",
-    EMAIL = "EMAIL",
-    PHONE = "PHONE",
-    CURRENCY = "CURRENCY",
-    URL = "URL",
-    PERCENTAGE = "PERCENTAGE"
-}
-export enum BlockTypeStrictness {
-    SOFT = "SOFT",
-    STRICT = "STRICT",
-    NONE = "NONE"
-}
-export enum ConditionOp {
-    EXISTS = "EXISTS",
-    EQUALS = "EQUALS",
-    NOT_EQUALS = "NOT_EQUALS",
-    GT = "GT",
-    GTE = "GTE",
-    LT = "LT",
-    LTE = "LTE",
-    IN = "IN",
-    NOT_IN = "NOT_IN",
-    EMPTY = "EMPTY",
-    NOT_EMPTY = "NOT_EMPTY"
-}
-export enum FormWidgetConfigType {
+export enum BlockFormWidgetType {
     TEXT_INPUT = "TEXT_INPUT",
     NUMBER_INPUT = "NUMBER_INPUT",
     CHECKBOX = "CHECKBOX",
@@ -3461,79 +3399,102 @@ export enum FormWidgetConfigType {
     SLIDER = "SLIDER",
     TOGGLE_SWITCH = "TOGGLE_SWITCH"
 }
-export enum OrganisationCreationRequestPlan {
-    FREE = "FREE",
-    STARTUP = "STARTUP",
-    SCALE = "SCALE",
-    ENTERPRISE = "ENTERPRISE"
-}
-export enum InvoiceCreationRequestStatus {
-    PENDING = "PENDING",
-    PAID = "PAID",
-    OVERDUE = "OVERDUE",
-    OUTDATED = "OUTDATED",
-    CANCELLED = "CANCELLED"
-}
-export enum CreateBlockTypeRequestMode {
+export enum BlockValidationScope {
     SOFT = "SOFT",
     STRICT = "STRICT",
     NONE = "NONE"
 }
+export enum ComponentType {
+    LAYOUT_CONTAINER = "LAYOUT_CONTAINER",
+    LIST = "LIST",
+    CONTACT_CARD = "CONTACT_CARD",
+    ADDRESS_CARD = "ADDRESS_CARD",
+    LINE_ITEM = "LINE_ITEM",
+    TABLE = "TABLE",
+    IMAGE = "IMAGE",
+    BUTTON = "BUTTON",
+    ATTACHMENT = "ATTACHMENT",
+    TEXT = "TEXT",
+    FALLBACK = "FALLBACK"
+}
+export enum DataFormat {
+    DATE = "DATE",
+    DATETIME = "DATETIME",
+    EMAIL = "EMAIL",
+    PHONE = "PHONE",
+    CURRENCY = "CURRENCY",
+    URL = "URL",
+    PERCENTAGE = "PERCENTAGE"
+}
+export enum DataType {
+    STRING = "STRING",
+    NUMBER = "NUMBER",
+    BOOLEAN = "BOOLEAN",
+    OBJECT = "OBJECT",
+    ARRAY = "ARRAY",
+    NULL = "NULL"
+}
+export enum Op {
+    EXISTS = "EXISTS",
+    EQUALS = "EQUALS",
+    NOT_EQUALS = "NOT_EQUALS",
+    GT = "GT",
+    GTE = "GTE",
+    LT = "LT",
+    LTE = "LTE",
+    IN = "IN",
+    NOT_IN = "NOT_IN",
+    EMPTY = "EMPTY",
+    NOT_EMPTY = "NOT_EMPTY"
+}
 type WithRequired<T, K extends keyof T> = T & {
     [P in K]-?: T[P];
 };
-export enum BlockTreeType {
-    block_tree = "block_tree"
-}
-export enum EntityReferenceMetadataPresentation {
-    SUMMARY = "SUMMARY",
-    ENTITY = "ENTITY",
-    TABLE = "TABLE",
-    GRID = "GRID",
-    INLINE = "INLINE"
-}
-export enum ListConfigMode {
+export enum BlockListOrderingMode {
     MANUAL = "MANUAL",
     SORTED = "SORTED"
 }
-export enum ListConfigFilterLogic {
-    AND = "AND",
-    OR = "OR"
-}
-export enum MetadataType {
+export enum BlockMetadataType {
     CONTENT = "CONTENT",
     ENTITY_REFERENCE = "ENTITY_REFERENCE",
     BLOCK_REFERENCE = "BLOCK_REFERENCE"
 }
-export enum NodeType {
-    REFERENCE = "REFERENCE",
-    CONTENT = "CONTENT"
+export enum BlockReferenceFetchPolicy {
+    LAZY = "LAZY",
+    EAGER = "EAGER"
 }
-export enum ReferenceWarning {
+export enum BlockReferenceWarning {
     MISSING = "MISSING",
     REQUIRES_LOADING = "REQUIRES_LOADING",
     UNSUPPORTED = "UNSUPPORTED",
     CIRCULAR = "CIRCULAR",
     DEPTH_EXCEEDED = "DEPTH_EXCEEDED"
 }
-export enum ReferenceMetadataFetchPolicy {
-    LAZY = "LAZY",
-    EAGER = "EAGER"
+export enum ListFilterLogicType {
+    AND = "AND",
+    OR = "OR"
 }
-export enum ReferencePayloadType {
+export enum NodeType {
+    REFERENCE = "REFERENCE",
+    CONTENT = "CONTENT",
+}
+export enum Presentation {
+    SUMMARY = "SUMMARY",
+    ENTITY = "ENTITY",
+    TABLE = "TABLE",
+    GRID = "GRID",
+    INLINE = "INLINE"
+}
+export enum ReferenceType {
     BLOCK = "BLOCK",
     ENTITY = "ENTITY"
 }
-export enum RenderContentRenderType {
+export enum RenderType {
     LIST = "LIST",
     COMPONENT = "COMPONENT",
     CONTAINER = "CONTAINER"
 }
-export enum RenderContentBlockType {
-    REFERENCE = "REFERENCE",
-    CONTENT = "CONTENT"
-}
-export enum SortSpecDir {
+export enum SortDir {
     ASC = "ASC",
     DESC = "DESC"
 }
