@@ -14,29 +14,16 @@ import { useLayoutKeyboardShortcuts } from "../../hooks/use-layout-keyboard-shor
 export const EditModeIndicator: FC = () => {
     const { getEditingCount, hasUnsavedChanges, saveAllEdits, discardAllEdits } = useBlockEdit();
     const { isInitialized } = useBlockEnvironment();
-    const {
-        hasLayoutChanges,
-        saveLayoutChanges,
-        discardLayoutChanges,
-        saveStatus,
-        conflictData,
-        resolveConflict,
-    } = useLayoutChange();
-    const { hasContentChanges: hasContent } = useLayoutHistory();
+    const { saveLayoutChanges, discardLayoutChanges, saveStatus, conflictData, resolveConflict } =
+        useLayoutChange();
+    const { hasContentChanges, hasLayoutChanges } = useLayoutHistory();
 
     const editingCount = getEditingCount();
     const hasDataChanges = hasUnsavedChanges();
-    const hasLayout = hasLayoutChanges();
-    const hasContentChanges = hasContent;
-    const totalChanges = editingCount + (hasLayout ? 1 : 0) + (hasContentChanges ? 1 : 0);
+    const totalChanges = editingCount + (hasLayoutChanges ? 1 : 0) + (hasContentChanges ? 1 : 0);
 
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
-        console.log(
-            `📝 Edit Mode: ${editingCount} blocks editing, Layout changes: ${hasLayout}, Content changes: ${hasContentChanges}, Total unsaved changes: ${totalChanges}`
-        );
-    }, [editingCount, hasLayout, hasContentChanges, hasDataChanges, totalChanges]);
     const handleSaveAll = async () => {
         if (isSaving || saveStatus === "saving" || saveStatus === "conflict") {
             return;
@@ -46,7 +33,7 @@ export const EditModeIndicator: FC = () => {
             // Save active edit sessions
             if (hasDataChanges) await saveAllEdits();
             // Save layout and content changes (both are sent to backend together)
-            if (hasLayout || hasContentChanges) await saveLayoutChanges();
+            if (hasLayoutChanges || hasContentChanges) await saveLayoutChanges();
         } catch (error) {
             console.error("Error saving all changes:", error);
         } finally {
@@ -59,7 +46,7 @@ export const EditModeIndicator: FC = () => {
         !isSaving &&
         saveStatus !== "saving" &&
         saveStatus !== "conflict" &&
-        (hasDataChanges || hasLayout || hasContentChanges);
+        (hasDataChanges || hasLayoutChanges || hasContentChanges);
 
     useLayoutKeyboardShortcuts(canSaveViaShortcut ? handleSaveAll : undefined);
 
@@ -74,7 +61,7 @@ export const EditModeIndicator: FC = () => {
         }
 
         // Discard layout and content changes
-        if (hasLayout || hasContentChanges) {
+        if (hasLayoutChanges || hasContentChanges) {
             discardLayoutChanges();
         }
     };
@@ -104,16 +91,16 @@ export const EditModeIndicator: FC = () => {
                                 </span>
                             </>
                         )}
-                        {editingCount > 0 && (hasLayout || hasContentChanges) && (
+                        {editingCount > 0 && (hasLayoutChanges || hasContentChanges) && (
                             <span className="text-primary-foreground/60">•</span>
                         )}
-                        {hasLayout && (
+                        {hasLayoutChanges && (
                             <>
                                 <Layout className="h-4 w-4" />
                                 <span className="font-medium">Layout modified</span>
                             </>
                         )}
-                        {hasLayout && hasContentChanges && (
+                        {hasLayoutChanges && hasContentChanges && (
                             <span className="text-primary-foreground/60">•</span>
                         )}
                         {hasContentChanges && (
@@ -124,7 +111,7 @@ export const EditModeIndicator: FC = () => {
                         )}
                     </div>
 
-                    {(hasDataChanges || hasLayout || hasContentChanges) && (
+                    {(hasDataChanges || hasLayoutChanges || hasContentChanges) && (
                         <>
                             <div className="h-4 w-px bg-primary-foreground/30" />
                             <div className="flex items-center gap-2">

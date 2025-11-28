@@ -1267,8 +1267,6 @@ export interface components {
         };
         /** @description Content node containing a block with optional children */
         ContentNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
-            /** @enum {unknown} */
-            type: components["schemas"]["NodeType"];
             children?: components["schemas"]["Node"][];
         };
         DraggableOptions: {
@@ -1313,8 +1311,8 @@ export interface components {
         ListFilterLogicType: ListFilterLogicType;
         Metadata: {
             type: components["schemas"]["BlockMetadataType"];
-            meta: components["schemas"]["BlockMeta"];
             deletable: boolean;
+            meta: components["schemas"]["BlockMeta"];
         };
         Node: {
             warnings: string[];
@@ -1368,8 +1366,6 @@ export interface components {
         };
         /** @description Reference node containing a block with entity or block tree references */
         ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
-            /** @enum {unknown} */
-            type: components["schemas"]["NodeType"];
             reference: components["schemas"]["EntityReference"] | components["schemas"]["BlockTreeReference"];
         };
         ReferencePayload: {
@@ -1457,7 +1453,7 @@ export interface components {
             /** Format: int32 */
             w: number;
             /** Format: int32 */
-            h: number;
+            h?: number;
             /** Format: int32 */
             minW?: number;
             /** Format: int32 */
@@ -3477,6 +3473,7 @@ export enum ListFilterLogicType {
 export enum NodeType {
     REFERENCE = "REFERENCE",
     CONTENT = "CONTENT",
+    ERROR = "ERROR"
 }
 export enum Presentation {
     SUMMARY = "SUMMARY",

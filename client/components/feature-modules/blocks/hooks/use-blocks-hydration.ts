@@ -43,19 +43,11 @@ export const useBlocksHydration = (
     return useQuery<HydrateBlocksResponse, Error>({
         queryKey: ["blocks-hydration", organisationId, ...sortedBlockIds],
         queryFn: async () => {
-            if (blockIds.length === 0) {
-                return {};
-            }
-
             if (!organisationId) {
                 throw new Error("Organisation ID is required");
             }
 
-            const results = await BlockService.hydrateBlocks(
-                session,
-                blockIds,
-                organisationId
-            );
+            const results = await BlockService.hydrateBlocks(session, blockIds, organisationId);
 
             return results;
         },

@@ -1,6 +1,6 @@
 "use client";
 
-import { get, set } from "@/lib/util/utils";
+import { get, isPayloadEqual, set } from "@/lib/util/utils";
 import React, {
     createContext,
     useCallback,
@@ -11,46 +11,12 @@ import React, {
     useState,
 } from "react";
 import { BlockNode, isContentNode } from "../interface/block.interface";
-import { useTrackedEnvironment } from "./tracked-environment-provider";
 import { useBlockFocus } from "./block-focus-provider";
+import { useTrackedEnvironment } from "./tracked-environment-provider";
 
 /* -------------------------------------------------------------------------- */
 /*                              Type Definitions                              */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Deep equality check for block payload data
- * Returns true if the objects are deeply equal
- * Uses a proper deep comparison instead of JSON.stringify to avoid property ordering issues
- */
-function isPayloadEqual(a: any, b: any): boolean {
-    // Handle primitive types and null
-    if (a === b) return true;
-    if (a == null || b == null) return false;
-    if (typeof a !== typeof b) return false;
-
-    // Handle arrays
-    if (Array.isArray(a) && Array.isArray(b)) {
-        if (a.length !== b.length) return false;
-        return a.every((item, index) => isPayloadEqual(item, b[index]));
-    }
-
-    // Handle objects
-    if (typeof a === "object" && typeof b === "object") {
-        const keysA = Object.keys(a).sort();
-        const keysB = Object.keys(b).sort();
-
-        // Compare keys (order-independent)
-        if (keysA.length !== keysB.length) return false;
-        if (!keysA.every((key, index) => key === keysB[index])) return false;
-
-        // Compare values recursively
-        return keysA.every((key) => isPayloadEqual(a[key], b[key]));
-    }
-
-    // For other types (functions, symbols, etc.), use strict equality
-    return a === b;
-}
 
 export interface EditSession {
     blockId: string;
@@ -448,8 +414,11 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
         });
 
-        console.log(`💾 Batch save completed: ${savedCount} of ${allBlockIds.length} blocks updated (${allBlockIds.length - savedCount} unchanged)`);
-
+        console.log(
+            `💾 Batch save completed: ${savedCount} of ${allBlockIds.length} blocks updated (${
+                allBlockIds.length - savedCount
+            } unchanged)`
+        );
 
         // Clean up ALL sessions and drafts at once
         setEditingSessions(new Map());
@@ -592,7 +561,11 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     }
                 });
 
-                console.log(`🗄️ Drawer save completed: ${savedCount} of ${blocksInDrawer.length} blocks updated (${blocksInDrawer.length - savedCount} unchanged)`);
+                console.log(
+                    `🗄️ Drawer save completed: ${savedCount} of ${
+                        blocksInDrawer.length
+                    } blocks updated (${blocksInDrawer.length - savedCount} unchanged)`
+                );
             }
 
             // Clean up ALL sessions and drafts within the drawer tree at once

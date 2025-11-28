@@ -34,11 +34,17 @@ const clientCreationSchema = z.object({
     contact: z.object({
         email: z.string().email(),
         phone: z
-            .string()
-            .min(10, "Please enter a valid phone number for the specified country")
-            .refine(isMobilePhone, "Please enter a valid phone number for the specified country")
-            .optional()
-            .or(z.literal("")),
+            .union([
+                z.literal(""),
+                z
+                    .string()
+                    .min(10, "Please enter a valid phone number for the specified country")
+                    .refine(
+                        isMobilePhone,
+                        "Please enter a valid phone number for the specified country"
+                    ),
+            ])
+            .optional(),
         address: AddressFormSchema.optional(),
     }),
 });

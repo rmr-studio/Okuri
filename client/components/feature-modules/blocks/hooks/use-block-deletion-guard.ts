@@ -36,9 +36,8 @@ export const useBlockDeletionGuard = () => {
 
             const { block } = node;
 
-            // Check metadata.deletable flag (defaults to true if not set)
-
-            if (!block.payload.deletable) {
+            // Check if block is marked as non-deletable. Treat undefined as deletable, so only explicit false blocks are protected.
+            if (block.payload.deletable === false) {
                 toast.error("Cannot delete block", {
                     description: "This block is required and cannot be deleted.",
                 });

@@ -12,8 +12,6 @@ export const ClientAddressFormStep: FC<ClientStepFormProps> = ({
 }) => {
     const onNext = async () => {
         // Validate required address fields
-        console.log(form.getValues());
-
         const isValid = await form.trigger([
             "contact.address",
             "contact.address.city",

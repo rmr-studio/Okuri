@@ -144,3 +144,50 @@ export function set(obj: any, path: string | Array<string | number>, value: any)
 
     return obj;
 }
+
+/**
+ * Deep equality check a given object payload
+ * Returns true if the objects are deeply equal
+ * Uses a proper deep comparison instead of JSON.stringify to avoid property ordering issues
+ */
+export function isPayloadEqual(a: any, b: any, visited = new WeakSet()): boolean {
+    // Handle primitive types and null
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+
+    // Handle Date objects
+    if (a instanceof Date && b instanceof Date) {
+        return a.getTime() === b.getTime();
+    }
+
+    // Handle RegExp
+    if (a instanceof RegExp && b instanceof RegExp) {
+        return a.toString() === b.toString();
+    }
+
+    // Handle arrays
+    if (Array.isArray(a) && Array.isArray(b)) {
+        if (a.length !== b.length) return false;
+        return a.every((item, index) => isPayloadEqual(item, b[index]));
+    }
+
+    // Handle objects
+    if (typeof a === "object" && typeof b === "object") {
+        // Check for circular references
+        if (visited.has(a)) return true;
+        visited.add(a);
+        const keysA = Object.keys(a).sort();
+        const keysB = Object.keys(b).sort();
+
+        // Compare keys (order-independent)
+        if (keysA.length !== keysB.length) return false;
+        if (!keysA.every((key, index) => key === keysB[index])) return false;
+
+        // Compare values recursively
+        return keysA.every((key) => isPayloadEqual(a[key], b[key], visited));
+    }
+
+    // For other types (functions, symbols, etc.), use strict equality
+    return a === b;
+}

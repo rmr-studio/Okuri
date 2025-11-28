@@ -21,7 +21,7 @@ export interface EntityBlockConfig {
  *
  * @example
  * // Get allowed block types for clients
- * const config = getEntityBlockConfig(EntityType.client);
+ * const config = getEntityBlockConfig(EntityType.CLIENT);
  * const canAddBlock = config.allowedBlockTypes.includes(blockTypeKey);
  */
 export const ENTITY_BLOCK_CONFIG: Record<EntityType, EntityBlockConfig> = {

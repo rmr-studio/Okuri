@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EntityType } from "@/lib/types/types";
 import { AlertCircle, PlusIcon } from "lucide-react";
-import { FC, useMemo, useState } from "react";
+import { FC, ReactNode, useMemo, useState } from "react";
 import { BlockEditProvider } from "../../context/block-edit-provider";
 import {
     BlockEnvironmentProvider,
@@ -24,6 +24,7 @@ import {
 import { useEntityLayout } from "../../hooks/use-entity-layout";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import { BlockType } from "../../interface/block.interface";
+import { WrapElementProvider } from "../../interface/render.interface";
 import { createBlockInstanceFromType } from "../../util/block/factory/instance.factory";
 import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
 import { BlockEditDrawer, EditModeIndicator } from "../forms";
@@ -50,7 +51,7 @@ export interface EntityBlockEnvironmentProps {
     /** Optional wrapper function to customize the outer container */
     renderWrapper?: (children: React.ReactNode) => React.ReactNode;
     /** Optional element wrapper for editor panels (slash menu, toolbar, etc.) */
-    wrapElement?: any; // Type from editorPanel wrapper
+    wrapElement?: (args: WrapElementProvider) => ReactNode;
 }
 
 /**
@@ -81,7 +82,6 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
     wrapElement,
 }) => {
     const { environment, isLoading, error } = useEntityLayout(organisationId, entityId, entityType);
-    console.log(environment);
 
     const gridOptions = useMemo(() => {
         return environment?.layout?.layout ?? DEFAULT_WIDGET_OPTIONS;

@@ -85,19 +85,19 @@ export function ClientCard({ client, onEdit, onDelete }: ClientCardProps) {
                             <h3 className="font-medium text-sm text-foreground truncate">
                                 {client.name}
                             </h3>
-                            {client.contactDetails?.email && (
+                            {client.contact?.email && (
                                 <div className="flex items-center gap-1 mt-1">
                                     <Mail className="h-3 w-3 text-muted-foreground" />
                                     <p className="text-xs text-muted-foreground truncate">
-                                        {client.contactDetails.email}
+                                        {client.contact.email}
                                     </p>
                                 </div>
                             )}
-                            {client.contactDetails?.phone && (
+                            {client.contact?.phone && (
                                 <div className="flex items-center gap-1 mt-1">
                                     <Phone className="h-3 w-3 text-muted-foreground" />
                                     <p className="text-xs text-muted-foreground">
-                                        {client.contactDetails.phone}
+                                        {client.contact.phone}
                                     </p>
                                 </div>
                             )}

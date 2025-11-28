@@ -7,13 +7,13 @@ import { useGrid } from "@/components/feature-modules/blocks/context/grid-provid
 import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { BlockType } from "@/components/feature-modules/blocks/interface/block.interface";
 import { createBlockInstanceFromType } from "@/components/feature-modules/blocks/util/block/factory/instance.factory";
-import { useClient } from "@/components/feature-modules/client/hooks/useClient";
+import { useClient } from "@/components/feature-modules/client/hooks/use-client";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EntityType } from "@/lib/types/types";
 import { isResponseError } from "@/lib/util/error/error.util";
-import { PlusIcon, SaveIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useOrganisation } from "../../organisation/hooks/useOrganisation";
@@ -33,12 +33,6 @@ const ClientLayoutToolbar = ({ clientId, organisationId }: ClientLayoutToolbarPr
     const { addTrackedBlock } = useTrackedEnvironment();
     const { environment } = useBlockEnvironment();
     const [dialogOpen, setDialogOpen] = useState(false);
-
-    const handleSave = () => {
-        const result = save();
-        console.log("Saved layout:", result);
-        // TODO: Persist layout via LayoutService
-    };
 
     const handleBlockTypeSelect = (blockType: BlockType) => {
         // Create a new block instance from the selected type
@@ -63,14 +57,6 @@ const ClientLayoutToolbar = ({ clientId, organisationId }: ClientLayoutToolbarPr
                     <PlusIcon className="size-4 mr-2" />
                     Add Block
                 </Button>
-
-                {/* Save Layout Button - only show if blocks exist */}
-                {hasBlocks && (
-                    <Button onClick={handleSave} size="sm">
-                        <SaveIcon className="size-4 mr-2" />
-                        Save Layout
-                    </Button>
-                )}
             </div>
 
             {/* Add Block Dialog */}

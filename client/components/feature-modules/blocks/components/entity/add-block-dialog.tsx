@@ -8,6 +8,7 @@ import {
     CommandList,
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EntityType } from "@/lib/types/types";
 import {
     BoxIcon,
     CheckSquareIcon,
@@ -22,7 +23,6 @@ import {
 import { FC } from "react";
 import { categorizeBlockTypes, useBlockTypes } from "../../hooks/use-block-types";
 import { BlockType } from "../../interface/block.interface";
-import { EntityType } from "@/lib/types/types";
 
 /**
  * Props for the AddBlockDialog component
@@ -83,12 +83,10 @@ export const AddBlockDialog: FC<AddBlockDialogProps> = ({
     onBlockTypeSelect,
 }) => {
     const { data: blockTypes, isLoading, error } = useBlockTypes(organisationId, entityType);
-    if (!blockTypes) {
-        return null;
-    }
+    const availableBlockTypes = blockTypes ?? [];
 
     // Categorize block types for organized display
-    const categories = categorizeBlockTypes(blockTypes);
+    const categories = categorizeBlockTypes(availableBlockTypes);
 
     const handleSelect = (blockType: BlockType) => {
         onBlockTypeSelect(blockType);
@@ -113,11 +111,11 @@ export const AddBlockDialog: FC<AddBlockDialogProps> = ({
                     </div>
                 )}
 
-                {!isLoading && !error && blockTypes.length === 0 && (
+                {!isLoading && !error && availableBlockTypes.length === 0 && (
                     <CommandEmpty>No block types available.</CommandEmpty>
                 )}
 
-                {!isLoading && !error && blockTypes.length > 0 && (
+                {!isLoading && !error && availableBlockTypes.length > 0 && (
                     <>
                         {/* Layout Blocks */}
                         {categories.layout.length > 0 && (

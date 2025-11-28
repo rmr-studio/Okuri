@@ -1,6 +1,9 @@
 "use client";
 
-import { FC, useState, useEffect } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     CommandDialog,
     CommandEmpty,
@@ -9,44 +12,26 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Users, Building2, Loader2 } from "lucide-react";
-import { useAuth } from "@/components/provider/auth-context";
-import { fetchOrganisationClients } from "@/components/feature-modules/client/service/client.service";
-
-/**
- * Reference item representing an entity to be referenced in a block.
- */
-export interface ReferenceItem {
-    type: string; // EntityType (CLIENT, ORGANISATION, etc.)
-    id: string; // Entity UUID
-    labelOverride?: string | null;
-    badge?: string | null;
-}
-
-/**
- * Entity data for display in the selector.
- */
-interface EntityOption {
-    id: string;
-    name: string;
-    type: string;
-    secondaryInfo?: string; // Email, status, member count, etc.
-    icon?: React.ReactNode;
-}
+import { EntityType } from "@/lib/types/types";
+import { AlertCircle, Loader2, RefreshCw, Users } from "lucide-react";
+import { FC, useMemo, useState } from "react";
+import { useEntitySelector } from "../../hooks/use-entity-selector";
+import { ReferenceItem } from "../../interface/block.interface";
 
 interface EntitySelectorModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSelect: (items: ReferenceItem[]) => void;
-    entityType: string; // Which entity type to show (CLIENT, ORGANISATION, etc.)
+    entityType: EntityType;
     organisationId: string;
     multiSelect?: boolean; // Allow selecting multiple entities
     excludeIds?: string[]; // Entity IDs to exclude (already selected)
     initialSelection?: ReferenceItem[]; // Pre-selected items
 }
+
+const ENTITY_ICONS = {
+    CLIENT: <Users className="size-4" />,
+} as const;
 
 /**
  * EntitySelectorModal - Modal for selecting entities to reference in a block.
@@ -78,54 +63,39 @@ export const EntitySelectorModal: FC<EntitySelectorModalProps> = ({
     excludeIds = [],
     initialSelection = [],
 }) => {
-    const { session } = useAuth();
-    const [entities, setEntities] = useState<EntityOption[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(
         new Set(initialSelection.map((item) => item.id))
     );
 
-    // Fetch entities when modal opens
-    useEffect(() => {
-        if (!open || !session || !organisationId) return;
+    const {
+        data: rawEntities,
+        isLoading,
+        isLoadingAuth,
+        error,
+        refetch,
+        isRefetching,
+    } = useEntitySelector({
+        entityType,
+        organisationId,
+        excludeIds,
+        enabled: open,
+    });
 
-        const fetchEntities = async () => {
-            setIsLoading(true);
-            try {
-                // Currently only supports CLIENT entity type
-                // TODO: Add support for ORGANISATION, PROJECT, INVOICE, etc.
-                if (entityType === "CLIENT") {
-                    const clients = await fetchOrganisationClients(session, {
-                        id: organisationId,
-                    } as any);
+    // Add icons to entities
+    const entities = useMemo(() => {
+        if (!rawEntities) return [];
 
-                    const options: EntityOption[] = clients.map((client) => ({
-                        id: client.id,
-                        name: client.name || "Unnamed Client",
-                        type: "CLIENT",
-                        secondaryInfo: client.contactDetails?.email || client.id,
-                        icon: <Users className="size-4" />,
-                    }));
+        return rawEntities.map((entity) => ({
+            ...entity,
+            icon: ENTITY_ICONS[entity.type as keyof typeof ENTITY_ICONS] || null,
+        }));
+    }, [rawEntities]);
 
-                    // Filter out excluded IDs
-                    const filteredOptions = options.filter(
-                        (opt) => !excludeIds.includes(opt.id)
-                    );
+    // Determine if we have an empty result (no error, but no data)
+    const isEmpty = !isLoading && !error && entities.length === 0;
+    const hasError = !!error;
+    const showLoading = isLoadingAuth || isLoading || isRefetching;
 
-                    setEntities(filteredOptions);
-                }
-            } catch (error) {
-                console.error("Failed to fetch entities:", error);
-                setEntities([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchEntities();
-    }, [open, session, organisationId, entityType, excludeIds]);
-
-    // Handle entity selection
     const handleEntityToggle = (entityId: string) => {
         if (multiSelect) {
             const newSelection = new Set(selectedIds);
@@ -136,15 +106,12 @@ export const EntitySelectorModal: FC<EntitySelectorModalProps> = ({
             }
             setSelectedIds(newSelection);
         } else {
-            // Single select - immediately select and close
             const entity = entities.find((e) => e.id === entityId);
             if (entity) {
                 onSelect([
                     {
                         type: entity.type,
                         id: entity.id,
-                        labelOverride: null,
-                        badge: null,
                     },
                 ]);
                 onOpenChange(false);
@@ -152,15 +119,12 @@ export const EntitySelectorModal: FC<EntitySelectorModalProps> = ({
         }
     };
 
-    // Handle confirm for multi-select
     const handleConfirm = () => {
         const selectedItems: ReferenceItem[] = Array.from(selectedIds).map((id) => {
             const entity = entities.find((e) => e.id === id);
             return {
                 type: entity?.type || entityType,
                 id,
-                labelOverride: null,
-                badge: null,
             };
         });
 
@@ -168,7 +132,6 @@ export const EntitySelectorModal: FC<EntitySelectorModalProps> = ({
         onOpenChange(false);
     };
 
-    // Format entity type for display
     const formattedEntityType = entityType
         .split("_")
         .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
@@ -178,15 +141,50 @@ export const EntitySelectorModal: FC<EntitySelectorModalProps> = ({
         <CommandDialog open={open} onOpenChange={onOpenChange}>
             <CommandInput
                 placeholder={`Search ${formattedEntityType.toLowerCase()}s...`}
+                disabled={showLoading || hasError}
             />
             <CommandList>
-                {isLoading ? (
+                {showLoading ? (
                     <div className="flex items-center justify-center py-6">
                         <Loader2 className="size-6 animate-spin text-muted-foreground" />
                     </div>
+                ) : hasError ? (
+                    <div className="p-4">
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription className="flex flex-col gap-2">
+                                <span>Failed to load {formattedEntityType.toLowerCase()}s.</span>
+                                <span className="text-xs opacity-90">{error.message}</span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => refetch()}
+                                    className="mt-2 w-fit"
+                                >
+                                    <RefreshCw className="size-3 mr-2" />
+                                    Try Again
+                                </Button>
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                ) : isEmpty ? (
+                    <CommandEmpty>
+                        <div className="py-6 text-center">
+                            <p className="text-sm text-muted-foreground">
+                                No {formattedEntityType.toLowerCase()}s found.
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {excludeIds.length > 0
+                                    ? "All available items are already selected."
+                                    : `No ${formattedEntityType.toLowerCase()}s available in this organisation.`}
+                            </p>
+                        </div>
+                    </CommandEmpty>
                 ) : (
                     <>
-                        <CommandEmpty>No {formattedEntityType.toLowerCase()}s found.</CommandEmpty>
+                        <CommandEmpty>
+                            No matching {formattedEntityType.toLowerCase()}s found.
+                        </CommandEmpty>
                         <CommandGroup heading={`Select ${formattedEntityType}`}>
                             {entities.map((entity) => {
                                 const isSelected = selectedIds.has(entity.id);
@@ -200,7 +198,9 @@ export const EntitySelectorModal: FC<EntitySelectorModalProps> = ({
                                         {multiSelect && (
                                             <Checkbox
                                                 checked={isSelected}
-                                                onCheckedChange={() => handleEntityToggle(entity.id)}
+                                                onCheckedChange={() =>
+                                                    handleEntityToggle(entity.id)
+                                                }
                                             />
                                         )}
                                         {entity.icon}
@@ -221,17 +221,12 @@ export const EntitySelectorModal: FC<EntitySelectorModalProps> = ({
                 )}
             </CommandList>
 
-            {/* Show confirm button for multi-select */}
-            {multiSelect && entities.length > 0 && (
+            {multiSelect && entities.length > 0 && !showLoading && !hasError && (
                 <div className="border-t p-4 flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                         {selectedIds.size} selected
                     </span>
-                    <Button
-                        onClick={handleConfirm}
-                        disabled={selectedIds.size === 0}
-                        size="sm"
-                    >
+                    <Button onClick={handleConfirm} disabled={selectedIds.size === 0} size="sm">
                         Confirm Selection
                     </Button>
                 </div>

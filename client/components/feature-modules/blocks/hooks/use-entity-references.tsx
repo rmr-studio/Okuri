@@ -5,17 +5,23 @@
  * allowing users to select entities to reference from a modal dialog.
  */
 
-import { useState } from "react";
-import { Users } from "lucide-react";
-import { CustomToolbarAction } from "./panel-toolbar";
-import { EntitySelectorModal, ReferenceItem } from "../../modals/entity-selector-modal";
-import { useBlockEnvironment } from "../../../context/block-environment-provider";
-import { useTrackedEnvironment } from "../../../context/tracked-environment-provider";
+import { EntityType } from "@/lib/types/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { Users } from "lucide-react";
+import { useState } from "react";
+import { EntitySelectorModal } from "../components/modals/entity-selector-modal";
+import { CustomToolbarAction } from "../components/panel/toolbar/panel-toolbar";
+import { useBlockEnvironment } from "../context/block-environment-provider";
+import { useTrackedEnvironment } from "../context/tracked-environment-provider";
+import {
+    EntityReferenceMetadata,
+    isEntityReferenceMetadata,
+    ReferenceItem,
+} from "../interface/block.interface";
 
 export interface UseReferenceBlockToolbarProps {
     blockId: string;
-    entityType: string; // CLIENT, ORGANISATION, etc.
+    entityType: EntityType;
     currentItems?: ReferenceItem[]; // Currently selected items
     multiSelect?: boolean;
 }
@@ -49,7 +55,7 @@ export interface UseReferenceBlockToolbarResult {
  *   </>
  * );
  */
-export function useReferenceBlockToolbar({
+export function UseEntityReferenceToolbar({
     blockId,
     entityType,
     currentItems = [],
@@ -64,20 +70,27 @@ export function useReferenceBlockToolbar({
     const handleEntitySelect = (items: ReferenceItem[]) => {
         const block = getBlock(blockId);
         if (!block) return;
+        const { payload } = block.block;
+
+        // Ensure block is an entity reference
+        if (!isEntityReferenceMetadata(payload)) return;
 
         // Update block metadata with new items
-        const updatedPayload = {
-            ...block.payload,
-            items: items,
+        const updatedPayload: EntityReferenceMetadata = {
+            ...payload,
+            items,
         };
 
         updateTrackedBlock(blockId, {
             ...block,
-            payload: updatedPayload,
+            block: {
+                ...block.block,
+                payload: updatedPayload,
+            },
         });
 
         // Invalidate hydration cache to trigger re-fetch with new entities
-        queryClient.invalidateQueries(["block-hydration", blockId]);
+        queryClient.invalidateQueries({ queryKey: ["block-hydration", blockId] });
 
         setEntitySelectorOpen(false);
     };

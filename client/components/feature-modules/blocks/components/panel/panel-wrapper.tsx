@@ -8,6 +8,7 @@ import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useBlockEdit } from "../../context/block-edit-provider";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useBlockFocus } from "../../context/block-focus-provider";
+import { useLayoutChange } from "../../context/layout-change-provider";
 import { useRenderElement } from "../../context/block-renderer-provider";
 import { useFocusSurface } from "../../hooks/use-focus-surface";
 import { isContentNode } from "../../interface/block.interface";
@@ -80,6 +81,7 @@ export const PanelWrapper: FC<Props> = ({
     const { startEdit, saveAndExit, openDrawer, isEditing, getEditMode, drawerState, cancelEdit } =
         useBlockEdit();
     const { getBlock, getChildren } = useBlockEnvironment();
+    const { suppressEditModeTracking } = useLayoutChange();
     const [isEditMode, setEditMode] = useState(false);
     const block = getBlock(id);
     const hasChildren = getChildren(id).length > 0;
@@ -299,6 +301,7 @@ export const PanelWrapper: FC<Props> = ({
         } else {
             // No children: toggle inline edit
             if (isEditMode) {
+                suppressEditModeTracking(true);
                 saveAndExit(id).then((success) => {
                     if (success) {
                         setEditMode(false);
@@ -307,20 +310,46 @@ export const PanelWrapper: FC<Props> = ({
                             requestAnimationFrame(() => {
                                 requestAnimationFrame(() => {
                                     requestResize();
+                                    // Re-enable tracking after resize completes
+                                    requestAnimationFrame(() => {
+                                        suppressEditModeTracking(false);
+                                    });
+                                });
+                            });
+                        } else {
+                            // No resize function, just re-enable after RAF
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    suppressEditModeTracking(false);
                                 });
                             });
                         }
+                    } else {
+                        // Save failed, re-enable tracking
+                        suppressEditModeTracking(false);
                     }
                 });
             } else {
+                // Enter edit mode
+                suppressEditModeTracking(true);
                 startEdit(id, "inline");
                 setEditMode(true);
+
+                // Re-enable tracking after triple RAF (allows grid to settle)
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            suppressEditModeTracking(false);
+                        });
+                    });
+                });
             }
         }
-    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize]);
+    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize, suppressEditModeTracking]);
 
     const handleSaveEditClick = useCallback(() => {
         if (isEditMode) {
+            suppressEditModeTracking(true);
             saveAndExit(id).then((success) => {
                 if (success) {
                     setEditMode(false);
@@ -329,16 +358,31 @@ export const PanelWrapper: FC<Props> = ({
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
                                 requestResize();
+                                // Re-enable tracking after resize completes
+                                requestAnimationFrame(() => {
+                                    suppressEditModeTracking(false);
+                                });
+                            });
+                        });
+                    } else {
+                        // No resize function, just re-enable after RAF
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                suppressEditModeTracking(false);
                             });
                         });
                     }
+                } else {
+                    // Save failed, re-enable tracking
+                    suppressEditModeTracking(false);
                 }
             });
         }
-    }, [isEditMode, saveAndExit, id, requestResize]);
+    }, [isEditMode, saveAndExit, id, requestResize, suppressEditModeTracking]);
 
     const handleDiscardEditClick = useCallback(() => {
         if (isEditMode) {
+            suppressEditModeTracking(true);
             cancelEdit(id);
             setEditMode(false);
             // Resize back to display content after discarding
@@ -346,11 +390,22 @@ export const PanelWrapper: FC<Props> = ({
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         requestResize();
+                        // Re-enable tracking after resize completes
+                        requestAnimationFrame(() => {
+                            suppressEditModeTracking(false);
+                        });
+                    });
+                });
+            } else {
+                // No resize function, just re-enable after RAF
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        suppressEditModeTracking(false);
                     });
                 });
             }
         }
-    }, [isEditMode, cancelEdit, id, requestResize]);
+    }, [isEditMode, cancelEdit, id, requestResize, suppressEditModeTracking]);
 
     useEffect(() => {
         if (!isSelected) return;
@@ -477,15 +532,35 @@ export const PanelWrapper: FC<Props> = ({
                         // No children: toggle inline edit
                         if (isEditMode) {
                             // Exit edit mode and save
+                            suppressEditModeTracking(true);
                             saveAndExit(id).then((success) => {
                                 if (success) {
                                     setEditMode(false);
+                                    // Re-enable tracking after triple RAF
+                                    requestAnimationFrame(() => {
+                                        requestAnimationFrame(() => {
+                                            requestAnimationFrame(() => {
+                                                suppressEditModeTracking(false);
+                                            });
+                                        });
+                                    });
+                                } else {
+                                    suppressEditModeTracking(false);
                                 }
                             });
                         } else {
                             // Enter edit mode
+                            suppressEditModeTracking(true);
                             startEdit(id, "inline");
                             setEditMode(true);
+                            // Re-enable tracking after triple RAF
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    requestAnimationFrame(() => {
+                                        suppressEditModeTracking(false);
+                                    });
+                                });
+                            });
                         }
                     }
                 }

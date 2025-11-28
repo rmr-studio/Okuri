@@ -28,7 +28,6 @@ export class LayoutService {
         entityId: string | undefined,
         entityType: EntityType
     ): Promise<BlockEnvironment> {
-        console.log(entityType);
         try {
             if (!organisationId || !entityId) {
                 throw fromError({
@@ -94,7 +93,6 @@ export class LayoutService {
         session: Session | null,
         request: SaveEnvironmentRequest
     ): Promise<SaveEnvironmentResponse> {
-        console.log(request);
         try {
             validateSession(session);
             const url = api();

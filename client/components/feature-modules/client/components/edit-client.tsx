@@ -1,6 +1,6 @@
 "use client";
 
-import { useClient } from "@/components/feature-modules/client/hooks/useClient";
+import { useClient } from "@/components/feature-modules/client/hooks/use-client";
 import { UpdateClientRequest } from "@/components/feature-modules/client/interface/client.interface";
 import { updateClient } from "@/components/feature-modules/client/service/client.service";
 import { useAuth } from "@/components/provider/auth-context";

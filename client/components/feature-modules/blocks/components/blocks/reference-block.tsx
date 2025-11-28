@@ -1,15 +1,15 @@
 "use client";
 
-import { FC } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Database } from "lucide-react";
+import { FC } from "react";
 import { z } from "zod";
-import { RenderElementMetadata } from "../../util/block/block.registry";
-import { useBlockHydration } from "../../hooks/use-block-hydration";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
+import { useBlockHydration } from "../../hooks/use-block-hydration";
+import { RenderElementMetadata } from "../../util/block/block.registry";
 
 /**
  * Schema for ReferenceBlock props.
@@ -104,13 +104,14 @@ const Block: FC<Props> = ({ blockId, items = [], title }) => {
     }
 
     const references = hydrationResult?.references || [];
+    const EXCLUDED_KEYS = new Set(["__typename", "createdAt", "updatedAt", "deletedAt"]);
 
     // Render resolved entities
     return (
         <div className="space-y-4">
             {references.map((ref, index) => {
-                const entity = ref.entity as any;
-                const item = items[index];
+                const entity = ref.entity as Record<string, unknown> | null;
+                const item = items.find((i) => i.id === ref.entityId);
 
                 // Entity not found or access denied
                 if (!entity || ref.warning) {
@@ -119,7 +120,8 @@ const Block: FC<Props> = ({ blockId, items = [], title }) => {
                             <AlertCircle className="h-4 w-4" />
                             <AlertTitle>Entity unavailable</AlertTitle>
                             <AlertDescription>
-                                {ref.warning || "This entity could not be loaded. It may have been deleted or you may not have access."}
+                                {ref.warning ||
+                                    "This entity could not be loaded. It may have been deleted or you may not have access."}
                             </AlertDescription>
                         </Alert>
                     );
@@ -132,8 +134,8 @@ const Block: FC<Props> = ({ blockId, items = [], title }) => {
                     .join(" ");
 
                 // Get display name
-                const displayName =
-                    item?.labelOverride || entity.name || entity.title || entity.id || "Entity";
+                const displayName: string =
+                    item?.labelOverride ?? entity.name ?? entity.title ?? entity.id ?? "Entity";
 
                 return (
                     <Card key={ref.entityId}>
@@ -149,7 +151,11 @@ const Block: FC<Props> = ({ blockId, items = [], title }) => {
                             <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 {Object.entries(entity).map(([key, value]) => {
                                     // Skip null/undefined and complex nested objects
-                                    if (value === null || value === undefined) {
+                                    if (
+                                        value === null ||
+                                        value === undefined ||
+                                        EXCLUDED_KEYS.has(key)
+                                    ) {
                                         return null;
                                     }
 
@@ -162,7 +168,9 @@ const Block: FC<Props> = ({ blockId, items = [], title }) => {
                                     // Format the value
                                     let displayValue: string;
                                     if (typeof value === "object") {
-                                        displayValue = JSON.stringify(value, null, 2);
+                                        displayValue = Array.isArray(value)
+                                            ? `[${value.length} items]`
+                                            : "[Complex data]";
                                     } else if (typeof value === "boolean") {
                                         displayValue = value ? "Yes" : "No";
                                     } else {

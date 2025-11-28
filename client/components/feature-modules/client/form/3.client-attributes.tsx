@@ -18,7 +18,6 @@ export const ClientAttributesFormStep: FC<ClientStepFormProps> = ({
     const onSubmit = async () => {
         const isValid = await form.trigger();
         if (!isValid) {
-            console.log("Validation errors:", form.formState.errors);
             toast.error("Please fix validation errors before submitting");
             return;
         }

@@ -55,6 +55,9 @@ interface LayoutChangeContextValue {
     /** Check if discard is allowed (always true with command system) */
     canDiscard: () => boolean;
 
+    /** Suppress layout change tracking temporarily (e.g., during edit mode transitions) */
+    suppressEditModeTracking: (suppress: boolean) => void;
+
     /** Number of layout change events (for UI feedback) */
     layoutChangeCount: number;
 
@@ -121,18 +124,14 @@ function applyIdMapping(
             // Map the blockId if it needs to be updated
             const newBlockId = idMappings[blockId] || blockId;
             // Map the parentId if it needs to be updated (null stays null)
-            const newParentId = parentId !== null && idMappings[parentId]
-                ? idMappings[parentId]
-                : parentId;
+            const newParentId =
+                parentId !== null && idMappings[parentId] ? idMappings[parentId] : parentId;
 
             newHierarchy.set(newBlockId, newParentId);
         });
 
         // Replace the old map with the updated one
-        environment.hierarchy.clear();
-        newHierarchy.forEach((parentId, blockId) => {
-            environment.hierarchy.set(blockId, parentId);
-        });
+        environment.hierarchy = newHierarchy;
     }
 
     // Update treeIndex map (blockId -> rootId)
@@ -233,7 +232,6 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             // Apply ID mappings to both environment and layout (update temporary IDs to permanent database IDs)
             if (idMappings && Object.keys(idMappings).length > 0) {
                 applyIdMapping(newEnvironment, idMappings);
-                console.log("Applied ID mappings to environment and layout:", idMappings);
             }
 
             // // Update cache with new layout data instead of invalidating (more efficient)
@@ -294,6 +292,8 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     // Flag to prevent tracking during discard/initialization
     const isDiscardingRef = useRef(false);
     const hasInitializedRef = useRef(false);
+    // Flag to prevent tracking during edit mode transitions (form resize)
+    const isTogglingEditModeRef = useRef(false);
 
     // Capture initial snapshot when a layout is provided from the server
     useEffect(() => {
@@ -340,6 +340,14 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     }, [clearHistory]);
 
     /**
+     * Suppress layout change tracking temporarily (e.g., during edit mode transitions)
+     * Used to prevent false positives when blocks resize for form rendering
+     */
+    const suppressEditModeTracking = useCallback((suppress: boolean) => {
+        isTogglingEditModeRef.current = suppress;
+    }, []);
+
+    /**
      * Track that a layout change occurred
      * Called from use-environment-grid-sync when GridStack 'change' event fires
      * With command system, this is primarily for UI feedback
@@ -359,8 +367,12 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     }, [getBaselineSnapshot, saveGridLayout]);
 
     const trackLayoutChange = useCallback(() => {
-        // Don't track during initialization or discard operations
-        if (!hasInitializedRef.current || isDiscardingRef.current) {
+        // Don't track during initialization, discard operations, or edit mode transitions
+        if (
+            !hasInitializedRef.current ||
+            isDiscardingRef.current ||
+            isTogglingEditModeRef.current
+        ) {
             return;
         }
 
@@ -582,6 +594,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             saveLayoutChanges,
             discardLayoutChanges,
             canDiscard,
+            suppressEditModeTracking,
             publishedVersion,
             localVersion,
             layoutChangeCount: changeCount,
@@ -598,6 +611,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             saveLayoutChanges,
             discardLayoutChanges,
             canDiscard,
+            suppressEditModeTracking,
             publishedVersion,
             localVersion,
             changeCount,

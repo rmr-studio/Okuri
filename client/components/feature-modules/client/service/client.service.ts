@@ -3,11 +3,11 @@ import {
     CreateClientResponse,
     GetClientByIdPathParams,
     GetClientByIdResponse,
+    GetOrganisationClientsPathParams,
     GetOrganisationClientsResponse,
     UpdateClientRequest,
     UpdateClientResponse,
 } from "@/components/feature-modules/client/interface/client.interface";
-import { Organisation } from "@/components/feature-modules/organisation/interface/organisation.interface";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { handleError, validateSession, validateUuid } from "@/lib/util/service/service.util";
 import { api } from "@/lib/util/utils";
@@ -15,21 +15,17 @@ import { Session } from "@supabase/supabase-js";
 
 export const fetchOrganisationClients = async (
     session: Session | null,
-    organisation: Organisation
+    params: GetOrganisationClientsPathParams
 ): Promise<GetOrganisationClientsResponse> => {
     try {
+        const { organisationId } = params;
+        validateUuid(organisationId);
         // Validate session and access token
-        if (!session?.access_token) {
-            throw fromError({
-                message: "No active session found",
-                status: 401,
-                error: "NO_SESSION",
-            });
-        }
+        validateSession(session);
 
         const url = api();
 
-        const response = await fetch(`${url}/v1/client/organisation/${organisation.id}`, {
+        const response = await fetch(`${url}/v1/client/organisation/${organisationId}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
