@@ -1,5 +1,6 @@
 package okuri.core.service.block
 
+import io.github.oshai.kotlinlogging.KLogger
 import jakarta.transaction.Transactional
 import okuri.core.entity.activity.ActivityLogEntity
 import okuri.core.entity.block.BlockEntity
@@ -39,6 +40,7 @@ class BlockEnvironmentService(
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
     private val defaultEnvironmentService: DefaultBlockEnvironmentService,
+    private val logger: KLogger
 ) {
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
@@ -93,17 +95,67 @@ class BlockEnvironmentService(
                 allIdMappings.putAll(mappings)
             }
 
-            // Save layout snapshot
-            blockTreeLayoutService.updateLayoutSnapshot(layout, request.layout, request.version)
-            return SaveEnvironmentResponse(
-                success = true,
-                conflict = false,
-                newVersion = request.version,
-                latestVersion = request.version,
-                lastModifiedAt = layout.updatedAt,
-                lastModifiedBy = layout.updatedBy?.toString(),
-                idMappings = allIdMappings
-            )
+            // Save layout snapshot with updated mappings
+            val updatedLayout = request.layout.let { layout ->
+                layout.children?.forEach { widget ->
+                    applyIdMapping(widget, allIdMappings)
+                }
+                layout
+            }
+
+            blockTreeLayoutService.updateLayoutSnapshot(layout, updatedLayout, request.version).run {
+                return SaveEnvironmentResponse(
+                    success = true,
+                    conflict = false,
+                    layout = updatedLayout,
+                    newVersion = request.version,
+                    latestVersion = request.version,
+                    lastModifiedAt = layout.updatedAt,
+                    lastModifiedBy = layout.updatedBy?.toString(),
+                    idMappings = allIdMappings
+                )
+            }
+        }
+    }
+
+    /**
+     * Applies ID mappings to a widget and its children recursively.
+     * Updates both the widget's main ID and its content ID from temporary IDs to permanent database IDs.
+     *
+     * @param widget The widget to update
+     * @param mapping Map of temporary UUIDs to permanent database UUIDs
+     */
+    private fun applyIdMapping(
+        widget: Widget,
+        mapping: Map<UUID, UUID>
+    ) {
+        // Map widget's main ID if it's a temporary ID
+        try {
+            val widgetId = UUID.fromString(widget.id)
+            mapping[widgetId]?.let { newId ->
+                widget.id = newId.toString()
+            }
+        } catch (e: Exception) {
+            // Widget ID is not a valid UUID, skip mapping
+            logger.warn { "Widget ${widget.id} is not currently assigned a valid UUID as its primary identifier" }
+        }
+
+        // Map content ID if present
+        widget.content?.id?.let { contentIdStr ->
+            try {
+                val contentId = UUID.fromString(contentIdStr)
+                mapping[contentId]?.let { newId ->
+                    widget.content.id = newId.toString()
+                }
+            } catch (e: Exception) {
+                // Content ID is not a valid UUID, skip mapping
+                logger.warn { "Widget ${widget.content.id} is not currently assigned a valid UUID as its primary identifier" }
+            }
+        }
+
+        // Recursively apply to children in subGridOpts
+        widget.subGridOpts?.children?.forEach { childWidget ->
+            applyIdMapping(childWidget, mapping)
         }
     }
 
@@ -112,54 +164,56 @@ class BlockEnvironmentService(
         organisationId: UUID,
         operation: StructuralOperationRequest
     ): ActivityLogEntity {
+        val operationData = operation.data // Assign to local variable for smart casting
+
         return ActivityLogEntity(
             userId = userId,
             organisationId = organisationId,
             activity = Activity.BLOCK_OPERATION,
-            operation = when (operation.data.type) {
+            operation = when (operationData.type) {
                 BlockOperationType.ADD_BLOCK -> OperationType.CREATE
                 BlockOperationType.REMOVE_BLOCK -> OperationType.DELETE
                 else -> OperationType.UPDATE
             },
             entityType = EntityType.BLOCK,
-            entityId = operation.data.blockId,
+            entityId = operationData.blockId,
             timestamp = operation.timestamp,
-            details = when (operation.data) {
+            details = when (operationData) {
                 is AddBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "blockId" to operation.data.blockId.toString(),
-                        "parentId" to operation.data.parentId.toString(),
+                        "type" to operationData.type,
+                        "blockId" to operationData.blockId.toString(),
+                        "parentId" to operationData.parentId.toString(),
                     )
                 }
 
                 is RemoveBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "blockId" to operation.data.blockId.toString()
+                        "type" to operationData.type,
+                        "blockId" to operationData.blockId.toString()
                     )
                 }
                 // Todo: Calculate readable diffs for updates
                 is UpdateBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "blockId" to operation.data.blockId.toString(),
+                        "type" to operationData.type,
+                        "blockId" to operationData.blockId.toString(),
                     )
                 }
 
                 is MoveBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "oldParentId" to operation.data.fromParentId,
-                        "newParentId" to operation.data.toParentId
+                        "type" to operationData.type,
+                        "oldParentId" to operationData.fromParentId,
+                        "newParentId" to operationData.toParentId
                     )
                 }
 
                 is ReorderBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "previousIndex" to operation.data.fromIndex,
-                        "newIndex" to operation.data.toIndex
+                        "type" to operationData.type,
+                        "previousIndex" to operationData.fromIndex,
+                        "newIndex" to operationData.toIndex
                     )
                 }
             }

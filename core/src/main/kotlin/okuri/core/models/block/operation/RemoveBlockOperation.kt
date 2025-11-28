@@ -1,8 +1,13 @@
 package okuri.core.models.block.operation
 
+import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import okuri.core.enums.block.request.BlockOperationType
 import java.util.*
 
+@JsonTypeName("REMOVE_BLOCK")
+@JsonDeserialize(using = JsonDeserializer.None::class)
 data class RemoveBlockOperation(
     override val type: BlockOperationType = BlockOperationType.REMOVE_BLOCK,
     override val blockId: UUID,

@@ -1,4 +1,4 @@
-package okuri.core.models.block.tree.deserializer
+package okuri.core.deserializer
 
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext

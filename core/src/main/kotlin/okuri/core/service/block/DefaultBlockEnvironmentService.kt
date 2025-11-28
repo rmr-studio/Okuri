@@ -164,7 +164,7 @@ class DefaultBlockEnvironmentService(
         entityType: EntityType
     ): Widget {
         // Generate a deterministic ID for the reference block
-        val referenceBlockId = "ref-${entityType.type.lowercase()}-$entityId"
+        val referenceBlockId = "ref-${entityType}-$entityId"
 
         return Widget(
             id = referenceBlockId,

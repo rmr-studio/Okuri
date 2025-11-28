@@ -3,6 +3,7 @@ package okuri.core.models.block.layout
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import okuri.core.deserializer.WidgetDeserializer
 
 /**
  * Represents a single node/widget in the Gridstack layout
@@ -12,7 +13,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 @JsonDeserialize(using = WidgetDeserializer::class)
 data class Widget(
     // Unique identifier for this widget (typically block ID)
-    val id: String,
+    var id: String,
 
     // Position and dimensions
     val x: Int,

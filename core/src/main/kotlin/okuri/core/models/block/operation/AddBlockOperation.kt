@@ -1,11 +1,16 @@
 package okuri.core.models.block.operation
 
+import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.request.BlockOperationType
 import okuri.core.models.block.tree.*
 import java.util.*
 
+@JsonTypeName("ADD_BLOCK")
+@JsonDeserialize(using = JsonDeserializer.None::class)
 data class AddBlockOperation(
     override val type: BlockOperationType = BlockOperationType.ADD_BLOCK,
     // Temporary ID for the new block for local frontend referencing.. Will be replaced by the server with a permanent ID.

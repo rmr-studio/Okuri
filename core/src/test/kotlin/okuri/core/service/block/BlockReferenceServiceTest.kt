@@ -35,7 +35,7 @@ class BlockReferenceServiceTest {
     // Mock resolver for CLIENT type
     private val clientResolver = object : ReferenceResolver {
         override val type = EntityType.CLIENT
-        override fun fetch(ids: Set<UUID>): Map<UUID, Referenceable> {
+        override fun fetch(ids: Set<UUID>, organisationId: UUID): Map<UUID, Referenceable> {
             // Return mock client objects
             return ids.associateWith { id ->
                 ClientFactory.createClient(id = id)
@@ -46,7 +46,7 @@ class BlockReferenceServiceTest {
     // Mock resolver for ORGANISATION type
     private val organisationResolver = object : ReferenceResolver {
         override val type = EntityType.ORGANISATION
-        override fun fetch(ids: Set<UUID>): Map<UUID, Referenceable> {
+        override fun fetch(ids: Set<UUID>, organisationId: UUID): Map<UUID, Referenceable> {
             // Return mock client objects
             return ids.associateWith { id ->
                 OrganisationFactory.createOrganisation(id = id, name = "Org-$id").toModel()
@@ -230,6 +230,7 @@ class BlockReferenceServiceTest {
     fun `findListReferences returns LAZY references with metadata only`() {
         UUID.randomUUID()
         val blockId = UUID.randomUUID()
+        val orgId = UUID.randomUUID()
 
         val client1Id = UUID.randomUUID()
         val client2Id = UUID.randomUUID()
@@ -266,7 +267,7 @@ class BlockReferenceServiceTest {
         whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
 
         val service = serviceWithResolvers()
-        val result = service.findListReferences(blockId, metadata)
+        val result = service.findListReferences(blockId, metadata, orgId)
 
         assertEquals(2, result.size)
         assertEquals(EntityType.CLIENT, result[0].entityType)
@@ -279,6 +280,7 @@ class BlockReferenceServiceTest {
     fun `findListReferences EAGER loads entities via resolvers`() {
         UUID.randomUUID()
         val blockId = UUID.randomUUID()
+        val orgId = UUID.randomUUID()
 
         val client1Id = UUID.randomUUID()
         val client2Id = UUID.randomUUID()
@@ -315,7 +317,7 @@ class BlockReferenceServiceTest {
         whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
 
         val service = serviceWithResolvers()
-        val result = service.findListReferences(blockId, metadata)
+        val result = service.findListReferences(blockId, metadata, orgId)
 
         assertEquals(2, result.size)
         assertNotNull(result[0].entity) // EAGER - entity loaded
@@ -328,6 +330,7 @@ class BlockReferenceServiceTest {
     fun `findListReferences returns MISSING warning when reference not in database`() {
         UUID.randomUUID()
         val blockId = UUID.randomUUID()
+        val orgId = UUID.randomUUID()
 
         val clientId = UUID.randomUUID()
 
@@ -343,7 +346,7 @@ class BlockReferenceServiceTest {
         whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(emptyList())
 
         val service = serviceWithResolvers()
-        val result = service.findListReferences(blockId, metadata)
+        val result = service.findListReferences(blockId, metadata, orgId)
 
         assertEquals(1, result.size)
         assertNull(result[0].id) // No database row
@@ -357,6 +360,7 @@ class BlockReferenceServiceTest {
     fun `findListReferences returns UNSUPPORTED warning when no resolver available`() {
         UUID.randomUUID()
         val blockId = UUID.randomUUID()
+        val orgId = UUID.randomUUID()
 
         val projectId = UUID.randomUUID()
 
@@ -384,7 +388,7 @@ class BlockReferenceServiceTest {
 
         // Service has no PROJECT resolver
         val service = serviceWithResolvers(listOf(clientResolver))
-        val result = service.findListReferences(blockId, metadata)
+        val result = service.findListReferences(blockId, metadata, orgId)
 
         assertEquals(1, result.size)
         assertNull(result[0].entity)
@@ -745,7 +749,7 @@ class BlockReferenceServiceTest {
         whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
 
         val service = serviceWithResolvers(listOf(clientResolver, organisationResolver))
-        val result = service.findListReferences(blockId, metadata)
+        val result = service.findListReferences(blockId, metadata, organisationId)
 
         assertEquals(3, result.size)
 
@@ -766,7 +770,7 @@ class BlockReferenceServiceTest {
     @Test
     fun `findListReferences returns MISSING for items in metadata not in database`() {
         val blockId = UUID.randomUUID()
-
+        val orgId = UUID.randomUUID()
         val client1Id = UUID.randomUUID()
         val client2Id = UUID.randomUUID()
 
@@ -796,7 +800,7 @@ class BlockReferenceServiceTest {
         whenever(blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, "\$.items")).thenReturn(rows)
 
         val service = serviceWithResolvers()
-        val result = service.findListReferences(blockId, metadata)
+        val result = service.findListReferences(blockId, metadata, orgId)
 
         assertEquals(2, result.size)
 

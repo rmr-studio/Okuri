@@ -1,6 +1,7 @@
 package okuri.core.models.client
 
-import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.entity.util.AuditableModel
 import okuri.core.enums.client.ClientType
@@ -11,8 +12,8 @@ import okuri.core.models.company.Company
 import java.time.ZonedDateTime
 import java.util.*
 
-@JsonTypeName("client")
 @Schema(requiredProperties = ["type", "id", "name", "organisationId"])
+@JsonDeserialize(using = JsonDeserializer.None::class)
 data class Client(
     override val type: EntityType = EntityType.CLIENT,
     val id: UUID,
@@ -26,7 +27,7 @@ data class Client(
     var company: Company? = null,
     var role: String? = null,
     var archived: Boolean = false,
-    
+
     // Auditing fields
     override val createdAt: ZonedDateTime? = null,
     override val updatedAt: ZonedDateTime? = null,

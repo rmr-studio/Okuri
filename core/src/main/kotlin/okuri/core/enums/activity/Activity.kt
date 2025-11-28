@@ -1,5 +1,12 @@
 package okuri.core.enums.activity
 
+import io.swagger.v3.oas.annotations.media.Schema
+
+@Schema(
+    name = "Activity",
+    description = "Enumeration of possible activities within the system.",
+    enumAsRef = true,
+)
 enum class Activity {
     LINE_ITEM,
     CLIENT,

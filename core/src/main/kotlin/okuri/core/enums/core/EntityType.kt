@@ -1,19 +1,24 @@
 package okuri.core.enums.core
 
-import com.fasterxml.jackson.annotation.JsonValue
+import io.swagger.v3.oas.annotations.media.Schema
 
-enum class EntityType(@get:JsonValue val type: String) {
-    LINE_ITEM("line_item"),
-    CLIENT("client"),
-    COMPANY("company"),
-    INVOICE("invoice"),
-    BLOCK_TREE("block_tree"),
-    REPORT("report"),
-    DOCUMENT("document"),
-    PROJECT("project"),
-    ORGANISATION("organisation"),
-    TASK("task"),
-    BLOCK_TYPE("block_type"),
-    BLOCK("block"),
-    USER("user"),
+@Schema(
+    name = "EntityType",
+    description = "Enumeration of possible entity types within the system.",
+    enumAsRef = true,
+)
+enum class EntityType {
+    LINE_ITEM,
+    CLIENT,
+    COMPANY,
+    INVOICE,
+    BLOCK_TREE,
+    REPORT,
+    DOCUMENT,
+    PROJECT,
+    ORGANISATION,
+    TASK,
+    BLOCK_TYPE,
+    BLOCK,
+    USER,
 }
