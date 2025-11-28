@@ -338,17 +338,18 @@ class BlockChildrenService(
         val affectedNewParents = mutableMapOf<UUID, MutableList<BlockChildEntity>>()
 
         operations.forEach { move ->
-            // Find and mark old edge for deletion
-            move.fromParentId?.let { oldParentId ->
-                existingChildren[oldParentId]?.find { it.childId == move.blockId }?.let { oldEdge ->
-                    toDelete.add(oldEdge)
+            // Find and mark old edge for deletion by searching all existing children
+            // This is more robust than relying on fromParentId, which may be null or incorrect
+            val oldEdge = existingChildren.values.flatten().find { it.childId == move.blockId }
 
-                    // Track siblings in old parent for renumbering
-                    if (!affectedOldParents.containsKey(oldParentId)) {
-                        affectedOldParents[oldParentId] = existingChildren[oldParentId]
-                            ?.filter { it.childId != move.blockId }
-                            ?.toMutableList() ?: mutableListOf()
-                    }
+            oldEdge?.let { edge ->
+                toDelete.add(edge)
+
+                // Track siblings in old parent for renumbering
+                if (!affectedOldParents.containsKey(edge.parentId)) {
+                    affectedOldParents[edge.parentId] = existingChildren[edge.parentId]
+                        ?.filter { it.childId != move.blockId }
+                        ?.toMutableList() ?: mutableListOf()
                 }
             }
 

@@ -19,7 +19,8 @@ data class Widget(
     val x: Int,
     val y: Int,
     val w: Int,  // width in grid columns
-    val h: Int,  // height in grid rows
+
+    val h: Int? = null,  // height in grid rows
 
     // Optional constraints
     val minW: Int? = null,

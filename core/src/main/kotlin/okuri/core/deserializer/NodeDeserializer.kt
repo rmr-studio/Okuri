@@ -19,6 +19,7 @@ class NodeDeserializer : JsonDeserializer<Node>() {
         return when (nodeType) {
             NodeType.CONTENT -> p.codec.treeToValue(node, ContentNode::class.java)
             NodeType.REFERENCE -> p.codec.treeToValue(node, ReferenceNode::class.java)
+            else -> throw IllegalArgumentException("Unknown Node type: $typeValue")
         }
     }
 }

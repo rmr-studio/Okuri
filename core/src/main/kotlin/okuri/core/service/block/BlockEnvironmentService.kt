@@ -90,6 +90,7 @@ class BlockEnvironmentService(
                 val mappings = executeOperations(
                     operations = operations,
                     block = block,
+                    existingIdMappings = allIdMappings
                 )
 
                 allIdMappings.putAll(mappings)
@@ -481,6 +482,7 @@ class BlockEnvironmentService(
     private fun executeOperations(
         operations: List<StructuralOperationRequest>,
         block: BlockEntity? = null,
+        existingIdMappings: Map<UUID, UUID> = emptyMap()
     ): Map<UUID, UUID> {
         // PHASE 1: Handle REMOVE operations (will need to cascade delete children)
         val removeOps = operations.filter { it.data.type == BlockOperationType.REMOVE_BLOCK }
@@ -545,14 +547,17 @@ class BlockEnvironmentService(
             emptyList()
         }
 
-        // Map temporary IDs to real IDs
+        // Map temporary IDs to real IDs (combine with existing mappings from previous executions)
         val idMapping = mutableMapOf<UUID, UUID>()
         addOps.zip(savedBlocks).forEach { (addOp, savedBlock) ->
             idMapping[addOp.blockId] = savedBlock.id!!
         }
 
         // Helper function to resolve IDs (temp -> real)
-        val resolveId: (UUID) -> UUID = { id -> idMapping[id] ?: id }
+        // Check local mappings first, then existing mappings from previous executions
+        val resolveId: (UUID) -> UUID = { id ->
+            idMapping[id] ?: existingIdMappings[id] ?: id
+        }
 
         // Update child additions with real IDs (resolve both child and parent)
         val resolvedChildAdditions = childAdditions.map { addition ->
@@ -622,7 +627,7 @@ class BlockEnvironmentService(
 
             }
 
-            val affectedParents = moveOps.flatMap {
+            val affectedParents = moves.flatMap {
                 listOfNotNull(
                     it.fromParentId?.let { parentId -> resolveId(parentId) },
                     it.toParentId?.let { parentId -> resolveId(parentId) }

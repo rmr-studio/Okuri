@@ -23,7 +23,8 @@ class WidgetDeserializer() : JsonDeserializer<Widget>() {
         val x = node.get("x").asInt()
         val y = node.get("y").asInt()
         val w = node.get("w").asInt()
-        val h = node.get("h").asInt()
+
+        val h = node.get("h")?.asInt()
 
         // Parse optional constraint fields
         val minW = node.get("minW")?.asInt()
