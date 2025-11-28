@@ -8,6 +8,7 @@ import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useBlockEdit } from "../../context/block-edit-provider";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useBlockFocus } from "../../context/block-focus-provider";
+import { useRenderElement } from "../../context/block-renderer-provider";
 import { useFocusSurface } from "../../hooks/use-focus-surface";
 import { isContentNode } from "../../interface/block.interface";
 import { QuickActionItem, SlashMenuItem } from "../../interface/panel.interface";
@@ -16,7 +17,6 @@ import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
 import PanelToolbar, { CustomToolbarAction } from "./toolbar/panel-toolbar";
-import { useRenderElement } from "../../context/block-renderer-provider";
 
 interface Props extends ChildNodeProps, ClassNameProps {
     id: string;
@@ -632,7 +632,7 @@ export const PanelWrapper: FC<Props> = ({
                 <div
                     ref={surfaceRef}
                     className={cn(
-                        "group flex relative flex-col rounded-sm border text-card-foreground transition-colors w-full p-4",
+                        "group flex relative flex-col rounded-sm border text-card-foreground transition-colors w-full p-4 shadow backdrop-blur-sm",
                         "break-words", // Fix for text overflow - ensure long text wraps
                         allowInsert
                             ? shouldHighlight
@@ -734,9 +734,7 @@ export const PanelWrapper: FC<Props> = ({
                     </AnimatePresence>
 
                     {/* Custom controls section (e.g., list sort/filter controls) */}
-                    {customControls && (
-                        <div className="mb-3 border-b pb-3">{customControls}</div>
-                    )}
+                    {customControls && <div className="mb-3 border-b pb-3">{customControls}</div>}
 
                     {isEditMode && block && isContentNode(block) ? (
                         <BlockForm

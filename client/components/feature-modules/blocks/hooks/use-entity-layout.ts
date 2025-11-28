@@ -1,8 +1,8 @@
 import { useAuth } from "@/components/provider/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { type BlockEnvironment } from "../interface/block.interface";
-import { EntityType } from "../interface/layout.interface";
 import { LayoutService } from "../service/layout.service";
+import { EntityType } from "@/lib/types/types";
 
 /**
  * Hook to load and manage block environment for an entity.

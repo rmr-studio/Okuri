@@ -3,7 +3,8 @@
 /* -------------------------------------------------------------------------- */
 
 import { ChildNodeProps } from "@/lib/interfaces/interface";
-import { BlockNode, BlockTree } from "./block.interface";
+import { EntityType } from "@/lib/types/types";
+import { BlockEnvironment, BlockNode, BlockTree } from "./block.interface";
 import { BlockTreeLayout } from "./layout.interface";
 
 /** Metadata describing the environment itself. */
@@ -43,20 +44,27 @@ export interface EditorEnvironment {
 }
 
 export interface BlockEnvironmentProviderProps extends ChildNodeProps {
+    /** Organisation and entity context for the environment */
     organisationId: string;
-    initialTrees?: BlockTree[];
+    entityId: string;
+    entityType: EntityType;
 
-    /** Full layout object with ID tracking for persistence */
-    blockTreeLayout?: BlockTreeLayout;
+    /** Initial block environment to load */
+    environment: BlockEnvironment;
 }
 
 /** Context contract exposed to consumers. */
 export interface BlockEnvironmentContextValue {
     environment: EditorEnvironment;
+
+    // Entity Context
     organisationId: string;
+    entityId: string;
+    entityType: EntityType;
 
     /** Full layout object with metadata */
-    blockTreeLayout?: BlockTreeLayout;
+    layout: BlockTreeLayout;
+
     /** Layout ID for persistence operations */
     layoutId?: string;
     isInitialized: boolean;

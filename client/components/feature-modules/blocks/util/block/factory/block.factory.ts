@@ -15,7 +15,7 @@ import {
     EntityReferenceMetadata,
     EntityReferencePayload,
     Metadata,
-    NodeType,
+    Node,
     Reference,
     Referenceable,
     ReferenceItem,
@@ -23,6 +23,7 @@ import {
     ReferencePayload,
     ReferenceWarning,
 } from "../../../interface/block.interface";
+import { NodeType } from "@/lib/types/types";
 
 const createMeta = (overrides?: Partial<BlockMeta>): BlockMeta => ({
     validationErrors: overrides?.validationErrors ?? [],
@@ -135,10 +136,10 @@ export const createContentNode = ({
     data?: Record<string, unknown>;
     name?: string;
     id?: string;
-    children?: BlockNode[];
+    children?: Node[];
     payloadOverride?: Metadata;
 }): BlockNode => ({
-    type: "content_node",
+    type: NodeType.CONTENT,
     block: createBlockBase({
         id,
         organisationId,
@@ -150,48 +151,7 @@ export const createContentNode = ({
     warnings: [],
 });
 
-export const createReferenceNode = ({
-    type,
-    reference,
-    block,
-    warnings,
-}: {
-    type: NodeType;
-    block: Block;
-    reference: ReferencePayload;
-    warnings?: string[];
-}): ReferenceNode => ({
-    type,
-    block,
-    reference,
-    warnings: warnings ?? [],
-});
 
-export const createEntityReference = ({
-    entities,
-}: {
-    entities: Referenceable[];
-}): EntityReferencePayload => {
-    if (entities.length === 0) {
-        throw new Error("No entities provided");
-    }
-
-    if (entities.some((entity) => entity.type === "block_tree"))
-        throw new Error("Entities contain block tree, use createBlockReference instead");
-    return {
-        type: "entity_reference",
-        reference: entities.map((entity, index) =>
-            createReference({
-                type: entity.type,
-                // todo ensure all references have valid IDs
-                // currently things like block trees dont have a unique id property
-                entityId: (entity as any).id || uuid(),
-                order: index,
-                entity,
-            })
-        ),
-    };
-};
 
 export const createBlockReference = ({ block }: { block: BlockTree }): BlockReferencePayload => {
     const reference = createReference({

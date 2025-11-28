@@ -1,5 +1,5 @@
 import { useEntityLayout } from "@/components/feature-modules/blocks/hooks/use-entity-layout";
-import { EntityType } from "@/components/feature-modules/blocks/interface/layout.interface";
+import { EntityType } from "@/lib/types/types";
 
 /**
  * Hook to load and manage block environment for a client entity.

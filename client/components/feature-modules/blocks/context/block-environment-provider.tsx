@@ -10,6 +10,7 @@ import React, {
     useState,
 } from "react";
 
+import { BlockTreeType } from "@/lib/types/types";
 import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
     BlockEnvironmentContextValue,
@@ -44,8 +45,9 @@ export const BlockEnvironmentContext = createContext<BlockEnvironmentContextValu
  */
 export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> = ({
     organisationId,
-    initialTrees,
-    blockTreeLayout,
+    entityId,
+    entityType,
+    environment: { layout: blockLayout, trees: initialTrees },
     children,
 }) => {
     const initialEnvironment = useMemo(
@@ -54,6 +56,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     );
 
     const { environment: initialEnvState } = initialEnvironment;
+    const { layout, id: layoutId } = blockLayout;
 
     const [environment, setEnvironment] = useState<EditorEnvironment>(initialEnvState);
     const environmentRef = useRef(environment);
@@ -62,10 +65,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     useEffect(() => {
         environmentRef.current = environment;
     }, [environment]);
-
-    // Derive layout from blockTreeLayout
-    const layoutForGrid = blockTreeLayout?.layout;
-    const layoutId = blockTreeLayout?.id;
 
     useEffect(() => {
         setEnvironment(initialEnvState);
@@ -150,7 +149,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 }
 
                 const tree: BlockTree = {
-                    type: "block_tree",
+                    type: BlockTreeType.block_tree,
                     root: block,
                 };
 
@@ -490,7 +489,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         const treeIndex = new Map(environment.treeIndex);
 
         const newTree: BlockTree = {
-            type: "block_tree",
+            type: BlockTreeType.block_tree,
             root: detachedNode!,
         };
 
@@ -669,8 +668,10 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         () => ({
             environment,
             organisationId,
-            initialLayout: layoutForGrid,
-            blockTreeLayout,
+            entityId,
+            entityType,
+            layout: blockLayout,
+
             layoutId,
             isInitialized,
             setIsInitialized,
@@ -694,9 +695,10 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         }),
         [
             environment,
-            layoutForGrid,
+            blockLayout,
             organisationId,
-            blockTreeLayout,
+            entityId,
+            entityType,
             layoutId,
             isInitialized,
             addBlock,

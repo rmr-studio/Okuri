@@ -1,4 +1,5 @@
-import { fromError, isResponseError } from "@/lib/util/error/error.util";
+import { EntityType } from "@/lib/types/types";
+import { formatError, fromError, isResponseError } from "@/lib/util/error/error.util";
 import { handleError, validateSession, validateUuid } from "@/lib/util/service/service.util";
 import { api } from "@/lib/util/utils";
 import { Session } from "@supabase/supabase-js";
@@ -25,8 +26,9 @@ export class LayoutService {
         session: Session | null,
         organisationId: string | undefined,
         entityId: string | undefined,
-        entityType: string
+        entityType: EntityType
     ): Promise<BlockEnvironment> {
+        console.log(entityType);
         try {
             if (!organisationId || !entityId) {
                 throw fromError({
@@ -56,13 +58,20 @@ export class LayoutService {
                 return await response.json();
             }
 
-            throw await handleError(
+            const err = await handleError(
                 response,
                 (res) => `Failed to load block environment: ${res.status} ${res.statusText}`
             );
+            console.error("Failed to load layout:", formatError(err));
+            throw err;
         } catch (error) {
-            if (isResponseError(error)) throw error;
-            throw fromError(error);
+            if (isResponseError(error)) {
+                console.error("Failed to load layout:", formatError(error));
+                throw error;
+            }
+            const err = fromError(error);
+            console.error("Failed to load layout:", formatError(err));
+            throw err;
         }
     }
 
@@ -101,13 +110,20 @@ export class LayoutService {
                 return await response.json();
             }
 
-            throw await handleError(
+            const err = await handleError(
                 response,
                 (res) => `Failed to save block layout: ${res.status} ${res.statusText}`
             );
+            console.error("Failed to save layout:", formatError(err));
+            throw err;
         } catch (error) {
-            if (isResponseError(error)) throw error;
-            throw fromError(error);
+            if (isResponseError(error)) {
+                console.error("Failed to save layout:", formatError(error));
+                throw error;
+            }
+            const err = fromError(error);
+            console.error("Failed to save layout:", formatError(err));
+            throw err;
         }
     }
 }

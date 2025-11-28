@@ -22,7 +22,7 @@ import {
 import { FC } from "react";
 import { categorizeBlockTypes, useBlockTypes } from "../../hooks/use-block-types";
 import { BlockType } from "../../interface/block.interface";
-import { EntityType } from "../../interface/layout.interface";
+import { EntityType } from "@/lib/types/types";
 
 /**
  * Props for the AddBlockDialog component

@@ -1,4 +1,4 @@
-import { EntityType } from "../interface/layout.interface";
+import { EntityType } from "@/lib/types/types";
 
 /**
  * Configuration for entity-specific block type restrictions.
@@ -21,7 +21,7 @@ export interface EntityBlockConfig {
  *
  * @example
  * // Get allowed block types for clients
- * const config = getEntityBlockConfig(EntityType.CLIENT);
+ * const config = getEntityBlockConfig(EntityType.client);
  * const canAddBlock = config.allowedBlockTypes.includes(blockTypeKey);
  */
 export const ENTITY_BLOCK_CONFIG: Record<EntityType, EntityBlockConfig> = {
@@ -36,28 +36,15 @@ export const ENTITY_BLOCK_CONFIG: Record<EntityType, EntityBlockConfig> = {
         defaultBlocks: [], // To be defined later (post-MVP)
     },
     [EntityType.ORGANISATION]: {
-        allowedBlockTypes: [
-            "reference",
-            "note",
-            "layout_container",
-            "content_block_list",
-        ],
+        allowedBlockTypes: ["reference", "note", "layout_container", "content_block_list"],
         defaultBlocks: [],
     },
     [EntityType.PROJECT]: {
-        allowedBlockTypes: [
-            "reference",
-            "note",
-            "task_list",
-            "layout_container",
-        ],
+        allowedBlockTypes: ["reference", "note", "task_list", "layout_container"],
         defaultBlocks: [],
     },
     [EntityType.INVOICE]: {
-        allowedBlockTypes: [
-            "reference",
-            "note",
-        ],
+        allowedBlockTypes: ["reference", "note"],
         defaultBlocks: [],
     },
 };
@@ -69,15 +56,15 @@ export const ENTITY_BLOCK_CONFIG: Record<EntityType, EntityBlockConfig> = {
  * @returns EntityBlockConfig with allowed block types
  *
  * @example
- * const config = getEntityBlockConfig(EntityType.CLIENT);
+ * const config = getEntityBlockConfig(EntityType.client);
  * console.log(config.allowedBlockTypes); // ["reference", "note", ...]
  */
-export const getEntityBlockConfig = (
-    entityType: EntityType
-): EntityBlockConfig => {
-    return ENTITY_BLOCK_CONFIG[entityType] || {
-        allowedBlockTypes: ["reference", "note"], // Fallback to basic types
-    };
+export const getEntityBlockConfig = (entityType: EntityType): EntityBlockConfig => {
+    return (
+        ENTITY_BLOCK_CONFIG[entityType] || {
+            allowedBlockTypes: ["reference", "note"], // Fallback to basic types
+        }
+    );
 };
 
 /**
@@ -92,10 +79,7 @@ export const getEntityBlockConfig = (
  *   // Can add task list to client
  * }
  */
-export const isBlockTypeAllowed = (
-    entityType: EntityType,
-    blockTypeKey: string
-): boolean => {
+export const isBlockTypeAllowed = (entityType: EntityType, blockTypeKey: string): boolean => {
     const config = getEntityBlockConfig(entityType);
     return config.allowedBlockTypes.includes(blockTypeKey);
 };

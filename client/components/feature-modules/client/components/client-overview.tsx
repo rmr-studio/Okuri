@@ -6,12 +6,12 @@ import { useBlockEnvironment } from "@/components/feature-modules/blocks/context
 import { useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
 import { BlockType } from "@/components/feature-modules/blocks/interface/block.interface";
-import { EntityType } from "@/components/feature-modules/blocks/interface/layout.interface";
 import { createBlockInstanceFromType } from "@/components/feature-modules/blocks/util/block/factory/instance.factory";
 import { useClient } from "@/components/feature-modules/client/hooks/useClient";
 import { BreadCrumbGroup, BreadCrumbTrail } from "@/components/ui/breadcrumb-group";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EntityType } from "@/lib/types/types";
 import { isResponseError } from "@/lib/util/error/error.util";
 import { PlusIcon, SaveIcon } from "lucide-react";
 import { useRouter } from "next/navigation";

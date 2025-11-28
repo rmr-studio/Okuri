@@ -21,14 +21,35 @@ import { useBlockFocus } from "./block-focus-provider";
 /**
  * Deep equality check for block payload data
  * Returns true if the objects are deeply equal
+ * Uses a proper deep comparison instead of JSON.stringify to avoid property ordering issues
  */
 function isPayloadEqual(a: any, b: any): boolean {
-    try {
-        return JSON.stringify(a) === JSON.stringify(b);
-    } catch (error) {
-        console.warn("Failed to compare payloads:", error);
-        return false;
+    // Handle primitive types and null
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+
+    // Handle arrays
+    if (Array.isArray(a) && Array.isArray(b)) {
+        if (a.length !== b.length) return false;
+        return a.every((item, index) => isPayloadEqual(item, b[index]));
     }
+
+    // Handle objects
+    if (typeof a === "object" && typeof b === "object") {
+        const keysA = Object.keys(a).sort();
+        const keysB = Object.keys(b).sort();
+
+        // Compare keys (order-independent)
+        if (keysA.length !== keysB.length) return false;
+        if (!keysA.every((key, index) => key === keysB[index])) return false;
+
+        // Compare values recursively
+        return keysA.every((key) => isPayloadEqual(a[key], b[key]));
+    }
+
+    // For other types (functions, symbols, etc.), use strict equality
+    return a === b;
 }
 
 export interface EditSession {
@@ -343,9 +364,9 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
                 // Commit to BlockEnvironment (using tracked version to record operation)
                 updateTrackedBlock(blockId, updatedNode);
-                console.log(`✅ Saved block ${blockId} (changes detected)`);
+                console.log(`✅ Saved block ${blockId} - changes detected and applied`);
             } else {
-                console.log(`⏭️ Skipped saving block ${blockId} (no changes detected)`);
+                console.log(`⏭️ Skipped saving block ${blockId} - no changes detected`);
             }
 
             // Clean up session and draft
@@ -427,7 +448,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
         });
 
-        console.log(`Saved ${savedCount} of ${allBlockIds.length} blocks (skipped ${allBlockIds.length - savedCount} unchanged)`);
+        console.log(`💾 Batch save completed: ${savedCount} of ${allBlockIds.length} blocks updated (${allBlockIds.length - savedCount} unchanged)`);
 
 
         // Clean up ALL sessions and drafts at once
@@ -571,7 +592,7 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     }
                 });
 
-                console.log(`Drawer: Saved ${savedCount} of ${blocksInDrawer.length} blocks (skipped ${blocksInDrawer.length - savedCount} unchanged)`);
+                console.log(`🗄️ Drawer save completed: ${savedCount} of ${blocksInDrawer.length} blocks updated (${blocksInDrawer.length - savedCount} unchanged)`);
             }
 
             // Clean up ALL sessions and drafts within the drawer tree at once

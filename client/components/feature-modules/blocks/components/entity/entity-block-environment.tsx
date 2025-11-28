@@ -3,6 +3,7 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EntityType } from "@/lib/types/types";
 import { AlertCircle, PlusIcon } from "lucide-react";
 import { FC, useMemo, useState } from "react";
 import { BlockEditProvider } from "../../context/block-edit-provider";
@@ -23,7 +24,6 @@ import {
 import { useEntityLayout } from "../../hooks/use-entity-layout";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
 import { BlockType } from "../../interface/block.interface";
-import { EntityType } from "../../interface/layout.interface";
 import { createBlockInstanceFromType } from "../../util/block/factory/instance.factory";
 import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
 import { BlockEditDrawer, EditModeIndicator } from "../forms";
@@ -81,6 +81,7 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
     wrapElement,
 }) => {
     const { environment, isLoading, error } = useEntityLayout(organisationId, entityId, entityType);
+    console.log(environment);
 
     const gridOptions = useMemo(() => {
         return environment?.layout?.layout ?? DEFAULT_WIDGET_OPTIONS;
@@ -137,8 +138,9 @@ export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
     const content = (
         <BlockEnvironmentProvider
             organisationId={organisationId}
-            initialTrees={environment.trees}
-            blockTreeLayout={environment.layout}
+            entityId={entityId}
+            entityType={entityType}
+            environment={environment}
         >
             <GridProvider initialOptions={gridOptions}>
                 <LayoutHistoryProvider>
