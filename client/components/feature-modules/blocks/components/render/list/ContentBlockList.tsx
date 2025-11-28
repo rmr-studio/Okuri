@@ -225,12 +225,6 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
 
             // Persist to backend via tracked environment
             updateTrackedBlock(id, updatedBlock);
-            console.log(
-                `💾 Persisted list configuration for ${id}:`,
-                `mode=${activeMode}`,
-                `sort=${activeSort ? `${activeSort.by} ${activeSort.dir}` : "none"}`,
-                `filters=${activeFilters.length}`
-            );
         }, 1500);
 
         // Cleanup timer on unmount
@@ -311,9 +305,6 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
 
                     // Call reorderTrackedBlock to update the environment and record operation
                     reorderTrackedBlock(active.id as string, id, targetIndex);
-                    console.log(
-                        `📋 Reordered block ${active.id} in list ${id}: ${oldIndex} → ${targetIndex}`
-                    );
                 }
             }
         },

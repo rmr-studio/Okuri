@@ -1,4 +1,4 @@
-import NewClient from "@/components/feature-modules/client/new-client";
+import NewClient from "@/components/feature-modules/client/components/new-client";
 
 const NewClientPage = () => {
     return <NewClient />;

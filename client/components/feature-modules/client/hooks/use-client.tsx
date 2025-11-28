@@ -1,9 +1,11 @@
 import { getClient } from "@/components/feature-modules/client/service/client.service";
 import { useAuth } from "@/components/provider/auth-context";
+import { AuthenticatedQueryResult } from "@/lib/interfaces/interface";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { Client } from "../interface/client.interface";
 
-export const useClient = () => {
+export const useClient = (): AuthenticatedQueryResult<Client> => {
     const { session, loading } = useAuth();
     // Extract organization name from URL params
     // Assuming the route is defined like: /dashboard/clients/:clientId

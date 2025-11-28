@@ -1,7 +1,9 @@
 "use client";
 
+import { BlockOperationType } from "@/lib/types/types";
 import { now } from "@/lib/util/utils";
 import { createContext, FC, PropsWithChildren, useCallback, useContext, useMemo } from "react";
+import { useBlockDeletionGuard } from "../hooks/use-block-deletion-guard";
 import { BlockNode } from "../interface/block.interface";
 import { StructuralOperationRequest } from "../interface/command.interface";
 import { useBlockEnvironment } from "./block-environment-provider";
@@ -52,8 +54,9 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
         getDescendants,
     } = blockEnvironment;
     const gridStack = useGrid();
-    const { trackStructuralChange } = useLayoutChange();
+    const { trackStructuralChange, trackContentChange } = useLayoutChange();
     const { recordStructuralOperation } = useLayoutHistory();
+    const { canDeleteBlock } = useBlockDeletionGuard();
 
     /**
      * Add a block using a command
@@ -69,7 +72,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
                 id: crypto.randomUUID(),
                 timestamp: now(),
                 data: {
-                    type: "ADD_BLOCK",
+                    type: BlockOperationType.ADD_BLOCK,
                     blockId: id,
                     block,
                     parentId: parentId || undefined,
@@ -90,6 +93,11 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
      */
     const removeTrackedBlock = useCallback(
         (blockId: string): void => {
+            // Check deletion guard before proceeding
+            if (!canDeleteBlock(blockId)) {
+                return; // Block is protected, abort deletion
+            }
+
             const previousParentId = getParentId(blockId) || undefined;
             const children = getDescendants(blockId);
             removeBlock(blockId);
@@ -99,7 +107,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
                 id: crypto.randomUUID(),
                 timestamp: now(),
                 data: {
-                    type: "REMOVE_BLOCK",
+                    type: BlockOperationType.REMOVE_BLOCK,
                     childrenIds: children,
                     blockId,
                     parentId: previousParentId,
@@ -109,7 +117,14 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
 
             trackStructuralChange();
         },
-        [removeBlock, trackStructuralChange, recordStructuralOperation, getParentId, getDescendants]
+        [
+            removeBlock,
+            trackStructuralChange,
+            recordStructuralOperation,
+            getParentId,
+            getDescendants,
+            canDeleteBlock,
+        ]
     );
 
     /**
@@ -125,7 +140,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
                 id: crypto.randomUUID(),
                 timestamp: now(),
                 data: {
-                    type: "MOVE_BLOCK",
+                    type: BlockOperationType.MOVE_BLOCK,
                     blockId,
                     fromParentId,
                     toParentId: targetParentId || undefined,
@@ -140,6 +155,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
 
     /**
      * Update a block using a command
+     * Content updates are tracked separately from structural changes
      */
     const updateTrackedBlock = useCallback(
         (blockId: string, updatedContent: BlockNode): void => {
@@ -150,16 +166,17 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
                 id: crypto.randomUUID(),
                 timestamp: now(),
                 data: {
-                    type: "UPDATE_BLOCK",
+                    type: BlockOperationType.UPDATE_BLOCK,
                     blockId,
                     updatedContent,
                 },
             };
             recordStructuralOperation(operation);
 
-            trackStructuralChange();
+            // Use content tracking instead of structural tracking
+            trackContentChange();
         },
-        [updateBlock, trackStructuralChange, recordStructuralOperation]
+        [updateBlock, trackContentChange, recordStructuralOperation]
     );
 
     /**
@@ -194,7 +211,7 @@ export const TrackedEnvironmentProvider: FC<PropsWithChildren> = ({ children }) 
                 id: crypto.randomUUID(),
                 timestamp: now(),
                 data: {
-                    type: "REORDER_BLOCK",
+                    type: BlockOperationType.REORDER_BLOCK,
                     blockId,
                     parentId,
                     fromIndex,

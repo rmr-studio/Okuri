@@ -1,5 +1,6 @@
 package okuri.core.models.block
 
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.node.BlockReferenceWarning
 import okuri.core.enums.core.EntityType
@@ -15,11 +16,18 @@ data class Reference(
     val entityId: UUID,
     val path: String? = null,
     val orderIndex: Int? = null,
-    // Polymorphic payload
-    // TODO: Add other entity types when developed
     @field:Schema(
-        description = "Inline, discriminated entity",
-        oneOf = [Client::class, Organisation::class, BlockTree::class]
+        oneOf = [
+            Client::class,
+            Organisation::class,
+            BlockTree::class
+        ],
+        discriminatorProperty = "type",
+        discriminatorMapping = [
+            DiscriminatorMapping(value = "CLIENT", schema = Client::class),
+            DiscriminatorMapping(value = "ORGANISATION", schema = Organisation::class),
+            DiscriminatorMapping(value = "BLOCK_TREE", schema = BlockTree::class),
+        ],
     )
     val entity: Referenceable? = null,
     val warning: BlockReferenceWarning? = null,

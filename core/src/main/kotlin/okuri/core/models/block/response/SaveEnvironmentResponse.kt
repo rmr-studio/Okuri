@@ -1,5 +1,6 @@
 package okuri.core.models.block.response
 
+import okuri.core.models.block.layout.TreeLayout
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -8,6 +9,7 @@ data class SaveEnvironmentResponse(
     val error: String? = null,
     val newVersion: Int? = null,
     val conflict: Boolean = false,
+    val layout: TreeLayout? = null,
     // If there is a conflict, Provide latest metadata
     val latestVersion: Int? = null,
     val lastModifiedBy: String? = null,

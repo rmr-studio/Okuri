@@ -1,5 +1,5 @@
 "use client";
-import { useClient } from "@/components/feature-modules/client/hooks/useClient";
+import { useClient } from "@/components/feature-modules/client/hooks/use-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

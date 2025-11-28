@@ -3,11 +3,11 @@
 import type { Client } from "@/components/feature-modules/client/interface/client.interface";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useOrganisationClients } from "@/hooks/useOrganisationClients";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useOrganisationClients } from "../../organisation/hooks/useOrganisationClients";
 import { ClientCard } from "./client-card";
 import DeleteClient from "./delete-client";
 
@@ -23,7 +23,7 @@ export default function ClientsList() {
         const filtered = clients.filter(
             (client) =>
                 client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                client.contactDetails?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                client.contact.email?.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
         setFilteredClients(filtered);

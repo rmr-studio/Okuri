@@ -7,10 +7,12 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.BlockEnvironment
+import okuri.core.models.block.request.HydrateBlocksRequest
 import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
+import okuri.core.models.block.response.internal.BlockHydrationResult
 import okuri.core.service.block.BlockEnvironmentService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -24,7 +26,7 @@ import java.util.*
     description = "Endpoints for managing block environments, layouts and all block related operations"
 )
 class BlockEnvironmentController(
-    private val environmentService: BlockEnvironmentService
+    private val environmentService: BlockEnvironmentService,
 ) {
     @PostMapping("/")
     @Operation(
@@ -61,20 +63,41 @@ class BlockEnvironmentController(
         return ResponseEntity.status(HttpStatus.OK).body(response)
     }
 
-    @GetMapping("/type/{type}/id/{entityId}")
+    @GetMapping("organisation/{organisationId}/type/{type}/id/{entityId}")
     @Operation(
         summary = "Get Block Environment",
-        description = "Retrieves the block environment for the specified page"
+        description = "Retrieves the block environment for the specified entity. Creates a default layout if none exists (lazy initialization)."
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Environment retrieved successfully"),
-        ApiResponse(responseCode = "404", description = "Block environment not found"),
-        ApiResponse(responseCode = "401", description = "Unauthorized access")
+        ApiResponse(responseCode = "404", description = "Entity not found"),
+        ApiResponse(responseCode = "401", description = "Unauthorized access"),
+        ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions")
     )
     fun getBlockEnvironment(
+        @PathVariable organisationId: UUID,
         @PathVariable type: EntityType,
         @PathVariable entityId: UUID,
     ): ResponseEntity<BlockEnvironment> {
-        TODO()
+        val environment = environmentService.loadBlockEnvironment(entityId, type, organisationId)
+        return ResponseEntity.ok(environment)
+    }
+
+    @PostMapping("/hydrate")
+    @Operation(
+        summary = "Hydrate Blocks",
+        description = "Resolves entity references for one or more blocks in a single batched request. " +
+                "This is used for progressive loading of entity data without fetching everything upfront. " +
+                "Only blocks with entity reference metadata will be hydrated; other blocks are skipped."
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Blocks hydrated successfully"),
+        ApiResponse(responseCode = "400", description = "Invalid request data"),
+        ApiResponse(responseCode = "401", description = "Unauthorized access"),
+        ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions")
+    )
+    fun hydrateBlocks(@Valid @RequestBody request: HydrateBlocksRequest): ResponseEntity<Map<UUID, BlockHydrationResult>> {
+        val results = environmentService.hydrateEnvironment(request)
+        return ResponseEntity.ok(results)
     }
 }

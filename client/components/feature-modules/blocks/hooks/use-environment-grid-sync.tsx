@@ -180,7 +180,6 @@ export const useEnvironmentGridSync = (_parentId: string | null = null) => {
                     });
 
                     const isProgrammaticUpdate = widgetBeforeChangeRef.current.size === 0;
-
                     // Only track as layout change if no parent changes occurred
                     // (parent changes are structural and handled separately)
                     // and the update was not part of an active drag/resize (handled on unlock)

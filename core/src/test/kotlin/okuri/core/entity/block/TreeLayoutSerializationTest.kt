@@ -42,7 +42,7 @@ class TreeLayoutSerializationTest {
                     "y": 0,
                     "w": 12,
                     "h": 4,
-                    "content": "{\"id\":\"6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6\",\"key\":\"content_block_list\",\"renderType\":\"list\",\"blockType\":\"content_node\"}"
+                    "content": "{\"id\":\"6f8c09fa-1b7e-4c41-aaec-4538f3ff34a6\",\"key\":\"content_block_list\",\"renderType\":\"LIST\",\"blockType\":\"CONTENT\"}"
                 },
                 {
                     "id": "7885d99e-0ef7-4077-9b83-f1fb75cda3ab",
@@ -71,7 +71,7 @@ class TreeLayoutSerializationTest {
                                 "y": 0,
                                 "w": 12,
                                 "h": 4,
-                                "content": "{\"id\":\"0b720c22-dfe0-46ad-b440-fc2ed39be364\",\"key\":\"note\",\"renderType\":\"component\",\"blockType\":\"content_node\"}"
+                                "content": "{\"id\":\"0b720c22-dfe0-46ad-b440-fc2ed39be364\",\"key\":\"note\",\"renderType\":\"COMPONENT\",\"blockType\":\"CONTENT\"}"
                             },
                             {
                                 "id": "373bc593-7e21-4877-a34f-e967085062a1",
@@ -79,11 +79,11 @@ class TreeLayoutSerializationTest {
                                 "y": 4,
                                 "w": 12,
                                 "h": 4,
-                                "content": "{\"id\":\"373bc593-7e21-4877-a34f-e967085062a1\",\"key\":\"note\",\"renderType\":\"component\",\"blockType\":\"content_node\"}"
+                                "content": "{\"id\":\"373bc593-7e21-4877-a34f-e967085062a1\",\"key\":\"note\",\"renderType\":\"COMPONENT\",\"blockType\":\"CONTENT\"}"
                             }
                         ]
                     },
-                    "content": "{\"id\":\"7885d99e-0ef7-4077-9b83-f1fb75cda3ab\",\"key\":\"layout_container\",\"renderType\":\"container\",\"blockType\":\"content_node\"}"
+                    "content": "{\"id\":\"7885d99e-0ef7-4077-9b83-f1fb75cda3ab\",\"key\":\"layout_container\",\"renderType\":\"CONTAINER\",\"blockType\":\"CONTENT\"}"
                 }
             ]
         }

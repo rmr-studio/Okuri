@@ -12,14 +12,12 @@ export const ClientAddressFormStep: FC<ClientStepFormProps> = ({
 }) => {
     const onNext = async () => {
         // Validate required address fields
-        console.log(form.getValues());
-
         const isValid = await form.trigger([
-            "contactDetails.address",
-            "contactDetails.address.city",
-            "contactDetails.address.state",
-            "contactDetails.address.postalCode",
-            "contactDetails.address.country",
+            "contact.address",
+            "contact.address.city",
+            "contact.address.state",
+            "contact.address.postalCode",
+            "contact.address.country",
         ]);
         if (!isValid) {
             toast.error("Please fill in all required address fields");
@@ -30,7 +28,7 @@ export const ClientAddressFormStep: FC<ClientStepFormProps> = ({
     };
 
     const onCountrySelect = (fieldPath: string, country: Country) => {
-        form.setValue("contactDetails.address.country", country);
+        form.setValue("contact.address.country", country);
     };
 
     return (
@@ -42,7 +40,7 @@ export const ClientAddressFormStep: FC<ClientStepFormProps> = ({
                     and official documents
                 </p>
                 <AddressForm
-                    basePath="contactDetails.address"
+                    basePath="contact.address"
                     control={form.control}
                     setValue={form.setValue}
                     defaultCountry="AU"

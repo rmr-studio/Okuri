@@ -1,4 +1,5 @@
-import { now, uniqueId } from "@/lib/util/utils";
+import { now } from "@/lib/util/utils";
+import { v4 as uuid } from "uuid";
 import {
     BlockComponentNode,
     BlockDisplay,
@@ -52,7 +53,7 @@ const createBaseBlockType = ({
     display: BlockDisplay;
     nesting?: BlockTypeNesting | null;
 }): BlockType => ({
-    id: uniqueId(`type-${key}`),
+    id: uuid(),
     key,
     version: 1,
     name,

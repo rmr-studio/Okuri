@@ -1,40 +1,49 @@
 package okuri.core.models.block.tree
 
-import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.swagger.v3.oas.annotations.media.DiscriminatorMapping
 import io.swagger.v3.oas.annotations.media.Schema
+import okuri.core.deserializer.NodeDeserializer
 import okuri.core.enums.block.node.NodeType
 import okuri.core.models.block.Block
 
 @Schema(hidden = true)
+@JsonDeserialize(using = NodeDeserializer::class)
 sealed interface Node {
     val type: NodeType
     val block: Block
     val warnings: List<String>
 }
 
-@JsonTypeName("content_node")
+@Schema(
+    name = "ContentNode",
+    description = "Content node containing a block with optional children"
+)
+@JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None::class)
 data class ContentNode(
     override val type: NodeType = NodeType.CONTENT,
     override val block: Block,
     override val warnings: List<String> = emptyList(),
-    // All child blocks, given a block and its associated block type supports nesting
     val children: List<Node>? = null,
 ) : Node
 
 
-@JsonTypeName("reference_node")
+@Schema(
+    name = "ReferenceNode",
+    description = "Reference node containing a block with entity or block tree references"
+)
+@JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None::class)
 data class ReferenceNode(
     override val type: NodeType = NodeType.REFERENCE,
     override val block: Block,
     override val warnings: List<String> = emptyList(),
     @field:Schema(
-        oneOf = [EntityReference::class, BlockTreeReference::class],
         discriminatorProperty = "type",
         discriminatorMapping = [
-            DiscriminatorMapping(value = "entity_reference", schema = EntityReference::class),
-            DiscriminatorMapping(value = "block_reference", schema = BlockTreeReference::class),
-        ]
+            DiscriminatorMapping(value = "ENTITY", schema = EntityReference::class),
+            DiscriminatorMapping(value = "BLOCK", schema = BlockTreeReference::class),
+        ],
+        oneOf = [EntityReference::class, BlockTreeReference::class]
     )
     val reference: ReferencePayload
 ) : Node

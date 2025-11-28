@@ -19,17 +19,29 @@ interface LayoutHistoryContextValue {
     /** Track that a structural change occurred (add, remove, move blocks). */
     markStructuralChange: () => void;
 
+    /** Track that a content change occurred (update block payload). */
+    markContentChange: () => void;
+
     /** Reset all tracked change counters (typically after a successful save or discard). */
     clearHistory: () => void;
 
     /** Whether there are pending layout changes. */
     hasUnsavedChanges: boolean;
 
+    /** Whether there are pending layout/structural changes (not content). */
+    hasLayoutChanges: boolean;
+
+    /** Whether there are pending content changes. */
+    hasContentChanges: boolean;
+
     /** Optional count of tracked layout changes for UI feedback. */
     layoutChangeCount: number;
 
     /** Optional count of tracked structural changes for UI feedback. */
     structuralChangeCount: number;
+
+    /** Optional count of tracked content changes for UI feedback. */
+    contentChangeCount: number;
 
     /** Store the snapshot that represents the last persisted state. */
     setBaselineSnapshot: (snapshot: LayoutSnapshot) => void;
@@ -49,6 +61,47 @@ interface LayoutHistoryContextValue {
 
 const LayoutHistoryContext = createContext<LayoutHistoryContextValue | undefined>(undefined);
 
+/**
+ * Checks if a block ID represents a placeholder block.
+ * Placeholder blocks have IDs ending with '-placeholder' and are used to keep subgrids active.
+ */
+function isPlaceholderId(id: string | undefined): boolean {
+    return id?.endsWith("-placeholder") ?? false;
+}
+
+/**
+ * Checks if a structural operation involves any placeholder blocks.
+ * Placeholder operations should not be sent to the backend as they're not real blocks.
+ */
+function isPlaceholderOperation(operation: StructuralOperationRequest): boolean {
+    const { data } = operation;
+
+    // Check the main blockId
+    if ("blockId" in data && isPlaceholderId(data.blockId)) {
+        return true;
+    }
+
+    // Check parent IDs (parentId, fromParentId, toParentId)
+    if ("parentId" in data && isPlaceholderId(data.parentId)) {
+        return true;
+    }
+    if ("fromParentId" in data && isPlaceholderId(data.fromParentId)) {
+        return true;
+    }
+    if ("toParentId" in data && isPlaceholderId(data.toParentId)) {
+        return true;
+    }
+
+    // Check childrenIds array (for REMOVE_BLOCK operations)
+    if ("childrenIds" in data && Array.isArray(data.childrenIds)) {
+        if (data.childrenIds.some((childId) => isPlaceholderId(childId))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export const useLayoutHistory = (): LayoutHistoryContextValue => {
     const context = useContext(LayoutHistoryContext);
     if (!context) {
@@ -60,7 +113,10 @@ export const useLayoutHistory = (): LayoutHistoryContextValue => {
 export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
     const [layoutChangeCount, setLayoutChangeCount] = useState(0);
     const [structuralChangeCount, setStructuralChangeCount] = useState(0);
+    const [contentChangeCount, setContentChangeCount] = useState(0);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [hasLayoutChanges, setHasLayoutChanges] = useState(false);
+    const [hasContentChanges, setHasContentChanges] = useState(false);
 
     const baselineSnapshotRef = useRef<LayoutSnapshot | null>(null);
     const structuralOperationsRef = useRef<StructuralOperationRequest[]>([]);
@@ -68,11 +124,19 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
     const markLayoutChange = useCallback(() => {
         setLayoutChangeCount((prev) => prev + 1);
         setHasUnsavedChanges(true);
+        setHasLayoutChanges(true);
     }, []);
 
     const markStructuralChange = useCallback(() => {
         setStructuralChangeCount((prev) => prev + 1);
         setHasUnsavedChanges(true);
+        setHasLayoutChanges(true);
+    }, []);
+
+    const markContentChange = useCallback(() => {
+        setContentChangeCount((prev) => prev + 1);
+        setHasUnsavedChanges(true);
+        setHasContentChanges(true);
     }, []);
 
     const recordStructuralOperation = useCallback((operation: StructuralOperationRequest) => {
@@ -80,7 +144,10 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
     }, []);
 
     const getStructuralOperations = useCallback(() => {
-        return [...structuralOperationsRef.current];
+        // Filter out operations involving placeholder blocks (they're not real blocks)
+        return structuralOperationsRef.current.filter((operation) => {
+            return !isPlaceholderOperation(operation);
+        });
     }, []);
 
     const clearStructuralOperations = useCallback(() => {
@@ -90,7 +157,10 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
     const clearHistory = useCallback(() => {
         setLayoutChangeCount(0);
         setStructuralChangeCount(0);
+        setContentChangeCount(0);
         setHasUnsavedChanges(false);
+        setHasLayoutChanges(false);
+        setHasContentChanges(false);
         clearStructuralOperations();
     }, [clearStructuralOperations]);
 
@@ -104,10 +174,14 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
         () => ({
             markLayoutChange,
             markStructuralChange,
+            markContentChange,
             clearHistory,
             hasUnsavedChanges,
+            hasLayoutChanges,
+            hasContentChanges,
             layoutChangeCount,
             structuralChangeCount,
+            contentChangeCount,
             setBaselineSnapshot,
             getBaselineSnapshot,
             recordStructuralOperation,
@@ -117,10 +191,14 @@ export const LayoutHistoryProvider: FC<PropsWithChildren> = ({ children }) => {
         [
             markLayoutChange,
             markStructuralChange,
+            markContentChange,
             clearHistory,
             hasUnsavedChanges,
+            hasLayoutChanges,
+            hasContentChanges,
             layoutChangeCount,
             structuralChangeCount,
+            contentChangeCount,
             setBaselineSnapshot,
             getBaselineSnapshot,
             recordStructuralOperation,

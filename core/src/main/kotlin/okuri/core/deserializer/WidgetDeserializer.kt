@@ -1,10 +1,13 @@
-package okuri.core.models.block.layout
+package okuri.core.deserializer
 
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import okuri.core.models.block.layout.RenderContent
+import okuri.core.models.block.layout.TreeLayout
+import okuri.core.models.block.layout.Widget
 
 /**
  * Custom deserializer for Widget that handles the stringified content field from Gridstack.
@@ -20,7 +23,8 @@ class WidgetDeserializer() : JsonDeserializer<Widget>() {
         val x = node.get("x").asInt()
         val y = node.get("y").asInt()
         val w = node.get("w").asInt()
-        val h = node.get("h").asInt()
+
+        val h = node.get("h")?.asInt()
 
         // Parse optional constraint fields
         val minW = node.get("minW")?.asInt()

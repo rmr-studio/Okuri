@@ -15,8 +15,6 @@ interface EditorPanelCallackProps {
     insertBlock: (node: BlockNode, parentId: string, index: number | null) => void;
     removeBlock: (id: string) => void;
     getParent: (id: string) => BlockNode | null;
-    moveBlockUp: (id: string) => void;
-    moveBlockDown: (id: string) => void;
 }
 
 export const editorPanel = ({
@@ -24,8 +22,6 @@ export const editorPanel = ({
     insertBlock,
     removeBlock,
     getParent,
-    moveBlockUp,
-    moveBlockDown,
 }: EditorPanelCallackProps) => {
     const wrapper = useCallback(
         ({ children, content, widget }: WrapElementProvider): ReactNode => {
@@ -78,7 +74,7 @@ export const editorPanel = ({
                 </PanelWrapper>
             );
         },
-        [getBlock, insertBlock, removeBlock, getParent, moveBlockUp, moveBlockDown]
+        [getBlock, insertBlock, removeBlock, getParent]
     );
 
     return { wrapper };

@@ -10,6 +10,7 @@ import React, {
     useState,
 } from "react";
 
+import { EntityType } from "@/lib/types/types";
 import { BlockNode, BlockTree, isContentNode } from "../interface/block.interface";
 import {
     BlockEnvironmentContextValue,
@@ -44,8 +45,9 @@ export const BlockEnvironmentContext = createContext<BlockEnvironmentContextValu
  */
 export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> = ({
     organisationId,
-    initialTrees,
-    blockTreeLayout,
+    entityId,
+    entityType,
+    environment: { layout: blockLayout, trees: initialTrees },
     children,
 }) => {
     const initialEnvironment = useMemo(
@@ -54,6 +56,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     );
 
     const { environment: initialEnvState } = initialEnvironment;
+    const { layout, id: layoutId } = blockLayout;
 
     const [environment, setEnvironment] = useState<EditorEnvironment>(initialEnvState);
     const environmentRef = useRef(environment);
@@ -62,10 +65,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     useEffect(() => {
         environmentRef.current = environment;
     }, [environment]);
-
-    // Derive layout from blockTreeLayout
-    const layoutForGrid = blockTreeLayout?.layout;
-    const layoutId = blockTreeLayout?.id;
 
     useEffect(() => {
         setEnvironment(initialEnvState);
@@ -150,7 +149,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
                 }
 
                 const tree: BlockTree = {
-                    type: "block_tree",
+                    type: EntityType.BLOCK_TREE,
                     root: block,
                 };
 
@@ -490,7 +489,7 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         const treeIndex = new Map(environment.treeIndex);
 
         const newTree: BlockTree = {
-            type: "block_tree",
+            type: EntityType.BLOCK_TREE,
             root: detachedNode!,
         };
 
@@ -610,12 +609,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         setEnvironment(createEmptyEnvironment(organisationId));
     }, [organisationId]);
 
-    /** Move a block up in its parent's children array (for lists) */
-    const moveBlockUp = useCallback((blockId: string) => {}, []);
-
-    /** Move a block down in its parent's children array (for lists) */
-    const moveBlockDown = useCallback((blockId: string) => {}, []);
-
     /**
      * Reorder a block to a specific index within its parent's children array.
      * Used by dnd-kit list components for drag-and-drop reordering.
@@ -674,8 +667,11 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
     const value = useMemo<BlockEnvironmentContextValue>(
         () => ({
             environment,
-            initialLayout: layoutForGrid,
-            blockTreeLayout,
+            organisationId,
+            entityId,
+            entityType,
+            layout: blockLayout,
+
             layoutId,
             isInitialized,
             setIsInitialized,
@@ -692,8 +688,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             getDescendants,
             isDescendantOf,
             updateHierarchy,
-            moveBlockUp,
-            moveBlockDown,
             reorderBlock,
             clear,
             hydrateEnvironment,
@@ -701,8 +695,10 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
         }),
         [
             environment,
-            layoutForGrid,
-            blockTreeLayout,
+            blockLayout,
+            organisationId,
+            entityId,
+            entityType,
             layoutId,
             isInitialized,
             addBlock,
@@ -718,8 +714,6 @@ export const BlockEnvironmentProvider: React.FC<BlockEnvironmentProviderProps> =
             getDescendants,
             isDescendantOf,
             updateHierarchy,
-            moveBlockUp,
-            moveBlockDown,
             reorderBlock,
             clear,
             hydrateEnvironment,

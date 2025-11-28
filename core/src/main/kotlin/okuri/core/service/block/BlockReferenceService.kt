@@ -9,10 +9,13 @@ import okuri.core.enums.core.EntityType
 import okuri.core.models.block.Reference
 import okuri.core.models.block.metadata.BlockReferenceMetadata
 import okuri.core.models.block.metadata.EntityReferenceMetadata
+import okuri.core.models.block.response.internal.BlockHydrationResult
 import okuri.core.repository.block.BlockReferenceRepository
 import okuri.core.service.block.resolvers.ReferenceResolver
 import org.springframework.stereotype.Service
 import java.util.*
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 /**
  * Service for managing block links.
@@ -71,7 +74,7 @@ class BlockReferenceService(
         if (toSave.isNotEmpty()) blockReferenceRepository.saveAll(toSave)
     }
 
-    fun findListReferences(blockId: UUID, meta: EntityReferenceMetadata): List<Reference> {
+    fun findListReferences(blockId: UUID, meta: EntityReferenceMetadata, organisationId: UUID): List<Reference> {
         val rows = blockReferenceRepository.findByBlockIdAndPathPrefix(blockId, meta.path)
         val byPath = rows.associateBy { it.path }
         val base = meta.items.mapIndexed { idx, item ->
@@ -91,7 +94,7 @@ class BlockReferenceService(
         val byType = base.filter { it.id != null }.groupBy { it.entityType }
         val resolvedByType = byType.mapNotNull { (t, refs) ->
             val resolver = resolverByType[t] ?: return@mapNotNull null
-            t to resolver.fetch(refs.map { it.entityId }.toSet())
+            t to resolver.fetch(refs.map { it.entityId }.toSet(), organisationId)
         }.toMap()
 
         return base.map { r ->
@@ -107,6 +110,57 @@ class BlockReferenceService(
                     entity = ent,
                     orderIndex = r.orderIndex,
                     warning = null
+                )
+            }
+        }
+    }
+
+    fun hydrateBlockReferences(blocks: Map<UUID, BlockEntity>, organisationId: UUID): Map<UUID, BlockHydrationResult> {
+        // 2. Filter to only entity reference blocks and collect all entity IDs by type
+        val referencesByType = mutableMapOf<EntityType, MutableSet<UUID>>()
+        val blockMetadata = mutableMapOf<UUID, EntityReferenceMetadata>()
+
+        blocks.forEach { (blockId, block) ->
+            val payload = block.payload
+            if (payload is EntityReferenceMetadata) {
+                blockMetadata[blockId] = payload
+                payload.items.forEach { item ->
+                    referencesByType
+                        .getOrPut(item.type) { mutableSetOf() }
+                        .add(item.id)
+                }
+            }
+        }
+        // 3. Batch fetch all entities by type using resolvers
+        val resolvedEntities = referencesByType.mapValues { (entityType, ids) ->
+            resolverByType[entityType]?.fetch(ids, organisationId) ?: emptyMap()
+        }
+
+        // 4. Build hydration results for each block
+        return blockMetadata.mapValues { (blockId, meta) ->
+            try {
+                val references = meta.items.mapIndexed { idx, item ->
+                    val entity = resolvedEntities[item.type]?.get(item.id)
+                    Reference(
+                        id = null, // Not using persisted reference rows for hydration
+                        entityType = item.type,
+                        entityId = item.id,
+                        entity = entity,
+                        orderIndex = idx,
+                        warning = if (entity == null) BlockReferenceWarning.MISSING else null
+                    )
+                }
+
+                BlockHydrationResult(
+                    blockId = blockId,
+                    references = references,
+                    error = null
+                )
+            } catch (e: Exception) {
+                BlockHydrationResult(
+                    blockId = blockId,
+                    references = emptyList(),
+                    error = "Failed to hydrate block: ${e.message}"
                 )
             }
         }

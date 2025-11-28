@@ -1,10 +1,15 @@
-import { GridItemHTMLElement, GridStackOptions, GridStackWidget } from "gridstack";
+import { NodeType, RenderType } from "@/lib/types/types";
+import { GridItemHTMLElement, GridStackWidget } from "gridstack";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useGrid } from "../../context/grid-provider";
 import { useLayoutChange } from "../../context/layout-change-provider";
-import { isContentNode, TreeLayout, Widget } from "../../interface/block.interface";
-import { WidgetRenderStructure } from "../../interface/render.interface";
+import {
+    isContentNode,
+    TreeLayout,
+    Widget,
+    WidgetRenderStructure,
+} from "../../interface/block.interface";
 import { getDefaultDimensions } from "../../util/block/block.util";
 import { findNodeById, getTreeId } from "../../util/environment/environment.util";
 import { isList } from "../../util/list/list.util";
@@ -26,17 +31,19 @@ function buildLayoutWidgetMap(layout?: TreeLayout): {
 
     const processChildren = (children: Widget[], parentId?: string) => {
         children.forEach((widget) => {
-            if (widget.id) {
-                widgetMap.set(widget.id, {
-                    ...widget,
-                    content: JSON.stringify(widget.content || {}),
-                });
-                if (parentId) {
-                    parentMap.set(widget.id, parentId);
-                }
+            if (!widget.content || !widget.id) return;
+
+            widgetMap.set(widget.id, {
+                ...widget,
+                content: widget.content,
+            });
+
+            if (parentId) {
+                parentMap.set(widget.id, parentId);
             }
+
             // Recursively process subgrid children
-            if (widget.subGridOpts?.children && widget.id) {
+            if (widget.subGridOpts?.children) {
                 processChildren(widget.subGridOpts.children, widget.id);
             }
         });
@@ -70,14 +77,14 @@ export const WidgetEnvironmentSync: React.FC = () => {
         environment: blockEnvironment,
         isInitialized,
         setIsInitialized,
-        blockTreeLayout,
+        layout,
     } = useBlockEnvironment();
     const { trackStructuralChange } = useLayoutChange();
 
     // Build a map of widget configurations from the provided layout
     const { widgetMap: layoutWidgetMap, parentMap: layoutParentMap } = useMemo(
-        () => buildLayoutWidgetMap(blockTreeLayout?.layout),
-        [blockTreeLayout?.layout]
+        () => buildLayoutWidgetMap(layout?.layout),
+        [layout?.layout]
     );
 
     // Track ALL block IDs in the environment (not just top-level)
@@ -211,13 +218,13 @@ export const WidgetEnvironmentSync: React.FC = () => {
             meta = {
                 id: id,
                 key: blockNode.block.type.key,
-                renderType: "component",
+                renderType: RenderType.COMPONENT,
                 blockType: blockNode.type,
             };
 
             // Special handling for list/container blocks blocks => We render them differently
             if (isList(blockNode)) {
-                meta.renderType = "list";
+                meta.renderType = RenderType.LIST;
             } else {
                 // Check if this block should have a subgrid (for blocks with wildcard slots)
                 const renderStructure = blockNode.block.type.display.render;
@@ -226,7 +233,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
                 );
 
                 if (hasWildcards && isContentNode(blockNode)) {
-                    meta.renderType = "container";
+                    meta.renderType = RenderType.CONTAINER;
 
                     // Add subgrid configuration - children will be added separately by the sync logic
                     // Include a placeholder widget to keep the subgrid active when empty
@@ -282,7 +289,7 @@ export const WidgetEnvironmentSync: React.FC = () => {
             // Dont render list item widgets directly - they are part of the list's rendering
             const parsedParentMeta = parseContent(parent);
             if (!parsedParentMeta) return;
-            if (parsedParentMeta.renderType === "list") {
+            if (parsedParentMeta.renderType === RenderType.LIST) {
                 return;
             }
 
@@ -314,8 +321,8 @@ export const WidgetEnvironmentSync: React.FC = () => {
             const meta: WidgetRenderStructure = {
                 id: id,
                 key: "error",
-                renderType: "component",
-                blockType: "error",
+                renderType: RenderType.COMPONENT,
+                blockType: NodeType.CONTENT,
             };
 
             // Resolve parent node (if any) to place error widget in the correct grid

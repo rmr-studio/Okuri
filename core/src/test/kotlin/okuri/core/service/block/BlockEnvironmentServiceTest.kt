@@ -2,17 +2,11 @@ package okuri.core.service.block
 
 import io.github.oshai.kotlinlogging.KLogger
 import okuri.core.configuration.auth.OrganisationSecurity
-import okuri.core.entity.block.BlockChildEntity
 import okuri.core.entity.block.BlockEntity
-import okuri.core.entity.block.BlockTreeLayoutEntity
 import okuri.core.enums.block.structure.BlockValidationScope
 import okuri.core.enums.organisation.OrganisationRoles
-import okuri.core.models.block.request.StructuralOperationRequest
 import okuri.core.models.block.response.internal.CascadeRemovalResult
 import okuri.core.models.block.response.internal.MovePreparationResult
-import okuri.core.repository.block.BlockChildrenRepository
-import okuri.core.repository.block.BlockRepository
-import okuri.core.repository.block.BlockTreeLayoutRepository
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
 import okuri.core.service.util.OrganisationRole
@@ -67,6 +61,9 @@ class BlockEnvironmentServiceTest {
 
     @MockitoBean
     private lateinit var activityService: ActivityService
+
+    @MockitoBean
+    private lateinit var defaultBlockEnvironmentService: DefaultBlockEnvironmentService
 
     @MockitoBean
     private lateinit var logger: KLogger

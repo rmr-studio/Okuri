@@ -1,17 +1,19 @@
 package okuri.core.enums.block.node
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonValue
+import io.swagger.v3.oas.annotations.media.Schema
 
-enum class NodeType(@get:JsonValue val type: String) {
-    REFERENCE("reference_node"),
-    CONTENT("content_node");
+@Schema(enumAsRef = true)
+enum class NodeType {
+    REFERENCE,
+    CONTENT,
 
-    companion object {
-        @JsonCreator
-        @JvmStatic
-        fun from(value: String): NodeType =
-            entries.firstOrNull { it.type.equals(value, ignoreCase = true) }
-                ?: error("Unknown NodeType: $value")
-    }
+    @Schema(
+        description = """
+           This type is used to flag nodes that could not be properly constructed due to issues 
+           such as missing data or incompatible formats.
+           This enum is only used locally in the frontend client and is never serialized or sent to the backend.
+        """
+    )
+    @Suppress("unused")
+    ERROR
 }

@@ -9,11 +9,7 @@ import { ClientStepFormProps } from "./client-form";
 export const ClientDetailsFormStep: FC<ClientStepFormProps> = ({ form, handleNextPage }) => {
     const onNext = async () => {
         // Handle internal validation for all fields specific to this step
-        const isValid = await form.trigger([
-            "name",
-            "contactDetails.email",
-            "contactDetails.phone",
-        ]);
+        const isValid = await form.trigger(["name", "contact.email", "contact.phone"]);
         if (!isValid) {
             toast.error("Some fields are missing required values");
             return;
@@ -48,10 +44,10 @@ export const ClientDetailsFormStep: FC<ClientStepFormProps> = ({ form, handleNex
 
             <FormField
                 control={form.control}
-                name="contactDetails.email"
+                name="contact.email"
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="font-semibold">Email</FormLabel>
+                        <FormLabel className="font-semibold">Email *</FormLabel>
                         <FormControl>
                             <Input {...field} type="email" placeholder="client@example.com" />
                         </FormControl>
@@ -62,7 +58,7 @@ export const ClientDetailsFormStep: FC<ClientStepFormProps> = ({ form, handleNex
 
             <FormField
                 control={form.control}
-                name="contactDetails.phone"
+                name="contact.phone"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel className="font-semibold">Phone</FormLabel>

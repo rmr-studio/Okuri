@@ -1,16 +1,20 @@
 package okuri.core.models.block.metadata
 
 import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.swagger.v3.oas.annotations.media.Schema
 import okuri.core.enums.block.structure.BlockMetadataType
 import okuri.core.models.common.json.JsonObject
 
-@JsonTypeName("block_content")
+@JsonTypeName("content")
+@JsonDeserialize(using = JsonDeserializer.None::class)
 data class BlockContentMetadata(
     @param:Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
     var data: JsonObject = emptyMap(),
     override val type: BlockMetadataType = BlockMetadataType.CONTENT,
     override val meta: BlockMeta = BlockMeta(),
+    override val deletable: Boolean = true,
     val listConfig: BlockListConfiguration? = null
 ) : Metadata
 

@@ -90,21 +90,3 @@ export const ListItem = <T extends unknown>({
         </div>
     );
 };
-
-// TODO Give each list item a dedicated editor panel
-//  if (canMoveUp(parent, id)) {
-//             quickActions.unshift({
-//                 id: "move-up",
-//                 label: "Move up",
-//                 shortcut: "⌘↑",
-//                 onSelect: () => moveBlockUp(id),
-//             });
-//         }
-//         if (canMoveDown(parent, id)) {
-//             quickActions.splice(1, 0, {
-//                 id: "move-down",
-//                 label: "Move down",
-//                 shortcut: "⌘↓",
-//                 onSelect: () => moveBlockDown(id),
-//             });
-//         }

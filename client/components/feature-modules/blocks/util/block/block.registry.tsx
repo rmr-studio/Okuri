@@ -18,6 +18,7 @@ import { ButtonBlock } from "../../components/primitive/block.button";
 import { LayoutContainerBlock } from "../../components/primitive/block.container";
 import { ListBlock } from "../../components/primitive/block.list";
 import { TextBlock } from "../../components/primitive/block.text";
+import { ReferenceBlock } from "../../components/blocks/reference-block";
 import { ComponentType } from "../../interface/block.interface";
 
 export interface RenderElementMetadata<T extends ZodTypeAny> {
@@ -45,6 +46,7 @@ const baseBlockElements: Record<ComponentType, RenderElementMetadata<ZodTypeAny>
 
 export const blockElements = {
     ...baseBlockElements,
+    REFERENCE: ReferenceBlock,
     FALLBACK: FallbackBlock,
     MISSING_BLOCK_ERROR: MissingBlockError,
 } satisfies BlockElementMap;

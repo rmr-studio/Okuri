@@ -14,13 +14,12 @@ import { PlusIcon, SaveIcon, TypeIcon } from "lucide-react";
 import React, { FC, Fragment, useEffect, useMemo, useState } from "react";
 import "../../styles/gridstack-custom.css";
 
-import { BlockFocusProvider } from "@/components/feature-modules/blocks/context/block-focus-provider";
-import { RenderElementProvider } from "@/components/feature-modules/blocks/context/block-renderer-provider";
 import { GridContainerProvider } from "@/components/feature-modules/blocks/context/grid-container-provider";
 import { GridProvider, useGrid } from "@/components/feature-modules/blocks/context/grid-provider";
 import { LayoutChangeProvider } from "@/components/feature-modules/blocks/context/layout-change-provider";
 import { useTrackedEnvironment } from "@/components/feature-modules/blocks/context/tracked-environment-provider";
-import { BlockTreeLayout, EntityType, LayoutScope } from "../../interface/layout.interface";
+import { BlockFocusProvider } from "../../context/block-focus-provider";
+import { BlockTreeLayout } from "../../interface/layout.interface";
 import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-handler";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +29,7 @@ import {
     BlockEnvironmentProvider,
     useBlockEnvironment,
 } from "../../context/block-environment-provider";
+import { RenderElementProvider } from "../../context/block-renderer-provider";
 import { LayoutHistoryProvider } from "../../context/layout-history-provider";
 import { TrackedEnvironmentProvider } from "../../context/tracked-environment-provider";
 import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
@@ -51,18 +51,17 @@ import {
     DEFAULT_GRID_LAYOUT,
 } from "../../util/block/factory/type.factory";
 import { BlockEditDrawer, EditModeIndicator } from "../forms";
-import { editorPanel } from "../panel/editor-panel";
 import { defaultSlashItems } from "../panel/panel-wrapper";
 import { WidgetEnvironmentSync } from "../sync/widget.sync";
 
-const DEMO_ORG_ID = "demo-org-12345";
+const DEMO_ORG_ID = "eda60a2a-641a-40fe-be2a-03eb8a56bb0c";
 export const DEFAULT_WIDGET_OPTIONS: GridStackOptions = {
     sizeToContent: true,
     resizable: {
         handles: "se, sw", // Only corner handles for cleaner appearance
     },
     draggable: {
-        cancel: ".block-no-drag",
+        cancel: ".no-drag",
         pause: 5,
     },
     column: 23,
@@ -151,7 +150,7 @@ const BlockEnvironmentWorkspace: React.FC = () => {
                                     <BlockEnvironmentGridSync />
                                     <WidgetEnvironmentSync />
                                     <GridContainerProvider>
-                                        <BlockRenderer />
+                                        <RenderElementProvider/>
                                     </GridContainerProvider>
                                     <BlockEditDrawer />
                                 </BlockEditProvider>
@@ -164,41 +163,6 @@ const BlockEnvironmentWorkspace: React.FC = () => {
         </>
     );
 };
-
-/**
- * Renders all blocks with proper wrapping (PanelWrapper for toolbar, slash menu, etc.)
- */
-const BlockRenderer: React.FC = () => {
-    const { getBlock, getParent, moveBlockUp, moveBlockDown } = useBlockEnvironment();
-    const { removeTrackedBlock, addTrackedBlock } = useTrackedEnvironment();
-
-    const { wrapper } = editorPanel({
-        getBlock,
-        insertBlock: (child, parentId, index) => addTrackedBlock(child, parentId, index),
-        removeBlock: removeTrackedBlock,
-        getParent,
-        moveBlockUp,
-        moveBlockDown,
-    });
-
-    return <RenderElementProvider wrapElement={wrapper} />;
-};
-
-/**
- * Helper to create a block node from a slash menu item
- */
-function createNodeFromSlashItem(item: SlashMenuItem, organisationId: string): BlockNode | null {
-    switch (item.id) {
-        case "LAYOUT_CONTAINER":
-        case "LINE_ITEM":
-            return createLayoutContainerNode(organisationId);
-        case "TEXT":
-        case "BLANK_NOTE":
-            return createNoteNode(organisationId);
-        default:
-            return createNoteNode(organisationId, `New ${item.label}`);
-    }
-}
 
 const DebugInfo = () => {
     "use client";
@@ -510,6 +474,7 @@ function createTaskListNodeWithId(organisationId: string, id: string): BlockNode
         children: tasks,
         payloadOverride: {
             type: "content",
+            deletable: true,
             meta: { validationErrors: [] },
             data: {
                 title: "Project Tasks",
@@ -529,6 +494,7 @@ function createTaskListNodeWithId(organisationId: string, id: string): BlockNode
                         by: "data.dueDate",
                         dir: "ASC",
                     },
+                    filters: [],
                     filterLogic: "AND",
                 },
             },
@@ -543,11 +509,11 @@ interface DemoEnvironmentResult {
 
 function createDemoEnvironment(): DemoEnvironmentResult {
     // Define IDs that match the layout below
-    const STANDALONE_NOTE_ID = "block-c5745236-a506-4410-994d-4ee9d17c07f2";
-    const LAYOUT_CONTAINER_ID = "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16";
-    const NESTED_NOTE_1_ID = "block-2eb29c0a-a7c8-4033-be94-7977466feaf4";
-    const NESTED_NOTE_2_ID = "block-4b907540-2d30-43a8-a12c-b7c574ef2f32";
-    const TASK_LIST_ID = "block-f79f702b-f858-479a-a415-261a76d81bdb";
+    const STANDALONE_NOTE_ID = "c5745236-a506-4410-994d-4ee9d17c07f2";
+    const LAYOUT_CONTAINER_ID = "7b648d3c-94d1-4988-8530-fc49f6fc2b16";
+    const NESTED_NOTE_1_ID = "2eb29c0a-a7c8-4033-be94-7977466feaf4";
+    const NESTED_NOTE_2_ID = "4b907540-2d30-43a8-a12c-b7c574ef2f32";
+    const TASK_LIST_ID = "f79f702b-f858-479a-a415-261a76d81bdb";
 
     // Create blocks with specific IDs to match the layout
     const noteType = createNoteBlockType(DEMO_ORG_ID);
@@ -623,7 +589,7 @@ function createDemoEnvironment(): DemoEnvironmentResult {
             handles: "se, sw",
         },
         draggable: {
-            cancel: ".block-no-drag",
+            cancel: ".no-drag",
             pause: 5,
         },
         columnOpts: {
@@ -643,20 +609,20 @@ function createDemoEnvironment(): DemoEnvironmentResult {
         cellHeight: 25,
         children: [
             {
-                id: "block-c5745236-a506-4410-994d-4ee9d17c07f2",
+                id: "c5745236-a506-4410-994d-4ee9d17c07f2",
                 x: 0,
                 y: 0,
                 w: 12,
                 h: 4,
                 content: {
-                    id: "block-c5745236-a506-4410-994d-4ee9d17c07f2",
+                    id: "c5745236-a506-4410-994d-4ee9d17c07f2",
                     key: "note",
                     renderType: "component",
                     blockType: "content_node",
                 },
             },
             {
-                id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16",
+                id: "7b648d3c-94d1-4988-8530-fc49f6fc2b16",
                 x: 0,
                 y: 4,
                 w: 6,
@@ -667,7 +633,7 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                         handles: "se, sw",
                     },
                     draggable: {
-                        cancel: ".block-no-drag",
+                        cancel: ".no-drag",
                         pause: 5,
                     },
                     column: "auto",
@@ -678,26 +644,26 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                     cellHeight: 25,
                     children: [
                         {
-                            id: "block-2eb29c0a-a7c8-4033-be94-7977466feaf4",
+                            id: "2eb29c0a-a7c8-4033-be94-7977466feaf4",
                             x: 0,
                             y: 1,
                             w: 6,
                             h: 4,
                             content: {
-                                id: "block-2eb29c0a-a7c8-4033-be94-7977466feaf4",
+                                id: "2eb29c0a-a7c8-4033-be94-7977466feaf4",
                                 key: "note",
                                 renderType: "component",
                                 blockType: "content_node",
                             },
                         },
                         {
-                            id: "block-4b907540-2d30-43a8-a12c-b7c574ef2f32",
+                            id: "4b907540-2d30-43a8-a12c-b7c574ef2f32",
                             x: 0,
                             y: 5,
                             w: 6,
                             h: 5,
                             content: {
-                                id: "block-4b907540-2d30-43a8-a12c-b7c574ef2f32",
+                                id: "4b907540-2d30-43a8-a12c-b7c574ef2f32",
                                 key: "note",
                                 renderType: "component",
                                 blockType: "content_node",
@@ -706,20 +672,20 @@ function createDemoEnvironment(): DemoEnvironmentResult {
                     ],
                 },
                 content: {
-                    id: "block-7b648d3c-94d1-4988-8530-fc49f6fc2b16",
+                    id: "7b648d3c-94d1-4988-8530-fc49f6fc2b16",
                     key: "layout_container",
                     renderType: "container",
                     blockType: "content_node",
                 },
             },
             {
-                id: "block-f79f702b-f858-479a-a415-261a76d81bdb",
+                id: "f79f702b-f858-479a-a415-261a76d81bdb",
                 x: 6,
                 y: 4,
                 w: 6,
                 h: 11,
                 content: {
-                    id: "block-f79f702b-f858-479a-a415-261a76d81bdb",
+                    id: "f79f702b-f858-479a-a415-261a76d81bdb",
                     key: "content_block_list",
                     renderType: "list",
                     blockType: "content_node",
@@ -731,9 +697,8 @@ function createDemoEnvironment(): DemoEnvironmentResult {
     // Wrap GridStack layout in BlockTreeLayout object for persistence tracking
     const blockTreeLayout: BlockTreeLayout = {
         version: 1,
-        id: "demo-layout-12345", // Mock ID for demo
+        id: "8bfc08df-5131-4299-9090-802f7ff01fd2", // Mock ID for demo
         organisationId: DEMO_ORG_ID,
-        scope: LayoutScope.ORGANIZATION,
         layout: gridLayout,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

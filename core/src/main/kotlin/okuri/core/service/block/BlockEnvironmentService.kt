@@ -1,24 +1,36 @@
 package okuri.core.service.block
 
+import io.github.oshai.kotlinlogging.KLogger
 import jakarta.transaction.Transactional
 import okuri.core.entity.activity.ActivityLogEntity
 import okuri.core.entity.block.BlockEntity
 import okuri.core.enums.activity.Activity
+import okuri.core.enums.block.node.BlockReferenceWarning
 import okuri.core.enums.block.request.BlockOperationType
 import okuri.core.enums.core.EntityType
 import okuri.core.enums.util.OperationType
+import okuri.core.exceptions.NotFoundException
+import okuri.core.models.block.BlockEnvironment
+import okuri.core.models.block.Reference
+import okuri.core.models.block.layout.TreeLayout
+import okuri.core.models.block.layout.Widget
+import okuri.core.models.block.metadata.BlockReferenceMetadata
+import okuri.core.models.block.metadata.EntityReferenceMetadata
 import okuri.core.models.block.operation.*
+import okuri.core.models.block.request.HydrateBlocksRequest
 import okuri.core.models.block.request.OverwriteEnvironmentRequest
 import okuri.core.models.block.request.SaveEnvironmentRequest
 import okuri.core.models.block.request.StructuralOperationRequest
 import okuri.core.models.block.response.OverwriteEnvironmentResponse
 import okuri.core.models.block.response.SaveEnvironmentResponse
+import okuri.core.models.block.response.internal.BlockHydrationResult
+import okuri.core.models.block.tree.*
 import okuri.core.service.activity.ActivityService
 import okuri.core.service.auth.AuthTokenService
+import org.springframework.security.access.prepost.PostAuthorize
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
 import java.util.*
-import kotlin.collections.emptyList
 
 @Service
 class BlockEnvironmentService(
@@ -27,6 +39,8 @@ class BlockEnvironmentService(
     private val blockChildrenService: BlockChildrenService,
     private val authTokenService: AuthTokenService,
     private val activityService: ActivityService,
+    private val defaultEnvironmentService: DefaultBlockEnvironmentService,
+    private val logger: KLogger
 ) {
 
     @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
@@ -76,22 +90,73 @@ class BlockEnvironmentService(
                 val mappings = executeOperations(
                     operations = operations,
                     block = block,
+                    existingIdMappings = allIdMappings
                 )
 
                 allIdMappings.putAll(mappings)
             }
 
-            // Save layout snapshot
-            blockTreeLayoutService.updateLayoutSnapshot(layout, request.layout, request.version)
-            return SaveEnvironmentResponse(
-                success = true,
-                conflict = false,
-                newVersion = request.version,
-                latestVersion = request.version,
-                lastModifiedAt = layout.updatedAt,
-                lastModifiedBy = layout.updatedBy?.toString(),
-                idMappings = allIdMappings
-            )
+            // Save layout snapshot with updated mappings
+            val updatedLayout = request.layout.let { layout ->
+                layout.children?.forEach { widget ->
+                    applyIdMapping(widget, allIdMappings)
+                }
+                layout
+            }
+
+            blockTreeLayoutService.updateLayoutSnapshot(layout, updatedLayout, request.version).run {
+                return SaveEnvironmentResponse(
+                    success = true,
+                    conflict = false,
+                    layout = updatedLayout,
+                    newVersion = request.version,
+                    latestVersion = request.version,
+                    lastModifiedAt = layout.updatedAt,
+                    lastModifiedBy = layout.updatedBy?.toString(),
+                    idMappings = allIdMappings
+                )
+            }
+        }
+    }
+
+    /**
+     * Applies ID mappings to a widget and its children recursively.
+     * Updates both the widget's main ID and its content ID from temporary IDs to permanent database IDs.
+     *
+     * @param widget The widget to update
+     * @param mapping Map of temporary UUIDs to permanent database UUIDs
+     */
+    private fun applyIdMapping(
+        widget: Widget,
+        mapping: Map<UUID, UUID>
+    ) {
+        // Map widget's main ID if it's a temporary ID
+        try {
+            val widgetId = UUID.fromString(widget.id)
+            mapping[widgetId]?.let { newId ->
+                widget.id = newId.toString()
+            }
+        } catch (e: Exception) {
+            // Widget ID is not a valid UUID, skip mapping
+            logger.warn { "Widget ${widget.id} is not currently assigned a valid UUID as its primary identifier" }
+        }
+
+        // Map content ID if present
+        widget.content?.id?.let { contentIdStr ->
+            try {
+                val contentId = UUID.fromString(contentIdStr)
+                mapping[contentId]?.let { newId ->
+                    widget.content.id = newId.toString()
+                }
+            } catch (e: Exception) {
+                // Content ID is not a valid UUID, skip mapping
+                logger.warn { "Widget ${widget.content.id} is not currently assigned a valid UUID as its primary identifier" }
+            }
+        }
+
+        // Recursively apply to children in subGridOpts
+        widget.subGridOpts?.children?.forEach { childWidget ->
+            applyIdMapping(childWidget, mapping)
         }
     }
 
@@ -100,54 +165,56 @@ class BlockEnvironmentService(
         organisationId: UUID,
         operation: StructuralOperationRequest
     ): ActivityLogEntity {
+        val operationData = operation.data // Assign to local variable for smart casting
+
         return ActivityLogEntity(
             userId = userId,
             organisationId = organisationId,
             activity = Activity.BLOCK_OPERATION,
-            operation = when (operation.data.type) {
+            operation = when (operationData.type) {
                 BlockOperationType.ADD_BLOCK -> OperationType.CREATE
                 BlockOperationType.REMOVE_BLOCK -> OperationType.DELETE
                 else -> OperationType.UPDATE
             },
             entityType = EntityType.BLOCK,
-            entityId = operation.data.blockId,
+            entityId = operationData.blockId,
             timestamp = operation.timestamp,
-            details = when (operation.data) {
+            details = when (operationData) {
                 is AddBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "blockId" to operation.data.blockId.toString(),
-                        "parentId" to operation.data.parentId.toString(),
+                        "type" to operationData.type,
+                        "blockId" to operationData.blockId.toString(),
+                        "parentId" to operationData.parentId.toString(),
                     )
                 }
 
                 is RemoveBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "blockId" to operation.data.blockId.toString()
+                        "type" to operationData.type,
+                        "blockId" to operationData.blockId.toString()
                     )
                 }
                 // Todo: Calculate readable diffs for updates
                 is UpdateBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "blockId" to operation.data.blockId.toString(),
+                        "type" to operationData.type,
+                        "blockId" to operationData.blockId.toString(),
                     )
                 }
 
                 is MoveBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "oldParentId" to operation.data.fromParentId,
-                        "newParentId" to operation.data.toParentId
+                        "type" to operationData.type,
+                        "oldParentId" to operationData.fromParentId,
+                        "newParentId" to operationData.toParentId
                     )
                 }
 
                 is ReorderBlockOperation -> {
                     mapOf(
-                        "type" to operation.data.type,
-                        "previousIndex" to operation.data.fromIndex,
-                        "newIndex" to operation.data.toIndex
+                        "type" to operationData.type,
+                        "previousIndex" to operationData.fromIndex,
+                        "newIndex" to operationData.toIndex
                     )
                 }
             }
@@ -162,6 +229,167 @@ class BlockEnvironmentService(
     fun overwriteBlockEnvironment(request: OverwriteEnvironmentRequest): OverwriteEnvironmentResponse {
         throw NotImplementedError()
     }
+
+    /**
+     * Loads the complete block environment for an entity.
+     * Implements lazy initialization - creates default environment if none exists.
+     *
+     * @param entityId The ID of the entity (e.g., client ID)
+     * @param entityType The type of entity (e.g., CLIENT, ORGANISATION)
+     * @return BlockEnvironment with layout, trees, and entity data
+     */
+    @PostAuthorize("@organisationSecurity.hasOrg(#organisationId)")
+    fun loadBlockEnvironment(
+        entityId: UUID,
+        entityType: EntityType,
+        organisationId: UUID
+    ): BlockEnvironment {
+        // 1. Try to load existing layout, or create default if it doesn't exist
+        val layoutEntity = try {
+            blockTreeLayoutService.fetchLayoutForEntity(entityId, entityType)
+        } catch (e: NotFoundException) {
+            defaultEnvironmentService.createDefaultEnvironmentForEntity(
+                entityId = entityId,
+                entityType = entityType,
+                organisationId = organisationId
+            )
+            // Fetch the newly created layout
+            blockTreeLayoutService.fetchLayoutForEntity(entityId, entityType)
+        }
+
+        require(layoutEntity.organisationId == organisationId) {
+            "Layout organisation ID does not match requested organisation ID"
+        }
+
+        // 2. Build block trees from layout
+        val trees = buildBlockTreesFromLayout(layoutEntity.layout)
+
+
+        // 4. Return complete BlockEnvironment
+        return BlockEnvironment(
+            layout = layoutEntity.toModel(),
+            trees = trees,
+        )
+    }
+
+    @PreAuthorize("@organisationSecurity.hasOrg(#request.organisationId)")
+    fun hydrateEnvironment(request: HydrateBlocksRequest): Map<UUID, BlockHydrationResult> {
+        val (blockIds, organisationId) = request
+        return blockService.hydrateBlocks(blockIds, organisationId)
+    }
+
+    /**
+     * Builds block trees from the layout structure (layout-driven approach).
+     *
+     * This is more efficient than BFS when layout is available because:
+     * - Single bulk query for all blocks (instead of recursive queries)
+     * - No need to query block_children table (layout has relationships)
+     * - Layout already contains the structural hierarchy
+     *
+     * Note: Falls back to empty list if layout has no widgets.
+     */
+    private fun buildBlockTreesFromLayout(layout: TreeLayout): List<BlockTree> {
+
+        // If no widgets in layout, return empty (default layouts start empty)
+        if (layout.children.isNullOrEmpty()) return emptyList()
+
+        // Extract ALL block IDs from layout (including nested in subGridOpts)
+        val blockIds = blockTreeLayoutService.extractBlockIdsFromTreeLayout(layout)
+        if (blockIds.isEmpty()) return emptyList()
+
+        // Bulk load all blocks in a single query
+        val blocksById = blockService.getBlocks(blockIds)
+
+        // Build trees from top-level widgets using layout structure
+        return layout.children.mapNotNull { widget ->
+            buildTreeFromWidget(widget, blocksById)
+        }
+    }
+
+
+    /**
+     * Builds a BlockTree from a widget using pre-loaded blocks.
+     * Recursively handles children from subGridOpts (nested layouts).
+     *
+     * Note: This uses the layout structure for relationships instead of querying block_children.
+     */
+    private fun buildTreeFromWidget(
+        widget: Widget,
+        blocksById: Map<UUID, BlockEntity>
+    ): BlockTree? {
+        val blockId = widget.content?.id?.let {
+            try {
+                UUID.fromString(it)
+            } catch (e: Exception) {
+                null
+            }
+        } ?: return null
+
+        val blockEntity = blocksById[blockId] ?: return null
+
+        // Use BlockService.buildNode to handle all node types (content, reference, entity reference)
+        // This delegates to existing BFS logic for building individual nodes
+        // But we supply children from layout instead of querying DB
+        val rootNode = buildNodeFromLayoutWidget(blockEntity, widget, blocksById)
+
+        return BlockTree(root = rootNode)
+    }
+
+    /**
+     * Builds a Node from a block entity using layout structure for children.
+     * This is a layout-aware variant that doesn't query block_children.
+     */
+    private fun buildNodeFromLayoutWidget(
+        blockEntity: BlockEntity,
+        widget: Widget,
+        blocksById: Map<UUID, BlockEntity>
+    ): Node {
+        val block = blockEntity.toModel()
+
+        return when (val meta = block.payload) {
+            is BlockReferenceMetadata -> {
+                // Handle block references
+                // TODO: Integrate with BlockReferenceService when available
+                ReferenceNode(
+                    block = block,
+                    reference = BlockTreeReference(
+                        reference = Reference(
+                            entityId = block.id,
+                            entityType = EntityType.BLOCK,
+                            entity = null,
+                            warning = BlockReferenceWarning.UNSUPPORTED
+                        )
+                    )
+                )
+            }
+
+            is EntityReferenceMetadata -> {
+                // Handle entity references with LAZY loading for progressive hydration
+                // Entity data is NOT resolved here to keep initial load fast.
+                // Frontend calls POST /api/v1/block/environment/hydrate to progressively
+                // load entity data for specific blocks as needed.
+                ReferenceNode(
+                    block = block,
+                    reference = EntityReference(
+                        reference = emptyList(), // Empty - will be hydrated separately
+                    )
+                )
+            }
+
+            is okuri.core.models.block.metadata.BlockContentMetadata -> {
+                // Content blocks: children come from layout subGridOpts, not DB!
+                val childNodes = widget.subGridOpts?.children?.mapNotNull { childWidget ->
+                    buildTreeFromWidget(childWidget, blocksById)?.root
+                } ?: emptyList()
+
+                ContentNode(
+                    block = block,
+                    children = childNodes
+                )
+            }
+        }
+    }
+
 
     /**
      * Filters out operations for blocks that will be cascade deleted when their parent is removed.
@@ -254,6 +482,7 @@ class BlockEnvironmentService(
     private fun executeOperations(
         operations: List<StructuralOperationRequest>,
         block: BlockEntity? = null,
+        existingIdMappings: Map<UUID, UUID> = emptyMap()
     ): Map<UUID, UUID> {
         // PHASE 1: Handle REMOVE operations (will need to cascade delete children)
         val removeOps = operations.filter { it.data.type == BlockOperationType.REMOVE_BLOCK }
@@ -318,14 +547,17 @@ class BlockEnvironmentService(
             emptyList()
         }
 
-        // Map temporary IDs to real IDs
+        // Map temporary IDs to real IDs (combine with existing mappings from previous executions)
         val idMapping = mutableMapOf<UUID, UUID>()
         addOps.zip(savedBlocks).forEach { (addOp, savedBlock) ->
             idMapping[addOp.blockId] = savedBlock.id!!
         }
 
         // Helper function to resolve IDs (temp -> real)
-        val resolveId: (UUID) -> UUID = { id -> idMapping[id] ?: id }
+        // Check local mappings first, then existing mappings from previous executions
+        val resolveId: (UUID) -> UUID = { id ->
+            idMapping[id] ?: existingIdMappings[id] ?: id
+        }
 
         // Update child additions with real IDs (resolve both child and parent)
         val resolvedChildAdditions = childAdditions.map { addition ->
@@ -395,7 +627,7 @@ class BlockEnvironmentService(
 
             }
 
-            val affectedParents = moveOps.flatMap {
+            val affectedParents = moves.flatMap {
                 listOfNotNull(
                     it.fromParentId?.let { parentId -> resolveId(parentId) },
                     it.toParentId?.let { parentId -> resolveId(parentId) }

@@ -13,12 +13,26 @@ class OrganisationResolver(
     override val type: EntityType = EntityType.ORGANISATION
 
     /**
-     * Fetches client entities for the given set of IDs.
+     * Fetches organisation entities for the given set of IDs.
      *
-     * @param ids The set of client UUIDs to resolve.
-     * @return A map from each found client UUID to its corresponding [Organisation]; UUIDs with no matching client are omitted.
+     * @param ids The set of organisation UUIDs to resolve.
+     * @param organisationId The organisation context for authorization (currently not used for filtering, but required by interface).
+     * @return A map from each found organisation UUID to its corresponding [Organisation]; UUIDs with no matching organisation are omitted.
      */
-    override fun fetch(ids: Set<UUID>): Map<UUID, Organisation> {
-        TODO()
+    override fun fetch(ids: Set<UUID>, organisationId: UUID): Map<UUID, Organisation> {
+        if (ids.isEmpty()) return emptyMap()
+
+        // Fetch organisations individually
+        // Note: OrganisationService currently doesn't have a batch fetch method,
+        // so we fetch individually. Consider adding batch fetch in the future for performance.
+        return ids.mapNotNull { id ->
+            try {
+                val org = service.getOrganisationById(id, includeMetadata = false)
+                id to org
+            } catch (e: Exception) {
+                // Organisation not found or access denied - skip it
+                null
+            }
+        }.toMap()
     }
 }

@@ -5,5 +5,5 @@ import okuri.core.models.block.tree.BlockTreeLayout
 
 data class BlockEnvironment(
     val layout: BlockTreeLayout,
-    val trees: List<BlockTree>
+    val trees: List<BlockTree>,
 )

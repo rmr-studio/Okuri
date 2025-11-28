@@ -8,6 +8,8 @@ import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useBlockEdit } from "../../context/block-edit-provider";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useBlockFocus } from "../../context/block-focus-provider";
+import { useLayoutChange } from "../../context/layout-change-provider";
+import { useRenderElement } from "../../context/block-renderer-provider";
 import { useFocusSurface } from "../../hooks/use-focus-surface";
 import { isContentNode } from "../../interface/block.interface";
 import { QuickActionItem, SlashMenuItem } from "../../interface/panel.interface";
@@ -15,8 +17,7 @@ import { BlockForm } from "../forms/block-form";
 import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
-import PanelToolbar from "./toolbar/panel-toolbar";
-import { useRenderElement } from "../../context/block-renderer-provider";
+import PanelToolbar, { CustomToolbarAction } from "./toolbar/panel-toolbar";
 
 interface Props extends ChildNodeProps, ClassNameProps {
     id: string;
@@ -33,6 +34,7 @@ interface Props extends ChildNodeProps, ClassNameProps {
     onInsertSibling?: (item: SlashMenuItem) => void;
     onDelete?: () => void;
     customControls?: React.ReactNode;
+    customActions?: CustomToolbarAction[];
 }
 
 export const defaultSlashItems: SlashMenuItem[] = Object.values(blockElements).map((meta) => ({
@@ -58,6 +60,7 @@ export const PanelWrapper: FC<Props> = ({
     className,
     allowInsert = false,
     customControls,
+    customActions = [],
 }) => {
     // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
 
@@ -78,6 +81,7 @@ export const PanelWrapper: FC<Props> = ({
     const { startEdit, saveAndExit, openDrawer, isEditing, getEditMode, drawerState, cancelEdit } =
         useBlockEdit();
     const { getBlock, getChildren } = useBlockEnvironment();
+    const { suppressEditModeTracking } = useLayoutChange();
     const [isEditMode, setEditMode] = useState(false);
     const block = getBlock(id);
     const hasChildren = getChildren(id).length > 0;
@@ -135,22 +139,38 @@ export const PanelWrapper: FC<Props> = ({
     const hasMenuActions = menuActions.length > 0;
 
     // Calculate toolbar button indices and count
+    // IMPORTANT: This must match the exact button order in panel-toolbar.tsx
     const toolbarIndices = useMemo(() => {
         let buttonIndex = 0;
         const quickActionsIndex = buttonIndex++;
         const insertIndex = allowInsert ? buttonIndex++ : -1;
-        const editIndex = buttonIndex++; // Edit button always present
+        // handleEditClick is always defined, so edit button is always present
+        const editIndex = buttonIndex++;
+
+        // Custom actions (dynamic count)
+        const customActionsStartIndex = buttonIndex;
+        const customActionsIndices = customActions.map(() => buttonIndex++);
+
+        // Edit mode actions (save/discard) - only present in edit mode
+        const saveEditIndex = isEditMode ? buttonIndex++ : -1;
+        const discardEditIndex = isEditMode ? buttonIndex++ : -1;
+
         const detailsIndex = buttonIndex++;
         const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
+
         return {
             quickActionsIndex,
             insertIndex,
             editIndex,
+            customActionsStartIndex,
+            customActionsIndices,
+            saveEditIndex,
+            discardEditIndex,
             detailsIndex,
             actionsMenuIndex,
             count: buttonIndex,
         };
-    }, [allowInsert, hasMenuActions]);
+    }, [allowInsert, hasMenuActions, customActions.length, isEditMode]);
 
     const {
         isSelected,
@@ -281,6 +301,7 @@ export const PanelWrapper: FC<Props> = ({
         } else {
             // No children: toggle inline edit
             if (isEditMode) {
+                suppressEditModeTracking(true);
                 saveAndExit(id).then((success) => {
                     if (success) {
                         setEditMode(false);
@@ -289,20 +310,46 @@ export const PanelWrapper: FC<Props> = ({
                             requestAnimationFrame(() => {
                                 requestAnimationFrame(() => {
                                     requestResize();
+                                    // Re-enable tracking after resize completes
+                                    requestAnimationFrame(() => {
+                                        suppressEditModeTracking(false);
+                                    });
+                                });
+                            });
+                        } else {
+                            // No resize function, just re-enable after RAF
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    suppressEditModeTracking(false);
                                 });
                             });
                         }
+                    } else {
+                        // Save failed, re-enable tracking
+                        suppressEditModeTracking(false);
                     }
                 });
             } else {
+                // Enter edit mode
+                suppressEditModeTracking(true);
                 startEdit(id, "inline");
                 setEditMode(true);
+
+                // Re-enable tracking after triple RAF (allows grid to settle)
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            suppressEditModeTracking(false);
+                        });
+                    });
+                });
             }
         }
-    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize]);
+    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize, suppressEditModeTracking]);
 
     const handleSaveEditClick = useCallback(() => {
         if (isEditMode) {
+            suppressEditModeTracking(true);
             saveAndExit(id).then((success) => {
                 if (success) {
                     setEditMode(false);
@@ -311,16 +358,31 @@ export const PanelWrapper: FC<Props> = ({
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
                                 requestResize();
+                                // Re-enable tracking after resize completes
+                                requestAnimationFrame(() => {
+                                    suppressEditModeTracking(false);
+                                });
+                            });
+                        });
+                    } else {
+                        // No resize function, just re-enable after RAF
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                suppressEditModeTracking(false);
                             });
                         });
                     }
+                } else {
+                    // Save failed, re-enable tracking
+                    suppressEditModeTracking(false);
                 }
             });
         }
-    }, [isEditMode, saveAndExit, id, requestResize]);
+    }, [isEditMode, saveAndExit, id, requestResize, suppressEditModeTracking]);
 
     const handleDiscardEditClick = useCallback(() => {
         if (isEditMode) {
+            suppressEditModeTracking(true);
             cancelEdit(id);
             setEditMode(false);
             // Resize back to display content after discarding
@@ -328,11 +390,22 @@ export const PanelWrapper: FC<Props> = ({
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         requestResize();
+                        // Re-enable tracking after resize completes
+                        requestAnimationFrame(() => {
+                            suppressEditModeTracking(false);
+                        });
+                    });
+                });
+            } else {
+                // No resize function, just re-enable after RAF
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        suppressEditModeTracking(false);
                     });
                 });
             }
         }
-    }, [isEditMode, cancelEdit, id, requestResize]);
+    }, [isEditMode, cancelEdit, id, requestResize, suppressEditModeTracking]);
 
     useEffect(() => {
         if (!isSelected) return;
@@ -387,6 +460,9 @@ export const PanelWrapper: FC<Props> = ({
                     quickActionsIndex,
                     insertIndex,
                     editIndex,
+                    customActionsIndices,
+                    saveEditIndex,
+                    discardEditIndex,
                     detailsIndex,
                     actionsMenuIndex,
                 } = toolbarIndices;
@@ -394,6 +470,26 @@ export const PanelWrapper: FC<Props> = ({
                 // Handle edit button activation
                 if (toolbarFocusIndex === editIndex) {
                     handleEditClick();
+                    return;
+                }
+
+                // Handle custom actions activation
+                const customActionIndex = customActionsIndices.indexOf(toolbarFocusIndex);
+                if (customActionIndex !== -1) {
+                    const action = customActions[customActionIndex];
+                    if (action && !action.disabled) {
+                        action.onClick();
+                    }
+                    return;
+                }
+
+                // Handle save/discard edit buttons
+                if (toolbarFocusIndex === saveEditIndex && saveEditIndex !== -1) {
+                    handleSaveEditClick();
+                    return;
+                }
+                if (toolbarFocusIndex === discardEditIndex && discardEditIndex !== -1) {
+                    handleDiscardEditClick();
                     return;
                 }
 
@@ -436,15 +532,35 @@ export const PanelWrapper: FC<Props> = ({
                         // No children: toggle inline edit
                         if (isEditMode) {
                             // Exit edit mode and save
+                            suppressEditModeTracking(true);
                             saveAndExit(id).then((success) => {
                                 if (success) {
                                     setEditMode(false);
+                                    // Re-enable tracking after triple RAF
+                                    requestAnimationFrame(() => {
+                                        requestAnimationFrame(() => {
+                                            requestAnimationFrame(() => {
+                                                suppressEditModeTracking(false);
+                                            });
+                                        });
+                                    });
+                                } else {
+                                    suppressEditModeTracking(false);
                                 }
                             });
                         } else {
                             // Enter edit mode
+                            suppressEditModeTracking(true);
                             startEdit(id, "inline");
                             setEditMode(true);
+                            // Re-enable tracking after triple RAF
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    requestAnimationFrame(() => {
+                                        suppressEditModeTracking(false);
+                                    });
+                                });
+                            });
                         }
                     }
                 }
@@ -480,6 +596,9 @@ export const PanelWrapper: FC<Props> = ({
         startEdit,
         id,
         handleEditClick,
+        customActions,
+        handleSaveEditClick,
+        handleDiscardEditClick,
     ]);
 
     const handleTitleBlur = useCallback(() => {
@@ -588,7 +707,8 @@ export const PanelWrapper: FC<Props> = ({
                 <div
                     ref={surfaceRef}
                     className={cn(
-                        "group flex relative flex-col rounded-sm border text-card-foreground transition-colors w-full p-4",
+                        "group flex relative flex-col rounded-sm border text-card-foreground transition-colors w-full p-4 shadow backdrop-blur-sm",
+                        "break-words", // Fix for text overflow - ensure long text wraps
                         allowInsert
                             ? shouldHighlight
                                 ? "border-primary ring-2 ring-primary/30 bg-card shadow-sm"
@@ -683,14 +803,13 @@ export const PanelWrapper: FC<Props> = ({
                                 hasChildren={hasChildren}
                                 onSaveEditClick={handleSaveEditClick}
                                 onDiscardEditClick={handleDiscardEditClick}
+                                customActions={customActions}
                             />
                         )}
                     </AnimatePresence>
 
                     {/* Custom controls section (e.g., list sort/filter controls) */}
-                    {customControls && (
-                        <div className="mb-3 border-b pb-3">{customControls}</div>
-                    )}
+                    {customControls && <div className="mb-3 border-b pb-3">{customControls}</div>}
 
                     {isEditMode && block && isContentNode(block) ? (
                         <BlockForm

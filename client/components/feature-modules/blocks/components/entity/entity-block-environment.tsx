@@ -1,0 +1,243 @@
+"use client";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EntityType } from "@/lib/types/types";
+import { AlertCircle, PlusIcon } from "lucide-react";
+import { FC, ReactNode, useMemo, useState } from "react";
+import { BlockEditProvider } from "../../context/block-edit-provider";
+import {
+    BlockEnvironmentProvider,
+    useBlockEnvironment,
+} from "../../context/block-environment-provider";
+import { BlockFocusProvider } from "../../context/block-focus-provider";
+import { RenderElementProvider } from "../../context/block-renderer-provider";
+import { GridContainerProvider } from "../../context/grid-container-provider";
+import { GridProvider } from "../../context/grid-provider";
+import { LayoutChangeProvider } from "../../context/layout-change-provider";
+import { LayoutHistoryProvider } from "../../context/layout-history-provider";
+import {
+    TrackedEnvironmentProvider,
+    useTrackedEnvironment,
+} from "../../context/tracked-environment-provider";
+import { useEntityLayout } from "../../hooks/use-entity-layout";
+import { BlockEnvironmentGridSync } from "../../hooks/use-environment-grid-sync";
+import { BlockType } from "../../interface/block.interface";
+import { WrapElementProvider } from "../../interface/render.interface";
+import { createBlockInstanceFromType } from "../../util/block/factory/instance.factory";
+import { DEFAULT_WIDGET_OPTIONS } from "../demo/block-demo";
+import { BlockEditDrawer, EditModeIndicator } from "../forms";
+import { KeyboardNavigationHandler } from "../navigation/keyboard-navigation-handler";
+import { WidgetEnvironmentSync } from "../sync/widget.sync";
+import { AddBlockDialog } from "./add-block-dialog";
+
+/**
+ * Props for EntityBlockEnvironment component.
+ *
+ * This is the generic wrapper that manages block environments for any entity type.
+ */
+export interface EntityBlockEnvironmentProps {
+    /** UUID of the entity (client, organisation, etc.) */
+    entityId: string;
+    /** Type of entity (CLIENT, ORGANISATION, PROJECT, INVOICE) */
+    entityType: EntityType;
+    /** Organisation ID for the entity */
+    organisationId: string;
+    /** Optional toolbar component to render above the grid */
+    renderToolbar?: () => React.ReactNode;
+    /** Whether to show the default "Add Block" toolbar (default: true) */
+    showDefaultToolbar?: boolean;
+    /** Optional wrapper function to customize the outer container */
+    renderWrapper?: (children: React.ReactNode) => React.ReactNode;
+    /** Optional element wrapper for editor panels (slash menu, toolbar, etc.) */
+    wrapElement?: (args: WrapElementProvider) => ReactNode;
+}
+
+/**
+ * EntityBlockEnvironment - Generic block environment wrapper for entities.
+ *
+ * This component:
+ * - Loads the block environment for an entity (with lazy initialization)
+ * - Manages all required providers in the correct hierarchy
+ * - Handles loading and error states
+ * - Renders the grid with all blocks
+ * - Supports custom toolbars and wrappers
+ *
+ * @example
+ * <EntityBlockEnvironment
+ *   entityId={clientId}
+ *   entityType={EntityType.CLIENT}
+ *   organisationId={organisationId}
+ *   renderToolbar={() => <ClientToolbar />}
+ * />
+ */
+export const EntityBlockEnvironment: FC<EntityBlockEnvironmentProps> = ({
+    entityId,
+    entityType,
+    organisationId,
+    renderToolbar,
+    showDefaultToolbar = true,
+    renderWrapper,
+    wrapElement,
+}) => {
+    const { environment, isLoading, error } = useEntityLayout(organisationId, entityId, entityType);
+
+    const gridOptions = useMemo(() => {
+        return environment?.layout?.layout ?? DEFAULT_WIDGET_OPTIONS;
+    }, [environment]);
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="space-y-4 w-full h-full">
+                <Skeleton className="h-12 w-full" />
+                <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+                <Skeleton className="h-48 w-full" />
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Failed to load block environment</AlertTitle>
+                <AlertDescription>
+                    {error.message ||
+                        "An unexpected error occurred while loading the block environment."}
+                </AlertDescription>
+            </Alert>
+        );
+    }
+
+    // No environment found (shouldn't happen with lazy initialization)
+    if (!environment) {
+        return (
+            <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No block environment found</AlertTitle>
+                <AlertDescription>
+                    Unable to load or create block environment for this entity.
+                </AlertDescription>
+            </Alert>
+        );
+    }
+
+    const toolbar = renderToolbar ? (
+        renderToolbar()
+    ) : (
+        <EntityToolbar organisationId={organisationId} entityType={entityType} />
+    );
+
+    // Render the complete block environment with provider hierarchy
+    const content = (
+        <BlockEnvironmentProvider
+            organisationId={organisationId}
+            entityId={entityId}
+            entityType={entityType}
+            environment={environment}
+        >
+            <GridProvider initialOptions={gridOptions}>
+                <LayoutHistoryProvider>
+                    <LayoutChangeProvider>
+                        <TrackedEnvironmentProvider>
+                            <BlockFocusProvider>
+                                <BlockEditProvider>
+                                    <EditModeIndicator />
+                                    <KeyboardNavigationHandler />
+                                    {(showDefaultToolbar || renderToolbar) && toolbar}
+                                    <BlockEnvironmentGridSync />
+                                    <WidgetEnvironmentSync />
+                                    <GridContainerProvider>
+                                        <RenderElementProvider wrapElement={wrapElement} />
+                                    </GridContainerProvider>
+                                    <BlockEditDrawer />
+                                </BlockEditProvider>
+                            </BlockFocusProvider>
+                        </TrackedEnvironmentProvider>
+                    </LayoutChangeProvider>
+                </LayoutHistoryProvider>
+            </GridProvider>
+        </BlockEnvironmentProvider>
+    );
+
+    // Apply custom wrapper if provided
+    return renderWrapper ? renderWrapper(content) : content;
+};
+
+/**
+ * Default toolbar component for entity block environments.
+ *
+ * Provides an "Add Block" button that opens a dialog for selecting
+ * and adding block types to the layout.
+ */
+interface EntityToolbarProps {
+    organisationId: string;
+    entityType: EntityType;
+}
+
+const EntityToolbar: FC<EntityToolbarProps> = ({ organisationId, entityType }) => {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const { addTrackedBlock } = useTrackedEnvironment();
+    const { environment } = useBlockEnvironment();
+
+    const handleBlockTypeSelect = (blockType: BlockType) => {
+        // Create a new block instance from the selected type
+        const newBlock = createBlockInstanceFromType(blockType, organisationId, {
+            name: blockType.name,
+        });
+
+        // Add the block to the environment
+        addTrackedBlock(newBlock);
+
+        // Close the dialog
+        setDialogOpen(false);
+    };
+
+    const hasBlocks = environment.trees.length > 0;
+
+    return (
+        <div className="mb-4">
+            {/* Show empty state if no blocks exist */}
+            {!hasBlocks && (
+                <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-border rounded-lg bg-muted/10">
+                    <div className="text-center space-y-3 max-w-md">
+                        <h3 className="text-lg font-semibold text-foreground">No blocks yet</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Get started by adding your first block. Choose from layout containers,
+                            lists, references, and more.
+                        </p>
+                        <Button onClick={() => setDialogOpen(true)} size="lg" className="mt-4">
+                            <PlusIcon className="size-4 mr-2" />
+                            Add Your First Block
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Show toolbar button if blocks exist */}
+            {hasBlocks && (
+                <div className="flex gap-2">
+                    <Button onClick={() => setDialogOpen(true)} variant="outline" size="sm">
+                        <PlusIcon className="size-4 mr-2" />
+                        Add Block
+                    </Button>
+                </div>
+            )}
+
+            {/* Add Block Dialog */}
+            <AddBlockDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                organisationId={organisationId}
+                entityType={entityType}
+                onBlockTypeSelect={handleBlockTypeSelect}
+            />
+        </div>
+    );
+};

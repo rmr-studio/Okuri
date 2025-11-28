@@ -3,7 +3,6 @@ package okuri.core.service.block
 import okuri.core.entity.block.BlockTreeLayoutEntity
 import okuri.core.enums.core.EntityType
 import okuri.core.models.block.layout.TreeLayout
-import okuri.core.models.block.tree.BlockTreeLayout
 import okuri.core.repository.block.BlockTreeLayoutRepository
 import okuri.core.util.ServiceUtil.findOrThrow
 import org.springframework.stereotype.Service
@@ -35,6 +34,7 @@ class BlockTreeLayoutService(
         id: UUID,
         type: EntityType
     ): BlockTreeLayoutEntity {
+        
         return findOrThrow { layoutRepository.findByEntityIdAndEntityType(id, type) }
     }
 
@@ -53,12 +53,40 @@ class BlockTreeLayoutService(
         }
     }
 
+
     /**
-     * Extension function to extract all block IDs from a block tree recursively.
-     * This is useful for batch loading layouts.
+     * Extracts all block IDs from a layout, including nested blocks in subGridOpts.
+     * This is useful for:
+     * - Batch loading blocks
+     * - Validating layout integrity
+     * - Bulk operations on all blocks in a layout
+     *
+     * @param treeLayout The BlockTreeLayout to extract IDs from
+     * @return Set of all block UUIDs found in the layout structure
      */
-    fun extractBlockIdsFromTree(layout: BlockTreeLayout): Set<UUID> {
-        TODO()
+    fun extractBlockIdsFromTreeLayout(treeLayout: TreeLayout): Set<UUID> {
+        val ids = mutableSetOf<UUID>()
+
+        fun traverseWidgets(widgets: List<okuri.core.models.block.layout.Widget>?) {
+            widgets?.forEach { widget ->
+                // Extract block ID from widget content
+                widget.content?.id?.let { idString ->
+                    try {
+                        ids.add(UUID.fromString(idString))
+                    } catch (e: IllegalArgumentException) {
+                        // Skip invalid UUIDs (could be placeholder IDs)
+                    }
+                }
+
+                // Recursively process nested widgets in subGridOpts
+                widget.subGridOpts?.children?.let { nestedChildren ->
+                    traverseWidgets(nestedChildren)
+                }
+            }
+        }
+
+        traverseWidgets(treeLayout.children)
+        return ids
     }
 }
 

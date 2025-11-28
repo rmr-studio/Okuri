@@ -1,25 +1,26 @@
-import { now, uniqueId } from "@/lib/util/utils";
+import {
+    BlockMetadataType,
+    BlockValidationScope,
+    EntityType,
+    NodeType,
+    ReferenceType,
+} from "@/lib/types/types";
+import { now } from "@/lib/util/utils";
+import { v4 as uuid } from "uuid";
 import {
     Block,
     BlockContentMetadata,
     BlockDisplay,
     BlockMeta,
-    BlockNode,
-    BlockReferenceMetadata,
     BlockReferencePayload,
     BlockSchema,
     BlockTree,
     BlockType,
     BlockTypeNesting,
-    EntityReferenceMetadata,
-    EntityReferencePayload,
+    ContentNode,
     Metadata,
-    NodeType,
     Reference,
     Referenceable,
-    ReferenceItem,
-    ReferenceNode,
-    ReferencePayload,
     ReferenceWarning,
 } from "../../../interface/block.interface";
 
@@ -30,69 +31,14 @@ const createMeta = (overrides?: Partial<BlockMeta>): BlockMeta => ({
 });
 
 export const createContentMetadata = (
-    data: Record<string, unknown>,
-    overrides?: Partial<BlockMeta>
+    data?: Record<string, unknown>,
+    overrides?: Partial<BlockMeta>,
+    deletable: boolean = true
 ): BlockContentMetadata => ({
-    type: "content",
-    data,
+    type: BlockMetadataType.CONTENT,
+    deletable,
+    data: data ?? {},
     meta: createMeta(overrides),
-});
-
-export const createEntityReferenceMetadata = ({
-    items,
-    presentation = "SUMMARY",
-    projection,
-    sort,
-    paging,
-    filter,
-    allowDuplicates = false,
-    fetchPolicy = "LAZY",
-    path = "$.items",
-    meta,
-}: {
-    items: ReferenceItem[];
-    presentation?: EntityReferenceMetadata["presentation"];
-    projection?: EntityReferenceMetadata["projection"];
-    sort?: EntityReferenceMetadata["sort"];
-    paging?: EntityReferenceMetadata["paging"];
-    filter?: EntityReferenceMetadata["filter"];
-    allowDuplicates?: boolean;
-    fetchPolicy?: EntityReferenceMetadata["fetchPolicy"];
-    path?: string;
-    meta?: Partial<BlockMeta>;
-}): EntityReferenceMetadata => ({
-    type: "entity_reference",
-    fetchPolicy,
-    path,
-    items,
-    presentation,
-    projection,
-    sort,
-    filter,
-    paging,
-    allowDuplicates,
-    meta: createMeta(meta),
-});
-
-export const createBlockReferenceMetadata = ({
-    item,
-    expandDepth = 1,
-    fetchPolicy = "LAZY",
-    path = "$.block",
-    meta,
-}: {
-    item: ReferenceItem;
-    expandDepth?: number;
-    fetchPolicy?: BlockReferenceMetadata["fetchPolicy"];
-    path?: string;
-    meta?: Partial<BlockMeta>;
-}): BlockReferenceMetadata => ({
-    type: "block_reference",
-    fetchPolicy,
-    path,
-    expandDepth,
-    item,
-    meta: createMeta(meta),
 });
 
 export const createBlockBase = ({
@@ -110,7 +56,7 @@ export const createBlockBase = ({
     payload: Metadata;
     archived?: boolean;
 }): Block => ({
-    id: id ?? uniqueId("block"),
+    id: id ?? uuid(),
     name,
     organisationId,
     type,
@@ -128,79 +74,38 @@ export const createContentNode = ({
     id,
     children,
     payloadOverride,
+    deletable = true,
 }: {
     organisationId: string;
     type: BlockType;
     data?: Record<string, unknown>;
     name?: string;
     id?: string;
-    children?: BlockNode[];
+    deletable?: boolean;
+    children?: ContentNode[];
     payloadOverride?: Metadata;
-}): BlockNode => ({
-    type: "content_node",
+}): ContentNode => ({
+    type: NodeType.CONTENT,
     block: createBlockBase({
         id,
         organisationId,
         type,
         name,
-        payload: payloadOverride ?? createContentMetadata(data ?? {}),
+        payload: payloadOverride ?? createContentMetadata(data, undefined, deletable),
     }),
     children,
     warnings: [],
 });
 
-export const createReferenceNode = ({
-    type,
-    reference,
-    block,
-    warnings,
-}: {
-    type: NodeType;
-    block: Block;
-    reference: ReferencePayload;
-    warnings?: string[];
-}): ReferenceNode => ({
-    type,
-    block,
-    reference,
-    warnings: warnings ?? [],
-});
-
-export const createEntityReference = ({
-    entities,
-}: {
-    entities: Referenceable[];
-}): EntityReferencePayload => {
-    if (entities.length === 0) {
-        throw new Error("No entities provided");
-    }
-
-    if (entities.some((entity) => entity.type === "block_tree"))
-        throw new Error("Entities contain block tree, use createBlockReference instead");
-    return {
-        type: "entity_reference",
-        reference: entities.map((entity, index) =>
-            createReference({
-                type: entity.type,
-                // todo ensure all references have valid IDs
-                // currently things like block trees dont have a unique id property
-                entityId: (entity as any).id || uniqueId("entity"),
-                order: index,
-                entity,
-            })
-        ),
-    };
-};
-
 export const createBlockReference = ({ block }: { block: BlockTree }): BlockReferencePayload => {
     const reference = createReference({
-        type: "block_tree",
+        type: EntityType.BLOCK_TREE,
         entityId: block.root.block.id,
         entity: block,
     });
 
     return {
-        type: "block_reference",
+        type: ReferenceType.BLOCK,
         reference,
     };
 };
@@ -221,7 +126,7 @@ export const createReference = ({
     warning?: ReferenceWarning;
 }): Reference => {
     return {
-        id: uniqueId("ref"),
+        id: uuid(),
         entityType: type,
         entityId,
         path,
@@ -248,14 +153,14 @@ export const createBlockType = ({
     display: BlockDisplay;
     nesting?: BlockTypeNesting | null;
 }): BlockType => ({
-    id: uniqueId(`type-${key}`),
+    id: uuid(),
     key,
     version: 1,
     name,
     description,
     organisationId,
     archived: false,
-    strictness: "SOFT",
+    strictness: BlockValidationScope.SOFT,
     system: false,
     schema,
     display,

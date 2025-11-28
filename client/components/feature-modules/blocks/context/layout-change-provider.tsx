@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-context";
+import { formatError } from "@/lib/util/error/error.util";
 import { now } from "@/lib/util/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GridStackOptions } from "gridstack";
@@ -16,6 +17,7 @@ import {
     useState,
 } from "react";
 import { toast } from "sonner";
+import { BlockNode, isContentNode } from "../interface/block.interface";
 import {
     LayoutSnapshot,
     SaveEnvironmentRequest,
@@ -38,6 +40,9 @@ interface LayoutChangeContextValue {
     /** Track that a structural change occurred (re-parent, add, remove) */
     trackStructuralChange: () => void;
 
+    /** Track that a content change occurred (block update) */
+    trackContentChange: () => void;
+
     /** Clear all tracked changes */
     clearLayoutChanges: () => void;
 
@@ -49,6 +54,9 @@ interface LayoutChangeContextValue {
 
     /** Check if discard is allowed (always true with command system) */
     canDiscard: () => boolean;
+
+    /** Suppress layout change tracking temporarily (e.g., during edit mode transitions) */
+    suppressEditModeTracking: (suppress: boolean) => void;
 
     /** Number of layout change events (for UI feedback) */
     layoutChangeCount: number;
@@ -79,10 +87,81 @@ export const useLayoutChange = (): LayoutChangeContextValue => {
     return context;
 };
 
+/**
+ * Applies ID mappings to the block environment, updating all temporary IDs to permanent database IDs.
+ * This recursively updates all blocks in all trees, and updates the hierarchy and treeIndex maps.
+ */
+function applyIdMapping(
+    environment: ReturnType<typeof useBlockEnvironment>["environment"],
+    idMappings: Record<string, string>
+): void {
+    if (!environment?.trees) return;
+
+    const updateNodeIds = (node: BlockNode): void => {
+        // Update block ID
+        if (node.block?.id && idMappings[node.block.id]) {
+            node.block.id = idMappings[node.block.id];
+        }
+
+        // Recursively update children in content nodes
+        if (isContentNode(node) && node.children) {
+            node.children.forEach(updateNodeIds);
+        }
+    };
+
+    // Update all trees
+    environment.trees.forEach((tree) => {
+        if (tree.root) {
+            updateNodeIds(tree.root);
+        }
+    });
+
+    // Update hierarchy map (blockId -> parentId)
+    if (environment.hierarchy) {
+        const newHierarchy = new Map<string, string | null>();
+
+        environment.hierarchy.forEach((parentId, blockId) => {
+            // Map the blockId if it needs to be updated
+            const newBlockId = idMappings[blockId] || blockId;
+            // Map the parentId if it needs to be updated (null stays null)
+            const newParentId =
+                parentId !== null && idMappings[parentId] ? idMappings[parentId] : parentId;
+
+            newHierarchy.set(newBlockId, newParentId);
+        });
+
+        // Replace the old map with the updated one
+        environment.hierarchy = newHierarchy;
+    }
+
+    // Update treeIndex map (blockId -> rootId)
+    if (environment.treeIndex) {
+        const newTreeIndex = new Map<string, string>();
+
+        environment.treeIndex.forEach((rootId, blockId) => {
+            // Map the blockId if it needs to be updated
+            const newBlockId = idMappings[blockId] || blockId;
+            // Map the rootId if it needs to be updated
+            const newRootId = idMappings[rootId] || rootId;
+
+            newTreeIndex.set(newBlockId, newRootId);
+        });
+
+        // Replace the old map with the updated one
+        environment.treeIndex.clear();
+        newTreeIndex.forEach((rootId, blockId) => {
+            environment.treeIndex.set(blockId, rootId);
+        });
+    }
+}
+
 export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     const {
         layoutId,
-        blockTreeLayout,
+        layout,
+        organisationId,
+        entityId,
+        entityType,
         isInitialized,
         environment,
         hydrateEnvironment,
@@ -92,8 +171,10 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     const {
         markLayoutChange: markHistoryLayoutChange,
         markStructuralChange: markHistoryStructuralChange,
+        markContentChange: markHistoryContentChange,
         clearHistory,
         hasUnsavedChanges,
+        hasLayoutChanges: historyHasLayoutChanges,
         setBaselineSnapshot,
         getBaselineSnapshot,
         getStructuralOperations,
@@ -101,7 +182,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     } = useLayoutHistory();
 
     const { session } = useAuth();
-    const [publishedVersion, setPublishedVersion] = useState(blockTreeLayout?.version ?? 0);
+    const [publishedVersion, setPublishedVersion] = useState(layout?.version ?? 0);
     const [localVersion, setLocalVersion] = useState(0);
     const [changeCount, setChangeCount] = useState(0);
     const [saveStatus, setSaveStatus] = useState<
@@ -117,22 +198,24 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             setSaveStatus("saving");
         },
         onError: (error: Error) => {
-            console.warn("Failed to save layout:", error);
+            const errorMsg = "error" in error ? formatError(error as any) : error.message;
+            console.error("Failed to save layout:", errorMsg);
             toast.error("Failed to save layout changes.");
             setSaveStatus("error");
             setTimeout(() => setSaveStatus("idle"), 3000);
             return;
         },
         onSuccess: (response: SaveEnvironmentResponse) => {
-            const layout = saveGridLayout();
+            const { idMappings, conflict, newVersion, layout } = response;
             if (!layout) {
+                // TODO: Fetch from backend
                 console.warn("Failed to get layout from GridStack after save");
                 setSaveStatus("error");
                 setTimeout(() => setSaveStatus("idle"), 3000);
                 return;
             }
 
-            if (response.conflict) {
+            if (conflict) {
                 console.warn("⚠️ [SAVE] Conflict detected - version mismatch", {
                     ourVersion: publishedVersion,
                     theirVersion: response.latestVersion,
@@ -144,24 +227,33 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 return;
             }
 
-            // Todo: Invalid Layout fetch query to refresh cached layout (Once we have integration)
-            // queryClient.invalidateQueries({ queryKey: ["layout", layoutId] });
+            const newEnvironment = structuredClone(environment);
 
-            const nextVersion = response.newVersion ?? publishedVersion + 1;
+            // Apply ID mappings to both environment and layout (update temporary IDs to permanent database IDs)
+            if (idMappings && Object.keys(idMappings).length > 0) {
+                applyIdMapping(newEnvironment, idMappings);
+            }
+
+            // // Update cache with new layout data instead of invalidating (more efficient)
+            // queryClient.setQueryData(["layout", organisationId, entityType, entityId], {
+            //     layout: newLayout,
+            //     version: newVersion || publishedVersion + 1,
+            // });
+
             const snapshot: LayoutSnapshot = {
-                blockEnvironment: getEnvironmentSnapshot(),
+                blockEnvironment: newEnvironment,
                 gridLayout: layout,
                 timestamp: now(),
-                version: nextVersion,
+                version: newVersion || publishedVersion + 1,
             };
             setBaselineSnapshot(snapshot);
-            updatePublishedVersion(nextVersion);
+            updatePublishedVersion(newVersion || publishedVersion + 1);
 
             // Clear operations on successful save
             clearStructuralOperations();
 
             requestAnimationFrame(() => {
-                discardLayoutChanges();
+                discardLayoutChanges(snapshot);
             });
 
             setSaveStatus("success");
@@ -200,23 +292,25 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     // Flag to prevent tracking during discard/initialization
     const isDiscardingRef = useRef(false);
     const hasInitializedRef = useRef(false);
+    // Flag to prevent tracking during edit mode transitions (form resize)
+    const isTogglingEditModeRef = useRef(false);
 
     // Capture initial snapshot when a layout is provided from the server
     useEffect(() => {
-        if (!blockTreeLayout?.layout) return;
+        if (!layout?.layout) return;
 
         const snapshot: LayoutSnapshot = {
             blockEnvironment: getEnvironmentSnapshot(),
-            gridLayout: structuredClone(blockTreeLayout.layout) as GridStackOptions,
+            gridLayout: structuredClone(layout.layout) as GridStackOptions,
             timestamp: now(),
-            version: blockTreeLayout.version ?? 0,
+            version: layout.version ?? 0,
         };
 
         setBaselineSnapshot(snapshot);
-        updatePublishedVersion(blockTreeLayout.version ?? 0);
+        updatePublishedVersion(layout.version ?? 0);
     }, [
-        blockTreeLayout?.layout,
-        blockTreeLayout?.version,
+        layout?.layout,
+        layout?.version,
         getEnvironmentSnapshot,
         setBaselineSnapshot,
         updatePublishedVersion,
@@ -246,6 +340,14 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     }, [clearHistory]);
 
     /**
+     * Suppress layout change tracking temporarily (e.g., during edit mode transitions)
+     * Used to prevent false positives when blocks resize for form rendering
+     */
+    const suppressEditModeTracking = useCallback((suppress: boolean) => {
+        isTogglingEditModeRef.current = suppress;
+    }, []);
+
+    /**
      * Track that a layout change occurred
      * Called from use-environment-grid-sync when GridStack 'change' event fires
      * With command system, this is primarily for UI feedback
@@ -265,8 +367,12 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     }, [getBaselineSnapshot, saveGridLayout]);
 
     const trackLayoutChange = useCallback(() => {
-        // Don't track during initialization or discard operations
-        if (!hasInitializedRef.current || isDiscardingRef.current) {
+        // Don't track during initialization, discard operations, or edit mode transitions
+        if (
+            !hasInitializedRef.current ||
+            isDiscardingRef.current ||
+            isTogglingEditModeRef.current
+        ) {
             return;
         }
 
@@ -293,6 +399,19 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     }, [markHistoryStructuralChange]);
 
     /**
+     * Track that a content change occurred (block update)
+     * Content changes don't affect layout structure
+     */
+    const trackContentChange = useCallback(() => {
+        if (!hasInitializedRef.current || isDiscardingRef.current) {
+            return;
+        }
+
+        setChangeCount((prev) => prev + 1);
+        markHistoryContentChange();
+    }, [markHistoryContentChange]);
+
+    /**
      * Check if discard is allowed
      * With command system, discard is always allowed via undo
      */
@@ -301,41 +420,44 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
     }, []);
 
     /**
-     * Check if there are unsaved layout changes
+     * Check if there are unsaved layout changes (structural/positional, not content)
      */
     const hasLayoutChanges = useCallback(() => {
-        return hasUnsavedChanges;
-    }, [hasUnsavedChanges]);
+        return historyHasLayoutChanges;
+    }, [historyHasLayoutChanges]);
 
     /**
      * Discard all layout changes by clearing history and reloading from last save
      * Called when user clicks "Discard All" in EditModeIndicator
      * With command system, this clears all commands and reloads from saved state
      */
-    const discardLayoutChanges = useCallback(() => {
-        const snapshot = getBaselineSnapshot();
-        if (!snapshot) {
-            console.warn("Cannot discard layout: missing saved snapshot");
-            return;
-        }
+    const discardLayoutChanges = useCallback(
+        (snapshot: LayoutSnapshot | null = null) => {
+            const curr = snapshot || getBaselineSnapshot();
+            if (!curr) {
+                console.warn("Cannot discard layout: missing saved snapshot");
+                return;
+            }
 
-        // Set flag to prevent tracking reload events
-        isDiscardingRef.current = true;
+            // Set flag to prevent tracking reload events
+            isDiscardingRef.current = true;
 
-        try {
-            // Clear command history immediately (don't undo - just discard)
-            clearLayoutChanges();
+            try {
+                // Clear command history immediately (don't undo - just discard)
+                clearLayoutChanges();
 
-            applySnapshot(snapshot);
-        } catch (error) {
-            console.error("Failed to discard layout changes:", error);
-        } finally {
-            // Re-enable tracking after delay
-            setTimeout(() => {
-                isDiscardingRef.current = false;
-            }, 500);
-        }
-    }, [clearLayoutChanges, getBaselineSnapshot, applySnapshot]);
+                applySnapshot(curr);
+            } catch (error) {
+                console.error("Failed to discard layout changes:", error);
+            } finally {
+                // Re-enable tracking after delay
+                setTimeout(() => {
+                    isDiscardingRef.current = false;
+                }, 500);
+            }
+        },
+        [clearLayoutChanges, getBaselineSnapshot, applySnapshot]
+    );
 
     /**
      * Save current layout state to backend with version control
@@ -357,12 +479,15 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             return false;
         }
 
+        const nextVersion = publishedVersion + 1;
+
         // Prepare save request
         const saveRequest: SaveEnvironmentRequest = {
             layoutId,
+            organisationId,
             layout: currentLayout,
-            baseVersion: publishedVersion,
-            structuralOperations: operations,
+            version: nextVersion,
+            operations,
         };
 
         try {
@@ -464,10 +589,12 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             hasLayoutChanges,
             trackLayoutChange,
             trackStructuralChange,
+            trackContentChange,
             clearLayoutChanges,
             saveLayoutChanges,
             discardLayoutChanges,
             canDiscard,
+            suppressEditModeTracking,
             publishedVersion,
             localVersion,
             layoutChangeCount: changeCount,
@@ -479,10 +606,12 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
             hasLayoutChanges,
             trackLayoutChange,
             trackStructuralChange,
+            trackContentChange,
             clearLayoutChanges,
             saveLayoutChanges,
             discardLayoutChanges,
             canDiscard,
+            suppressEditModeTracking,
             publishedVersion,
             localVersion,
             changeCount,

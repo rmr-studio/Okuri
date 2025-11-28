@@ -8,6 +8,7 @@ interface Props {
     variant?: "title" | "subtitle" | "body" | "muted";
     align?: "left" | "center" | "right";
     className?: string;
+    placeholder?: string;
 }
 
 const Schema = z
@@ -16,6 +17,7 @@ const Schema = z
         variant: z.enum(["title", "subtitle", "body", "muted"]).optional(),
         align: z.enum(["left", "center", "right"]).optional(),
         className: z.string().optional(),
+        placeholder: z.string().optional(),
     })
     .passthrough();
 
@@ -39,11 +41,25 @@ const tagMap: Record<NonNullable<Props["variant"]>, string> = {
     muted: "p",
 };
 
-const Block: FC<Props> = ({ text, variant = "body", align = "left", className }) => {
-    if (!text) return null;
+const Block: FC<Props> = ({ text, variant = "body", align = "left", className, placeholder }) => {
+    // If no text and no placeholder, render nothing
+    if (!text && !placeholder) return null;
+
     const Tag = tagMap[variant] as keyof JSX.IntrinsicElements;
+    const displayText = text || placeholder;
+    const isPlaceholder = !text && placeholder;
+
     return (
-        <Tag className={cn(variantClasses[variant], alignClasses[align], className)}>{text}</Tag>
+        <Tag
+            className={cn(
+                variantClasses[variant],
+                alignClasses[align],
+                isPlaceholder && "text-muted-foreground/50 italic",
+                className
+            )}
+        >
+            {displayText}
+        </Tag>
     );
 };
 

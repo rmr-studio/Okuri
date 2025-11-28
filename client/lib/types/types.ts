@@ -376,6 +376,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/block/environment/hydrate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hydrate Blocks
+         * @description Resolves entity references for one or more blocks in a single batched request. This is used for progressive loading of entity data without fetching everything upfront. Only blocks with entity reference metadata will be hydrated; other blocks are skipped.
+         */
+        post: operations["hydrateBlocks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/block/environment/": {
         parameters: {
             query?: never;
@@ -588,7 +608,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/block/environment/type/{type}/id/{entityId}": {
+    "/api/v1/block/environment/organisation/{organisationId}/type/{type}/id/{entityId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -597,7 +617,7 @@ export interface paths {
         };
         /**
          * Get Block Environment
-         * @description Retrieves the block environment for the specified page
+         * @description Retrieves the block environment for the specified entity. Creates a default layout if none exists (lazy initialization).
          */
         get: operations["getBlockEnvironment"];
         put?: never;
@@ -651,24 +671,23 @@ export interface components {
             postalCode: string;
             country: string;
         };
+        /**
+         * @description Enumeration of possible entity types within the system.
+         * @enum {string}
+         */
+        EntityType: EntityType;
         MembershipDetails: {
             organisation?: components["schemas"]["Organisation"];
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
+            role: components["schemas"]["OrganisationRoles"];
             /** Format: date-time */
             memberSince: string;
         };
         Organisation: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "organisation";
+            type: components["schemas"]["EntityType"];
             /** Format: uuid */
             id: string;
             name: string;
-            /** @enum {string} */
-            plan: "FREE" | "STARTUP" | "SCALE" | "ENTERPRISE";
+            plan: components["schemas"]["OrganisationPlan"];
             defaultCurrency: {
                 currencyCode?: string;
                 /** Format: int32 */
@@ -704,11 +723,11 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             expiresAt: string;
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
-            /** @enum {string} */
-            status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED";
+            role: components["schemas"]["OrganisationRoles"];
+            status: components["schemas"]["OrganisationInviteStatus"];
         };
+        /** @enum {string} */
+        OrganisationInviteStatus: OrganisationInviteStatus;
         OrganisationMember: {
             user: components["schemas"]["UserDisplay"];
             membershipDetails: components["schemas"]["MembershipDetails"];
@@ -718,6 +737,10 @@ export interface components {
             accountNumber?: string;
             accountName?: string;
         };
+        /** @enum {string} */
+        OrganisationPlan: OrganisationPlan;
+        /** @enum {string} */
+        OrganisationRoles: OrganisationRoles;
         User: {
             /** Format: uuid */
             id: string;
@@ -742,187 +765,33 @@ export interface components {
             /** Format: uuid */
             organisationId: string;
             description?: string;
-            /** @enum {string} */
-            type: "SERVICE" | "PRODUCT" | "FEE" | "DISCOUNT";
+            type: components["schemas"]["LineItemType"];
             chargeRate: number;
         };
+        /** @enum {string} */
+        LineItemType: LineItemType;
         Billable: {
             /** Format: date-time */
             date: string;
             description: string;
             lineItem: components["schemas"]["LineItem"];
-            /** @enum {string} */
-            billableType: "HOURS" | "DISTANCE" | "QUANTITY" | "FIXED";
+            billableType: components["schemas"]["BillableType"];
             quantity: number;
         };
-        BindingSource: {
-            type: string;
-        };
-        Block: {
-            /** Format: uuid */
-            id: string;
-            name?: string;
-            /** Format: uuid */
-            organisationId: string;
-            type: components["schemas"]["BlockType"];
-            payload: components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["BlockContentMetadata"];
-            archived: boolean;
-            validationErrors?: string[];
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            /** Format: uuid */
-            createdBy?: string;
-            /** Format: uuid */
-            updatedBy?: string;
-        };
-        BlockBinding: {
-            prop: string;
-            source: components["schemas"]["Computed"] | components["schemas"]["DataPath"];
-        };
-        BlockComponentNode: {
-            id: string;
-            /** @enum {string} */
-            type: "LAYOUT_CONTAINER" | "LIST" | "CONTACT_CARD" | "ADDRESS_CARD" | "LINE_ITEM" | "TABLE" | "IMAGE" | "BUTTON" | "ATTACHMENT" | "TEXT" | "FALLBACK";
-            props: {
-                [key: string]: unknown;
-            };
-            bindings: components["schemas"]["BlockBinding"][];
-            slots?: {
-                [key: string]: string[];
-            };
-            slotLayout?: {
-                [key: string]: components["schemas"]["LayoutGrid"];
-            };
-            widgetMeta?: {
-                [key: string]: Record<string, never>;
-            };
-            visible?: components["schemas"]["Condition"];
-            /** @enum {string} */
-            fetchPolicy: "INHERIT" | "LAZY" | "EAGER";
-        };
-        BlockContentMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
-            data: {
-                [key: string]: unknown;
-            };
-            listConfig?: components["schemas"]["BlockListConfiguration"];
-        };
-        BlockDisplay: {
-            form: components["schemas"]["BlockFormStructure"];
-            render: components["schemas"]["BlockRenderStructure"];
-        };
-        BlockFormStructure: {
-            fields: {
-                [key: string]: components["schemas"]["FormWidgetConfig"];
-            };
-        };
-        BlockListConfiguration: {
-            allowedTypes?: string[];
-            allowDuplicates: boolean;
-            display: components["schemas"]["ListDisplayConfig"];
-            config: components["schemas"]["ListConfig"];
-        };
-        BlockMeta: {
-            validationErrors: string[];
-            computedFields?: {
-                [key: string]: unknown;
-            };
-            /** Format: int32 */
-            lastValidatedVersion?: number;
-        };
-        BlockReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
-            /** Format: int32 */
-            expandDepth: number;
-            item: components["schemas"]["ReferenceItem"];
-        };
-        BlockRenderStructure: {
-            /** Format: int32 */
-            version: number;
-            layoutGrid: components["schemas"]["LayoutGrid"];
-            components: {
-                [key: string]: components["schemas"]["BlockComponentNode"];
-            };
-            theme?: components["schemas"]["ThemeTokens"];
-        };
-        BlockSchema: {
-            name: string;
-            description?: string;
-            /** @enum {string} */
-            type: "STRING" | "NUMBER" | "BOOLEAN" | "OBJECT" | "ARRAY" | "NULL";
-            /** @enum {string} */
-            format?: "DATE" | "DATETIME" | "EMAIL" | "PHONE" | "CURRENCY" | "URL" | "PERCENTAGE";
-            required: boolean;
-            properties?: {
-                [key: string]: components["schemas"]["BlockSchema"];
-            };
-            items?: components["schemas"]["BlockSchema"];
-        };
-        BlockTree: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "block_tree";
-            root: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
-        };
-        BlockTreeReference: WithRequired<components["schemas"]["ReferencePayload"], "type"> & {
-            reference: components["schemas"]["Reference"];
-        };
-        BlockType: {
-            /** Format: uuid */
-            id: string;
-            key: string;
-            /** Format: int32 */
-            version: number;
-            name: string;
-            /** Format: uuid */
-            sourceId?: string;
-            nesting?: components["schemas"]["BlockTypeNesting"];
-            description?: string;
-            /** Format: uuid */
-            organisationId?: string;
-            archived: boolean;
-            /** @enum {string} */
-            strictness: "SOFT" | "STRICT" | "NONE";
-            system: boolean;
-            schema: components["schemas"]["BlockSchema"];
-            display: components["schemas"]["BlockDisplay"];
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            /** Format: uuid */
-            createdBy?: string;
-            /** Format: uuid */
-            updatedBy?: string;
-        };
-        BlockTypeNesting: {
-            /** Format: int32 */
-            max?: number;
-            allowedTypes: string[];
-        };
+        /** @enum {string} */
+        BillableType: BillableType;
         Client: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "client";
+            type: components["schemas"]["EntityType"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             organisationId: string;
             name: string;
             contact: components["schemas"]["Contact"];
-            /** @enum {string} */
-            clientType?: "PROSPECT" | "CUSTOMER" | "SUBSCRIBER" | "SERVICE" | "ENTERPRISE" | "PARTNER" | "VENDOR" | "DORMANT" | "TRIAL" | "CHURNED" | "INFLUENCER" | "OTHER";
+            clientType?: components["schemas"]["ClientType"];
             company?: components["schemas"]["Company"];
             role?: string;
             archived: boolean;
-            metadata?: components["schemas"]["ClientTypeMetadata"];
-            attributes?: {
-                [key: string]: components["schemas"]["BlockTree"];
-            };
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -932,13 +801,8 @@ export interface components {
             /** Format: uuid */
             updatedBy?: string;
         };
-        ClientTypeMetadata: {
-            /** @enum {string} */
-            type: "PROSPECT" | "CUSTOMER" | "SUBSCRIBER" | "SERVICE" | "ENTERPRISE" | "PARTNER" | "VENDOR" | "DORMANT" | "TRIAL" | "CHURNED" | "INFLUENCER" | "OTHER";
-            metadata: {
-                [key: string]: components["schemas"]["Block"];
-            };
-        };
+        /** @enum {string} */
+        ClientType: ClientType;
         Company: {
             /** Format: uuid */
             id: string;
@@ -961,18 +825,6 @@ export interface components {
             /** Format: uuid */
             updatedBy?: string;
         };
-        Computed: {
-            type: "Computed";
-        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
-            expr: string;
-            engine: string;
-        });
-        Condition: {
-            /** @enum {string} */
-            op: "EXISTS" | "EQUALS" | "NOT_EQUALS" | "GT" | "GTE" | "LT" | "LTE" | "IN" | "NOT_IN" | "EMPTY" | "NOT_EMPTY";
-            left: components["schemas"]["Path"] | components["schemas"]["Value"];
-            right?: components["schemas"]["Path"] | components["schemas"]["Value"];
-        };
         Contact: {
             email: string;
             phone?: string;
@@ -980,54 +832,6 @@ export interface components {
             additionalContacts?: {
                 [key: string]: string;
             };
-        };
-        ContentNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
-            children?: components["schemas"]["Node"][];
-        };
-        DataPath: {
-            type: "DataPath";
-        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
-            path: string;
-        });
-        EntityReference: WithRequired<components["schemas"]["ReferencePayload"], "type"> & {
-            reference: components["schemas"]["Reference"][];
-        };
-        EntityReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
-            /** @enum {string} */
-            presentation: "SUMMARY" | "ENTITY" | "TABLE" | "GRID" | "INLINE";
-            items: components["schemas"]["ReferenceItem"][];
-            projection: components["schemas"]["Projection"];
-            allowedTypes?: ("line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task" | "block_type" | "block" | "user")[];
-            display: components["schemas"]["ListDisplayConfig"];
-            config: components["schemas"]["ListConfig"];
-            allowDuplicates: boolean;
-        };
-        FilterSpec: {
-            expr: {
-                [key: string]: unknown;
-            };
-        };
-        FormWidgetConfig: {
-            /** @enum {string} */
-            type: "TEXT_INPUT" | "NUMBER_INPUT" | "CHECKBOX" | "RADIO_BUTTON" | "DROPDOWN" | "DATE_PICKER" | "EMAIL_INPUT" | "PHONE_INPUT" | "CURRENCY_INPUT" | "TEXT_AREA" | "FILE_UPLOAD" | "SLIDER" | "TOGGLE_SWITCH";
-            label: string;
-            description?: string;
-            tooltip?: string;
-            placeholder?: string;
-            options?: components["schemas"]["Option"][];
-        };
-        GridRect: {
-            /** Format: int32 */
-            x: number;
-            /** Format: int32 */
-            y: number;
-            /** Format: int32 */
-            margin?: number;
-            /** Format: int32 */
-            width: number;
-            /** Format: int32 */
-            height: number;
-            locked: boolean;
         };
         Invoice: {
             /** Format: uuid */
@@ -1049,8 +853,7 @@ export interface components {
                 /** Format: int32 */
                 defaultFractionDigits?: number;
             };
-            /** @enum {string} */
-            status: "PENDING" | "PAID" | "OVERDUE" | "OUTDATED" | "CANCELLED";
+            status: components["schemas"]["InvoiceStatus"];
             dates: components["schemas"]["InvoiceDates"];
             customFields: {
                 [key: string]: Record<string, never>;
@@ -1070,118 +873,23 @@ export interface components {
             /** Format: date-time */
             invoiceUpdatedAt?: string;
         };
+        InvoiceFieldType: string;
+        /** @enum {string} */
+        InvoiceStatus: InvoiceStatus;
         InvoiceTemplateFieldStructure: {
             name: string;
             description?: string;
-            type: string;
+            type: components["schemas"]["InvoiceFieldType"];
             required: boolean;
             children: components["schemas"]["InvoiceTemplateFieldStructure"][];
         };
-        LayoutGrid: {
-            layout: components["schemas"]["GridRect"];
-            items: components["schemas"]["LayoutGridItem"][];
-        };
-        LayoutGridItem: {
-            id: string;
-            rect: components["schemas"]["GridRect"];
-        };
-        ListConfig: {
-            /** @enum {string} */
-            mode: "MANUAL" | "SORTED";
-            sort?: components["schemas"]["SortSpec"];
-            filters: components["schemas"]["FilterSpec"][];
-            /** @enum {string} */
-            filterLogic: "AND" | "OR";
-        };
-        ListDisplayConfig: {
-            /** Format: int32 */
-            itemSpacing: number;
-            showDragHandles: boolean;
-            emptyMessage: string;
-            paging?: components["schemas"]["PagingSpec"];
-        };
-        Metadata: {
-            /** @enum {string} */
-            type: "content" | "entity_reference" | "block_reference";
-            meta: components["schemas"]["BlockMeta"];
-        };
-        Node: {
-            warnings: string[];
-            /** @enum {string} */
-            type: "reference_node" | "content_node";
-            block: components["schemas"]["Block"];
-        };
-        Operand: {
-            kind: string;
-        };
-        Option: {
-            label: string;
-            value: string;
-        };
-        PagingSpec: {
-            /** Format: int32 */
-            pageSize: number;
-        };
-        Path: {
-            kind: "Path";
-        } & (Omit<components["schemas"]["Operand"], "kind"> & {
-            path: string;
-        });
-        Projection: {
-            fields: string[];
-            /** Format: uuid */
-            templateId?: string;
-        };
-        Reference: {
-            /** Format: uuid */
-            id?: string;
-            /** @enum {string} */
-            entityType: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task" | "block_type" | "block" | "user";
-            /** Format: uuid */
-            entityId: string;
-            path?: string;
-            /** Format: int32 */
-            orderIndex?: number;
-            /** @description Inline, discriminated entity */
-            entity?: components["schemas"]["Referenceable"];
-            /** @enum {string} */
-            warning?: "MISSING" | "REQUIRES_LOADING" | "UNSUPPORTED" | "CIRCULAR" | "DEPTH_EXCEEDED";
-        };
-        ReferenceItem: {
-            /** @enum {string} */
-            type: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task" | "block_type" | "block" | "user";
-            /** Format: uuid */
-            id: string;
-            labelOverride?: string;
-            badge?: string;
-        };
-        ReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "meta" | "type"> & {
-            path: string;
-            /** @enum {string} */
-            fetchPolicy: "LAZY" | "EAGER";
-        };
-        ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
-            reference: components["schemas"]["EntityReference"] | components["schemas"]["BlockTreeReference"];
-        };
-        ReferencePayload: {
-            /** @enum {string} */
-            type: "block_reference" | "entity_reference";
-        };
-        Referenceable: {
-            /** @enum {string} */
-            type: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task" | "block_type" | "block" | "user";
-        } & (components["schemas"]["Client"] | components["schemas"]["Organisation"] | components["schemas"]["BlockTree"]);
+        ReportFieldType: string;
         ReportTemplateFieldStructure: {
             name: string;
             description?: string;
-            type: string;
+            type: components["schemas"]["ReportFieldType"];
             required: boolean;
             children: components["schemas"]["ReportTemplateFieldStructure"][];
-        };
-        SortSpec: {
-            by: string;
-            /** @enum {string} */
-            dir: "ASC" | "DESC";
         };
         TemplateInvoiceTemplateFieldStructure: {
             /** Format: uuid */
@@ -1190,8 +898,7 @@ export interface components {
             userId?: string;
             name: string;
             description?: string;
-            /** @enum {string} */
-            type: "CLIENT" | "INVOICE" | "REPORT";
+            type: components["schemas"]["TemplateType"];
             structure: {
                 [key: string]: components["schemas"]["InvoiceTemplateFieldStructure"];
             };
@@ -1209,8 +916,7 @@ export interface components {
             userId?: string;
             name: string;
             description?: string;
-            /** @enum {string} */
-            type: "CLIENT" | "INVOICE" | "REPORT";
+            type: components["schemas"]["TemplateType"];
             structure: {
                 [key: string]: components["schemas"]["ReportTemplateFieldStructure"];
             };
@@ -1221,6 +927,166 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        /** @enum {string} */
+        TemplateType: TemplateType;
+        BindingSource: {
+            type: string;
+        };
+        BlockBinding: {
+            prop: string;
+            source: components["schemas"]["Computed"] | components["schemas"]["DataPath"];
+        };
+        BlockComponentNode: {
+            id: string;
+            type: components["schemas"]["ComponentType"];
+            props: {
+                [key: string]: unknown;
+            };
+            bindings: components["schemas"]["BlockBinding"][];
+            slots?: {
+                [key: string]: string[];
+            };
+            slotLayout?: {
+                [key: string]: components["schemas"]["LayoutGrid"];
+            };
+            widgetMeta?: {
+                [key: string]: Record<string, never>;
+            };
+            visible?: components["schemas"]["Condition"];
+            fetchPolicy: components["schemas"]["BlockFetchPolicy"];
+        };
+        BlockDisplay: {
+            form: components["schemas"]["BlockFormStructure"];
+            render: components["schemas"]["BlockRenderStructure"];
+        };
+        /** @enum {string} */
+        BlockFetchPolicy: BlockFetchPolicy;
+        BlockFormStructure: {
+            fields: {
+                [key: string]: components["schemas"]["FormWidgetConfig"];
+            };
+        };
+        /** @enum {string} */
+        BlockFormWidgetType: BlockFormWidgetType;
+        BlockRenderStructure: {
+            /** Format: int32 */
+            version: number;
+            layoutGrid: components["schemas"]["LayoutGrid"];
+            components: {
+                [key: string]: components["schemas"]["BlockComponentNode"];
+            };
+            theme?: components["schemas"]["ThemeTokens"];
+        };
+        BlockSchema: {
+            name: string;
+            description?: string;
+            type: components["schemas"]["DataType"];
+            format?: components["schemas"]["DataFormat"];
+            required: boolean;
+            properties?: {
+                [key: string]: components["schemas"]["BlockSchema"];
+            };
+            items?: components["schemas"]["BlockSchema"];
+        };
+        BlockType: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            /** Format: int32 */
+            version: number;
+            name: string;
+            /** Format: uuid */
+            sourceId?: string;
+            nesting?: components["schemas"]["BlockTypeNesting"];
+            description?: string;
+            /** Format: uuid */
+            organisationId?: string;
+            archived: boolean;
+            strictness: components["schemas"]["BlockValidationScope"];
+            system: boolean;
+            schema: components["schemas"]["BlockSchema"];
+            display: components["schemas"]["BlockDisplay"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            updatedBy?: string;
+        };
+        BlockTypeNesting: {
+            /** Format: int32 */
+            max?: number;
+            allowedTypes: string[];
+        };
+        /** @enum {string} */
+        BlockValidationScope: BlockValidationScope;
+        /** @enum {string} */
+        ComponentType: ComponentType;
+        Computed: {
+            type: "Computed";
+        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
+            expr: string;
+            engine: string;
+        });
+        Condition: {
+            op: components["schemas"]["Op"];
+            left: components["schemas"]["Path"] | components["schemas"]["Value"];
+            right?: components["schemas"]["Path"] | components["schemas"]["Value"];
+        };
+        /** @enum {string} */
+        DataFormat: DataFormat;
+        DataPath: {
+            type: "DataPath";
+        } & (Omit<components["schemas"]["BindingSource"], "type"> & {
+            path: string;
+        });
+        /** @enum {string} */
+        DataType: DataType;
+        FormWidgetConfig: {
+            type: components["schemas"]["BlockFormWidgetType"];
+            label: string;
+            description?: string;
+            tooltip?: string;
+            placeholder?: string;
+            options?: components["schemas"]["Option"][];
+        };
+        GridRect: {
+            /** Format: int32 */
+            x: number;
+            /** Format: int32 */
+            y: number;
+            /** Format: int32 */
+            margin?: number;
+            /** Format: int32 */
+            width: number;
+            /** Format: int32 */
+            height: number;
+            locked: boolean;
+        };
+        LayoutGrid: {
+            layout: components["schemas"]["GridRect"];
+            items: components["schemas"]["LayoutGridItem"][];
+        };
+        LayoutGridItem: {
+            id: string;
+            rect: components["schemas"]["GridRect"];
+        };
+        /** @enum {string} */
+        Op: Op;
+        Operand: {
+            kind: string;
+        };
+        Option: {
+            label: string;
+            value: string;
+        };
+        Path: {
+            kind: "Path";
+        } & (Omit<components["schemas"]["Operand"], "kind"> & {
+            path: string;
+        });
         ThemeTokens: {
             variant?: string;
             colorRole?: string;
@@ -1234,8 +1100,7 @@ export interface components {
         OrganisationCreationRequest: {
             name: string;
             avatarUrl?: string;
-            /** @enum {string} */
-            plan: "FREE" | "STARTUP" | "SCALE" | "ENTERPRISE";
+            plan: components["schemas"]["OrganisationPlan"];
             defaultCurrency: string;
             isDefault: boolean;
             businessNumber?: string;
@@ -1273,8 +1138,7 @@ export interface components {
                 /** Format: int32 */
                 defaultFractionDigits?: number;
             };
-            /** @enum {string} */
-            status: "PENDING" | "PAID" | "OVERDUE" | "OUTDATED" | "CANCELLED";
+            status: components["schemas"]["InvoiceStatus"];
             /** Format: date-time */
             startDate?: string;
             /** Format: date-time */
@@ -1300,16 +1164,71 @@ export interface components {
             key: string;
             name: string;
             description?: string;
-            /** @enum {string} */
-            mode: "SOFT" | "STRICT" | "NONE";
+            mode: components["schemas"]["BlockValidationScope"];
             schema: components["schemas"]["BlockSchema"];
             display: components["schemas"]["BlockDisplay"];
             /** Format: uuid */
             organisationId: string;
         };
+        Block: {
+            /** Format: uuid */
+            id: string;
+            name?: string;
+            /** Format: uuid */
+            organisationId: string;
+            type: components["schemas"]["BlockType"];
+            payload: components["schemas"]["EntityReferenceMetadata"] | components["schemas"]["BlockReferenceMetadata"] | components["schemas"]["BlockContentMetadata"];
+            archived: boolean;
+            validationErrors?: string[];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            updatedBy?: string;
+        };
+        BlockContentMetadata: WithRequired<components["schemas"]["Metadata"], "deletable" | "meta" | "type"> & {
+            data: {
+                [key: string]: unknown;
+            };
+            listConfig?: components["schemas"]["BlockListConfiguration"];
+        };
         BlockEnvironment: {
             layout: components["schemas"]["BlockTreeLayout"];
             trees: components["schemas"]["BlockTree"][];
+        };
+        BlockListConfiguration: {
+            allowedTypes?: string[];
+            allowDuplicates: boolean;
+            display: components["schemas"]["ListDisplayConfig"];
+            config: components["schemas"]["ListConfig"];
+        };
+        /** @enum {string} */
+        BlockListOrderingMode: BlockListOrderingMode;
+        BlockMeta: {
+            validationErrors: string[];
+            computedFields?: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            lastValidatedVersion?: number;
+        };
+        /** @enum {string} */
+        BlockMetadataType: BlockMetadataType;
+        /** @enum {string} */
+        BlockReferenceFetchPolicy: BlockReferenceFetchPolicy;
+        BlockReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
+            /** Format: int32 */
+            expandDepth: number;
+            item: components["schemas"]["ReferenceItem"];
+        };
+        /** @enum {string} */
+        BlockReferenceWarning: BlockReferenceWarning;
+        BlockTree: {
+            type: components["schemas"]["EntityType"];
+            root: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
         };
         BlockTreeLayout: {
             /** Format: uuid */
@@ -1328,6 +1247,9 @@ export interface components {
             /** Format: uuid */
             updatedBy?: string;
         };
+        BlockTreeReference: WithRequired<components["schemas"]["ReferencePayload"], "type"> & {
+            reference: components["schemas"]["Reference"];
+        };
         BreakpointConfig: {
             /** Format: int32 */
             w: number;
@@ -1337,6 +1259,15 @@ export interface components {
         ColumnOptions: {
             breakpoints?: components["schemas"]["BreakpointConfig"][];
             layout?: string;
+            breakpointForWindow?: string;
+            /** Format: int32 */
+            columnMax?: number;
+            /** Format: int32 */
+            columnWidth?: number;
+        };
+        /** @description Content node containing a block with optional children */
+        ContentNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
+            children?: components["schemas"]["Node"][];
         };
         DraggableOptions: {
             cancel?: string;
@@ -1346,6 +1277,50 @@ export interface components {
             appendTo?: string;
             scroll?: boolean;
         };
+        EntityReference: WithRequired<components["schemas"]["ReferencePayload"], "type"> & {
+            reference: components["schemas"]["Reference"][];
+        };
+        EntityReferenceMetadata: components["schemas"]["ReferenceMetadata"] & {
+            presentation: components["schemas"]["Presentation"];
+            items: components["schemas"]["ReferenceItem"][];
+            projection: components["schemas"]["Projection"];
+            allowedTypes?: components["schemas"]["EntityType"][];
+            display: components["schemas"]["ListDisplayConfig"];
+            config: components["schemas"]["ListConfig"];
+            allowDuplicates: boolean;
+        };
+        FilterSpec: {
+            expr: {
+                [key: string]: unknown;
+            };
+        };
+        ListConfig: {
+            mode: components["schemas"]["BlockListOrderingMode"];
+            sort?: components["schemas"]["SortSpec"];
+            filters: components["schemas"]["FilterSpec"][];
+            filterLogic: components["schemas"]["ListFilterLogicType"];
+        };
+        ListDisplayConfig: {
+            /** Format: int32 */
+            itemSpacing: number;
+            showDragHandles: boolean;
+            emptyMessage: string;
+            paging?: components["schemas"]["PagingSpec"];
+        };
+        /** @enum {string} */
+        ListFilterLogicType: ListFilterLogicType;
+        Metadata: {
+            type: components["schemas"]["BlockMetadataType"];
+            deletable: boolean;
+            meta: components["schemas"]["BlockMeta"];
+        };
+        Node: {
+            warnings: string[];
+            type: components["schemas"]["NodeType"];
+            block: components["schemas"]["Block"];
+        };
+        /** @enum {string} */
+        NodeType: NodeType;
         OverwriteEnvironmentRequest: {
             /** Format: uuid */
             layoutId: string;
@@ -1355,19 +1330,77 @@ export interface components {
             version: number;
             environment: components["schemas"]["BlockEnvironment"];
         };
+        PagingSpec: {
+            /** Format: int32 */
+            pageSize: number;
+        };
+        /** @enum {string} */
+        Presentation: Presentation;
+        Projection: {
+            fields: string[];
+            /** Format: uuid */
+            templateId?: string;
+        };
+        Reference: {
+            /** Format: uuid */
+            id?: string;
+            entityType: components["schemas"]["EntityType"];
+            /** Format: uuid */
+            entityId: string;
+            path?: string;
+            /** Format: int32 */
+            orderIndex?: number;
+            entity?: components["schemas"]["Referenceable"];
+            warning?: components["schemas"]["BlockReferenceWarning"];
+        };
+        ReferenceItem: {
+            type: components["schemas"]["EntityType"];
+            /** Format: uuid */
+            id: string;
+            labelOverride?: string;
+            badge?: string;
+        };
+        ReferenceMetadata: WithRequired<components["schemas"]["Metadata"], "deletable" | "meta" | "type"> & {
+            path: string;
+            fetchPolicy: components["schemas"]["BlockReferenceFetchPolicy"];
+        };
+        /** @description Reference node containing a block with entity or block tree references */
+        ReferenceNode: WithRequired<components["schemas"]["Node"], "block" | "type" | "warnings"> & {
+            reference: components["schemas"]["EntityReference"] | components["schemas"]["BlockTreeReference"];
+        };
+        ReferencePayload: {
+            type: components["schemas"]["ReferenceType"];
+        };
+        /** @enum {string} */
+        ReferenceType: ReferenceType;
+        Referenceable: {
+            type: components["schemas"]["EntityType"];
+        };
         RenderContent: {
             id: string;
             key: string;
-            /** @enum {string} */
-            renderType: "list" | "component" | "container";
-            /** @enum {string} */
-            blockType: "reference_node" | "content_node";
+            renderType: components["schemas"]["RenderType"];
+            blockType: components["schemas"]["NodeType"];
         };
+        /** @enum {string} */
+        RenderType: RenderType;
         ResizableOptions: {
             handles?: string;
             autoHide?: boolean;
         };
+        /** @enum {string} */
+        SortDir: SortDir;
+        SortSpec: {
+            by: string;
+            dir: components["schemas"]["SortDir"];
+        };
         TreeLayout: {
+            acceptWidgets?: boolean;
+            alwaysShowResizeHandle?: boolean;
+            animate?: boolean;
+            auto?: boolean;
+            /** Format: int32 */
+            cellHeight?: number;
             resizable?: components["schemas"]["ResizableOptions"];
             draggable?: components["schemas"]["DraggableOptions"];
             /** Format: int32 */
@@ -1380,14 +1413,8 @@ export interface components {
             marginBottom?: number;
             /** Format: int32 */
             marginLeft?: number;
-            acceptWidgets?: boolean;
-            alwaysShowResizeHandle?: boolean;
-            animate?: boolean;
-            auto?: boolean;
-            /** Format: int32 */
-            cellHeight?: number;
-            /** Format: int32 */
-            column?: number;
+            /** @description Number of columns or the string 'auto' */
+            column?: number | string;
             columnOpts?: components["schemas"]["ColumnOptions"];
             disableDrag?: boolean;
             disableOneColumnMode?: boolean;
@@ -1412,6 +1439,7 @@ export interface components {
             rtl?: boolean;
             staticGrid?: boolean;
             styleInHead?: boolean;
+            sizeToContent?: boolean;
             layout?: string;
             class?: string;
             children?: components["schemas"]["Widget"][];
@@ -1425,7 +1453,7 @@ export interface components {
             /** Format: int32 */
             w: number;
             /** Format: int32 */
-            h: number;
+            h?: number;
             /** Format: int32 */
             minW?: number;
             /** Format: int32 */
@@ -1445,6 +1473,17 @@ export interface components {
             success: boolean;
             environment: components["schemas"]["BlockEnvironment"];
         };
+        HydrateBlocksRequest: {
+            blockIds: string[];
+            /** Format: uuid */
+            organisationId: string;
+        };
+        BlockHydrationResult: {
+            /** Format: uuid */
+            blockId: string;
+            references: components["schemas"]["Reference"][];
+            error?: string;
+        };
         AddBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
             block: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
             /** Format: uuid */
@@ -1453,11 +1492,15 @@ export interface components {
             index?: number;
         };
         BlockOperation: {
-            /** @enum {string} */
-            type: "ADD_BLOCK" | "REMOVE_BLOCK" | "MOVE_BLOCK" | "UPDATE_BLOCK" | "REORDER_BLOCK";
+            type: components["schemas"]["BlockOperationType"];
             /** Format: uuid */
             blockId: string;
         };
+        /**
+         * @description Enumeration of possible block operation types for requests.
+         * @enum {string}
+         */
+        BlockOperationType: BlockOperationType;
         MoveBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
             /** Format: uuid */
             fromParentId?: string;
@@ -1494,7 +1537,7 @@ export interface components {
             id: string;
             /** Format: date-time */
             timestamp: string;
-            data: components["schemas"]["AddBlockOperation"] | components["schemas"]["MoveBlockOperation"] | components["schemas"]["RemoveBlockOperation"] | components["schemas"]["ReorderBlockOperation"] | components["schemas"]["UpdateBlockOperation"];
+            data: components["schemas"]["AddBlockOperation"] | components["schemas"]["MoveBlockOperation"] | components["schemas"]["RemoveBlockOperation"] | components["schemas"]["ReorderBlockOperation"] | components["schemas"]["UpdateBlockOperation"] | components["schemas"]["AddBlockOperation"] | components["schemas"]["RemoveBlockOperation"] | components["schemas"]["MoveBlockOperation"] | components["schemas"]["UpdateBlockOperation"] | components["schemas"]["ReorderBlockOperation"];
         };
         UpdateBlockOperation: WithRequired<components["schemas"]["BlockOperation"], "blockId" | "type"> & {
             updatedContent: components["schemas"]["ContentNode"] | components["schemas"]["ReferenceNode"];
@@ -1505,6 +1548,7 @@ export interface components {
             /** Format: int32 */
             newVersion?: number;
             conflict: boolean;
+            layout?: components["schemas"]["TreeLayout"];
             /** Format: int32 */
             latestVersion?: number;
             lastModifiedBy?: string;
@@ -1627,7 +1671,7 @@ export interface operations {
             header?: never;
             path: {
                 organisationId: string;
-                role: "OWNER" | "ADMIN" | "MEMBER";
+                role: components["schemas"]["OrganisationRoles"];
             };
             cookie?: never;
         };
@@ -2296,7 +2340,7 @@ export interface operations {
             path: {
                 organisationId: string;
                 email: string;
-                role: "OWNER" | "ADMIN" | "MEMBER";
+                role: components["schemas"]["OrganisationRoles"];
             };
             cookie?: never;
         };
@@ -2632,6 +2676,65 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OverwriteEnvironmentResponse"];
+                };
+            };
+        };
+    };
+    hydrateBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HydrateBlocksRequest"];
+            };
+        };
+        responses: {
+            /** @description Blocks hydrated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: components["schemas"]["BlockHydrationResult"];
+                    };
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: components["schemas"]["BlockHydrationResult"];
+                    };
+                };
+            };
+            /** @description Unauthorized access */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: components["schemas"]["BlockHydrationResult"];
+                    };
+                };
+            };
+            /** @description Forbidden - insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: components["schemas"]["BlockHydrationResult"];
+                    };
                 };
             };
         };
@@ -3110,7 +3213,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: "line_item" | "client" | "company" | "invoice" | "block_tree" | "report" | "document" | "project" | "organisation" | "task" | "block_type" | "block" | "user";
+                organisationId: string;
+                type: components["schemas"]["EntityType"];
                 entityId: string;
             };
             cookie?: never;
@@ -3135,7 +3239,16 @@ export interface operations {
                     "*/*": components["schemas"]["BlockEnvironment"];
                 };
             };
-            /** @description Block environment not found */
+            /** @description Forbidden - insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockEnvironment"];
+                };
+            };
+            /** @description Entity not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3192,6 +3305,200 @@ export interface operations {
         };
     };
 }
+export enum EntityType {
+    LINE_ITEM = "LINE_ITEM",
+    CLIENT = "CLIENT",
+    COMPANY = "COMPANY",
+    INVOICE = "INVOICE",
+    BLOCK_TREE = "BLOCK_TREE",
+    REPORT = "REPORT",
+    DOCUMENT = "DOCUMENT",
+    PROJECT = "PROJECT",
+    ORGANISATION = "ORGANISATION",
+    TASK = "TASK",
+    BLOCK_TYPE = "BLOCK_TYPE",
+    BLOCK = "BLOCK",
+    USER = "USER"
+}
+export enum OrganisationInviteStatus {
+    PENDING = "PENDING",
+    ACCEPTED = "ACCEPTED",
+    DECLINED = "DECLINED",
+    EXPIRED = "EXPIRED"
+}
+export enum OrganisationPlan {
+    FREE = "FREE",
+    STARTUP = "STARTUP",
+    SCALE = "SCALE",
+    ENTERPRISE = "ENTERPRISE"
+}
+export enum OrganisationRoles {
+    OWNER = "OWNER",
+    ADMIN = "ADMIN",
+    MEMBER = "MEMBER"
+}
+export enum LineItemType {
+    SERVICE = "SERVICE",
+    PRODUCT = "PRODUCT",
+    FEE = "FEE",
+    DISCOUNT = "DISCOUNT"
+}
+export enum BillableType {
+    HOURS = "HOURS",
+    DISTANCE = "DISTANCE",
+    QUANTITY = "QUANTITY",
+    FIXED = "FIXED"
+}
+export enum ClientType {
+    PROSPECT = "PROSPECT",
+    CUSTOMER = "CUSTOMER",
+    SUBSCRIBER = "SUBSCRIBER",
+    SERVICE = "SERVICE",
+    ENTERPRISE = "ENTERPRISE",
+    PARTNER = "PARTNER",
+    VENDOR = "VENDOR",
+    DORMANT = "DORMANT",
+    TRIAL = "TRIAL",
+    CHURNED = "CHURNED",
+    INFLUENCER = "INFLUENCER",
+    OTHER = "OTHER"
+}
+export enum InvoiceStatus {
+    PENDING = "PENDING",
+    PAID = "PAID",
+    OVERDUE = "OVERDUE",
+    OUTDATED = "OUTDATED",
+    CANCELLED = "CANCELLED"
+}
+export enum TemplateType {
+    CLIENT = "CLIENT",
+    INVOICE = "INVOICE",
+    REPORT = "REPORT"
+}
+export enum BlockFetchPolicy {
+    INHERIT = "INHERIT",
+    LAZY = "LAZY",
+    EAGER = "EAGER"
+}
+export enum BlockFormWidgetType {
+    TEXT_INPUT = "TEXT_INPUT",
+    NUMBER_INPUT = "NUMBER_INPUT",
+    CHECKBOX = "CHECKBOX",
+    RADIO_BUTTON = "RADIO_BUTTON",
+    DROPDOWN = "DROPDOWN",
+    DATE_PICKER = "DATE_PICKER",
+    EMAIL_INPUT = "EMAIL_INPUT",
+    PHONE_INPUT = "PHONE_INPUT",
+    CURRENCY_INPUT = "CURRENCY_INPUT",
+    TEXT_AREA = "TEXT_AREA",
+    FILE_UPLOAD = "FILE_UPLOAD",
+    SLIDER = "SLIDER",
+    TOGGLE_SWITCH = "TOGGLE_SWITCH"
+}
+export enum BlockValidationScope {
+    SOFT = "SOFT",
+    STRICT = "STRICT",
+    NONE = "NONE"
+}
+export enum ComponentType {
+    LAYOUT_CONTAINER = "LAYOUT_CONTAINER",
+    LIST = "LIST",
+    CONTACT_CARD = "CONTACT_CARD",
+    ADDRESS_CARD = "ADDRESS_CARD",
+    LINE_ITEM = "LINE_ITEM",
+    TABLE = "TABLE",
+    IMAGE = "IMAGE",
+    BUTTON = "BUTTON",
+    ATTACHMENT = "ATTACHMENT",
+    TEXT = "TEXT",
+    FALLBACK = "FALLBACK"
+}
+export enum DataFormat {
+    DATE = "DATE",
+    DATETIME = "DATETIME",
+    EMAIL = "EMAIL",
+    PHONE = "PHONE",
+    CURRENCY = "CURRENCY",
+    URL = "URL",
+    PERCENTAGE = "PERCENTAGE"
+}
+export enum DataType {
+    STRING = "STRING",
+    NUMBER = "NUMBER",
+    BOOLEAN = "BOOLEAN",
+    OBJECT = "OBJECT",
+    ARRAY = "ARRAY",
+    NULL = "NULL"
+}
+export enum Op {
+    EXISTS = "EXISTS",
+    EQUALS = "EQUALS",
+    NOT_EQUALS = "NOT_EQUALS",
+    GT = "GT",
+    GTE = "GTE",
+    LT = "LT",
+    LTE = "LTE",
+    IN = "IN",
+    NOT_IN = "NOT_IN",
+    EMPTY = "EMPTY",
+    NOT_EMPTY = "NOT_EMPTY"
+}
 type WithRequired<T, K extends keyof T> = T & {
     [P in K]-?: T[P];
 };
+export enum BlockListOrderingMode {
+    MANUAL = "MANUAL",
+    SORTED = "SORTED"
+}
+export enum BlockMetadataType {
+    CONTENT = "CONTENT",
+    ENTITY_REFERENCE = "ENTITY_REFERENCE",
+    BLOCK_REFERENCE = "BLOCK_REFERENCE"
+}
+export enum BlockReferenceFetchPolicy {
+    LAZY = "LAZY",
+    EAGER = "EAGER"
+}
+export enum BlockReferenceWarning {
+    MISSING = "MISSING",
+    REQUIRES_LOADING = "REQUIRES_LOADING",
+    UNSUPPORTED = "UNSUPPORTED",
+    CIRCULAR = "CIRCULAR",
+    DEPTH_EXCEEDED = "DEPTH_EXCEEDED"
+}
+export enum ListFilterLogicType {
+    AND = "AND",
+    OR = "OR"
+}
+export enum NodeType {
+    REFERENCE = "REFERENCE",
+    CONTENT = "CONTENT",
+    ERROR = "ERROR"
+}
+export enum Presentation {
+    SUMMARY = "SUMMARY",
+    ENTITY = "ENTITY",
+    TABLE = "TABLE",
+    GRID = "GRID",
+    INLINE = "INLINE"
+}
+export enum ReferenceType {
+    BLOCK = "BLOCK",
+    ENTITY = "ENTITY"
+}
+export enum RenderType {
+    LIST = "LIST",
+    COMPONENT = "COMPONENT",
+    CONTAINER = "CONTAINER"
+}
+export enum SortDir {
+    ASC = "ASC",
+    DESC = "DESC"
+}
+export enum BlockOperationType {
+    ADD_BLOCK = "ADD_BLOCK",
+    REMOVE_BLOCK = "REMOVE_BLOCK",
+    MOVE_BLOCK = "MOVE_BLOCK",
+    UPDATE_BLOCK = "UPDATE_BLOCK",
+    REORDER_BLOCK = "REORDER_BLOCK"
+}

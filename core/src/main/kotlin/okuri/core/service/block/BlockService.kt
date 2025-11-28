@@ -10,6 +10,7 @@ import okuri.core.enums.util.OperationType
 import okuri.core.models.block.Block
 import okuri.core.models.block.Reference
 import okuri.core.models.block.metadata.*
+import okuri.core.models.block.response.internal.BlockHydrationResult
 import okuri.core.models.block.tree.*
 import okuri.core.models.common.json.JsonObject
 import okuri.core.repository.block.BlockRepository
@@ -264,7 +265,7 @@ class BlockService(
             }
 
             is EntityReferenceMetadata -> {
-                val entities = blockReferenceService.findListReferences(block.id, meta)
+                val entities = blockReferenceService.findListReferences(block.id, meta, block.organisationId)
                 visited.remove(block.id)
                 ReferenceNode(
                     block = block,
@@ -353,6 +354,29 @@ class BlockService(
                 "archiveStatus" to status
             )
         )
+    }
+
+    // -------- BLOCK HYDRATION --------
+    /**
+     * Hydrates (resolves entity references for) multiple blocks in a single batched operation.
+     *
+     * This method is optimized for performance by:
+     * 1. Loading all requested blocks in a single query
+     * 2. Grouping entity references by type for batch fetching
+     * 3. Using resolvers to fetch all entities of each type in parallel
+     *
+     * @param blockIds The list of block UUIDs to hydrate.
+     * @param organisationId The organisation context for authorization and filtering.
+     * @return A map from block ID to its hydration result. Blocks that aren't entity reference blocks are skipped.
+     */
+    fun hydrateBlocks(blockIds: List<UUID>, organisationId: UUID): Map<UUID, BlockHydrationResult> {
+        if (blockIds.isEmpty()) return emptyMap()
+
+        // Load all blocks in a single query
+        getBlocks(blockIds.toSet()).run {
+            // Hydrate Block References
+            return blockReferenceService.hydrateBlockReferences(this, organisationId)
+        }
     }
 
     /**

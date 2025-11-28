@@ -24,3 +24,4 @@ export type UpdateClientResponse = operations["updateClient"]["responses"]["200"
 export type GetClientByIdPathParams = operations["getClientById"]["parameters"]["path"];
 export type UpdateClientPathParams = operations["updateClient"]["parameters"]["path"];
 export type DeleteClientByIdPathParams = operations["deleteClientById"]["parameters"]["path"];
+export type GetOrganisationClientsPathParams = operations["getOrganisationClients"]["parameters"]["path"];
