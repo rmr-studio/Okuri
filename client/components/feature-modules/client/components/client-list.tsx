@@ -7,7 +7,7 @@ import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useOrganisationClients } from "../../organisation/hooks/useOrganisationClients";
+import { useOrganisationClients } from "../../organisation/hooks/use-organisation-clients";
 import { ClientCard } from "./client-card";
 import DeleteClient from "./delete-client";
 

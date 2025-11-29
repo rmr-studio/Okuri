@@ -10,7 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useOrganisation } from "../../organisation/hooks/useOrganisation";
+import { useOrganisation } from "../../organisation/hooks/use-organisation";
 import { ClientCreation, ClientForm } from "../form/client-form";
 import { createClient } from "../service/client.service";
 

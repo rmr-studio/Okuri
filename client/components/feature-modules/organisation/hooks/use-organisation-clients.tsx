@@ -4,7 +4,7 @@ import { fetchOrganisationClients } from "@/components/feature-modules/client/se
 import { useAuth } from "@/components/provider/auth-context";
 import { fromError, isResponseError } from "@/lib/util/error/error.util";
 import { useQuery } from "@tanstack/react-query";
-import { useOrganisation } from "./useOrganisation";
+import { useOrganisation } from "./use-organisation";
 
 export function useOrganisationClients() {
     const { session, loading } = useAuth();
@@ -31,7 +31,7 @@ export function useOrganisationClients() {
                 });
             }
 
-            return fetchOrganisationClients(session, organisation);
+            return fetchOrganisationClients(session, { organisationId: organisation.id });
         },
         enabled: !!session?.user.id && !!organisation?.id, // Only fetch if user is authenticated and if an organisation is available
         retry: (count, error) => {

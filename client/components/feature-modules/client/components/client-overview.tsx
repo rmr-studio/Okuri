@@ -16,7 +16,7 @@ import { isResponseError } from "@/lib/util/error/error.util";
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useOrganisation } from "../../organisation/hooks/useOrganisation";
+import { useOrganisation } from "../../organisation/hooks/use-organisation";
 import DeleteClient from "./delete-client";
 
 /**

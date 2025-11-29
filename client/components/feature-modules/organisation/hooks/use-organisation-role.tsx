@@ -1,6 +1,6 @@
 import { OrganisationRole } from "@/components/feature-modules/organisation/interface/organisation.interface";
 import { useAuth } from "@/components/provider/auth-context";
-import { useOrganisation } from "./useOrganisation";
+import { useOrganisation } from "./use-organisation";
 
 interface UseOrganisationRoleReturn {
     isLoading: boolean;
