@@ -1,4 +1,3 @@
-import { GridRect } from "@/lib/interfaces/common.interface";
 import {
     BlockNode,
     ContentNode,
@@ -8,6 +7,7 @@ import {
     isReferenceNode,
 } from "../../interface/block.interface";
 import { InsertResult } from "../../interface/editor.interface";
+import { GridRect } from "../../interface/layout.interface";
 import { isList } from "../list/list.util";
 
 // export function evalVisible(cond: Condition | undefined, ctx: TreeCtx): boolean {
@@ -104,7 +104,7 @@ export const getChildren = (node: BlockNode): BlockNode[] | undefined => {
  * @returns The GridRect representing the block's dimensions.
  */
 export const getDefaultDimensions = (node: BlockNode): GridRect => {
-    return node.block.type.display.render.layoutGrid.layout
+    return node.block.type.display.render.layoutGrid.layout;
 };
 
 export const getTitle = (node: BlockNode): string => {

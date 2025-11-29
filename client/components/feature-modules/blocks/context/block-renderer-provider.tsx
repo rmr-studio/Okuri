@@ -1,13 +1,15 @@
 "use client";
 
 import { NodeType } from "@/lib/types/types";
+import { GridStackWidget } from "gridstack";
 import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
 import { MissingBlockErrorComponent } from "../components/bespoke/MissingBlockError";
 import { editorPanel } from "../components/panel/editor-panel";
 import { BlockStructureRenderer } from "../components/render/block-structure-renderer";
-import { ContentBlockList } from "../components/render/list/ContentBlockList";
+import { ContentBlockList } from "../components/render/list/content-block-list";
 import { PortalContentWrapper } from "../components/render/portal-wrapper";
+import { EntityReference } from "../components/render/reference/entity/entity-reference";
 import {
     BlockNode,
     ContentNode,
@@ -15,6 +17,8 @@ import {
     isContentNode,
     isEntityReferenceMetadata,
     isReferenceNode,
+    ReferenceNode,
+    WidgetRenderStructure,
 } from "../interface/block.interface";
 import { ProviderProps, RenderElementContextValue } from "../interface/render.interface";
 import { isList } from "../util/list/list.util";
@@ -47,13 +51,38 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
         getParent,
     });
 
-    const renderList = (node: BlockNode): ReactNode => {
-        // Determine List rendering component (Content v Reference Lists)
-        if (isReferenceNode(node) && isEntityReferenceMetadata(node.block.payload)) {
-            // TODO: Support Entity Reference Listss
-            return <>Ill deal with this soon</>;
+    const generateRenderedComponent = (
+        node: BlockNode,
+        meta: GridStackWidget,
+        nodeData: WidgetRenderStructure
+    ): ReactNode => {
+        // Compute the rendered components based on provided block metadata
+        if (isReferenceNode(node)) return renderReference(node);
+        if (isList(node)) return renderList(node);
+
+        // Wrap each rendered block inside an editor portal for interactivity
+        return (wrapElement ?? DEFAULT_WRAPPER)({
+            children: renderNode(node),
+            widget: meta,
+            content: nodeData,
+        });
+    };
+
+    const renderReference = (node: ReferenceNode): ReactNode => {
+        if (isEntityReferenceMetadata(node.block.payload)) {
+            return <EntityReference node={node} />;
         }
 
+        // Add other reference types here in the future
+        return null;
+    };
+
+    const renderList = (node: BlockNode): ReactNode => {
+        // Content Block List (existing)
+        // Entity Reference - Smart rendering based on item count
+        if (isReferenceNode(node) && isEntityReferenceMetadata(node.block.payload)) {
+            return <EntityReference node={node} />;
+        }
         if (isContentNode(node) && isContentMetadata(node.block.payload)) {
             const config = node.block.payload.listConfig;
             if (!config) return null;
@@ -97,7 +126,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                 }
 
                 // Extract Node's render structure from widget content
-                const nodeData = parseContent(meta);
+                const nodeData: WidgetRenderStructure | null = parseContent(meta);
                 if (!nodeData) return null;
 
                 const { id, blockType, renderType } = nodeData;
@@ -143,16 +172,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                     return null;
                 }
 
-                // Compute the rendered components based on provided block metadata
-                const rendered: ReactNode = isList(blockNode)
-                    ? // Special rendering for List blocks
-                      renderList(blockNode)
-                    : // Wrap each rendered block inside an editor portal for interactivity
-                      (wrapElement ?? DEFAULT_WRAPPER)({
-                          children: renderNode(blockNode),
-                          widget: meta,
-                          content: nodeData,
-                      });
+                const rendered: ReactNode = generateRenderedComponent(blockNode, meta, nodeData);
 
                 return (
                     <RenderElementContext.Provider

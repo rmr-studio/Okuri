@@ -1,5 +1,12 @@
+import { BlockMetadataType } from "@/lib/types/types";
 import { BlockNode, BlockSchema, BlockType } from "../../../interface/block.interface";
-import { createContentNode } from "./block.factory";
+import {
+    createBlockReferenceMetadata,
+    createContentNode,
+    createEntityReferenceMetadata,
+    createListConfiguration,
+    createReferenceNode,
+} from "./block.factory";
 
 /**
  * Options for creating a block instance from a block type
@@ -12,11 +19,30 @@ export interface CreateBlockInstanceOptions {
 }
 
 /**
+ * Determines if a block type is a reference block (entity or block reference).
+ */
+function isReferenceBlockType(blockType: BlockType): boolean {
+    return blockType.key === "entity_reference" || blockType.key === "block_reference";
+}
+
+/**
+ * Determines if a block type is a list block that requires listConfig.
+ */
+function isListBlockType(blockType: BlockType): boolean {
+    return blockType.key === "block_list" || blockType.key === "content_block_list";
+}
+
+/**
  * Creates a BlockNode instance from a BlockType definition.
  *
  * This function generates a new block with default data values based on the
  * block type's schema. It's used when users select a block type from the
  * available catalog and want to add a new instance to their layout.
+ *
+ * This function automatically detects special block types and handles them appropriately:
+ * - Reference blocks (entity_reference, block_reference) → ReferenceNode
+ * - List blocks (block_list, content_block_list) → ContentNode with listConfig
+ * - Regular blocks → ContentNode
  *
  * @param blockType - The block type definition from the database
  * @param organisationId - UUID of the organization
@@ -25,13 +51,23 @@ export interface CreateBlockInstanceOptions {
  *
  * @example
  * ```typescript
- * const layoutContainerType = await blockTypeService.getBlockTypeByKey('layout_container');
+ * // Regular content block
+ * const layoutType = await blockTypeService.getBlockTypeByKey('layout_container');
  * const newBlock = createBlockInstanceFromType(
- *   layoutContainerType,
+ *   layoutType,
  *   organisationId,
  *   { name: 'My Container', initialData: { title: 'Welcome' } }
  * );
- * addTrackedBlock(newBlock);
+ *
+ * // Reference block
+ * const entityRefType = await blockTypeService.getBlockTypeByKey('entity_reference');
+ * const refBlock = createBlockInstanceFromType(entityRefType, organisationId);
+ * // Returns a ReferenceNode with empty items array
+ *
+ * // List block
+ * const listType = await blockTypeService.getBlockTypeByKey('block_list');
+ * const listBlock = createBlockInstanceFromType(listType, organisationId);
+ * // Returns a ContentNode with listConfig populated
  * ```
  */
 export function createBlockInstanceFromType(
@@ -39,18 +75,72 @@ export function createBlockInstanceFromType(
     organisationId: string,
     options?: CreateBlockInstanceOptions
 ): BlockNode {
+    // Use block type name as default if no custom name provided
+    const name = options?.name ?? blockType.name;
+
+    // Handle reference blocks (entity_reference, block_reference)
+    if (isReferenceBlockType(blockType)) {
+        if (blockType.key === "entity_reference") {
+            // Create entity reference block with empty items
+            const payload = createEntityReferenceMetadata();
+            return createReferenceNode({
+                organisationId,
+                type: blockType,
+                name,
+                payload,
+            });
+        } else {
+            // Create block reference with empty item
+            const payload = createBlockReferenceMetadata();
+            return createReferenceNode({
+                organisationId,
+                type: blockType,
+                name,
+                payload,
+            });
+        }
+    }
+
+    // Handle list blocks (block_list, content_block_list)
+    if (isListBlockType(blockType)) {
+        // Generate default data based on schema
+        const defaultData = generateDefaultDataFromSchema(blockType.schema);
+
+        // Merge with any provided initial data
+        const data = options?.initialData
+            ? { ...defaultData, ...options.initialData }
+            : defaultData;
+
+        // Create list configuration from block type's nesting
+        const allowedTypes = blockType.nesting?.allowedTypes;
+        const listConfig = createListConfiguration(allowedTypes);
+
+        // Create content node with list configuration
+        return createContentNode({
+            organisationId,
+            type: blockType,
+            data,
+            name,
+            payloadOverride: {
+                type: BlockMetadataType.CONTENT,
+                deletable: true,
+                data,
+                meta: {
+                    validationErrors: [],
+                },
+                listConfig,
+            },
+        });
+    }
+
+    // Handle regular content blocks
     // Generate default data based on schema
     const defaultData = generateDefaultDataFromSchema(blockType.schema);
 
     // Merge with any provided initial data
-    const data = options?.initialData
-        ? { ...defaultData, ...options.initialData }
-        : defaultData;
+    const data = options?.initialData ? { ...defaultData, ...options.initialData } : defaultData;
 
-    // Use block type name as default if no custom name provided
-    const name = options?.name ?? blockType.name;
-
-    // Create the block node using the existing factory
+    // Create content node
     return createContentNode({
         organisationId,
         type: blockType,

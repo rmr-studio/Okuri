@@ -8,6 +8,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { BlockListOrderingMode, ListFilterLogicType } from "@/lib/types/types";
 import { cn } from "@/lib/util/utils";
 import {
     closestCenter,
@@ -56,13 +57,13 @@ interface ContentBlockListProps {
 interface ListControlsProps {
     uniformBlockType: BlockNode["block"]["type"] | null;
     isUniBlock: boolean;
-    currentMode: "MANUAL" | "SORTED";
-    onModeChange: (mode: "MANUAL" | "SORTED") => void;
+    currentMode: BlockListOrderingMode;
+    onModeChange: (mode: BlockListOrderingMode) => void;
     activeSort: SortSpec | undefined;
     setActiveSort: (sort: SortSpec | undefined) => void;
     activeFilters: FilterSpec[];
     setActiveFilters: (filters: FilterSpec[]) => void;
-    filterLogic: "AND" | "OR";
+    filterLogic: ListFilterLogicType;
 }
 
 /**
@@ -80,8 +81,8 @@ export const ListControls: React.FC<ListControlsProps> = ({
     setActiveFilters,
     filterLogic,
 }) => {
-    const isSortedMode = currentMode === "SORTED";
-    const isManualMode = currentMode === "MANUAL";
+    const isSortedMode = currentMode === BlockListOrderingMode.SORTED;
+    const isManualMode = currentMode === BlockListOrderingMode.MANUAL;
 
     return (
         <div className="space-y-2">
@@ -98,7 +99,7 @@ export const ListControls: React.FC<ListControlsProps> = ({
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                             )}
-                            onClick={() => onModeChange("MANUAL")}
+                            onClick={() => onModeChange(BlockListOrderingMode.MANUAL)}
                         >
                             Manual Order
                         </Button>
@@ -110,7 +111,7 @@ export const ListControls: React.FC<ListControlsProps> = ({
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                             )}
-                            onClick={() => onModeChange("SORTED")}
+                            onClick={() => onModeChange(BlockListOrderingMode.SORTED)}
                         >
                             Sorted View
                         </Button>
@@ -174,10 +175,10 @@ export const ContentBlockList: React.FC<ContentBlockListProps> = ({
     // Runtime sort/filter/mode overrides (starts with config defaults)
     const [activeSort, setActiveSort] = useState<SortSpec | undefined>(listConfig.sort);
     const [activeFilters, setActiveFilters] = useState<FilterSpec[]>(listConfig.filters || []);
-    const [activeMode, setActiveMode] = useState<"MANUAL" | "SORTED">(listConfig.mode);
+    const [activeMode, setActiveMode] = useState<BlockListOrderingMode>(listConfig.mode);
 
     // Determine effective mode - force MANUAL if not uni-block
-    const effectiveMode = isUniBlock ? activeMode : "MANUAL";
+    const effectiveMode = isUniBlock ? activeMode : BlockListOrderingMode.MANUAL;
 
     // Debounced persistence of configuration changes to backend
     useEffect(() => {

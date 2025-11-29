@@ -2,14 +2,7 @@
  * Utility functions for detecting and working with content block lists
  */
 
-import {
-    BlockListConfiguration,
-    BlockNode,
-    isContentMetadata,
-    isContentNode,
-    isEntityReferenceMetadata,
-    isReferenceNode,
-} from "../../interface/block.interface";
+import { BlockNode, isContentMetadata, isContentNode } from "../../interface/block.interface";
 
 /**
  * A list will be rendered if:
@@ -21,26 +14,11 @@ import {
  */
 export const isList = (node: BlockNode): boolean => {
     return (
-        (isReferenceNode(node) && isEntityReferenceMetadata(node.block.payload)) ||
-        (isContentNode(node) &&
-            isContentMetadata(node.block.payload) &&
-            !!node.block.payload.listConfig)
+        isContentNode(node) &&
+        isContentMetadata(node.block.payload) &&
+        !!node.block.payload.listConfig
     );
 };
-
-/**
- * Checks if a list is in manual ordering mode
- */
-export function isManualOrderingMode(listConfig: BlockListConfiguration): boolean {
-    return listConfig.order.mode === "MANUAL";
-}
-
-/**
- * Checks if a list is in sorted ordering mode
- */
-export function isSortedOrderingMode(listConfig: BlockListConfiguration): boolean {
-    return listConfig.order.mode === "SORTED";
-}
 
 /**
  * Gets the index of a child block within its parent's children array

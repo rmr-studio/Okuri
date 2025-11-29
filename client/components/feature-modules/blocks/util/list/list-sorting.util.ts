@@ -1,3 +1,4 @@
+import { BlockListOrderingMode, SortDir } from "@/lib/types/types";
 import {
     BlockListConfiguration,
     BlockNode,
@@ -16,7 +17,7 @@ export interface SortableField {
 
 export interface SortSpec {
     by: string;
-    dir: "ASC" | "DESC";
+    dir: SortDir;
 }
 
 export interface FilterSpec {
@@ -253,13 +254,15 @@ function evaluateCondition(value: unknown, condition: unknown): boolean {
 /**
  * Check if ordering mode is MANUAL
  */
-export function isManualOrderingMode(config: BlockListConfiguration): boolean {
-    return config.order.mode === "MANUAL";
+export function isManualOrderingMode(list: BlockListConfiguration): boolean {
+    const { config } = list;
+    return config.mode === BlockListOrderingMode.MANUAL;
 }
 
 /**
  * Check if ordering mode is SORTED
  */
-export function isSortedOrderingMode(config: BlockListConfiguration): boolean {
-    return config.order.mode === "SORTED";
+export function isSortedOrderingMode(list: BlockListConfiguration): boolean {
+    const { config } = list;
+    return config.mode === BlockListOrderingMode.SORTED;
 }
