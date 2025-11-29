@@ -15,6 +15,8 @@ import { Check, CommandIcon, Edit3, InfoIcon, PlusIcon, X } from "lucide-react";
 import { FC, RefObject, ReactNode } from "react";
 
 import { motion } from "framer-motion";
+import { usePanelWrapperContext } from "../context/panel-wrapper-provider";
+import { usePanelToolbarIndices } from "../hooks/use-panel-toolbar-indices";
 import { QuickActionItem, SlashMenuItem } from "../../../interface/panel.interface";
 import PanelActions from "./panel-actions";
 import PanelDetails from "./panel-details";
@@ -35,32 +37,20 @@ export interface CustomToolbarAction {
 interface PanelToolbarProps {
     visible: boolean;
     onQuickActionsClick: () => void;
-    allowInsert: boolean;
     onInlineInsertClick?: () => void;
-    inlineMenuOpen?: boolean;
     onInlineMenuOpenChange?: (open: boolean) => void;
     inlineSearchRef?: RefObject<HTMLInputElement | null>;
     items?: SlashMenuItem[];
     onSelectItem?: (item: SlashMenuItem) => void;
     onShowAllOptions?: () => void;
     onOpenQuickActionsFromInline?: () => void;
-    draftTitle: string;
-    onDraftTitleChange: (value: string) => void;
     onTitleBlur: () => void;
-    titlePlaceholder: string;
-    description?: string;
     badge?: string;
-    hasMenuActions: boolean;
     menuActions: QuickActionItem[];
     onMenuAction: (action: QuickActionItem) => void;
-    toolbarFocusIndex?: number;
-    detailsOpen?: boolean;
     onDetailsOpenChange?: (open: boolean) => void;
-    actionsOpen?: boolean;
     onActionsOpenChange?: (open: boolean) => void;
     onEditClick?: () => void;
-    isEditMode?: boolean;
-    hasChildren?: boolean;
     onSaveEditClick?: () => void;
     onDiscardEditClick?: () => void;
     customActions?: CustomToolbarAction[]; // Custom toolbar actions (e.g., entity selector)
@@ -71,36 +61,59 @@ const toolbarButtonClass =
 
 const PanelToolbar: FC<PanelToolbarProps> = ({
     onQuickActionsClick,
-    allowInsert,
     onInlineInsertClick,
-    inlineMenuOpen,
     onInlineMenuOpenChange,
     inlineSearchRef,
     items,
     onSelectItem,
     onShowAllOptions,
     onOpenQuickActionsFromInline,
-    draftTitle,
-    onDraftTitleChange,
     onTitleBlur,
-    titlePlaceholder,
-    description,
     badge,
-    hasMenuActions,
     menuActions,
     onMenuAction,
-    toolbarFocusIndex = -1,
-    detailsOpen,
     onDetailsOpenChange,
-    actionsOpen,
     onActionsOpenChange,
     onEditClick,
-    isEditMode = false,
-    hasChildren = false,
     onSaveEditClick,
     onDiscardEditClick,
     customActions = [],
 }) => {
+    // Consume context values (eliminates prop drilling)
+    const {
+        draftTitle,
+        setDraftTitle,
+        titlePlaceholder,
+        description,
+        toolbarFocusIndex,
+        isDetailsOpen,
+        isActionsOpen,
+        isEditMode,
+        hasChildren,
+        hasMenuActions,
+        allowInsert,
+        isInlineMenuOpen,
+    } = usePanelWrapperContext();
+
+    // Use shared toolbar indices hook (single source of truth)
+    const toolbarIndices = usePanelToolbarIndices({
+        allowInsert,
+        hasMenuActions,
+        customActionsCount: customActions.length,
+        isEditMode,
+    });
+
+    const {
+        quickActionsIndex,
+        insertIndex,
+        editIndex,
+        customActionsIndices,
+        saveEditIndex,
+        discardEditIndex,
+        detailsIndex,
+        actionsMenuIndex,
+    } = toolbarIndices;
+
     // Helper to get button class with focus highlight
     const getButtonClass = (index: number) => {
         const isFocused = toolbarFocusIndex === index;
@@ -109,18 +122,6 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
             isFocused && "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
         );
     };
-
-    // Calculate button indices
-    let buttonIndex = 0;
-    const quickActionsIndex = buttonIndex++;
-    const insertIndex = allowInsert ? buttonIndex++ : -1;
-    const editIndex = onEditClick ? buttonIndex++ : -1;
-    const customActionsStartIndex = buttonIndex;
-    const customActionsIndices = customActions.map(() => buttonIndex++);
-    const saveEditIndex = isEditMode && onSaveEditClick ? buttonIndex++ : -1;
-    const discardEditIndex = isEditMode && onDiscardEditClick ? buttonIndex++ : -1;
-    const detailsIndex = buttonIndex++;
-    const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -148,13 +149,12 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
             {allowInsert &&
             onInlineInsertClick &&
             onInlineMenuOpenChange &&
-            inlineMenuOpen !== undefined &&
             inlineSearchRef &&
             items &&
             onSelectItem &&
             onShowAllOptions &&
             onOpenQuickActionsFromInline ? (
-                <Popover open={inlineMenuOpen ?? false} onOpenChange={onInlineMenuOpenChange}>
+                <Popover open={isInlineMenuOpen} onOpenChange={onInlineMenuOpenChange}>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <PopoverTrigger asChild>
@@ -298,7 +298,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                 </>
             )}
 
-            <Popover open={detailsOpen} onOpenChange={onDetailsOpenChange}>
+            <Popover open={isDetailsOpen} onOpenChange={onDetailsOpenChange}>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <PopoverTrigger asChild>
@@ -317,7 +317,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                 <PopoverContent className="w-72 space-y-3 p-4" align="start">
                     <PanelDetails
                         draftTitle={draftTitle}
-                        onDraftTitleChange={onDraftTitleChange}
+                        onDraftTitleChange={setDraftTitle}
                         onTitleBlur={onTitleBlur}
                         titlePlaceholder={titlePlaceholder}
                         description={description}
@@ -330,7 +330,7 @@ const PanelToolbar: FC<PanelToolbarProps> = ({
                     menuActions={menuActions}
                     toolbarButtonClass={getButtonClass(actionsMenuIndex)}
                     onMenuAction={onMenuAction}
-                    actionsOpen={actionsOpen}
+                    actionsOpen={isActionsOpen}
                     onActionsOpenChange={onActionsOpenChange}
                 />
             ) : null}

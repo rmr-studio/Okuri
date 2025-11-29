@@ -81,14 +81,6 @@ export class BlockService {
                 });
             }
 
-            if (!organisationId) {
-                throw fromError({
-                    message: "Organisation ID is required",
-                    status: 400,
-                    error: "MISSING_PARAMETERS",
-                });
-            }
-
             validateSession(session);
             validateUuid(organisationId);
             blockIds.forEach(validateUuid);

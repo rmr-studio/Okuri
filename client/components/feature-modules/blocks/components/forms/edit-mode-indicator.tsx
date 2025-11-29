@@ -4,22 +4,31 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Check, Edit3, FileEdit, Layout, X } from "lucide-react";
-import { FC, useEffect, useState } from "react";
+import { FC, useState } from "react";
 import { useBlockEdit } from "../../context/block-edit-provider";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useLayoutChange } from "../../context/layout-change-provider";
 import { useLayoutHistory } from "../../context/layout-history-provider";
 import { useLayoutKeyboardShortcuts } from "../../hooks/use-layout-keyboard-shortcuts";
+import { BlockNode } from "../../interface/block.interface";
 
 export const EditModeIndicator: FC = () => {
-    const { getEditingCount, hasUnsavedChanges, saveAllEdits, discardAllEdits } = useBlockEdit();
+    const { getEditingCount, hasActualChanges, saveAllEdits, discardAllEdits, exitAllSessions } =
+        useBlockEdit();
     const { isInitialized } = useBlockEnvironment();
-    const { saveLayoutChanges, discardLayoutChanges, saveStatus, conflictData, resolveConflict } =
-        useLayoutChange();
+    const {
+        saveLayoutChanges,
+        discardLayoutChanges,
+        saveStatus,
+        conflictData,
+        resolveConflict,
+        suppressEditModeTracking,
+    } = useLayoutChange();
     const { hasContentChanges, hasLayoutChanges } = useLayoutHistory();
 
     const editingCount = getEditingCount();
-    const hasDataChanges = hasUnsavedChanges();
+    const hasDataChanges = hasActualChanges();
+    const canSave = hasDataChanges || hasLayoutChanges || hasContentChanges;
     const totalChanges = editingCount + (hasLayoutChanges ? 1 : 0) + (hasContentChanges ? 1 : 0);
 
     const [isSaving, setIsSaving] = useState(false);
@@ -28,12 +37,88 @@ export const EditModeIndicator: FC = () => {
         if (isSaving || saveStatus === "saving" || saveStatus === "conflict") {
             return;
         }
+
+        // If no actual changes, just exit all sessions silently
+        if (!canSave) {
+            // Suppress tracking while exiting sessions to prevent false positives
+            suppressEditModeTracking(true);
+            exitAllSessions();
+
+            /**
+             * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+             *
+             * Why three frames?
+             * 1. Frame 1: React schedules state updates from exitAllSessions()
+             * 2. Frame 2: React commits DOM changes (form unmounts, display mounts)
+             * 3. Frame 3: GridStack reflows/resizes widgets based on new content dimensions
+             *
+             * Race prevented: Without this delay, we'd re-enable tracking before
+             * GridStack's 'change' event fires from the resize, causing false layout changes.
+             *
+             * Alternative: Could use MutationObserver + ResizeObserver to deterministically
+             * detect when GridStack completes layout, but triple-RAF is simpler and reliable
+             * for this use case (matches pattern in use-panel-edit-mode.ts lines 86-94).
+             */
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        suppressEditModeTracking(false);
+                    });
+                });
+            });
+            return;
+        }
+
         setIsSaving(true);
         try {
-            // Save active edit sessions
-            if (hasDataChanges) await saveAllEdits();
-            // Save layout and content changes (both are sent to backend together)
-            if (hasLayoutChanges || hasContentChanges) await saveLayoutChanges();
+            let contentChanges: Map<string, BlockNode> | undefined;
+
+            // Step 1: Prepare content changes from active edit sessions
+            if (hasDataChanges) {
+                const result = await saveAllEdits();
+                if (!result.success) {
+                    console.error("Failed to prepare content changes (validation failed)");
+                    setIsSaving(false);
+                    return;
+                }
+                contentChanges = result.changes;
+                console.log(`Prepared ${contentChanges.size} content changes`);
+            }
+
+            // Step 2: Save everything to backend atomically
+            // This includes: layout changes + structural operations + content changes
+            if (
+                hasLayoutChanges ||
+                hasContentChanges ||
+                (contentChanges && contentChanges.size > 0)
+            ) {
+                const success = await saveLayoutChanges(contentChanges);
+                if (!success) {
+                    console.error("Failed to save to backend");
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
+            // Step 3: Clean up ALL edit sessions (both dirty and clean)
+            // Suppress tracking while exiting to prevent false positives from dimension changes
+            suppressEditModeTracking(true);
+            exitAllSessions();
+
+            /**
+             * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+             * See detailed explanation above in the !canSave path (lines 47-61).
+             * Same timing requirements apply: wait for React commit + GridStack reflow.
+             */
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        suppressEditModeTracking(false);
+                    });
+                });
+            });
+
+            console.log("✅ All changes saved successfully");
         } catch (error) {
             console.error("Error saving all changes:", error);
         } finally {
@@ -55,15 +140,28 @@ export const EditModeIndicator: FC = () => {
     const shouldShow = isInitialized && totalChanges > 0;
 
     const handleDiscardAll = () => {
-        // Discard block data edits
-        if (hasDataChanges) {
-            discardAllEdits();
-        }
+        // Suppress layout change tracking during edit mode exit to prevent
+        // false positives from blocks resizing back to display view
+        suppressEditModeTracking(true);
 
-        // Discard layout and content changes
-        if (hasLayoutChanges || hasContentChanges) {
-            discardLayoutChanges();
-        }
+        discardLayoutChanges();
+
+        // Then exit all edit sessions (discards local drafts)
+        exitAllSessions();
+
+        /**
+         * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+         * See detailed explanation in handleSaveAll's !canSave path (lines 47-61).
+         * Same timing requirements: React commit + GridStack reflow must complete
+         * before re-enabling tracking to prevent false 'change' events.
+         */
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    suppressEditModeTracking(false);
+                });
+            });
+        });
     };
 
     return (
@@ -132,13 +230,16 @@ export const EditModeIndicator: FC = () => {
                             disabled={
                                 isSaving || saveStatus === "saving" || saveStatus === "conflict"
                             }
+                            title={canSave ? "Save all changes" : "Exit edit mode"}
                         >
                             <Check className="h-3.5 w-3.5 mr-1" />
                             {isSaving || saveStatus === "saving"
                                 ? "Saving..."
                                 : saveStatus === "conflict"
                                 ? "Conflict!"
-                                : "Save All"}
+                                : canSave
+                                ? "Save All"
+                                : "Exit Edit Mode"}
                         </Button>
                         <Button
                             size="sm"

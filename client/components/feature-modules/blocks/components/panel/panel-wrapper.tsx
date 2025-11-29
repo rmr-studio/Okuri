@@ -17,6 +17,11 @@ import { BlockForm } from "../forms/block-form";
 import InsertBlockModal from "../modals/insert-block-modal";
 import QuickActionModal from "../modals/quick-action-modal";
 import PanelActionContextMenu from "./action/panel-action-menu";
+import { PanelWrapperProvider } from "./context/panel-wrapper-provider";
+import { usePanelEditMode } from "./hooks/use-panel-edit-mode";
+import { usePanelKeyboardNavigation } from "./hooks/use-panel-keyboard-navigation";
+import { usePanelOverlayLock } from "./hooks/use-panel-overlay-lock";
+import { usePanelToolbarIndices } from "./hooks/use-panel-toolbar-indices";
 import PanelToolbar, { CustomToolbarAction } from "./toolbar/panel-toolbar";
 
 interface Props extends ChildNodeProps, ClassNameProps {
@@ -62,8 +67,6 @@ export const PanelWrapper: FC<Props> = ({
     customControls,
     customActions = [],
 }) => {
-    // todo: Move alot of this wrapper state into a context provider to reduce prop drilling
-
     const [isHovered, setIsHovered] = useState(false);
     const [isSlashOpen, setSlashOpen] = useState(false);
     const [isQuickOpen, setQuickOpen] = useState(false);
@@ -78,11 +81,9 @@ export const PanelWrapper: FC<Props> = ({
     const actions = quickActions ?? [];
 
     // Block edit state
-    const { startEdit, saveAndExit, openDrawer, isEditing, getEditMode, drawerState, cancelEdit } =
-        useBlockEdit();
+    const { openDrawer, isEditing, drawerState, startEdit, saveAndExit } = useBlockEdit();
     const { getBlock, getChildren } = useBlockEnvironment();
     const { suppressEditModeTracking } = useLayoutChange();
-    const [isEditMode, setEditMode] = useState(false);
     const block = getBlock(id);
     const hasChildren = getChildren(id).length > 0;
 
@@ -96,31 +97,13 @@ export const PanelWrapper: FC<Props> = ({
         requestResize = undefined;
     }
 
-    // Sync local edit mode state with provider
-    const prevEditModeRef = useRef<"inline" | "drawer" | null>(null);
-    useEffect(() => {
-        const editMode = getEditMode(id);
-        const prevEditMode = prevEditModeRef.current;
-
-        // Only set to true if in inline mode; drawer mode is handled separately
-        setEditMode(editMode === "inline");
-
-        // If transitioning from any edit mode to null (edit mode closed), request resize
-        // This handles: individual save/discard, Save All, Discard All, and drawer close
-        if (prevEditMode !== null && editMode === null && requestResize) {
-            // Use triple requestAnimationFrame to ensure React has fully unmounted
-            // the form and mounted the display content before measuring
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        requestResize();
-                    });
-                });
-            });
-        }
-
-        prevEditModeRef.current = editMode;
-    }, [id, getEditMode, requestResize]);
+    // Edit mode logic extracted to hook
+    const { isEditMode, handleEditClick, handleSaveEditClick, handleDiscardEditClick } =
+        usePanelEditMode({
+            id,
+            hasChildren,
+            requestResize,
+        });
 
     const menuActions = useMemo(() => {
         if (onDelete && !actions.some((action) => action.id === "delete")) {
@@ -138,39 +121,13 @@ export const PanelWrapper: FC<Props> = ({
 
     const hasMenuActions = menuActions.length > 0;
 
-    // Calculate toolbar button indices and count
-    // IMPORTANT: This must match the exact button order in panel-toolbar.tsx
-    const toolbarIndices = useMemo(() => {
-        let buttonIndex = 0;
-        const quickActionsIndex = buttonIndex++;
-        const insertIndex = allowInsert ? buttonIndex++ : -1;
-        // handleEditClick is always defined, so edit button is always present
-        const editIndex = buttonIndex++;
-
-        // Custom actions (dynamic count)
-        const customActionsStartIndex = buttonIndex;
-        const customActionsIndices = customActions.map(() => buttonIndex++);
-
-        // Edit mode actions (save/discard) - only present in edit mode
-        const saveEditIndex = isEditMode ? buttonIndex++ : -1;
-        const discardEditIndex = isEditMode ? buttonIndex++ : -1;
-
-        const detailsIndex = buttonIndex++;
-        const actionsMenuIndex = hasMenuActions ? buttonIndex++ : -1;
-
-        return {
-            quickActionsIndex,
-            insertIndex,
-            editIndex,
-            customActionsStartIndex,
-            customActionsIndices,
-            saveEditIndex,
-            discardEditIndex,
-            detailsIndex,
-            actionsMenuIndex,
-            count: buttonIndex,
-        };
-    }, [allowInsert, hasMenuActions, customActions.length, isEditMode]);
+    // Calculate toolbar button indices using hook (single source of truth)
+    const toolbarIndices = usePanelToolbarIndices({
+        allowInsert,
+        hasMenuActions,
+        customActionsCount: customActions.length,
+        isEditMode,
+    });
 
     const {
         isSelected,
@@ -185,9 +142,6 @@ export const PanelWrapper: FC<Props> = ({
         elementRef: surfaceRef,
         focusParentOnDelete: true,
     });
-    const { acquireLock } = useBlockFocus();
-    const overlayLockRef = useRef<(() => void) | null>(null);
-
     const items = slashItems ?? defaultSlashItems;
 
     const shouldHighlight =
@@ -238,51 +192,17 @@ export const PanelWrapper: FC<Props> = ({
         isActionsOpen,
     ]);
 
-    useEffect(() => {
-        const shouldLock =
-            isSlashOpen ||
-            isQuickOpen ||
-            isInlineMenuOpen ||
-            isDetailsOpen ||
-            isActionsOpen ||
-            drawerState.isOpen;
-        // Acquire or release overlay lock based on menu state
-        if (!shouldLock && overlayLockRef.current) {
-            overlayLockRef.current();
-            overlayLockRef.current = null;
-        } else if (shouldLock && !overlayLockRef.current) {
-            // Clear hover state before acquiring lock to prevent race condition
-            setFocusHover(false);
-
-            const release = acquireLock({
-                id: `panel-overlay-${id}`,
-                reason: "Panel overlay menu open",
-                suppressHover: true,
-                suppressSelection: true,
-                suppressKeyboardNavigation: true, // Prevent block navigation when menus are open
-                scope: "surface",
-                surfaceId: id,
-            });
-            overlayLockRef.current = release;
-        }
-
-        return () => {
-            if (overlayLockRef.current) {
-                overlayLockRef.current();
-                overlayLockRef.current = null;
-            }
-        };
-    }, [
+    // Overlay lock management extracted to hook
+    usePanelOverlayLock({
         id,
-        acquireLock,
-        isInlineMenuOpen,
-        isQuickOpen,
         isSlashOpen,
+        isQuickOpen,
+        isInlineMenuOpen,
         isDetailsOpen,
         isActionsOpen,
-        drawerState.isOpen,
+        drawerStateIsOpen: drawerState.isOpen,
         setFocusHover,
-    ]);
+    });
 
     useEffect(() => {
         setDraftTitle(title ?? "");
@@ -294,312 +214,33 @@ export const PanelWrapper: FC<Props> = ({
         }
     }, [isInlineMenuOpen]);
 
-    const handleEditClick = useCallback(() => {
-        if (hasChildren) {
-            // Has children: open drawer
-            openDrawer(id);
-        } else {
-            // No children: toggle inline edit
-            if (isEditMode) {
-                suppressEditModeTracking(true);
-                saveAndExit(id).then((success) => {
-                    if (success) {
-                        setEditMode(false);
-                        // Resize back to display content after exiting edit mode
-                        if (requestResize) {
-                            requestAnimationFrame(() => {
-                                requestAnimationFrame(() => {
-                                    requestResize();
-                                    // Re-enable tracking after resize completes
-                                    requestAnimationFrame(() => {
-                                        suppressEditModeTracking(false);
-                                    });
-                                });
-                            });
-                        } else {
-                            // No resize function, just re-enable after RAF
-                            requestAnimationFrame(() => {
-                                requestAnimationFrame(() => {
-                                    suppressEditModeTracking(false);
-                                });
-                            });
-                        }
-                    } else {
-                        // Save failed, re-enable tracking
-                        suppressEditModeTracking(false);
-                    }
-                });
-            } else {
-                // Enter edit mode
-                suppressEditModeTracking(true);
-                startEdit(id, "inline");
-                setEditMode(true);
-
-                // Re-enable tracking after triple RAF (allows grid to settle)
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            suppressEditModeTracking(false);
-                        });
-                    });
-                });
-            }
-        }
-    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize, suppressEditModeTracking]);
-
-    const handleSaveEditClick = useCallback(() => {
-        if (isEditMode) {
-            suppressEditModeTracking(true);
-            saveAndExit(id).then((success) => {
-                if (success) {
-                    setEditMode(false);
-                    // Resize back to display content after saving
-                    if (requestResize) {
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                requestResize();
-                                // Re-enable tracking after resize completes
-                                requestAnimationFrame(() => {
-                                    suppressEditModeTracking(false);
-                                });
-                            });
-                        });
-                    } else {
-                        // No resize function, just re-enable after RAF
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                suppressEditModeTracking(false);
-                            });
-                        });
-                    }
-                } else {
-                    // Save failed, re-enable tracking
-                    suppressEditModeTracking(false);
-                }
-            });
-        }
-    }, [isEditMode, saveAndExit, id, requestResize, suppressEditModeTracking]);
-
-    const handleDiscardEditClick = useCallback(() => {
-        if (isEditMode) {
-            suppressEditModeTracking(true);
-            cancelEdit(id);
-            setEditMode(false);
-            // Resize back to display content after discarding
-            if (requestResize) {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        requestResize();
-                        // Re-enable tracking after resize completes
-                        requestAnimationFrame(() => {
-                            suppressEditModeTracking(false);
-                        });
-                    });
-                });
-            } else {
-                // No resize function, just re-enable after RAF
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        suppressEditModeTracking(false);
-                    });
-                });
-            }
-        }
-    }, [isEditMode, cancelEdit, id, requestResize, suppressEditModeTracking]);
-
-    useEffect(() => {
-        if (!isSelected) return;
-
-        const handler = (event: KeyboardEvent) => {
-            const active = document.activeElement;
-            const isInput =
-                active &&
-                (active.tagName === "INPUT" ||
-                    active.tagName === "TEXTAREA" ||
-                    active.getAttribute("contenteditable") === "true");
-
-            // Toolbar keyboard navigation
-            // NOTE: Toolbar menus must use Popover, NOT DropdownMenu to avoid DOM focus conflicts.
-            // See panel-toolbar.tsx and panel-actions.tsx for implementation details.
-
-            // Toolbar navigation with Left/Right arrows
-            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                if (isInput) return;
-                event.preventDefault();
-
-                // Blur any focused toolbar button to prevent it from capturing Enter key
-                const activeElement = document.activeElement as HTMLElement | null;
-                if (activeElement && typeof activeElement.blur === "function") {
-                    activeElement.blur();
-                }
-
-                if (toolbarFocusIndex === -1) {
-                    // First time pressing arrow - focus first toolbar button
-                    setToolbarFocusIndex(0);
-                } else {
-                    // Navigate between toolbar buttons
-                    if (event.key === "ArrowLeft") {
-                        setToolbarFocusIndex((prev) =>
-                            prev <= 0 ? toolbarIndices.count - 1 : prev - 1
-                        );
-                    } else {
-                        setToolbarFocusIndex((prev) =>
-                            prev >= toolbarIndices.count - 1 ? 0 : prev + 1
-                        );
-                    }
-                }
-                return;
-            }
-
-            // Activate focused toolbar button with Enter
-            if (event.key === "Enter" && toolbarFocusIndex >= 0) {
-                if (isInput) return;
-                event.preventDefault();
-
-                const {
-                    quickActionsIndex,
-                    insertIndex,
-                    editIndex,
-                    customActionsIndices,
-                    saveEditIndex,
-                    discardEditIndex,
-                    detailsIndex,
-                    actionsMenuIndex,
-                } = toolbarIndices;
-
-                // Handle edit button activation
-                if (toolbarFocusIndex === editIndex) {
-                    handleEditClick();
-                    return;
-                }
-
-                // Handle custom actions activation
-                const customActionIndex = customActionsIndices.indexOf(toolbarFocusIndex);
-                if (customActionIndex !== -1) {
-                    const action = customActions[customActionIndex];
-                    if (action && !action.disabled) {
-                        action.onClick();
-                    }
-                    return;
-                }
-
-                // Handle save/discard edit buttons
-                if (toolbarFocusIndex === saveEditIndex && saveEditIndex !== -1) {
-                    handleSaveEditClick();
-                    return;
-                }
-                if (toolbarFocusIndex === discardEditIndex && discardEditIndex !== -1) {
-                    handleDiscardEditClick();
-                    return;
-                }
-
-                // Handle other menu buttons
-                setQuickOpen(toolbarFocusIndex === quickActionsIndex);
-                setInlineMenuOpen(toolbarFocusIndex === insertIndex && insertIndex !== -1);
-                setDetailsOpen(toolbarFocusIndex === detailsIndex);
-                setActionsOpen(toolbarFocusIndex === actionsMenuIndex && actionsMenuIndex !== -1);
-
-                return;
-            }
-
-            if (
-                allowInsert &&
-                event.key === "/" &&
-                !event.metaKey &&
-                !event.ctrlKey &&
-                !event.altKey
-            ) {
-                if (isInput) return;
-                event.preventDefault();
-                setInsertContext("nested");
-                focusSelf();
-                setInlineMenuOpen(true);
-            }
-
-            // Cmd+E or Cmd+Shift+E: Edit mode
-            if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
-                event.preventDefault();
-
-                if (event.shiftKey) {
-                    // Cmd+Shift+E: Always open drawer for any block
-                    openDrawer(id);
-                } else {
-                    // Cmd+E: Inline edit for simple blocks, drawer for containers
-                    if (hasChildren) {
-                        // Has children: open drawer
-                        openDrawer(id);
-                    } else {
-                        // No children: toggle inline edit
-                        if (isEditMode) {
-                            // Exit edit mode and save
-                            suppressEditModeTracking(true);
-                            saveAndExit(id).then((success) => {
-                                if (success) {
-                                    setEditMode(false);
-                                    // Re-enable tracking after triple RAF
-                                    requestAnimationFrame(() => {
-                                        requestAnimationFrame(() => {
-                                            requestAnimationFrame(() => {
-                                                suppressEditModeTracking(false);
-                                            });
-                                        });
-                                    });
-                                } else {
-                                    suppressEditModeTracking(false);
-                                }
-                            });
-                        } else {
-                            // Enter edit mode
-                            suppressEditModeTracking(true);
-                            startEdit(id, "inline");
-                            setEditMode(true);
-                            // Re-enable tracking after triple RAF
-                            requestAnimationFrame(() => {
-                                requestAnimationFrame(() => {
-                                    requestAnimationFrame(() => {
-                                        suppressEditModeTracking(false);
-                                    });
-                                });
-                            });
-                        }
-                    }
-                }
-            }
-
-            if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-                event.preventDefault();
-                if (allowInsert && actions.length === 0) {
-                    setInsertContext("nested");
-                    focusSelf();
-                    setInlineMenuOpen(true);
-                } else {
-                    setQuickOpen(true);
-                    focusSelf();
-                }
-            }
-        };
-
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [
-        allowInsert,
-        actions.length,
-        focusSelf,
+    // Keyboard navigation extracted to hook
+    usePanelKeyboardNavigation({
+        id,
         isSelected,
+        allowInsert,
+        actionsLength: actions.length,
         toolbarFocusIndex,
+        setToolbarFocusIndex,
+        setInlineMenuOpen,
+        setQuickOpen,
+        setDetailsOpen,
+        setActionsOpen,
+        handleEditClick,
+        handleSaveEditClick,
+        handleDiscardEditClick,
+        customActions,
         toolbarIndices,
+        focusSelf,
+        setInsertContext,
         hasMenuActions,
         isEditMode,
         hasChildren,
         openDrawer,
         saveAndExit,
         startEdit,
-        id,
-        handleEditClick,
-        customActions,
-        handleSaveEditClick,
-        handleDiscardEditClick,
-    ]);
+        suppressEditModeTracking,
+    });
 
     const handleTitleBlur = useCallback(() => {
         if (draftTitle !== title) onTitleChange?.(draftTitle);
@@ -701,8 +342,58 @@ export const PanelWrapper: FC<Props> = ({
         [toolbarIndices.insertIndex]
     );
 
+    // Context value for PanelWrapperProvider (eliminates prop drilling to PanelToolbar)
+    const contextValue = useMemo(
+        () => ({
+            id,
+            isSlashOpen,
+            setSlashOpen,
+            isQuickOpen,
+            setQuickOpen,
+            isInlineMenuOpen,
+            setInlineMenuOpen,
+            isDetailsOpen,
+            setDetailsOpen,
+            isActionsOpen,
+            setActionsOpen,
+            draftTitle,
+            setDraftTitle,
+            onTitleChange,
+            titlePlaceholder,
+            insertContext,
+            setInsertContext,
+            toolbarFocusIndex,
+            setToolbarFocusIndex,
+            allowInsert,
+            hasMenuActions,
+            description,
+            shouldHighlight,
+            isEditMode,
+            hasChildren,
+        }),
+        [
+            id,
+            isSlashOpen,
+            isQuickOpen,
+            isInlineMenuOpen,
+            isDetailsOpen,
+            isActionsOpen,
+            draftTitle,
+            onTitleChange,
+            titlePlaceholder,
+            insertContext,
+            toolbarFocusIndex,
+            allowInsert,
+            hasMenuActions,
+            description,
+            shouldHighlight,
+            isEditMode,
+            hasChildren,
+        ]
+    );
+
     return (
-        <>
+        <PanelWrapperProvider value={contextValue}>
             <PanelActionContextMenu id={id} actions={menuActions} onDelete={onDelete}>
                 <div
                     ref={surfaceRef}
@@ -770,11 +461,9 @@ export const PanelWrapper: FC<Props> = ({
                             <PanelToolbar
                                 visible={shouldHighlight}
                                 onQuickActionsClick={handleQuickActionsOpen}
-                                allowInsert={allowInsert}
                                 onInlineInsertClick={
                                     allowInsert ? handleInlineInsertOpen : undefined
                                 }
-                                inlineMenuOpen={allowInsert ? isInlineMenuOpen : undefined}
                                 onInlineMenuOpenChange={
                                     allowInsert ? handleInlineMenuOpenChange : undefined
                                 }
@@ -785,22 +474,12 @@ export const PanelWrapper: FC<Props> = ({
                                 onOpenQuickActionsFromInline={
                                     allowInsert ? handleQuickInsertOpenQuickActions : undefined
                                 }
-                                draftTitle={draftTitle}
-                                onDraftTitleChange={(value) => setDraftTitle(value)}
                                 onTitleBlur={handleTitleBlur}
-                                titlePlaceholder={titlePlaceholder}
-                                description={description}
-                                hasMenuActions={hasMenuActions}
                                 menuActions={menuActions}
                                 onMenuAction={handleMenuAction}
-                                toolbarFocusIndex={toolbarFocusIndex}
-                                detailsOpen={isDetailsOpen}
                                 onDetailsOpenChange={handleDetailsOpenChange}
-                                actionsOpen={isActionsOpen}
                                 onActionsOpenChange={handleActionsOpenChange}
                                 onEditClick={handleEditClick}
-                                isEditMode={isEditMode}
-                                hasChildren={hasChildren}
                                 onSaveEditClick={handleSaveEditClick}
                                 onDiscardEditClick={handleDiscardEditClick}
                                 customActions={customActions}
@@ -839,7 +518,7 @@ export const PanelWrapper: FC<Props> = ({
                 actions={actions}
                 allowInsert={allowInsert}
             />
-        </>
+        </PanelWrapperProvider>
     );
 };
 

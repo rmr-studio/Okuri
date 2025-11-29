@@ -45,7 +45,7 @@ export interface BlockEditContextValue {
     saveAndExit(blockId: string): Promise<boolean>;
 
     // Batch actions
-    saveAllEdits(): Promise<boolean>;
+    saveAllEdits(): Promise<{ success: boolean; changes: Map<string, BlockNode> }>;
     discardAllEdits(): void;
 
     // Draft manipulation
@@ -67,6 +67,8 @@ export interface BlockEditContextValue {
     getEditMode(blockId: string): "inline" | "drawer" | null;
     hasUnsavedChanges(): boolean;
     getEditingCount(): number;
+    hasActualChanges(): boolean;
+    exitAllSessions(): void;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -375,7 +377,10 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         [saveEdit]
     );
 
-    const saveAllEdits = useCallback(async (): Promise<boolean> => {
+    const saveAllEdits = useCallback(async (): Promise<{
+        success: boolean;
+        changes: Map<string, BlockNode>;
+    }> => {
         const allBlockIds = Array.from(editingSessions.keys());
 
         // Validate all blocks first
@@ -383,11 +388,11 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         if (!allValid) {
             console.warn("Validation failed for one or more blocks. Cannot save all.");
-            return false;
+            return { success: false, changes: new Map() };
         }
 
-        // Update all blocks in the environment (only if they have changes)
-        let savedCount = 0;
+        // Collect changes WITHOUT applying them yet
+        const changes = new Map<string, BlockNode>();
         allBlockIds.forEach((blockId) => {
             const draft = drafts.get(blockId);
             if (!draft) return;
@@ -407,24 +412,15 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         payload: draft,
                     },
                 };
-
-                // Commit to BlockEnvironment (using tracked version to record operation)
-                updateTrackedBlock(blockId, updatedNode);
-                savedCount++;
+                changes.set(blockId, updatedNode);
             }
         });
 
-        console.log(
-            `💾 Batch save completed: ${savedCount} of ${allBlockIds.length} blocks updated (${
-                allBlockIds.length - savedCount
-            } unchanged)`
-        );
+        console.log(`Prepared ${changes.size} of ${allBlockIds.length} blocks for save`);
 
-        // Clean up ALL sessions and drafts at once
-        setEditingSessions(new Map());
-        setDrafts(new Map());
-        return true;
-    }, [editingSessions, drafts, validateBlock, getBlock, updateTrackedBlock]);
+        // Don't clean up sessions yet - coordinator will do that after save succeeds
+        return { success: true, changes };
+    }, [editingSessions, drafts, validateBlock, getBlock]);
 
     const discardAllEdits = useCallback(() => {
         const allBlockIds = Array.from(editingSessions.keys());
@@ -434,6 +430,13 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setDrafts(new Map());
 
         console.log(`Discarded edits for ${allBlockIds.length} blocks`);
+    }, [editingSessions]);
+
+    const exitAllSessions = useCallback(() => {
+        const count = editingSessions.size;
+        setEditingSessions(new Map());
+        setDrafts(new Map());
+        console.log(`Exited ${count} edit sessions without saving`);
     }, [editingSessions]);
 
     /* -------------------------------------------------------------------------- */
@@ -647,6 +650,18 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return editingSessions.size;
     }, [editingSessions]);
 
+    const hasActualChanges = useCallback((): boolean => {
+        return Array.from(editingSessions.values()).some((session) => {
+            if (!session.isDirty) return false;
+
+            const draft = drafts.get(session.blockId);
+            const block = getBlock(session.blockId);
+            if (!draft || !block || !isContentNode(block)) return false;
+
+            return !isPayloadEqual(block.block.payload, draft);
+        });
+    }, [editingSessions, drafts, getBlock]);
+
     /* -------------------------------------------------------------------------- */
     /*                                Context Value                               */
     /* -------------------------------------------------------------------------- */
@@ -674,6 +689,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             getEditMode,
             hasUnsavedChanges,
             getEditingCount,
+            hasActualChanges,
+            exitAllSessions,
         }),
         [
             editingSessions,
@@ -697,6 +714,8 @@ export const BlockEditProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             getEditMode,
             hasUnsavedChanges,
             getEditingCount,
+            hasActualChanges,
+            exitAllSessions,
         ]
     );
 

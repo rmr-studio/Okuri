@@ -8,8 +8,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { useOrganisation } from "../hooks/useOrganisation";
-import { useOrganisationRole } from "../hooks/useOrganisationRole";
+import { useOrganisation } from "../hooks/use-organisation";
+import { useOrganisationRole } from "../hooks/use-organisation-role";
 import { OrganisationForm, OrganisationFormDetails } from "./form/organisation-form";
 
 const EditOrganisation = () => {

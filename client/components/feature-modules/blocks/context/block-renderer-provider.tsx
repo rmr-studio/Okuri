@@ -1,5 +1,6 @@
 "use client";
 
+import { NodeType } from "@/lib/types/types";
 import { createContext, FC, ReactNode, useContext } from "react";
 import { createPortal } from "react-dom";
 import { MissingBlockErrorComponent } from "../components/bespoke/MissingBlockError";
@@ -105,7 +106,7 @@ export const RenderElementProvider: FC<ProviderProps> = ({ onUnknownType, wrapEl
                 if (!container) return null;
 
                 // Handle error blocks (missing blocks from layout)
-                if (blockType === "error") {
+                if (blockType === NodeType.ERROR) {
                     const rendered = <MissingBlockErrorComponent blockId={id} />;
                     return (
                         <RenderElementContext.Provider
