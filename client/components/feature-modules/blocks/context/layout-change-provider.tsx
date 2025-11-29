@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/provider/auth-context";
 import { formatError } from "@/lib/util/error/error.util";
+import { BlockOperationType } from "@/lib/types/types";
 import { now } from "@/lib/util/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GridStackOptions } from "gridstack";
@@ -22,6 +23,7 @@ import {
     LayoutSnapshot,
     SaveEnvironmentRequest,
     SaveEnvironmentResponse,
+    StructuralOperationRequest,
 } from "../interface/command.interface";
 import { LayoutService } from "../service/layout.service";
 import { useBlockEnvironment } from "./block-environment-provider";
@@ -47,7 +49,7 @@ interface LayoutChangeContextValue {
     clearLayoutChanges: () => void;
 
     /** Save layout changes to backend with version control */
-    saveLayoutChanges: () => Promise<boolean>;
+    saveLayoutChanges: (contentChanges?: Map<string, BlockNode>) => Promise<boolean>;
 
     /** Discard layout changes and reload from last saved state */
     discardLayoutChanges: () => void;
@@ -166,6 +168,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         environment,
         hydrateEnvironment,
         getEnvironmentSnapshot,
+        updateBlock,
     } = useBlockEnvironment();
     const { gridStack, save: saveGridLayout, reloadEnvironment } = useGrid();
     const {
@@ -179,6 +182,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
         getBaselineSnapshot,
         getStructuralOperations,
         clearStructuralOperations,
+        recordStructuralOperation,
     } = useLayoutHistory();
 
     const { session } = useAuth();
@@ -463,53 +467,102 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
      * Save current layout state to backend with version control
      * Called when user clicks "Save All" in EditModeIndicator
      */
-    const saveLayoutChanges = useCallback(async (): Promise<boolean> => {
-        if (!layoutId || !saveGridLayout) {
-            console.warn("Cannot save layout: missing layoutId or save function");
-            return false;
-        }
+    const saveLayoutChanges = useCallback(
+        async (contentChanges?: Map<string, BlockNode>): Promise<boolean> => {
+            if (!layoutId || !saveGridLayout) {
+                console.warn("Cannot save layout: missing layoutId or save function");
+                return false;
+            }
 
-        // Get structural operations since last save
-        const operations = getStructuralOperations();
+            setSaveStatus("saving");
 
-        // Get current layout from GridStack with preserved JSON content
-        const currentLayout = saveGridLayout();
-        if (!currentLayout) {
-            console.warn("Cannot save layout: failed to get current layout from GridStack");
-            return false;
-        }
+            try {
+                // Apply content changes to environment AND record operations
+                if (contentChanges && contentChanges.size > 0) {
+                    contentChanges.forEach((updatedNode, blockId) => {
+                        // Apply change to environment
+                        updateBlock(blockId, updatedNode);
 
-        const nextVersion = publishedVersion + 1;
+                        // Record the UPDATE_BLOCK operation for backend
+                        const operation: StructuralOperationRequest = {
+                            id: crypto.randomUUID(),
+                            timestamp: now(),
+                            data: {
+                                type: BlockOperationType.UPDATE_BLOCK,
+                                blockId,
+                                updatedContent: updatedNode,
+                            },
+                        };
+                        recordStructuralOperation(operation);
+                    });
+                    console.log(
+                        `Applied ${contentChanges.size} content changes and recorded operations`
+                    );
+                }
 
-        // Prepare save request
-        const saveRequest: SaveEnvironmentRequest = {
+                // Get structural operations since last save
+                const operations = getStructuralOperations();
+
+                // Get current layout from GridStack with preserved JSON content
+                const currentLayout = saveGridLayout();
+                if (!currentLayout) {
+                    console.warn(
+                        "Cannot save layout: failed to get current layout from GridStack"
+                    );
+                    setSaveStatus("idle");
+                    return false;
+                }
+
+                const nextVersion = publishedVersion + 1;
+
+                // Prepare save request with ALL changes
+                const saveRequest: SaveEnvironmentRequest = {
+                    layoutId,
+                    organisationId,
+                    layout: currentLayout,
+                    version: nextVersion,
+                    operations,
+                };
+
+                console.log("Saving layout changes to backend:", {
+                    layoutId,
+                    version: nextVersion,
+                    operationCount: operations.length,
+                    contentChangeCount: contentChanges?.size || 0,
+                });
+
+                const { success, conflict, conflictData } = await saveLayout(saveRequest);
+
+                if (conflict && conflictData) {
+                    setSaveStatus("conflict");
+                    setConflictData(conflictData);
+                    return false;
+                }
+
+                if (success) {
+                    console.log("✅ Layout and content changes saved successfully");
+                    return true;
+                } else {
+                    setSaveStatus("error");
+                    return false;
+                }
+            } catch (error) {
+                console.error("Error saving layout:", error);
+                setSaveStatus("error");
+                return false;
+            }
+        },
+        [
             layoutId,
             organisationId,
-            layout: currentLayout,
-            version: nextVersion,
-            operations,
-        };
-
-        try {
-            const { success, conflict } = await saveLayout(saveRequest);
-            return success && !conflict;
-        } catch (error) {
-            return false;
-        }
-    }, [
-        layoutId,
-        saveGridLayout,
-        environment,
-        publishedVersion,
-        clearLayoutChanges,
-        getEnvironmentSnapshot,
-        setBaselineSnapshot,
-        updatePublishedVersion,
-        discardLayoutChanges,
-        getStructuralOperations,
-        clearStructuralOperations,
-        saveLayout,
-    ]);
+            publishedVersion,
+            saveGridLayout,
+            getStructuralOperations,
+            updateBlock,
+            recordStructuralOperation,
+            saveLayout,
+        ]
+    );
 
     /**
      * Resolve a conflict after user makes a decision

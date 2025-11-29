@@ -5,6 +5,7 @@ import { cn } from "@/lib/util/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Check, Edit3, FileEdit, Layout, X } from "lucide-react";
 import { FC, useEffect, useState } from "react";
+import { BlockNode } from "../../interface/block.interface";
 import { useBlockEdit } from "../../context/block-edit-provider";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useLayoutChange } from "../../context/layout-change-provider";
@@ -12,14 +13,16 @@ import { useLayoutHistory } from "../../context/layout-history-provider";
 import { useLayoutKeyboardShortcuts } from "../../hooks/use-layout-keyboard-shortcuts";
 
 export const EditModeIndicator: FC = () => {
-    const { getEditingCount, hasUnsavedChanges, saveAllEdits, discardAllEdits } = useBlockEdit();
+    const { getEditingCount, hasActualChanges, saveAllEdits, discardAllEdits, exitAllSessions } =
+        useBlockEdit();
     const { isInitialized } = useBlockEnvironment();
     const { saveLayoutChanges, discardLayoutChanges, saveStatus, conflictData, resolveConflict } =
         useLayoutChange();
     const { hasContentChanges, hasLayoutChanges } = useLayoutHistory();
 
     const editingCount = getEditingCount();
-    const hasDataChanges = hasUnsavedChanges();
+    const hasDataChanges = hasActualChanges();
+    const canSave = hasDataChanges || hasLayoutChanges || hasContentChanges;
     const totalChanges = editingCount + (hasLayoutChanges ? 1 : 0) + (hasContentChanges ? 1 : 0);
 
     const [isSaving, setIsSaving] = useState(false);
@@ -28,12 +31,44 @@ export const EditModeIndicator: FC = () => {
         if (isSaving || saveStatus === "saving" || saveStatus === "conflict") {
             return;
         }
+
+        // If no actual changes, just exit all sessions silently
+        if (!canSave) {
+            exitAllSessions();
+            return;
+        }
+
         setIsSaving(true);
         try {
-            // Save active edit sessions
-            if (hasDataChanges) await saveAllEdits();
-            // Save layout and content changes (both are sent to backend together)
-            if (hasLayoutChanges || hasContentChanges) await saveLayoutChanges();
+            let contentChanges: Map<string, BlockNode> | undefined;
+
+            // Step 1: Prepare content changes from active edit sessions
+            if (hasDataChanges) {
+                const result = await saveAllEdits();
+                if (!result.success) {
+                    console.error("Failed to prepare content changes (validation failed)");
+                    setIsSaving(false);
+                    return;
+                }
+                contentChanges = result.changes;
+                console.log(`Prepared ${contentChanges.size} content changes`);
+            }
+
+            // Step 2: Save everything to backend atomically
+            // This includes: layout changes + structural operations + content changes
+            if (hasLayoutChanges || hasContentChanges || (contentChanges && contentChanges.size > 0)) {
+                const success = await saveLayoutChanges(contentChanges);
+                if (!success) {
+                    console.error("Failed to save to backend");
+                    setIsSaving(false);
+                    return;
+                }
+            }
+
+            // Step 3: Clean up ALL edit sessions (both dirty and clean)
+            exitAllSessions();
+
+            console.log("✅ All changes saved successfully");
         } catch (error) {
             console.error("Error saving all changes:", error);
         } finally {
@@ -55,15 +90,13 @@ export const EditModeIndicator: FC = () => {
     const shouldShow = isInitialized && totalChanges > 0;
 
     const handleDiscardAll = () => {
-        // Discard block data edits
-        if (hasDataChanges) {
-            discardAllEdits();
-        }
-
-        // Discard layout and content changes
+        // Discard layout and content changes first
         if (hasLayoutChanges || hasContentChanges) {
             discardLayoutChanges();
         }
+
+        // Then exit all edit sessions (discards local drafts)
+        exitAllSessions();
     };
 
     return (
@@ -132,13 +165,16 @@ export const EditModeIndicator: FC = () => {
                             disabled={
                                 isSaving || saveStatus === "saving" || saveStatus === "conflict"
                             }
+                            title={canSave ? "Save all changes" : "Exit edit mode"}
                         >
                             <Check className="h-3.5 w-3.5 mr-1" />
                             {isSaving || saveStatus === "saving"
                                 ? "Saving..."
                                 : saveStatus === "conflict"
                                 ? "Conflict!"
-                                : "Save All"}
+                                : canSave
+                                ? "Save All"
+                                : "Exit Edit Mode"}
                         </Button>
                         <Button
                             size="sm"
