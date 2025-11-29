@@ -210,12 +210,7 @@ export const ClientOverview = () => {
                     entityId={client.id}
                     entityType={EntityType.CLIENT}
                     organisationId={organisation.id}
-                    renderToolbar={() => (
-                        <ClientLayoutToolbar
-                            clientId={client.id}
-                            organisationId={organisation.id}
-                        />
-                    )}
+                    showDefaultToolbar={true}
                 />
 
                 {/* <aside className="space-y-6">

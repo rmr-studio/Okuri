@@ -75,6 +75,17 @@ export function UseEntityReferenceToolbar({
         // Ensure block is an entity reference
         if (!isEntityReferenceMetadata(payload)) return;
 
+        // Validate entity types if listType is set
+        if (payload.listType) {
+            const invalidItems = items.filter(item => item.type !== payload.listType);
+            if (invalidItems.length > 0) {
+                console.error(
+                    `Cannot add entities of type ${invalidItems[0].type} to a ${payload.listType} reference block`
+                );
+                return;
+            }
+        }
+
         // Update block metadata with new items
         const updatedPayload: EntityReferenceMetadata = {
             ...payload,

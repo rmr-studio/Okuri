@@ -1,9 +1,5 @@
 import { ReactNode, useCallback } from "react";
-import {
-    BlockNode,
-    isEntityReferenceMetadata,
-    isReferenceNode,
-} from "../../interface/block.interface";
+import { BlockNode } from "../../interface/block.interface";
 import { SlashMenuItem } from "../../interface/panel.interface";
 import { WrapElementProvider } from "../../interface/render.interface";
 import { getAllowedChildTypes, getTitle } from "../../util/block/block.util";
@@ -12,7 +8,6 @@ import {
     createNoteNode,
     createProjectBlockNode,
 } from "../../util/block/factory/mock.factory";
-import { UseEntityReferenceToolbar } from "../../hooks/use-entity-references";
 import { PanelWrapper, defaultSlashItems } from "./panel-wrapper";
 
 interface EditorPanelCallackProps {
@@ -64,38 +59,19 @@ export const editorPanel = ({
                 ? defaultSlashItems.filter((item) => restrictedChildTypes.includes(item.id))
                 : defaultSlashItems;
 
-            // Detect entity reference blocks
-            const isEntityRef = isReferenceNode(node) && isEntityReferenceMetadata(block.payload);
-
-            // Create toolbar for entity references
-            const entityRefToolbar = isEntityRef
-                ? UseEntityReferenceToolbar({
-                      blockId: id,
-                      entityType: block.payload.entityType || "CLIENT",
-                      currentItems: block.payload.items || [],
-                      multiSelect: true,
-                  })
-                : null;
-
-            const customActions = entityRefToolbar?.customActions || [];
-
             return (
-                <>
-                    <PanelWrapper
-                        id={id}
-                        title={title}
-                        description={type.description}
-                        slashItems={availableItems}
-                        quickActions={quickActions}
-                        allowInsert={!!type.nesting}
-                        onInsert={handleInsert}
-                        onDelete={handleDelete}
-                        customActions={customActions}
-                    >
-                        {children}
-                    </PanelWrapper>
-                    {entityRefToolbar?.modal}
-                </>
+                <PanelWrapper
+                    id={id}
+                    title={title}
+                    description={type.description}
+                    slashItems={availableItems}
+                    quickActions={quickActions}
+                    allowInsert={!!type.nesting}
+                    onInsert={handleInsert}
+                    onDelete={handleDelete}
+                >
+                    {children}
+                </PanelWrapper>
             );
         },
         [getBlock, insertBlock, removeBlock, getParent]

@@ -73,25 +73,31 @@ export const createListConfiguration = (
 /**
  * Creates EntityReferenceMetadata for entity reference blocks.
  * Used when creating blocks that reference external entities (clients, organizations, etc.)
+ *
+ * @param listType - The entity type that this reference block is restricted to (CLIENT, INVOICE, etc.)
+ * @param overrides - Optional metadata overrides
+ * @param deletable - Whether the block can be deleted
  */
 export const createEntityReferenceMetadata = (
+    listType?: EntityType,
     overrides?: Partial<BlockMeta>,
     deletable: boolean = true
 ): EntityReferenceMetadata => ({
     type: BlockMetadataType.ENTITY_REFERENCE,
     deletable,
     meta: createMeta(overrides),
-    path: "",
+    path: "$.items",
     fetchPolicy: BlockReferenceFetchPolicy.LAZY,
     presentation: Presentation.ENTITY,
     items: [],
     projection: {
         fields: [],
     },
+    listType, // Set the entity type restriction
     display: {
         itemSpacing: 8,
         showDragHandles: false,
-        emptyMessage: "No entities selected",
+        emptyMessage: listType ? `No ${listType.toLowerCase()}s selected` : "No entities selected",
     },
     config: {
         mode: BlockListOrderingMode.MANUAL,

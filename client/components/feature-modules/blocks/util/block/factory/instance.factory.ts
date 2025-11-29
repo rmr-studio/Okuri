@@ -1,4 +1,4 @@
-import { BlockMetadataType } from "@/lib/types/types";
+import { BlockMetadataType, EntityType } from "@/lib/types/types";
 import { BlockNode, BlockSchema, BlockType } from "../../../interface/block.interface";
 import {
     createBlockReferenceMetadata,
@@ -16,6 +16,10 @@ export interface CreateBlockInstanceOptions {
     name?: string;
     /** Optional initial data to override schema defaults */
     initialData?: Record<string, unknown>;
+    /** Entity type for entity reference blocks (CLIENT, INVOICE, etc.) */
+    entityType?: EntityType;
+    /** Allowed block type keys for block lists (null = allow all types) */
+    allowedTypes?: string[] | null;
 }
 
 /**
@@ -82,11 +86,19 @@ export function createBlockInstanceFromType(
     if (isReferenceBlockType(blockType)) {
         if (blockType.key === "entity_reference") {
             // Create entity reference block with empty items
-            const payload = createEntityReferenceMetadata();
+            // Use provided entity type or undefined (will need to be set later)
+            const entityType = options?.entityType;
+            const payload = createEntityReferenceMetadata(entityType);
+
+            // Use entity type in name if provided
+            const blockName = entityType
+                ? name ?? `${entityType.charAt(0) + entityType.slice(1).toLowerCase()} Reference`
+                : name ?? blockType.name;
+
             return createReferenceNode({
                 organisationId,
                 type: blockType,
-                name,
+                name: blockName,
                 payload,
             });
         } else {
@@ -111,8 +123,15 @@ export function createBlockInstanceFromType(
             ? { ...defaultData, ...options.initialData }
             : defaultData;
 
-        // Create list configuration from block type's nesting
-        const allowedTypes = blockType.nesting?.allowedTypes;
+        // Determine allowed types:
+        // 1. Use provided allowedTypes from options (can be array or null)
+        // 2. Fall back to block type's nesting.allowedTypes
+        // 3. undefined means no restriction (allow all)
+        const allowedTypes =
+            options?.allowedTypes !== undefined
+                ? options.allowedTypes || undefined  // null becomes undefined (allow all)
+                : blockType.nesting?.allowedTypes;
+
         const listConfig = createListConfiguration(allowedTypes);
 
         // Create content node with list configuration

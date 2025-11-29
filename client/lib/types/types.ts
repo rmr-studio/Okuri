@@ -1200,7 +1200,7 @@ export interface components {
             trees: components["schemas"]["BlockTree"][];
         };
         BlockListConfiguration: {
-            allowedTypes?: string[];
+            listType?: string[];
             allowDuplicates: boolean;
             display: components["schemas"]["ListDisplayConfig"];
             config: components["schemas"]["ListConfig"];
@@ -1284,7 +1284,7 @@ export interface components {
             presentation: components["schemas"]["Presentation"];
             items: components["schemas"]["ReferenceItem"][];
             projection: components["schemas"]["Projection"];
-            allowedTypes?: components["schemas"]["EntityType"][];
+            listType?: components["schemas"]["EntityType"];
             display: components["schemas"]["ListDisplayConfig"];
             config: components["schemas"]["ListConfig"];
             allowDuplicates: boolean;
@@ -1311,8 +1311,8 @@ export interface components {
         ListFilterLogicType: ListFilterLogicType;
         Metadata: {
             type: components["schemas"]["BlockMetadataType"];
-            deletable: boolean;
             meta: components["schemas"]["BlockMeta"];
+            deletable: boolean;
         };
         Node: {
             warnings: string[];
