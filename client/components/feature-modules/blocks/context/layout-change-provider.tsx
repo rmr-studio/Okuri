@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-context";
-import { formatError } from "@/lib/util/error/error.util";
 import { BlockOperationType } from "@/lib/types/types";
+import { formatError } from "@/lib/util/error/error.util";
 import { now } from "@/lib/util/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { GridStackOptions } from "gridstack";
@@ -506,9 +506,7 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                 // Get current layout from GridStack with preserved JSON content
                 const currentLayout = saveGridLayout();
                 if (!currentLayout) {
-                    console.warn(
-                        "Cannot save layout: failed to get current layout from GridStack"
-                    );
+                    console.warn("Cannot save layout: failed to get current layout from GridStack");
                     setSaveStatus("idle");
                     return false;
                 }
@@ -531,11 +529,12 @@ export const LayoutChangeProvider: FC<PropsWithChildren> = ({ children }) => {
                     contentChangeCount: contentChanges?.size || 0,
                 });
 
-                const { success, conflict, conflictData } = await saveLayout(saveRequest);
+                const response = await saveLayout(saveRequest);
+                const { conflict, success } = response;
 
-                if (conflict && conflictData) {
+                if (conflict) {
                     setSaveStatus("conflict");
-                    setConflictData(conflictData);
+                    setConflictData(response);
                     return false;
                 }
 

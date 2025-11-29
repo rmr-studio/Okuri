@@ -39,6 +39,7 @@ export function usePanelEditMode(options: UsePanelEditModeOptions): UsePanelEdit
 
     // Track previous edit mode to detect transitions (for resize coordination)
     const prevEditModeRef = useRef<"inline" | "drawer" | null>(null);
+    const mountedRef = useRef(true);
 
     // Sync local edit mode state with provider
     useEffect(() => {
@@ -56,7 +57,9 @@ export function usePanelEditMode(options: UsePanelEditModeOptions): UsePanelEdit
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        requestResize();
+                        if (mountedRef.current) {
+                            requestResize();
+                        }
                     });
                 });
             });
@@ -64,6 +67,13 @@ export function usePanelEditMode(options: UsePanelEditModeOptions): UsePanelEdit
 
         prevEditModeRef.current = editMode;
     }, [id, getEditMode, requestResize]);
+    // Track mounted state
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     /**
      * Handle edit button click
@@ -121,7 +131,16 @@ export function usePanelEditMode(options: UsePanelEditModeOptions): UsePanelEdit
                 });
             }
         }
-    }, [hasChildren, isEditMode, openDrawer, saveAndExit, startEdit, id, requestResize, suppressEditModeTracking]);
+    }, [
+        hasChildren,
+        isEditMode,
+        openDrawer,
+        saveAndExit,
+        startEdit,
+        id,
+        requestResize,
+        suppressEditModeTracking,
+    ]);
 
     /**
      * Handle save edit button click (explicit save button in toolbar)

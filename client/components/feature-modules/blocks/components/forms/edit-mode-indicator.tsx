@@ -43,7 +43,22 @@ export const EditModeIndicator: FC = () => {
             // Suppress tracking while exiting sessions to prevent false positives
             suppressEditModeTracking(true);
             exitAllSessions();
-            // Re-enable tracking after grid settles
+
+            /**
+             * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+             *
+             * Why three frames?
+             * 1. Frame 1: React schedules state updates from exitAllSessions()
+             * 2. Frame 2: React commits DOM changes (form unmounts, display mounts)
+             * 3. Frame 3: GridStack reflows/resizes widgets based on new content dimensions
+             *
+             * Race prevented: Without this delay, we'd re-enable tracking before
+             * GridStack's 'change' event fires from the resize, causing false layout changes.
+             *
+             * Alternative: Could use MutationObserver + ResizeObserver to deterministically
+             * detect when GridStack completes layout, but triple-RAF is simpler and reliable
+             * for this use case (matches pattern in use-panel-edit-mode.ts lines 86-94).
+             */
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
@@ -89,7 +104,12 @@ export const EditModeIndicator: FC = () => {
             // Suppress tracking while exiting to prevent false positives from dimension changes
             suppressEditModeTracking(true);
             exitAllSessions();
-            // Re-enable tracking after grid settles
+
+            /**
+             * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+             * See detailed explanation above in the !canSave path (lines 47-61).
+             * Same timing requirements apply: wait for React commit + GridStack reflow.
+             */
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
@@ -129,7 +149,12 @@ export const EditModeIndicator: FC = () => {
         // Then exit all edit sessions (discards local drafts)
         exitAllSessions();
 
-        // Re-enable tracking after triple RAF to allow grid to settle
+        /**
+         * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+         * See detailed explanation in handleSaveAll's !canSave path (lines 47-61).
+         * Same timing requirements: React commit + GridStack reflow must complete
+         * before re-enabling tracking to prevent false 'change' events.
+         */
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {

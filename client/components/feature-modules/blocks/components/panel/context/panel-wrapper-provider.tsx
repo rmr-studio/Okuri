@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext } from "react";
 
 /**
  * PanelWrapperContext - Eliminates prop drilling between PanelWrapper and PanelToolbar
@@ -70,43 +70,7 @@ export const PanelWrapperProvider: React.FC<{
     value: PanelWrapperContextValue;
     children: React.ReactNode;
 }> = ({ value, children }) => {
-    // Memoize context value to prevent unnecessary re-renders
-    const contextValue = useMemo(
-        () => value,
-        [
-            value.id,
-            value.isSlashOpen,
-            value.setSlashOpen,
-            value.isQuickOpen,
-            value.setQuickOpen,
-            value.isInlineMenuOpen,
-            value.setInlineMenuOpen,
-            value.isDetailsOpen,
-            value.setDetailsOpen,
-            value.isActionsOpen,
-            value.setActionsOpen,
-            value.draftTitle,
-            value.setDraftTitle,
-            value.onTitleChange,
-            value.titlePlaceholder,
-            value.insertContext,
-            value.setInsertContext,
-            value.toolbarFocusIndex,
-            value.setToolbarFocusIndex,
-            value.allowInsert,
-            value.hasMenuActions,
-            value.description,
-            value.shouldHighlight,
-            value.isEditMode,
-            value.hasChildren,
-        ]
-    );
-
-    return (
-        <PanelWrapperContext.Provider value={contextValue}>
-            {children}
-        </PanelWrapperContext.Provider>
-    );
+    return <PanelWrapperContext.Provider value={value}>{children}</PanelWrapperContext.Provider>;
 };
 
 /**

@@ -63,9 +63,7 @@ export interface UsePanelKeyboardNavigationOptions {
  * - Coordinate toolbar focus index with menu open states
  * - Call appropriate handlers based on key combination
  */
-export function usePanelKeyboardNavigation(
-    options: UsePanelKeyboardNavigationOptions
-): void {
+export function usePanelKeyboardNavigation(options: UsePanelKeyboardNavigationOptions): void {
     const {
         id,
         isSelected,
@@ -219,25 +217,47 @@ export function usePanelKeyboardNavigation(
                         if (isEditMode) {
                             // Exit edit mode and save
                             suppressEditModeTracking(true);
-                            saveAndExit(id).then((success) => {
-                                if (success) {
-                                    // Re-enable tracking after triple RAF
-                                    requestAnimationFrame(() => {
+                            saveAndExit(id)
+                                .then((success) => {
+                                    if (success) {
+                                        /**
+                                         * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+                                         *
+                                         * Why three frames?
+                                         * 1. Frame 1: React schedules state updates from saveAndExit()
+                                         * 2. Frame 2: React commits DOM changes (form unmounts, display mounts)
+                                         * 3. Frame 3: GridStack reflows/resizes widgets based on new content dimensions
+                                         *
+                                         * Race prevented: Without this delay, we'd re-enable tracking before
+                                         * GridStack's 'change' event fires from the resize, causing false layout changes.
+                                         *
+                                         * Alternative: Could use MutationObserver + ResizeObserver to deterministically
+                                         * detect when GridStack completes layout, but triple-RAF is simpler and reliable.
+                                         */
                                         requestAnimationFrame(() => {
                                             requestAnimationFrame(() => {
-                                                suppressEditModeTracking(false);
+                                                requestAnimationFrame(() => {
+                                                    suppressEditModeTracking(false);
+                                                });
                                             });
                                         });
-                                    });
-                                } else {
+                                    } else {
+                                        suppressEditModeTracking(false);
+                                    }
+                                })
+                                .catch(() => {
                                     suppressEditModeTracking(false);
-                                }
-                            });
+                                });
                         } else {
                             // Enter edit mode
                             suppressEditModeTracking(true);
                             startEdit(id, "inline");
-                            // Re-enable tracking after triple RAF
+
+                            /**
+                             * Triple RAF timing pattern to re-enable layout tracking after grid settles.
+                             * See detailed explanation above (lines 223-236).
+                             * Same timing requirements when ENTERING edit mode: React commit + GridStack reflow.
+                             */
                             requestAnimationFrame(() => {
                                 requestAnimationFrame(() => {
                                     requestAnimationFrame(() => {

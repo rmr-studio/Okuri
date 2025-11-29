@@ -70,14 +70,6 @@ export function usePanelOverlayLock(options: UsePanelOverlayLockOptions): void {
             });
             overlayLockRef.current = release;
         }
-
-        // Cleanup function
-        return () => {
-            if (overlayLockRef.current) {
-                overlayLockRef.current();
-                overlayLockRef.current = null;
-            }
-        };
     }, [
         id,
         acquireLock,
@@ -89,4 +81,14 @@ export function usePanelOverlayLock(options: UsePanelOverlayLockOptions): void {
         drawerStateIsOpen,
         setFocusHover,
     ]);
+
+    // Cleanup on unmount only
+    useEffect(() => {
+        return () => {
+            if (overlayLockRef.current) {
+                overlayLockRef.current();
+                overlayLockRef.current = null;
+            }
+        };
+    }, []);
 }
