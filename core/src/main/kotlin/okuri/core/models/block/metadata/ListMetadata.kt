@@ -7,7 +7,7 @@ interface ListMetadata<T> {
     val config: ListConfig
     val display: ListDisplayConfig
     val allowDuplicates: Boolean
-    val allowedTypes: List<T>?
+    val listType: T?
 }
 
 data class ListConfig(

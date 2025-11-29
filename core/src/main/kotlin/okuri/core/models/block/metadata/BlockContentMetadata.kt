@@ -19,8 +19,8 @@ data class BlockContentMetadata(
 ) : Metadata
 
 data class BlockListConfiguration(
-    override val allowedTypes: List<String>? = null,
+    override val listType: List<String>? = null,
     override val allowDuplicates: Boolean = false,
     override val display: ListDisplayConfig = ListDisplayConfig(),
     override val config: ListConfig = ListConfig()
-) : ListMetadata<String>
+) : ListMetadata<List<String>>
