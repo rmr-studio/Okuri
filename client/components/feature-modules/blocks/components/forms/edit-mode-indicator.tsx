@@ -4,20 +4,26 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Check, Edit3, FileEdit, Layout, X } from "lucide-react";
-import { FC, useEffect, useState } from "react";
-import { BlockNode } from "../../interface/block.interface";
+import { FC, useState } from "react";
 import { useBlockEdit } from "../../context/block-edit-provider";
 import { useBlockEnvironment } from "../../context/block-environment-provider";
 import { useLayoutChange } from "../../context/layout-change-provider";
 import { useLayoutHistory } from "../../context/layout-history-provider";
 import { useLayoutKeyboardShortcuts } from "../../hooks/use-layout-keyboard-shortcuts";
+import { BlockNode } from "../../interface/block.interface";
 
 export const EditModeIndicator: FC = () => {
     const { getEditingCount, hasActualChanges, saveAllEdits, discardAllEdits, exitAllSessions } =
         useBlockEdit();
     const { isInitialized } = useBlockEnvironment();
-    const { saveLayoutChanges, discardLayoutChanges, saveStatus, conflictData, resolveConflict } =
-        useLayoutChange();
+    const {
+        saveLayoutChanges,
+        discardLayoutChanges,
+        saveStatus,
+        conflictData,
+        resolveConflict,
+        suppressEditModeTracking,
+    } = useLayoutChange();
     const { hasContentChanges, hasLayoutChanges } = useLayoutHistory();
 
     const editingCount = getEditingCount();
@@ -34,7 +40,17 @@ export const EditModeIndicator: FC = () => {
 
         // If no actual changes, just exit all sessions silently
         if (!canSave) {
+            // Suppress tracking while exiting sessions to prevent false positives
+            suppressEditModeTracking(true);
             exitAllSessions();
+            // Re-enable tracking after grid settles
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        suppressEditModeTracking(false);
+                    });
+                });
+            });
             return;
         }
 
@@ -56,7 +72,11 @@ export const EditModeIndicator: FC = () => {
 
             // Step 2: Save everything to backend atomically
             // This includes: layout changes + structural operations + content changes
-            if (hasLayoutChanges || hasContentChanges || (contentChanges && contentChanges.size > 0)) {
+            if (
+                hasLayoutChanges ||
+                hasContentChanges ||
+                (contentChanges && contentChanges.size > 0)
+            ) {
                 const success = await saveLayoutChanges(contentChanges);
                 if (!success) {
                     console.error("Failed to save to backend");
@@ -66,7 +86,17 @@ export const EditModeIndicator: FC = () => {
             }
 
             // Step 3: Clean up ALL edit sessions (both dirty and clean)
+            // Suppress tracking while exiting to prevent false positives from dimension changes
+            suppressEditModeTracking(true);
             exitAllSessions();
+            // Re-enable tracking after grid settles
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        suppressEditModeTracking(false);
+                    });
+                });
+            });
 
             console.log("✅ All changes saved successfully");
         } catch (error) {
@@ -90,13 +120,23 @@ export const EditModeIndicator: FC = () => {
     const shouldShow = isInitialized && totalChanges > 0;
 
     const handleDiscardAll = () => {
-        // Discard layout and content changes first
-        if (hasLayoutChanges || hasContentChanges) {
-            discardLayoutChanges();
-        }
+        // Suppress layout change tracking during edit mode exit to prevent
+        // false positives from blocks resizing back to display view
+        suppressEditModeTracking(true);
+
+        discardLayoutChanges();
 
         // Then exit all edit sessions (discards local drafts)
         exitAllSessions();
+
+        // Re-enable tracking after triple RAF to allow grid to settle
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    suppressEditModeTracking(false);
+                });
+            });
+        });
     };
 
     return (
